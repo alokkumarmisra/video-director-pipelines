@@ -1,0 +1,30 @@
+{
+  "description": "Alphabet journey sequence: 1 reference key visual -> 4 keyframe story beats (same character) -> each keyframe drives a 3s LTX i2v clip -> stitched final.",
+  "character": "a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones",
+  "referencePrompt": "1111111   a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones, standing in a vast library of towering bookshelves labeled A to Z, sunlight streaming through dust motes, holding the letter 'A' tile, whimsical atmosphere, 16:9 key visual composition",
+  "duration": 4,
+  "sequence": [
+    {
+      "title": "a_first_letter",
+      "image": "a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones, standing in a vast library of towering bookshelves labeled A to Z, sunlight streaming through dust motes, holding the letter 'A' tile, whimsical atmosphere, 16:9 key visual composition",
+      "motion": "He looks up at the shelf labels with awe, turning slowly to face the camera. Dust motes dance in the sunbeams. Warm, magical lighting. LTX style, 4 seconds, no cuts."
+    },
+    {
+      "title": "m_middle_journey",
+      "image": "a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones, walking down a central aisle of the library, surrounded by shelves labeled M through S, holding the letter 'M' tile, focus on his determined expression",
+      "motion": "He walks steadily down the aisle, passing stacks of books. His satchel swings slightly with each step. Camera tracks forward smoothly. Natural movement, 4 seconds, no cuts."
+    },
+    {
+      "title": "p_power_section",
+      "image": "a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones, climbing a spiral staircase in the library, holding the letter 'P' tile, reaching towards a high shelf labeled P",
+      "motion": "He climbs the spiral stairs, reaching up to grab a book. The camera tilts upward following his movement. Dynamic angle, dust swirling around him. 4 seconds, no cuts."
+    },
+    {
+      "title": "z_final_page",
+      "image": "a curious young explorer boy with messy brown hair and freckles, wearing a beige leather vest over a white shirt, khaki cargo pants, carrying a satchel filled with wooden letter tiles, cinematic lighting, highly detailed, clean lineart, earthy tones, standing at the very end of the aisle where shelves are labeled Z, holding the final 'Z' tile, smiling broadly at the completed set",
+      "motion": "He holds up the final 'Z' tile triumphantly. Sunlight flares into the lens from behind him. He bows slightly to the camera. Cinematic closing shot, 4 seconds, no cuts."
+    }
+  ],
+  "topic": "a to z",
+  "requirements": "2 videos"
+}
