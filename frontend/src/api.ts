@@ -1,4 +1,4 @@
-import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind } from "./types";
+import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset } from "./types";
 
 const get = async <T,>(url: string) => (await fetch(url)).json() as Promise<T>;
 
@@ -35,9 +35,14 @@ export const fmtDateTime = (ms: number) => {
 export const getScenario = (name: string) => get<{ name: string; config: Scenario }>(`/api/scenario/${name}`);
 
 // Saved versions of a scenario (every explicit Save = a new version in the DB).
+// The server attaches a delta summary per version: v1 lists all scenes (full
+// snapshot), v2+ lists only what changed vs the previous version, e.g.
+// { refChanged: false, beats: [3] } — so the UI never shows v2 as if all
+// scenes were regenerated.
 export interface ScenarioVersionInfo {
   version: number;
   created_at: string;
+  changes?: { refChanged: boolean; beats: number[] } | null;
 }
 export const listVersions = (name: string) =>
   get<ScenarioVersionInfo[]>(`/api/scenario/${name}/versions`);
@@ -57,7 +62,7 @@ export const saveScenario = (name: string, config: Scenario) =>
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
-  }).then((r) => r.json());
+  }).then((r) => r.json() as Promise<{ ok: boolean; version: number | null; project_id: number | null; unchanged?: boolean }>);
 export const deleteScenario = (name: string) =>
   fetch(`/api/scenario/${name}`, { method: "DELETE" }).then((r) =>
     r.ok ? r.json() : r.json().then((d) => Promise.reject(new Error(d.error || `HTTP ${r.status}`)))
@@ -168,3 +173,14 @@ export function tailRun(
 }
 
 export const outputUrl = (scenario: string, file: string) => `/outputs/${scenario}/${file}`;
+
+// Narrow project_assets rows for a project (one row per asset:
+// REFERENCE beat 0, KEYFRAME/VIDEO per beat). Version defaults to latest.
+// Versions are DELTA-based (v2 may store only the changed beat), so this
+// returns the EFFECTIVE state by default — the latest applicable row per
+// (beat, asset type) with version <= requested — and the UI keeps showing
+// all scenes. Pass mode "exact" for the raw delta rows stored at a version.
+export const listProjectAssets = (name: string, version?: number, mode?: "effective" | "exact") =>
+  get<ProjectAsset[]>(
+    `/api/project/${name}/assets${version != null ? `?version=${version}` : ""}${mode === "exact" ? (version != null ? "&mode=exact" : "?mode=exact") : ""}`
+  );
