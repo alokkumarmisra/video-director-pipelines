@@ -14,6 +14,10 @@ interface Props {
   // active (the ComfyUI queue is serial).
   onGenerateRef: (count: number) => void;
   refBusy?: boolean;
+  // True while a reference-only regen run for THIS scenario is active.
+  // refBusy disables the button during any run (queue is serial);
+  // refGenerating spins it — other runs must not light up this button.
+  refGenerating?: boolean;
   // Reference gallery rendered just below the Generate Reference button.
   referenceSlot?: ReactNode;
 }
@@ -24,7 +28,7 @@ const slug = (s: string) =>
 // Editable prompt JSON: reference prompt, duration, and the keyframe beats.
 // Nothing saves automatically — every explicit Save stores ALL fields
 // (topic, requirements, prompts, camera) as a new version in the database.
-export default function ScenarioEditor({ name, config, isDraft, onSave, onGenerateRef, refBusy, referenceSlot }: Props) {
+export default function ScenarioEditor({ name, config, isDraft, onSave, onGenerateRef, refBusy, refGenerating, referenceSlot }: Props) {
   const [cfg, setCfg] = useState<Scenario>(config);
   const [pristine, setPristine] = useState<Scenario>(config);
   const [saved, setSaved] = useState(false);
@@ -183,7 +187,10 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
               <option value="latest">Latest{versions[0] ? ` (v${versions[0].version})` : ""}</option>
               {versions.map((v) => (
                 <option key={v.version} value={v.version}>
-                  v{v.version}
+                  v{v.version}{v.changes ? ` — ${[
+                    v.changes.refChanged ? "ref" : "",
+                    ...v.changes.beats.map((b) => `beat ${b}`),
+                  ].filter(Boolean).join(", ") || "no asset change"}` : ""}
                 </option>
               ))}
             </select>
@@ -210,7 +217,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
           disabled={saving || (!isDraft && !dirty)}
           title={isDraft ? "Save everything as v1 of this project" : dirty ? "Save everything as a new version of this project" : "No changes — nothing to save"}
         >
-          <IconCheck size={13} />
+          {saving ? <Spinner size={13} /> : <IconCheck size={13} />}
           {saving ? "Saving…" : "Save Scenario"}
         </button>
       </div>
@@ -253,8 +260,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
             ? "Save scenario first — generation reads the saved prompt"
             : `Generate ${refCount} reference image(s) from the prompt above (each becomes a new version)`}
         >
-          {refBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
-          {refBusy ? "Generating…" : "Generate Reference"}
+          {refGenerating ? <Spinner size={13} /> : <IconSparkles size={13} />}
+          {refGenerating ? "Generating…" : "Generate Reference"}
         </button>
         <label className="gen-count" title="How many reference images to generate (1–8)">
           ×
