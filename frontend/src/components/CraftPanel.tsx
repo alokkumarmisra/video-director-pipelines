@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Scenario, ScenarioInfo } from "../types";
-import { fmtDate } from "../api";
+import { fmtDateTime } from "../api";
 import { IconSparkles, Spinner } from "./Icons";
 
 interface Props {
@@ -11,15 +11,31 @@ interface Props {
   scenarios: ScenarioInfo[];
   selected: string;
   onSelect: (name: string) => void;
+  // What the selected scenario/draft was crafted from — the boxes fill with
+  // these on selection (key "saved:<name>"), clear on "(new)".
+  contextKey: string;
+  contextTopic: string;
+  contextReqs: string;
 }
 
 // High-level topic + requirements -> local LLM crafts a scenario JSON.
-export default function CraftPanel({ onCrafted, scenarios, selected, onSelect }: Props) {
+export default function CraftPanel({ onCrafted, scenarios, selected, onSelect, contextKey, contextTopic, contextReqs }: Props) {
   const [topic, setTopic] = useState("");
   const [reqs, setReqs] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
+
+  // Show what the selected scenario was crafted from. Local typing never
+  // retriggers this (props only change on selection / loaded data) — and
+  // drafts are skipped so the post-craft clear stays cleared.
+  useEffect(() => {
+    if (!contextKey.startsWith("saved:") && contextKey !== "new") return;
+    setTopic(contextTopic);
+    setReqs(contextReqs);
+  }, [contextKey, contextTopic, contextReqs]);
+
+  const selInfo = scenarios.find((s) => s.name === selected);
 
   const craft = async () => {
     setBusy(true);
@@ -51,7 +67,7 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect }:
       <div className="card-head">
         <h2>
           <span className="head-icon"><IconSparkles size={15} /></span>
-          Craft scenario
+          AI Craft
         </h2>
         {busy && (
           <span className="pill running">
@@ -61,7 +77,17 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect }:
         )}
       </div>
 
-      <label>Workflow</label>
+      <div className="workflow-head">
+        <label>Workflow</label>
+        {selInfo && (
+          <span
+            className="muted workflow-dt"
+            title="Last edited"
+          >
+            {fmtDateTime(selInfo.mtimeMs)}
+          </span>
+        )}
+      </div>
       <select
         value={selected}
         onChange={(e) => onSelect(e.target.value)}
@@ -71,7 +97,7 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect }:
         <option value="">(new)</option>
         {scenarios.map((s) => (
           <option key={s.name} value={s.name}>
-            {s.name} — {fmtDate(s.mtimeMs)}
+            {s.name}
           </option>
         ))}
       </select>

@@ -1,14 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
-import { craftBeat, getScenario, listVersions, getVersion } from "../api";
-import { IconCheck, IconPlus, IconX, IconLayers, IconSparkles, Spinner } from "./Icons";
+import { craftBeat, getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi } from "../api";
+import { IconCheck, IconPlus, IconX, IconLayers, IconSparkles, IconTrash, Spinner } from "./Icons";
 
 interface Props {
   name: string;
   config: Scenario;
   isDraft: boolean;
   onSave: (cfg: Scenario) => Promise<void>;
+  // Batch-generate reference images from the reference prompt (needs a saved
+  // scenario — generation reads prompts/<name>.json). Disabled while a run is
+  // active (the ComfyUI queue is serial).
+  onGenerateRef: (count: number) => void;
+  refBusy?: boolean;
+  // Reference gallery rendered just below the Generate Reference button.
+  referenceSlot?: ReactNode;
 }
 
 const slug = (s: string) =>
@@ -17,17 +24,22 @@ const slug = (s: string) =>
 // Editable prompt JSON: reference prompt, duration, and the keyframe beats.
 // Nothing saves automatically — every explicit Save stores ALL fields
 // (topic, requirements, prompts, camera) as a new version in the database.
-export default function ScenarioEditor({ name, config, isDraft, onSave }: Props) {
+export default function ScenarioEditor({ name, config, isDraft, onSave, onGenerateRef, refBusy, referenceSlot }: Props) {
   const [cfg, setCfg] = useState<Scenario>(config);
+  const [pristine, setPristine] = useState<Scenario>(config);
   const [saved, setSaved] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Dirty = actually different from the last saved/loaded state (typing then
+  // reverting counts as clean). Save stays disabled while clean.
+  const dirty = JSON.stringify(cfg) !== JSON.stringify(pristine);
   const [error, setError] = useState("");
   const [genBusy, setGenBusy] = useState(false);
   const [genError, setGenError] = useState("");
   const [genCount, setGenCount] = useState(1);
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
   const [viewVersion, setViewVersion] = useState<number | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
+  const [refCount, setRefCount] = useState(3);
 
   const loadVersions = async () => {
     try {
@@ -42,10 +54,24 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
     if (!isDraft) void loadVersions();
   }, [isDraft, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Resync when a different workflow is picked from the dropdown (parent
+  // passes a new name/config). Internal edits (set/setBeat) don't change
+  // the prop identity, so typing is never wiped by this.
+  useEffect(() => {
+    setCfg(config);
+    setPristine(config);
+    setSaved(false);
+    setError("");
+    setViewVersion(null);
+  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setCfg(config);
+    setPristine(config);
+  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (patch: Partial<Scenario>) => {
     setCfg({ ...cfg, ...patch });
     setSaved(false);
-    setDirty(true);
   };
   const setBeat = (i: number, patch: Partial<Scenario["sequence"][number]>) => {
     const sequence = cfg.sequence.map((b, j) => (j === i ? { ...b, ...patch } : b));
@@ -86,7 +112,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
     try {
       await onSave(next);
       setSaved(true);
-      setDirty(false);
+      setPristine(next);
       setViewVersion(null);
       if (!isDraft) await loadVersions();
     } catch (e) {
@@ -96,15 +122,43 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
     }
   };
 
+  // Delete the viewed version (or latest when viewing latest). Deleting the
+  // latest rolls the current config back to the previous version; reload it.
+  const removeVersion = async () => {
+    const target = viewVersion ?? versions[0]?.version;
+    if (target == null || delBusy) return;
+    const isLatest = target === versions[0]?.version;
+    if (!window.confirm(
+      `Delete v${target} of "${name}"?` +
+      (dirty ? " Your unsaved edits will be lost." : "") +
+      (isLatest ? " Current config rolls back to the previous version." : "")
+    )) return;
+    setDelBusy(true);
+    setError("");
+    try {
+      await deleteVersionApi(name, target);
+      const r = await getScenario(name);
+      setCfg(r.config);
+      setPristine(r.config);
+      setViewVersion(null);
+      setSaved(true);
+      await loadVersions();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDelBusy(false);
+    }
+  };
+
   const switchVersion = async (v: number | null) => {
     if (dirty && !window.confirm("Discard unsaved edits and switch version?")) return;
     setError("");
     try {
       const r = v === null ? await getScenario(name) : await getVersion(name, v);
       setCfg(r.config);
+      setPristine(r.config);
       setViewVersion(v);
       setSaved(true);
-      setDirty(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -115,7 +169,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
       <div className="card-head">
         <h2>
           <span className="head-icon"><IconLayers size={15} /></span>
-          Scenario
+          Scenario Editor
           {isDraft && <span className="pill warn">draft · unsaved</span>}
         </h2>
         <span className="spacer" />
@@ -135,6 +189,17 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
             </select>
           </label>
         )}
+        {!isDraft && versions.length > 0 && (
+          <button
+            className="icon-btn danger"
+            title={`Delete ${viewVersion === null ? "latest" : `v${viewVersion}`} (config only — generated outputs are kept)`}
+            aria-label="Delete selected version"
+            onClick={() => void removeVersion()}
+            disabled={delBusy}
+          >
+            {delBusy ? <Spinner size={13} /> : <IconTrash size={13} />}
+          </button>
+        )}
         {viewVersion !== null && versions.length > 0 && versions[0] && viewVersion !== versions[0].version && (
           <span className="pill warn">viewing v{viewVersion}</span>
         )}
@@ -142,8 +207,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
         <button
           className="primary"
           onClick={() => doSave()}
-          disabled={saving}
-          title={isDraft ? "Save everything as v1 of this project" : "Save everything as a new version of this project"}
+          disabled={saving || (!isDraft && !dirty)}
+          title={isDraft ? "Save everything as v1 of this project" : dirty ? "Save everything as a new version of this project" : "No changes — nothing to save"}
         >
           <IconCheck size={13} />
           {saving ? "Saving…" : "Save Scenario"}
@@ -179,6 +244,36 @@ export default function ScenarioEditor({ name, config, isDraft, onSave }: Props)
         value={cfg.referencePrompt}
         onChange={(e) => set({ referencePrompt: e.target.value })}
       />
+      <div className="row" style={{ marginTop: 8 }}>
+        <button
+          className="ghost"
+          onClick={() => onGenerateRef(refCount)}
+          disabled={refBusy || saving || isDraft}
+          title={isDraft
+            ? "Save scenario first — generation reads the saved prompt"
+            : `Generate ${refCount} reference image(s) from the prompt above (each becomes a new version)`}
+        >
+          {refBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
+          {refBusy ? "Generating…" : "Generate Reference"}
+        </button>
+        <label className="gen-count" title="How many reference images to generate (1–8)">
+          ×
+          <input
+            type="number"
+            min={1}
+            max={8}
+            value={refCount}
+            disabled={refBusy}
+            onChange={(e) => setRefCount(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
+          />
+        </label>
+      </div>
+      {isDraft ? (
+        <p className="hint">Save the scenario first — reference generation runs from the saved prompt.</p>
+      ) : (
+        <p className="hint">Each image becomes a new reference version — pick the best one below.</p>
+      )}
+      {referenceSlot}
       <label>Clip duration (s)</label>
       <input
         type="number"

@@ -219,6 +219,12 @@ export const IconMoon = (p: P) => (
   </svg>
 );
 
+export const IconExpand = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+  </svg>
+);
+
 export const Spinner = ({ size = 14, ...props }: P) => (
   <svg
     width={size}

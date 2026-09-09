@@ -26,6 +26,12 @@ export const fmtDate = (ms: number) => {
   const d = new Date(ms);
   return `${String(d.getDate()).padStart(2, "0")}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
 };
+// 06-Sep-2026 14:04 (local time)
+export const fmtDateTime = (ms: number) => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 export const getScenario = (name: string) => get<{ name: string; config: Scenario }>(`/api/scenario/${name}`);
 
 // Saved versions of a scenario (every explicit Save = a new version in the DB).
@@ -38,6 +44,14 @@ export const listVersions = (name: string) =>
 export const getVersion = (name: string, version: number) =>
   get<{ name: string; version: number; config: Scenario; created_at: string }>(
     `/api/scenario/${name}/versions/${version}`);
+// Delete one saved version (prompt config). Deleting the latest rolls the
+// current config back to the previous version; outputs are untouched.
+export const deleteVersion = (name: string, version: number) =>
+  fetch(`/api/scenario/${name}/versions/${version}`, { method: "DELETE" }).then((r) =>
+    r.ok
+      ? r.json() as Promise<{ ok: boolean; deleted: number; latest: number | null }>
+      : r.json().then((d) => Promise.reject(new Error(d.error || "delete version failed")))
+  );
 export const saveScenario = (name: string, config: Scenario) =>
   fetch(`/api/scenario/${name}`, {
     method: "PUT",
@@ -63,7 +77,7 @@ export interface RegenSpec {
   index?: number;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; regen?: RegenSpec | null } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; regen?: RegenSpec | null; count?: number } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -72,8 +86,9 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       stitch: !!opts.stitch,
       engine: opts.engine || "ltx",
       regen: opts.regen || null,
+      count: opts.count ?? 1,
     }),
-  }).then((r) => r.json() as Promise<{ id: string }>);
+  }).then((r) => r.json() as Promise<{ id: string; error?: string }>);
 
 // Output dir for a scenario+engine (Wan runs write to outputs/<scenario>_wan/).
 export const outScenario = (scenario: string, engine: Engine) =>
@@ -141,6 +156,14 @@ export function tailRun(
   es.onmessage = (e) => onChunk(JSON.parse(e.data).line);
   if (onAsset) es.addEventListener("asset", (e) => onAsset(JSON.parse(e.data) as AssetEvent));
   es.addEventListener("close", (e) => { onDone(JSON.parse(e.data).status); es.close(); });
+  es.onerror = () => {
+    // Dead stream (e.g. backend restarted mid-run → unknown id): never retry
+    // forever on "running" — surface it as an error instead.
+    if (es.readyState === EventSource.CLOSED) {
+      try { onChunk("\n[log stream lost — backend restarted?]\n"); onDone("error"); }
+      finally { es.close(); }
+    }
+  };
   return () => es.close();
 }
 
