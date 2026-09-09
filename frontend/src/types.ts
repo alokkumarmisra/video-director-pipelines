@@ -69,3 +69,32 @@ export interface OutputsInfo {
 }
 
 export type AssetKind = "ref" | "keyframe" | "clip";
+
+// One row of the narrow public.project_assets table (one row per asset).
+export type ProjectAssetType = "REFERENCE" | "IMAGE" | "KEYFRAME" | "VIDEO";
+export type ProjectAssetStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "SKIPPED";
+
+export interface ProjectAsset {
+  id: number;
+  project_id: number;
+  version: number;
+  scene_id: number | null;
+  beat_index: number;
+  beat_title: string | null;
+  asset_type: ProjectAssetType;
+  status: ProjectAssetStatus;
+  prompt: string | null;
+  negative_prompt: string | null;
+  file_path: string | null;
+  model: string | null;
+  workflow: string | null;
+  seed: number | null;
+  attempts: number;
+  max_retries: number;
+  error_message: string | null;
+  metadata: Record<string, unknown> | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

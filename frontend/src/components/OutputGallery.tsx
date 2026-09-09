@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
-import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand } from "./Icons";
+import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 
 interface Props {
@@ -17,6 +17,9 @@ interface Props {
   onStitch?: () => void; // ask the run panel to re-stitch the final cut
   onRegen?: (kind: AssetKind, index: number | null) => void;
   onUploaded?: () => void; // a ref upload landed — ask the app to re-list outputs
+  // Called by the "view other engine's outputs" button (shown when this
+  // engine dir is empty but the sibling engine dir has renders).
+  onEngineSwitch?: () => void;
 }
 
 type RefMode = "generate" | "upload";
@@ -30,7 +33,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded, onEngineSwitch }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {} });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {} });
@@ -95,6 +98,25 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       }).catch((e) => setError(String(e.message || e)));
     }
   }, [scenario, refreshKey, assets]);
+
+  // Sibling engine dir (LTX <-> Wan): when THIS dir is empty, check whether
+  // the project's renders live under the other engine, so the empty state
+  // can point there instead of looking like nothing was ever generated.
+  const isWan = scenario.endsWith("_wan");
+  const sibScenario = isWan ? scenario.slice(0, -4) : `${scenario}_wan`;
+  const sibLabel = isWan ? "LTX 2.5" : "Wan 2.1";
+  const [sibCount, setSibCount] = useState<number | null>(null);
+  useEffect(() => {
+    setSibCount(null);
+    if (assets || bare || section === "reference" || !scenario) return;
+    if (files.length > 0) return; // own dir has renders — no need to look
+    let cancelled = false;
+    listOutputs(sibScenario).then((r) => {
+      if (cancelled) return;
+      setSibCount((r.files || []).filter((f) => /\.(png|mp4)$/i.test(f)).length);
+    }).catch(() => { if (!cancelled) setSibCount(null); });
+    return () => { cancelled = true; };
+  }, [scenario, sibScenario, files, assets, bare, section]);
 
   // Live-run view: no versioning UI (versions are created by the run itself).
   if (assets) {
@@ -199,6 +221,9 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     }
     return null; // everything exists — the run is re-stitching the final cut
   })();
+  // The Stitch final button's own run: every asset already has a version,
+  // so no asset chip is blinking — the button itself spins instead.
+  const stitching = generating && genTarget === null;
 
   const pickMain = async (kind: "ref" | "keyframe" | "clip", index: number | null, file: string) => {
     try {
@@ -300,10 +325,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           {hasClips && (
             <button
               onClick={doStitch}
-              title="Concatenate the selected main clip versions into the final cut"
+              disabled={generating}
+              title={stitching ? "Stitching the final cut…" : "Concatenate the selected main clip versions into the final cut"}
             >
-              <IconScissors size={12} />
-              Stitch final
+              {stitching ? <Spinner size={12} /> : <IconScissors size={12} />}
+              {stitching ? "Stitching…" : "Stitch final"}
             </button>
           )}
           {scenario && (
@@ -429,6 +455,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     onSelect={(f) => pickMain("keyframe", n, f)}
                     onRegen={() => onRegen?.("keyframe", n)}
                     generating={genTarget === `kf:${n}`}
+                    busy={generating}
                   />
                   <div className="video-frame">
                     {clipMain
@@ -448,6 +475,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     onSelect={(f) => pickMain("clip", n, f)}
                     onRegen={() => onRegen?.("clip", n)}
                     generating={genTarget === `clip:${n}`}
+                    busy={generating}
                   />
                 </div>
               );
@@ -482,6 +510,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               ? "Start a run to see the reference, keyframes, and final cut land here."
               : "Select a scenario to view its outputs."}
           </span>
+          {sibCount != null && sibCount > 0 && (
+            <>
+              <span className="hint">
+                This project has {sibCount} {sibLabel} render{sibCount === 1 ? "" : "s"} — switch engine to view them.
+              </span>
+              {onEngineSwitch && (
+                <button className="ghost" onClick={onEngineSwitch}>
+                  View {sibLabel} outputs
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
     </Tag>
@@ -516,13 +556,14 @@ function GenChip({ v }: { v: number }) {
 }
 
 // Version chips (v1, v2, …) + regenerate button for one versioned asset.
-function VersionRow({ versions, main, kind, onSelect, onRegen, generating }: {
+function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy }: {
   versions: AssetVersion[];
   main: string | null;
   kind: "image" | "video";
   onSelect: (file: string) => void;
   onRegen?: () => void;
   generating?: boolean; // a run is producing the next version right now
+  busy?: boolean; // a run is active in this output dir — regen would be ignored
 }) {
   if (versions.length === 0) return null;
   const nextV = versions[versions.length - 1].v + 1;
@@ -548,11 +589,12 @@ function VersionRow({ versions, main, kind, onSelect, onRegen, generating }: {
       {onRegen && (
         <button
           className="vchip regen"
-          title={`Regenerate ${kind} — keeps previous versions`}
+          title={busy ? (generating ? `Regenerating ${kind}…` : "A run is already in progress") : `Regenerate ${kind} — keeps previous versions`}
           onClick={onRegen}
+          disabled={busy}
         >
-          <IconRefresh size={10} />
-          regen
+          {generating ? <Spinner size={10} /> : <IconRefresh size={10} />}
+          {generating ? "generating…" : "regen"}
         </button>
       )}
     </div>

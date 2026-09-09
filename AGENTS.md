@@ -63,9 +63,11 @@ Serve the built UI + API: `npm install && npm run build` then `npm run serve`
 proxies `/api` + `/outputs` to :8790). `build` = `tsc && vite build`.
 
 Gotchas:
-- **Scenarios live in SQLite** `data/scenarios.sqlite` (canonical for the UI), **and** every
-  save also writes `prompts/<name>.json` so the CLI runners keep working. Editing the JSON
-  directly won't update the UI list unless you also touch the DB — prefer the UI Save route.
+- **Scenarios live in Postgres** (`scenarios` table, canonical for the UI) by default —
+  SQLite (`data/scenarios.sqlite`) is only used when `USE_SQLITE=true` is set in root
+  `.env` (then SQLite is canonical and Postgres only mirrors saves). **Every
+  save also writes `prompts/<name>.json`** so the CLI runners keep working (in either
+  mode). Editing the JSON directly won't update the UI list — prefer the UI Save route.
 - Auth is session-cookie based. Defaults `LOGIN_USER`/`LOGIN_PASS` = `admin`/`admin` from
   env — change these for anything non-local (server.mjs already forces login for `/api/*`
   and `/outputs/*`).

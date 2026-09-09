@@ -66,7 +66,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
-  const [draft, setDraft] = useState<{ name: string; config: Scenario } | null>(null);
+  const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
   const [engine, setEngine] = useState<Engine>("ltx");
   const [comfy, setComfy] = useState<ComfyStatus | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -164,8 +164,10 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   };
 
   // Craft renders below as an unsaved draft (topic + requirements included).
-  // Explicit "Save scenario" persists everything as v1; later saves add versions.
-  const handleCrafted = (n: string, c: Scenario, meta: { topic: string; requirements: string }) => {
+  // The project row is already saved in the DB at craft time (with its
+  // project_id); explicit "Save scenario" persists everything as v1 with
+  // project_assets rows linked by that same project_id.
+  const handleCrafted = (n: string, c: Scenario, meta: { topic: string; requirements: string }, project_id?: number | null) => {
     const full: Scenario = {
       ...c,
       ...(meta.topic ? { topic: meta.topic } : {}),
@@ -173,7 +175,10 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     };
     let target = n;
     for (let i = 2; scenarios.some((s) => s.name === target); i++) target = `${n}_${i}`;
-    setDraft({ name: target, config: full });
+    // Server already saved the project under `n` (unique there); if the
+    // sidebar needed a _2 suffix, the Save below creates that project row —
+    // either way project_assets always carry the right project_id.
+    setDraft({ name: target, config: full, project_id: target === n ? project_id ?? null : null });
   };
 
   const editor = draft
@@ -183,6 +188,12 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const comfyQueue = comfy?.queue
     ? (comfy.queue.queue_running?.length ?? 0) + (comfy.queue.queue_pending?.length ?? 0)
     : 0;
+
+  // True only while a reference-only regen run for the shown scenario is
+  // active — the Generate Reference button spins on exactly this, not on
+  // every unrelated run (full Generate, stitch, beat regen, …).
+  const refGenerating =
+    runActive && regenTarget?.kind === "ref" && !!name && !draft && runScenario === name;
 
   return (
     <div className="app">
@@ -231,7 +242,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         {sidebarOpen && (
         <aside className="sidebar">
           <div className="sidebar-head">
-            <span>Scenario Library</span>
+            <span>Projects</span>
             <span className="muted" style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
               {scenarios.length}
             </span>
@@ -292,6 +303,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               isDraft={!!draft}
               onSave={handleSave}
               refBusy={runActive}
+              refGenerating={refGenerating}
               onGenerateRef={(count) =>
                 !runActive && !draft && setPendingRun({ nonce: Date.now(), regen: { kind: "ref" }, count })}
               referenceSlot={!draft && name ? (
@@ -324,12 +336,13 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             engine={engine}
             onEngine={setEngine}
             onDone={refresh}
-            onStatus={(s, sc) => {
+            onStatus={(s, sc, regen) => {
               setRunActive(s === "running");
               setRunScenario(s === "running" ? sc : null);
-              // While a regen run is active, the gallery blinks the exact asset
-              // being regenerated (a full run has no regen target).
-              setRegenTarget(s === "running" ? (pendingRun?.regen ?? null) : null);
+              // The regen target comes from the run that actually started
+              // (reported by RunPanel) — never from a stale pendingRun, so a
+              // full Generate run is never mislabelled as a ref/beat regen.
+              setRegenTarget(s === "running" ? regen : null);
             }}
             pendingRun={pendingRun}
           />
@@ -345,6 +358,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             onStitch={() => !runActive && setPendingRun({ nonce: Date.now(), stitch: true })}
             onRegen={handleRegen}
             onUploaded={refresh}
+            onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
           />
         </div>
       </div>
