@@ -1,20 +1,20 @@
 {
-  "description": "Two video sequences showcasing a character from start 'A' to end 'Z', with each letter represented in the title.",
-  "character": "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors",
-  "referencePrompt": "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, standing on a hilltop overlooking a coastal town at golden hour, wind in her hair, dramatic cumulus clouds, lens flare, 16:9 key visual composition",
-  "duration": 3,
+  "description": "Exploring the alphabet from A to Z through various iconic symbols and scenes.",
+  "character": "An illustrated alphabet character",
+  "referencePrompt": "Cinematic key-visual of an illustrated alphabet character",
+  "duration": 4,
   "sequence": [
     {
-      "title": "a_beginning",
-      "image": "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, standing at the entrance of an ancient library filled with towering bookshelves, sunbeams illuminating her silhouette against the vast stacks of books",
-      "motion": "She stands in awe as she enters the grand, illuminated library. Sunlight cascades through the tall windows, casting a warm glow over the scene. The camera slowly pans up to reveal the vast and mysterious atmosphere of the library. Anime style, 3 seconds, no cuts."
+      "title": "alphabet_a_antelope",
+      "image": "A is for Antelope, a majestic creature in a vast African savannah under a clear blue sky.",
+      "motion": "The camera pans slowly from left to right, showcasing the wide-open landscape of the African savannah with the antelope standing majestically."
     },
     {
-      "title": "z_end",
-      "image": "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, standing on the edge of a cliff overlooking the vast ocean at sunset, her silhouette against the horizon",
-      "motion": "She stands alone, gazing out at the endless sea as the sun sets behind her. The sky is painted in hues of orange and pink. Her presence feels small yet significant in this grand, natural setting. Anime style, 3 seconds, no cuts."
+      "title": "alphabet_b_balloon",
+      "image": "B is for Balloon, floating high above a bustling city square filled with people and street performers.",
+      "motion": "The camera captures the vibrant scene as the balloon rises gently into the sky, reflecting the joy of the festive atmosphere below."
     }
   ],
   "topic": "a to z",
-  "requirements": "2 videos only"
+  "requirements": "generate only 2 video\n"
 }

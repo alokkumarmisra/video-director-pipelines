@@ -4,7 +4,7 @@ import { fmtDateTime } from "../api";
 import { IconSparkles, Spinner } from "./Icons";
 
 interface Props {
-  onCrafted: (name: string, config: Scenario, meta: { topic: string; requirements: string }) => void;
+  onCrafted: (name: string, config: Scenario, meta: { topic: string; requirements: string }, project_id?: number | null) => void;
   // Existing workflow (scenario) JSONs + which one is selected, so the user
   // can switch to another workflow (or clear the selection) without
   // refreshing the page.
@@ -51,7 +51,7 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect, c
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-      onCrafted(d.name, d.config, { topic, requirements: reqs });
+      onCrafted(d.name, d.config, { topic, requirements: reqs }, d.project_id ?? null);
       setTopic("");
       setReqs("");
     } catch (e) {

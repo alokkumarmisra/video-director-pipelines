@@ -10,7 +10,10 @@ interface Props {
   engine: Engine;
   onEngine: (e: Engine) => void;
   onDone: () => void;
-  onStatus?: (s: RunStatus, scenario: string) => void;
+  // Status reports the regen spec of the run that is actually active
+  // (null for full runs) — so the gallery/editor can spin exactly the
+  // button that triggered it instead of every busy-looking button.
+  onStatus?: (s: RunStatus, scenario: string, regen: RegenSpec | null) => void;
   // External run trigger (Stitch final / Regenerate from the output gallery /
   // Generate Reference from the scenario editor; count batches ref regens).
   pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null;
@@ -23,10 +26,19 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>("idle");
   // Scenario this panel's run is generating (captured at start, so it stays
-  // correct even if the user switches scenarios mid-run).
+  // correct even if the user switches scenarios mid-run). runRegen is the
+  // trigger of the active run (null = full run) — reported via onStatus so
+  // App never has to guess from a stale pendingRun.
   const [runScenario, setRunScenario] = useState<string | null>(null);
+  const [runRegen, setRunRegen] = useState<RegenSpec | null>(null);
+  // Which local button started the POST (null = triggered externally via
+  // pendingRun, or idle). Shows the spinner on the clicked button during
+  // the startRun round-trip, before status flips to "running".
+  const [starting, setStarting] = useState<"run" | "stitch" | null>(null);
+  const [stopping, setStopping] = useState(false);
 
-  useEffect(() => { onStatus?.(status, runScenario ?? scenario); }, [status, onStatus, runScenario, scenario]);
+  useEffect(() => { onStatus?.(status, runScenario ?? scenario, status === "running" ? runRegen : null); }, [status, onStatus, runScenario, runRegen, scenario]);
+  useEffect(() => { if (status !== "running") setStopping(false); }, [status]);
   const [log, setLog] = useState("");
   const [assets, setAssets] = useState<AssetEvent[]>([]);
   const closeTail = useRef<() => void>(() => {});
@@ -37,14 +49,16 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     boxRef.current?.scrollTo(0, boxRef.current.scrollHeight);
   }, [log]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1) => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external") => {
     if (!scenario) return;
+    if (which !== "external") setStarting(which);
     try {
       const res = await startRun(scenario, { stitch, regen, engine, count });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
       setRunScenario(scenario);
+      setRunRegen(regen);
       setStatus("running");
       setLog("");
       setAssets([]);
@@ -58,6 +72,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     } catch (e) {
       setStatus("error");
       setLog(`run failed to start: ${e instanceof Error ? e.message : String(e)}\n`);
+    } finally {
+      setStarting(null);
     }
   };
 
@@ -120,21 +136,29 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       )}
 
       <div className="row">
-        <button className="primary" onClick={() => begin(false)} disabled={status === "running" || !scenario}>
-          <IconPlay size={12} />
-          Generate
+        <button className="primary" onClick={() => begin(false, null, 1, "run")} disabled={status === "running" || starting !== null || !scenario}>
+          {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
+          {starting === "run" ? "Starting…" : "Generate"}
         </button>
-        <button onClick={() => begin(true)} disabled={status === "running" || !scenario}>
-          <IconScissors size={12} />
-          Stitch only
+        <button onClick={() => begin(true, null, 1, "stitch")} disabled={status === "running" || starting !== null || !scenario}>
+          {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
+          {starting === "stitch" ? "Starting…" : "Stitch only"}
         </button>
         <button
           className="danger"
-          disabled={status !== "running" || !runId}
-          onClick={() => runId && killRun(runId)}
+          disabled={status !== "running" || !runId || stopping}
+          onClick={async () => {
+            if (!runId || stopping) return;
+            setStopping(true);
+            try {
+              await killRun(runId);
+            } catch {
+              setStopping(false);
+            }
+          }}
         >
-          <IconStop size={12} />
-          Stop
+          {stopping ? <Spinner size={12} /> : <IconStop size={12} />}
+          {stopping ? "Stopping…" : "Stop"}
         </button>
       </div>
       {!scenario && (
