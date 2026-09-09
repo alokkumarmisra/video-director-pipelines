@@ -11,8 +11,9 @@ interface Props {
   onEngine: (e: Engine) => void;
   onDone: () => void;
   onStatus?: (s: RunStatus, scenario: string) => void;
-  // External run trigger (Stitch final / Regenerate from the output gallery).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null } | null;
+  // External run trigger (Stitch final / Regenerate from the output gallery /
+  // Generate Reference from the scenario editor; count batches ref regens).
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null;
 }
 
 const STAGES = ["Reference", "Keyframes", "Clips", "Stitch"];
@@ -36,10 +37,12 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     boxRef.current?.scrollTo(0, boxRef.current.scrollHeight);
   }, [log]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null) => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1) => {
     if (!scenario) return;
     try {
-      const { id } = await startRun(scenario, { stitch, regen, engine });
+      const res = await startRun(scenario, { stitch, regen, engine, count });
+      if (!res.id) throw new Error(res.error || "run rejected by server");
+      const { id } = res;
       setRunId(id);
       setRunScenario(scenario);
       setStatus("running");
@@ -58,9 +61,10 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     }
   };
 
-  // Runs triggered from the output gallery (stitch / regenerate).
+  // Runs triggered from the output gallery (stitch / regenerate) or the
+  // scenario editor (batch reference generation).
   useEffect(() => {
-    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null);
+    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 

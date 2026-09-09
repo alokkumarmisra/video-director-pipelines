@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
-import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX } from "./Icons";
+import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand } from "./Icons";
+import Lightbox, { type PreviewItem } from "./Lightbox";
 
 interface Props {
   scenario: string;
@@ -9,6 +10,9 @@ interface Props {
   assets?: AssetEvent[]; // live: assets finished so far in the current run
   bare?: boolean; // render without the outer card (for nesting in RunPanel)
   generatingScenario?: string | null; // output dir of the scenario currently being generated
+  // Which sections to render: everything, only Reference (embedded in the
+  // Scenario Editor under Generate Reference), or everything but Reference.
+  section?: "all" | "reference" | "rest";
   regenTarget?: { kind: AssetKind; index?: number } | null; // exact asset a regen run is producing
   onStitch?: () => void; // ask the run panel to re-stitch the final cut
   onRegen?: (kind: AssetKind, index: number | null) => void;
@@ -26,7 +30,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, regenTarget, onStitch, onRegen, onUploaded }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {} });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {} });
@@ -37,6 +41,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const [uploadError, setUploadError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<PreviewItem | null>(null);
 
   const readAsDataUrl = (f: File) =>
     new Promise<string>((resolve, reject) => {
@@ -81,6 +86,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     setVersions({ ref: [], beats: {} });
     setMains({ ref: null, beats: {} });
     setError("");
+    if (!scenario) return;
     if (!assets) {
       listOutputs(scenario).then((r) => {
         setFiles(r.files);
@@ -102,10 +108,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     return (
       <Tag className={bare ? undefined : "card"}>
         {bare && <div className="section-label">Generated so far</div>}
+        {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
         {final && (
           <>
             <div className="section-label">Final cut</div>
             <div className="video-frame">
+              <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, final), kind: "video", alt: "final cut" })} />
               <video controls src={outputUrl(scenario, final)} />
             </div>
           </>
@@ -114,6 +122,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <>
             <div className="section-label">Reference</div>
             <div className="img-frame">
+              <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, ref), kind: "image", alt: "reference" })} />
               <img src={outputUrl(scenario, ref)} alt="reference" loading="lazy" />
             </div>
           </>
@@ -125,10 +134,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               {keyframes.map((kf, i) => (
                 <div className="shot" key={kf}>
                   <div className="img-frame">
+                    <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf), kind: "image", alt: pretty(kf) })} />
                     <img src={outputUrl(scenario, kf)} alt={pretty(kf)} loading="lazy" />
                   </div>
                   {clips[i] && (
                     <div className="video-frame">
+                      <ExpandButton title={`Fullscreen preview of ${pretty(clips[i])}`} onOpen={() => setPreview({ src: outputUrl(scenario, clips[i]), kind: "video", alt: pretty(clips[i]) })} />
                       <video controls src={outputUrl(scenario, clips[i])} />
                     </div>
                   )}
@@ -203,12 +214,83 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
   const doStitch = () => onStitch?.();
 
+  // Shared Browse / Paste buttons (used in both upload layouts below).
+  const browseButton = (
+    <button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+      <IconUpload size={11} />
+      Browse
+    </button>
+  );
+  const pasteButton = (
+    <button
+      disabled={uploading}
+      title="Paste the clipboard image (or press Ctrl+V anywhere)"
+      onClick={async () => {
+        try {
+          const items = await navigator.clipboard.read();
+          const img = items.find((i) => i.types.includes("image/png")) || items.find((i) => i.types[0]?.startsWith("image/"));
+          if (img) {
+            const t = img.types.find((x) => x.startsWith("image/"))!;
+            const blob = await img.getType(t);
+            doUpload(new File([blob], "clipboard.png", { type: t }));
+          } else setUploadError("no image on the clipboard");
+        } catch {
+          setUploadError("clipboard unavailable — copy an image or use Ctrl+V");
+        }
+      }}
+    >
+      <IconClipboard size={11} />
+      Paste
+    </button>
+  );
+
+  // All reference versions in one go — each card header shows its version
+  // (V1, V2, …); clicking an image sets it as main. Shared by Generate and
+  // Upload modes.
+  const refNextV = versions.ref.length ? versions.ref[versions.ref.length - 1].v + 1 : 1;
+  const refCards = versions.ref.length || genTarget === "ref" ? (
+    <div className="ref-list">
+      {versions.ref.map((v) => (
+        <div className={`ref-card${mains.ref === v.file ? " on" : ""}`} key={v.file}>
+          <div
+            className="img-frame"
+            title={mains.ref === v.file ? `${v.file} (main)` : `Set ${v.file} as main`}
+          >
+            <span className="ver-badge">v{v.v}</span>
+            {mains.ref === v.file && <span className="main-badge"><IconCheck size={10} /> main</span>}
+            <ExpandButton title={`Fullscreen preview of ${v.file}`} onOpen={() => setPreview({ src: outputUrl(scenario, v.file), kind: "image", alt: `reference V${v.v}` })} />
+            <img
+              src={outputUrl(scenario, v.file)}
+              alt={`reference V${v.v}`}
+              loading="lazy"
+              onClick={() => pickMain("ref", null, v.file)}
+            />
+          </div>
+        </div>
+      ))}
+      {genTarget === "ref" && (
+        <div className="ref-card">
+          <div className="img-frame">
+            <span className="ver-badge">v{refNextV}</span>
+            <div className="frame-missing">
+              <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="img-frame">
+      <div className="frame-missing">no reference yet — generate above or switch to Upload</div>
+    </div>
+  );
+
   const mediaCount = beatNums.length + (refFile ? 1 : 0) + (final ? 1 : 0);
 
-  const Tag = bare ? "div" : "section";
+  const Tag = bare || section === "reference" ? "div" : "section";
   return (
-    <Tag className={bare ? undefined : "card"}>
-      {!bare && (
+    <Tag className={bare || section === "reference" ? (section === "reference" ? "ref-embed" : undefined) : "card"}>
+      {!bare && section !== "reference" && (
         <div className="card-head">
           <h2>
             <span className="head-icon"><IconFilm size={15} /></span>
@@ -233,8 +315,9 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       )}
 
       {error && <p className="hint err-text">{error}</p>}
+      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
-      {final && (
+      {section !== "reference" && final && (
         <>
           <div className="section-label">
             Final cut
@@ -245,11 +328,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             )}
           </div>
           <div className="video-frame">
+            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, final), kind: "video", alt: "final cut" })} />
             <video controls src={outputUrl(scenario, final)} />
           </div>
         </>
       )}
-      {scenario ? (
+      {scenario && section !== "rest" ? (
         <>
           <div className="section-label">
             Reference
@@ -264,29 +348,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               Upload
             </button>
           </div>
-          {refMode === "generate" ? (
-            <>
-              <div className="img-frame">
-                {refFile ? (
-                  <img src={outputUrl(scenario, refFile)} alt="reference" loading="lazy" />
-                ) : (
-                  <div className="frame-missing">
-                    {genTarget === "ref"
-                      ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
-                      : "no reference yet — start a run, or switch to Upload"}
-                  </div>
-                )}
-              </div>
-              <VersionRow
-                versions={versions.ref}
-                main={mains.ref}
-                kind="image"
-                onSelect={(f) => pickMain("ref", null, f)}
-                onRegen={() => onRegen?.("ref", null)}
-                generating={genTarget === "ref"}
-              />
-            </>
-          ) : (
+          {refMode === "generate" ? refCards : (
             <>
               <input
                 ref={fileInputRef}
@@ -310,55 +372,36 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 }}
               >
                 {refFile ? (
-                  <img src={outputUrl(scenario, refFile)} alt="reference" loading="lazy" />
-                ) : (
-                  <div className="frame-missing">
-                    <span className="gen-flag"><span className="dot pulse" /> {uploading ? "uploading…" : genTarget === "ref" ? "generating…" : "no reference yet"}</span>
+                  <div className="upload-side">
+                    <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, refFile), kind: "image", alt: "reference" })} />
+                    <img src={outputUrl(scenario, refFile)} alt="reference" loading="lazy" />
+                    <div className="upload-side-actions">
+                      {browseButton}
+                      {pasteButton}
+                      <span className="muted upload-hint">or drag &amp; drop / Ctrl+V</span>
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="frame-missing">
+                      <span className="gen-flag"><span className="dot pulse" /> {uploading ? "uploading…" : genTarget === "ref" ? "generating…" : "no reference yet"}</span>
+                    </div>
+                    <div className="upload-actions">
+                      {browseButton}
+                      {pasteButton}
+                      <span className="muted upload-hint">or drag &amp; drop / Ctrl+V</span>
+                    </div>
+                  </>
                 )}
-                <div className="upload-actions">
-                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                    <IconUpload size={11} />
-                    Browse
-                  </button>
-                  <button
-                    disabled={uploading}
-                    title="Paste the clipboard image (or press Ctrl+V anywhere)"
-                    onClick={async () => {
-                      try {
-                        const items = await navigator.clipboard.read();
-                        const img = items.find((i) => i.types.includes("image/png")) || items.find((i) => i.types[0]?.startsWith("image/"));
-                        if (img) {
-                          const t = img.types.find((x) => x.startsWith("image/"))!;
-                          const blob = await img.getType(t);
-                          doUpload(new File([blob], "clipboard.png", { type: t }));
-                        } else setUploadError("no image on the clipboard");
-                      } catch {
-                        setUploadError("clipboard unavailable — copy an image or use Ctrl+V");
-                      }
-                    }}
-                  >
-                    <IconClipboard size={11} />
-                    Paste
-                  </button>
-                  <span className="muted upload-hint">or drag &amp; drop / Ctrl+V</span>
-                </div>
               </div>
               {uploadError && <p className="hint err-text">{uploadError}</p>}
               <p className="hint">Uploaded image becomes the main reference — the run uses it instead of generating one.</p>
-              <VersionRow
-                versions={versions.ref}
-                main={mains.ref}
-                kind="image"
-                onSelect={(f) => pickMain("ref", null, f)}
-                onRegen={() => onRegen?.("ref", null)}
-                generating={genTarget === "ref"}
-              />
+              {refCards}
             </>
           )}
         </>
       ) : null}
-      {(beatNums.length > 0 || fallbackShots.length > 0) && (
+      {section !== "reference" && (beatNums.length > 0 || fallbackShots.length > 0) && (
         <>
           <div className="section-label">Keyframes → clips</div>
           <div className="grid">
@@ -370,7 +413,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 <div className="shot" key={n}>
                   <div className="img-frame">
                     {kfMain
-                      ? <img src={outputUrl(scenario, kfMain)} alt={pretty(kfMain)} loading="lazy" />
+                      ? <>
+                        <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
+                        <img src={outputUrl(scenario, kfMain)} alt={pretty(kfMain)} loading="lazy" />
+                      </>
                       : <div className="frame-missing">no keyframe</div>}
                   </div>
                   {genTarget === `kf:${n}` && !bv.keyframe.length && (
@@ -386,7 +432,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   />
                   <div className="video-frame">
                     {clipMain
-                      ? <video controls src={outputUrl(scenario, clipMain)} />
+                      ? <>
+                        <ExpandButton title={`Fullscreen preview of ${pretty(clipMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clipMain), kind: "video", alt: pretty(clipMain) })} />
+                        <video controls src={outputUrl(scenario, clipMain)} />
+                      </>
                       : <div className="frame-missing">no clip</div>}
                   </div>
                   {genTarget === `clip:${n}` && !bv.clip.length && (
@@ -422,7 +471,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </p>
         </>
       )}
-      {mediaCount === 0 && !generating && (
+      {section !== "reference" && mediaCount === 0 && !generating && (
         <div className="empty">
           <span className="empty-icon">
             <IconImage size={20} />
@@ -436,6 +485,20 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </div>
       )}
     </Tag>
+  );
+}
+
+// Expand button overlaying a frame corner — opens the fullscreen Lightbox.
+function ExpandButton({ title, onOpen }: { title: string; onOpen: () => void }) {
+  return (
+    <button
+      className="frame-expand"
+      title={title}
+      aria-label={title}
+      onClick={(e) => { e.stopPropagation(); onOpen(); }}
+    >
+      <IconExpand size={13} />
+    </button>
   );
 }
 

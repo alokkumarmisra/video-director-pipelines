@@ -45,6 +45,8 @@ const DB = path.join(DATA_DIR, "scenarios.sqlite");
     updated_at INTEGER NOT NULL
   )`);
   // One-time migration: import any prompts/*.json not yet in the DB.
+  // The dir may have been wiped — ensure it exists instead of crashing boot.
+  fs.mkdirSync(PROMPTS, { recursive: true });
   const insert = db.prepare("INSERT OR IGNORE INTO scenarios (name, config, updated_at) VALUES (?, ?, ?)");
   for (const f of fs.readdirSync(PROMPTS).filter((f) => f.endsWith(".json"))) {
     const name = f.replace(/\.json$/, "");
@@ -130,6 +132,8 @@ CREATE TABLE IF NOT EXISTS project_assets (
   image_prompt TEXT,
   motion TEXT,
   file TEXT,
+  image_generated TEXT NOT NULL DEFAULT 'PENDING' CHECK (image_generated IN ('PENDING','COMPLETED')),
+  video_generated TEXT NOT NULL DEFAULT 'PENDING' CHECK (video_generated IN ('PENDING','COMPLETED')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (project, version, kind, beat_index)
 );
@@ -145,11 +149,12 @@ function classifyAsset(file) {
   if (m) return splitBeat("keyframe", Number(m[1]), m[2]);
   m = file.match(/_clip(\d+)_(.+)\.mp4$/);
   if (m) return splitBeat("clip", Number(m[1]), m[2]);
-  if (/_ref\.png$/.test(file)) return { kind: "reference", beat_index: null, beat_title: null, version: null };
+  m = file.match(/_ref(?:_v(\d+))?\.png$/);
+  if (m) return { kind: "reference", beat_index: null, beat_title: null, version: m[1] ? Number(m[1]) : 1 };
   if (/_final\.mp4$/.test(file)) return { kind: "final", beat_index: null, beat_title: null, version: null };
   return { kind: "other", beat_index: null, beat_title: null, version: null };
   function splitBeat(kind, idx, rest) {
-    let version = null;
+    let version = 1;
     const vm = rest.match(/^(.*)_v(\d+)$/);
     if (vm) { rest = vm[1]; version = Number(vm[2]); }
     return { kind, beat_index: idx, beat_title: rest, version };
@@ -206,13 +211,20 @@ async function pgSyncFolder(folder) {
 // Full backfill on boot (files created while the server was down).
 async function syncAllToPg() {
   const rows = [];
-  for (const folder of fs.readdirSync(OUTPUTS)) {
-    const dir = path.join(OUTPUTS, folder);
-    if (!fs.statSync(dir).isDirectory()) continue;
-    for (const file of fs.readdirSync(dir)) {
-      if (!/\.(png|mp4)$/i.test(file)) continue;
-      const r = assetRow(folder, file);
-      if (r) rows.push(r);
+  // outputs/ may have been wiped — a missing dir means zero assets, not a crash.
+  if (fs.existsSync(OUTPUTS)) {
+    for (const folder of fs.readdirSync(OUTPUTS)) {
+      const dir = path.join(OUTPUTS, folder);
+      let files = [];
+      try {
+        if (!fs.statSync(dir).isDirectory()) continue;
+        files = fs.readdirSync(dir);
+      } catch { continue; } // folder removed mid-scan — skip it
+      for (const file of files) {
+        if (!/\.(png|mp4)$/i.test(file)) continue;
+        const r = assetRow(folder, file);
+        if (r) rows.push(r);
+      }
     }
   }
   await pgInsertAssetRows(rows);
@@ -277,6 +289,9 @@ function mainsFor(dirName, cfg) {
   return out;
 }
 // Project info row + that version's asset rows (prompts + current main files).
+// image_generated flips to COMPLETED on reference/keyframe rows once their
+// image file exists; video_generated flips on clip rows once the video file
+// exists. Existing COMPLETED flags are never downgraded back to PENDING.
 async function pgSaveProject(name, cfg, version, mains) {
   const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
   await pgPool.query(
@@ -287,21 +302,67 @@ async function pgSaveProject(name, cfg, version, mains) {
        updated_at = now()`,
     [name, cfg.description ?? null, cfg.topic ?? null, cfg.requirements ?? null,
      Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length]);
-  const rows = [[name, version, "reference", 0, null, cfg.referencePrompt ?? null, null, mains.ref ?? null]];
+  const done = (file) => (file ? "COMPLETED" : "PENDING");
+  const refFile = mains.ref ?? null;
+  const rows = [[name, version, "reference", 0, null, cfg.referencePrompt ?? null, null, refFile, done(refFile), "PENDING"]];
   seq.forEach((b, i) => {
     const n = i + 1;
     const bm = (mains.beats && mains.beats[String(n)]) || {};
-    rows.push([name, version, "keyframe", n, b.title ?? null, b.image ?? null, b.motion ?? null, bm.keyframeMain ?? null]);
-    rows.push([name, version, "clip", n, b.title ?? null, null, b.motion ?? null, bm.clipMain ?? null]);
+    const kf = bm.keyframeMain ?? null;
+    const cl = bm.clipMain ?? null;
+    rows.push([name, version, "keyframe", n, b.title ?? null, b.image ?? null, b.motion ?? null, kf, done(kf), "PENDING"]);
+    rows.push([name, version, "clip", n, b.title ?? null, null, b.motion ?? null, cl, "PENDING", done(cl)]);
   });
   for (const r of rows) {
     await pgPool.query(
-      `INSERT INTO project_assets (project, version, kind, beat_index, beat_title, image_prompt, motion, file)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO project_assets (project, version, kind, beat_index, beat_title, image_prompt, motion, file, image_generated, video_generated)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (project, version, kind, beat_index) DO UPDATE SET beat_title = EXCLUDED.beat_title,
-         image_prompt = EXCLUDED.image_prompt, motion = EXCLUDED.motion, file = EXCLUDED.file`,
+         image_prompt = EXCLUDED.image_prompt, motion = EXCLUDED.motion, file = EXCLUDED.file,
+         image_generated = CASE WHEN EXCLUDED.file IS NOT NULL AND EXCLUDED.kind IN ('reference', 'keyframe') THEN 'COMPLETED' ELSE project_assets.image_generated END,
+         video_generated = CASE WHEN EXCLUDED.file IS NOT NULL AND EXCLUDED.kind = 'clip' THEN 'COMPLETED' ELSE project_assets.video_generated END`,
       r);
   }
+}
+// Mark ONE asset row COMPLETED the moment its image/video finishes
+// generating (called per [asset] event, so rows flip one by one).
+// asset: { file, stage: 'reference'|'keyframe'|'clip'|'final', index? }
+async function pgMarkAssetComplete(projectName, asset) {
+  if (!pgUp) return;
+  try {
+    const v = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [projectName]);
+    const version = v.rows[0]?.v;
+    if (!version) return; // never saved — rows are created on the next Save
+    if (asset.stage === "reference") {
+      await pgPool.query(
+        "UPDATE project_assets SET file = $1, image_generated = 'COMPLETED' WHERE project = $2 AND version = $3 AND kind = 'reference' AND beat_index = 0",
+        [asset.file, projectName, version]);
+    } else if (asset.stage === "keyframe") {
+      await pgPool.query(
+        "UPDATE project_assets SET file = $1, image_generated = 'COMPLETED' WHERE project = $2 AND version = $3 AND kind = 'keyframe' AND beat_index = $4",
+        [asset.file, projectName, version, asset.index ?? 0]);
+    } else if (asset.stage === "clip") {
+      await pgPool.query(
+        "UPDATE project_assets SET file = $1, video_generated = 'COMPLETED' WHERE project = $2 AND version = $3 AND kind = 'clip' AND beat_index = $4",
+        [asset.file, projectName, version, asset.index ?? 0]);
+    }
+    // 'final' has no project_assets row (only reference/keyframe/clip kinds).
+  } catch (e) { console.warn("[pg] mark complete failed:", e.message); }
+}
+// Refresh the current version's project_assets file names from the output
+// dir's main versions (called after every generation + on run exit, so the
+// table always lists the actual image/video files on disk).
+async function pgRefreshProjectFiles(projectName, outputFolder) {
+  if (!pgUp) return;
+  try {
+    const raw = dbGetScenario(projectName);
+    if (raw === null) return;
+    const cfg = JSON.parse(raw);
+    const v = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [projectName]);
+    const version = v.rows[0]?.v;
+    if (!version) return; // never saved — files are recorded on the next Save
+    await pgSaveProject(projectName, cfg, Number(version), mainsFor(outputFolder, cfg));
+  } catch (e) { console.warn("[pg] project files refresh failed:", e.message); }
 }
 // File list for the gallery — served from the DB (null = PG down, use disk).
 async function pgAssetFiles(folder) {
@@ -315,6 +376,13 @@ async function pgInit() {
   if (!(await pgProbe())) return;
   try {
     await pgPool.query(PG_SCHEMA);
+    // Migrate pre-existing project_assets tables (CREATE TABLE IF NOT
+    // EXISTS leaves old tables untouched) + backfill COMPLETED for files
+    // that were generated before these columns existed.
+    await pgPool.query(`ALTER TABLE project_assets ADD COLUMN IF NOT EXISTS image_generated TEXT NOT NULL DEFAULT 'PENDING' CHECK (image_generated IN ('PENDING','COMPLETED'))`);
+    await pgPool.query(`ALTER TABLE project_assets ADD COLUMN IF NOT EXISTS video_generated TEXT NOT NULL DEFAULT 'PENDING' CHECK (video_generated IN ('PENDING','COMPLETED'))`);
+    await pgPool.query(`UPDATE project_assets SET image_generated = 'COMPLETED' WHERE file IS NOT NULL AND kind IN ('reference','keyframe') AND image_generated = 'PENDING'`);
+    await pgPool.query(`UPDATE project_assets SET video_generated = 'COMPLETED' WHERE file IS NOT NULL AND kind = 'clip' AND video_generated = 'PENDING'`);
     await syncAllToPg();
   } catch (e) { console.warn("[pg] init failed:", e.message); }
 }
@@ -372,14 +440,18 @@ const readJson = (req) => new Promise((res, rej) => {
 });
 
 // ---------------------------------------------------------------- runs
-// One run = one spawned `node scripts/character_sequence{,_wan}.mjs <scenario>`.
+// One run = one spawned `node scripts/character_sequence{,_wan}.mjs <scenario>`
+// (repeated `opts.count` times for batch reference generation).
 // engine: "ltx" (default) or "wan" — picks the i2v backend script.
 // opts.stitch   -> --stitch (re-stitch final from selected mains only)
 // opts.regen    -> --regen <ref|keyframe|clip> [beat] (regenerate one asset, keeps old versions)
+// opts.count    -> repeat a `ref` regen this many times (each pass writes a new
+//                  _vN version to pick from); anything else always runs once.
 const runs = new Map(); // id -> { scenario, status, log, startedAt, proc, subs:Set<res> }
 
 function startRun(scenario, opts = {}) {
   const { stitch = false, regen = null, engine = "ltx" } = opts;
+  const count = regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(opts.count) || 1)) : 1;
   if ([...runs.values()].some((r) => r.status === "running"))
     throw new Error("another run is still active (ComfyUI queue is serial)");
   const script = engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
@@ -389,10 +461,7 @@ function startRun(scenario, opts = {}) {
     argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
   }
   const id = Date.now().toString(36);
-  const proc = spawn("node", argv, {
-    cwd: ROOT, env: process.env,
-  });
-  const run = { id, scenario, engine, status: "running", log: "", assets: [], startedAt: Date.now(), proc, subs: new Set() };
+  const run = { id, scenario, engine, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -409,23 +478,43 @@ function startRun(scenario, opts = {}) {
         const asset = JSON.parse(m[1]);
         run.assets.push(asset);
         for (const s of run.subs) s.write(`event: asset\ndata: ${JSON.stringify(asset)}\n\n`);
-        // Save every finished generation to the Postgres catalog.
+        // Save every finished generation to the Postgres catalog (assets
+        // table + flip that one project_assets row to COMPLETED).
         const dirName = run.engine === "wan" ? `${run.scenario}_wan` : run.scenario;
-        pgUpsertAsset(dirName, asset.file).catch((e) => console.warn("[pg] catalog failed:", e.message));
+        pgUpsertAsset(dirName, asset.file)
+          .then(() => pgMarkAssetComplete(run.scenario, asset))
+          .catch((e) => console.warn("[pg] catalog failed:", e.message));
       }
     }
   };
-  proc.stdout.on("data", (d) => push(d.toString()));
-  proc.stderr.on("data", (d) => push(d.toString()));
-  proc.on("close", (code) => {
-    run.status = code === 0 ? "done" : "error";
-    push(`\n[exit ${code}]\n`);
+  const finish = (status) => {
+    run.status = status;
+    push(`\n[${status}]\n`);
     for (const s of run.subs) { s.write("event: close\ndata: " + JSON.stringify({ status: run.status }) + "\n\n"); s.end(); }
     run.subs.clear();
     // Reconcile the run's output dir with the DB (catches final.mp4 + anything missed).
     const dirName = run.engine === "wan" ? `${run.scenario}_wan` : run.scenario;
-    pgSyncFolder(dirName).catch((e) => console.warn("[pg] sync failed:", e.message));
-  });
+    pgSyncFolder(dirName)
+      .then(() => pgRefreshProjectFiles(run.scenario, dirName))
+      .catch((e) => console.warn("[pg] sync failed:", e.message));
+  };
+  const launch = () => {
+    run.pass += 1;
+    if (run.total > 1) push(`\n[reference ${run.pass}/${run.total}]\n`);
+    const proc = spawn("node", argv, {
+      cwd: ROOT, env: process.env,
+    });
+    run.proc = proc;
+    proc.stdout.on("data", (d) => push(d.toString()));
+    proc.stderr.on("data", (d) => push(d.toString()));
+    proc.on("close", (code) => {
+      push(`\n[exit ${code}]\n`);
+      if (code !== 0) return finish("error");
+      if (run.pass < run.total && !run.cancelled) return launch();
+      finish(run.cancelled ? "error" : "done");
+    });
+  };
+  launch();
   return run;
 }
 
@@ -447,31 +536,24 @@ async function comfyStatus() {
 // ---------------------------------------------------------------- LLM craft
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "scenario";
 
+// Canonical JSON stringify (sorted keys) for comparing configs regardless of key order.
+const canonical = (v) => {
+  const obj = typeof v === "string" ? JSON.parse(v) : v;
+  const sort = (x) =>
+    Array.isArray(x) ? x.map(sort)
+    : (x && typeof x === "object"
+      ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sort(x[k])]))
+      : x);
+  return JSON.stringify(sort(obj));
+};
+
 /**
  * Ask the local LLM (llama-server, OpenAI-compatible) to craft a
  * character-sequence scenario JSON from a high-level topic + requirements.
  * Format reference is resolved without any file dependency: an existing
- * prompts/*.json, any scenario already in SQLite, else a built-in example.
+ * prompts/*.json or any scenario already in SQLite. May be null on a fresh
+ * install — craftScenario() then relies on the system schema/rules alone.
  */
-const CRAFT_REFERENCE = {
-  description: "Anime sequence: 1 reference key visual -> 4 keyframe story beats (same character) -> each keyframe drives a 3s LTX i2v clip -> stitched final.",
-  character: "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors",
-  referencePrompt: "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, standing on a hilltop overlooking a coastal town at golden hour, wind in her hair, dramatic cumulus clouds, lens flare, 16:9 key visual composition",
-  duration: 3,
-  sequence: [
-    {
-      title: "a_greeting",
-      image: "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, at a sunny school gate with cherry blossom petals in the air, she smiles and waves, warm morning light, soft pastel colors",
-      motion: "She smiles and waves gently, cherry blossom petals drift across the frame, her hair and uniform flutter in the breeze. Soft morning light. Anime style, 3 seconds, no cuts."
-    },
-    {
-      title: "b_run",
-      image: "a 17-year-old anime girl with long silver-white hair with soft blue tips, large expressive teal eyes, wearing a white and navy sailor uniform with a red ribbon, Makoto Shinkai inspired anime key visual, cinematic lighting, highly detailed, clean lineart, vibrant colors, running joyfully along a tree-lined school path, petals swirling around her, motion energy, golden afternoon light, dynamic low angle",
-      motion: "She runs toward the camera, petals swirl around her, her hair and skirt flow with the motion, dappled light through the trees. Anime style, energetic, 3 seconds, no cuts."
-    }
-  ]
-};
-
 function loadCraftReference() {
   // 1) Preferred: prompts/anime_sequence.json (legacy location).
   try {
@@ -493,8 +575,9 @@ function loadCraftReference() {
       if (cfg?.referencePrompt && Array.isArray(cfg?.sequence) && cfg.sequence.length) return cfg;
     }
   } catch { /* fall through */ }
-  // 4) Built-in example — no file or DB dependency.
-  return CRAFT_REFERENCE;
+  // Nothing on disk or in DB — no reference (fresh install). The caller
+  // falls back to the system schema/rules alone.
+  return null;
 }
 async function craftScenario({ topic, requirements = "", name }) {
   const reference = loadCraftReference();
@@ -508,12 +591,9 @@ async function craftScenario({ topic, requirements = "", name }) {
     "each motion = 1-2 sentences of motion + camera direction for LTX image-to-video (no cuts, no new characters).",
     "duration = seconds per clip (2-5). Titles must be unique, short, snake_case.",
   ].join(" ");
-  const user = `Reference example (match its style and level of detail, NOT its subject):
-${JSON.stringify(reference, null, 2)}
-
-New scenario to craft:
-Topic: ${topic}
-Requirements: ${requirements || "(none)"}`;
+  const user = reference
+    ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\nTopic: ${topic}\nRequirements: ${requirements || "(none)"}`
+    : `New scenario to craft:\nTopic: ${topic}\nRequirements: ${requirements || "(none)"}`;
   const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -736,17 +816,35 @@ const server = http.createServer(async (req, res) => {
       const r = await pgPool.query("SELECT version, created_at FROM scenario_versions WHERE name = $1 ORDER BY version DESC", [name]);
       return json(res, 200, r.rows);
     }
-    if (p.startsWith("/api/scenario/") && req.method === "GET") {
+    // length === 4 guard: sub-paths like /versions/1 must never fall through
+    // to a whole-scenario route (an old client hitting a new path wiped a
+    // scenario that way once).
+    if (p.startsWith("/api/scenario/") && req.method === "GET" && p.split("/").length === 4) {
       const name = p.split("/")[3];
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const raw = dbGetScenario(name);
       if (raw === null) return json(res, 404, { error: "no such scenario" });
       return json(res, 200, { name, config: JSON.parse(raw) });
     }
-    if (p.startsWith("/api/scenario/") && req.method === "PUT") {
+    if (p.startsWith("/api/scenario/") && req.method === "PUT" && p.split("/").length === 4) {
       const name = p.split("/")[3];
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const cfg = await readJson(req);
+      // No-change save = no-op: an identical config must not stack a duplicate version.
+      const prevRaw = dbGetScenario(name);
+      let same = false;
+      try { same = prevRaw !== null && canonical(prevRaw) === canonical(cfg); }
+      catch { same = false; }
+      if (same) {
+        let version = null;
+        if (pgUp) {
+          try {
+            const r = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
+            version = r.rows[0]?.v ?? null;
+          } catch (e) { console.warn("[pg] version lookup failed:", e.message); }
+        }
+        return json(res, 200, { ok: true, version, unchanged: true });
+      }
       dbSaveScenario(name, cfg);
       // Keep the JSON export for the CLI runners.
       fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
@@ -762,7 +860,36 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true, version });
     }
-    if (p.startsWith("/api/scenario/") && req.method === "DELETE") {
+    // Delete ONE saved version (prompt config), not the scenario. Deleting the
+    // latest rolls the current config back to the new latest so "Latest" never
+    // points at a deleted version. Generated outputs are untouched.
+    // NOTE: must sit before the whole-scenario DELETE (same prefix).
+    if (p.startsWith("/api/scenario/") && req.method === "DELETE" && p.split("/")[4] === "versions") {
+      const parts = p.split("/");
+      const name = parts[3];
+      if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      const v = Number(parts[5]);
+      if (!Number.isInteger(v)) return json(res, 400, { error: "bad version" });
+      if (!pgUp) return json(res, 503, { error: "database unavailable" });
+      const cur = await pgPool.query("SELECT max(version) AS max FROM scenario_versions WHERE name = $1", [name]);
+      const max = cur.rows[0]?.max ?? null;
+      const del = await pgPool.query("DELETE FROM scenario_versions WHERE name = $1 AND version = $2 RETURNING version", [name, v]);
+      if (!del.rowCount) return json(res, 404, { error: "no such version" });
+      await pgPool.query("DELETE FROM project_assets WHERE project = $1 AND version = $2", [name, v]);
+      let latest = max === v ? null : max;
+      if (max === v) {
+        const nxt = await pgPool.query("SELECT version, config FROM scenario_versions WHERE name = $1 ORDER BY version DESC LIMIT 1", [name]);
+        if (nxt.rows.length) {
+          const cfg = nxt.rows[0].config;
+          latest = nxt.rows[0].version;
+          dbSaveScenario(name, cfg);
+          fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
+          pgSaveScenarioMirror(name, cfg).catch((e) => console.warn("[pg] scenario mirror failed:", e.message));
+        }
+      }
+      return json(res, 200, { ok: true, deleted: v, latest });
+    }
+    if (p.startsWith("/api/scenario/") && req.method === "DELETE" && p.split("/").length === 4) {
       const name = p.split("/")[3];
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       if (dbGetScenario(name) === null) return json(res, 404, { error: "no such scenario" });
@@ -776,10 +903,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === "/api/runs" && req.method === "POST") {
       const body = await readJson(req);
+      if (typeof body.scenario !== "string" || !isSafe(body.scenario))
+        return json(res, 400, { error: "bad scenario" });
       const run = startRun(body.scenario, {
         stitch: !!body.stitch,
         engine: body.engine || "ltx",
         regen: body.regen || null,
+        count: body.count,
       });
       return json(res, 200, { id: run.id });
     }
@@ -797,7 +927,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (p.startsWith("/api/runs/") && req.method === "DELETE") {
       const run = runs.get(p.split("/")[3]);
-      if (run && run.status === "running") run.proc.kill("SIGTERM");
+      if (run && run.status === "running") {
+        run.cancelled = true; // stop a batch loop after the current pass
+        run.proc?.kill("SIGTERM");
+      }
       return json(res, 200, { ok: true });
     }
     if (p === "/api/outputs" && req.method === "GET") {
@@ -833,7 +966,9 @@ const server = http.createServer(async (req, res) => {
       const file = v === 1 ? `${prefix}_ref.png` : `${prefix}_ref_v${v}.png`;
       fs.writeFileSync(path.join(outDir, file), buf);
       setMain(outDir, prefix, "ref", 0, null, file);
-      pgUpsertAsset(scenario, file).catch((e) => console.warn("[pg] catalog failed:", e.message));
+      pgUpsertAsset(scenario, file)
+        .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
+        .catch((e) => console.warn("[pg] catalog failed:", e.message));
       return json(res, 200, await outputsPayload(scenario));
     }
     if (p === "/api/outputs/stitch" && req.method === "POST") {

@@ -216,12 +216,16 @@ body {
   color: var(--text-3); display: grid; place-items: center;
 }
 .card-head .spacer { flex: 1; }
-/* Version picker in the middle of the Scenario card head. */
+/* Version picker in the middle of the Scenario Editor card head. */
 .version-pick {
   display: flex; align-items: center; gap: 6px;
   margin: 0; font-size: 11.5px; white-space: nowrap;
 }
 .version-pick select { width: auto; padding: 5px 8px; font-size: 12px; }
+/* Workflow label row: name left, last-edited datetime top-right above the select. */
+.workflow-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.workflow-head label { margin-bottom: 5px; }
+.workflow-head .workflow-dt { font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .card-desc {
   margin: -6px 0 14px; font-size: 12.5px; color: var(--text-3); line-height: 1.5;
 }
@@ -533,7 +537,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .section-label:first-child { margin-top: 0; }
 .video-frame {
   position: relative; border-radius: var(--radius-m);
-  overflow: hidden; background: #000;
+  overflow: hidden; background: var(--inset);
   border: 1px solid var(--line);
 }
 .video-frame video { width: 100%; display: block; border-radius: 0; }
@@ -621,6 +625,97 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   background: var(--surface-2);
 }
 .upload-hint { font-size: 11.5px; margin-left: auto; }
+
+/* upload mode with an image: image left, Browse/Paste stacked right,
+   vertically centered next to the image */
+.upload-zone .upload-side { display: flex; align-items: center; gap: 12px; padding: 10px; }
+.upload-zone .upload-side img {
+  flex: none; width: auto; max-width: 46%; max-height: 160px; min-height: 0;
+  object-fit: contain; background: #000; border-radius: var(--radius-s);
+}
+.upload-side-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.upload-side-actions .upload-hint { margin-left: 0; }
+
+/* compact embedded reference (Scenario Editor, under Generate Reference) —
+   about a third of the full-width height, centered */
+.ref-embed .img-frame { display: flex; justify-content: center; background: var(--inset); max-height: 190px; }
+.ref-embed .img-frame img { width: auto; max-width: 100%; max-height: 190px; object-fit: contain; }
+.ref-embed .upload-zone img { max-height: 190px; object-fit: contain; background: var(--inset); }
+
+/* reference version list — every version visible in one go, header per card */
+.ref-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+  gap: 8px; margin-top: 8px;
+}
+/* preview button always visible on reference cards (not hover-only) */
+.ref-card .frame-expand { opacity: 1; }
+.ref-card { min-width: 0; }
+/* version + main badges overlaid on the image — theme-aware */
+.ver-badge {
+  position: absolute; top: 6px; left: 6px; z-index: 2;
+  padding: 0 3px; border-radius: 6px;
+  background: var(--surface-2); color: var(--text-2);
+  border: 1px solid var(--line);
+  font: 700 11px/1.5 var(--mono);
+}
+.main-badge {
+  position: absolute; bottom: 6px; right: 6px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font: 700 14px/1.4 var(--mono);
+}
+.ref-card .img-frame { cursor: pointer; }
+.ref-card .img-frame:hover { border-color: var(--btn-hover-line); }
+.ref-card .img-frame, .ref-card .img-frame img { border-radius: 0; }
+.ref-card.on .img-frame {
+  border-color: var(--accent-line);
+}
+/* inner glow: only the selected reference border melts into the image */
+.ref-card.on .img-frame::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--accent-soft), inset 0 0 24px 8px var(--accent-soft);
+}
+/* generating placeholder tile keeps the card's height while the image lands */
+.ref-card .frame-missing { min-height: 84px; }
+
+/* fullscreen preview (lightbox) */
+.img-frame { position: relative; }
+.frame-expand {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  display: grid; place-items: center;
+  width: 26px; height: 26px; padding: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff; cursor: zoom-in;
+  opacity: 0; transition: opacity 0.12s, background 0.12s;
+}
+.frame-expand:hover { background: rgba(0, 0, 0, 0.8); border-color: rgba(255, 255, 255, 0.5); }
+.img-frame:hover .frame-expand, .video-frame:hover .frame-expand, .upload-zone:hover .frame-expand,
+.img-frame:focus-within .frame-expand, .video-frame:focus-within .frame-expand { opacity: 1; }
+.lightbox {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(0, 0, 0, 0.88); cursor: zoom-out;
+}
+.lightbox img, .lightbox video {
+  max-width: 94vw; max-height: 88vh;
+  border-radius: var(--radius-m); border: 1px solid var(--line);
+  background: #000; cursor: default;
+}
+.lightbox-close {
+  position: fixed; top: 14px; right: 14px;
+  display: grid; place-items: center;
+  width: 32px; height: 32px; padding: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff; cursor: pointer;
+}
+.lightbox-close:hover { background: rgba(255, 255, 255, 0.22); }
 
 /* empty states */
 .empty {

@@ -73,7 +73,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [runActive, setRunActive] = useState(false);
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => localStorage.getItem("ss-sidebar") !== "closed");
   const toggleSidebar = () =>
     setSidebarOpen((o) => {
@@ -82,6 +82,9 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     });
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  const handleRegen = (kind: AssetKind, index: number | null) =>
+    !runActive && setPendingRun({ nonce: Date.now(), regen: { kind, index: index ?? undefined } });
 
   const handleDelete = async (s: string) => {
     if (!window.confirm(`Delete scenario "${s}"?\nIts generated outputs will be removed too.`)) return;
@@ -126,8 +129,22 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   }, [refreshScenarios]);
 
   useEffect(() => {
-    if (!name) return;
-    getScenario(name).then((r) => setCfg(r.config));
+    if (!name) {
+      setCfg(null);
+      return;
+    }
+    let cancelled = false;
+    setCfg(null);
+    getScenario(name)
+      .then((r) => {
+        if (!cancelled) setCfg(r.config);
+      })
+      .catch(() => {
+        if (!cancelled) setCfg(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [name]);
 
   useEffect(() => {
@@ -214,7 +231,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         {sidebarOpen && (
         <aside className="sidebar">
           <div className="sidebar-head">
-            <span>Scenarios</span>
+            <span>Scenario Library</span>
             <span className="muted" style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
               {scenarios.length}
             </span>
@@ -263,6 +280,9 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             scenarios={scenarios}
             selected={draft ? "" : name}
             onSelect={(n) => { setDraft(null); setName(n); }}
+            contextKey={draft ? `draft:${draft.name}` : (name ? `saved:${name}` : "new")}
+            contextTopic={(draft ? draft.config : cfg)?.topic ?? ""}
+            contextReqs={(draft ? draft.config : cfg)?.requirements ?? ""}
           />
           {editor ? (
             <ScenarioEditor
@@ -271,6 +291,20 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               config={editor.config}
               isDraft={!!draft}
               onSave={handleSave}
+              refBusy={runActive}
+              onGenerateRef={(count) =>
+                !runActive && !draft && setPendingRun({ nonce: Date.now(), regen: { kind: "ref" }, count })}
+              referenceSlot={!draft && name ? (
+                <OutputGallery
+                  scenario={outScenario(name, engine)}
+                  refreshKey={refreshKey}
+                  section="reference"
+                  generatingScenario={runActive ? runScenario : null}
+                  regenTarget={runActive ? regenTarget : null}
+                  onRegen={handleRegen}
+                  onUploaded={refresh}
+                />
+              ) : null}
             />
           ) : (
             <section className="card">
@@ -305,11 +339,11 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           <OutputGallery
             scenario={outScenario(draft ? draft.name : name, engine)}
             refreshKey={refreshKey}
+            section="rest"
             generatingScenario={runActive ? runScenario : null}
             regenTarget={runActive ? regenTarget : null}
             onStitch={() => !runActive && setPendingRun({ nonce: Date.now(), stitch: true })}
-            onRegen={(kind: AssetKind, index: number | null) =>
-              !runActive && setPendingRun({ nonce: Date.now(), regen: { kind, index: index ?? undefined } })}
+            onRegen={handleRegen}
             onUploaded={refresh}
           />
         </div>
