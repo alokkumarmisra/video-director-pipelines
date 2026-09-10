@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
-import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind } from "./types";
+import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
+import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
 import GenerationProgressBar, { emptyProgress, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
@@ -86,6 +87,10 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   // Ticking clock so the menu bar's Elapsed/Remaining stay live between the
   // 15s dashboard polls (same 5s cadence as RunPanel's local ticker).
   const [now, setNow] = useState(() => Date.now());
+  // Per-project asset coverage for the Projects sidebar (images/videos/assets
+  // in small type on the right of each row). Same dashboard payload as the
+  // topbar progress — no extra endpoint.
+  const [dashMap, setDashMap] = useState<Map<string, DashboardProject>>(new Map());
   useEffect(() => {
     if (!remoteGen || genProgress.status === "running") return;
     const t = setInterval(() => setNow(Date.now()), 5000);
@@ -98,6 +103,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
       try {
         const d = await getDashboard();
         if (cancelled) return;
+        setDashMap(new Map((d.projects || []).map((p) => [p.name, p])));
         const g = (d.projects || []).find((p) => p.generating);
         if (!g) {
           setRemoteGen(null);
@@ -196,6 +202,10 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     const all = await listScenarios();
     const seq = all.filter((s) => s.isSequence);
     setScenarios(seq);
+    // Best-effort asset counts for the sidebar (never blocks the list).
+    getDashboard()
+      .then((d) => setDashMap(new Map((d.projects || []).map((p) => [p.name, p]))))
+      .catch(() => {});
     return seq;
   }, []);
 
@@ -327,14 +337,6 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           <GenerationProgressBar progress={topProgress} compact />
         </div>
         <div className="topbar-right">
-          <button
-            className="icon-btn theme-toggle"
-            onClick={toggleSidebar}
-            title={sidebarOpen ? "Hide scenarios panel" : "Show scenarios panel"}
-            aria-label={sidebarOpen ? "Hide scenarios panel" : "Show scenarios panel"}
-          >
-            <IconPanel size={15} />
-          </button>
           <span className={`pill ${comfy?.up ? "ok" : "err"}`} title={comfy?.error ?? ""}>
             <span className={`dot ${comfy?.up ? "pulse" : ""}`} />
             {comfy?.up
@@ -364,6 +366,17 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. */}
       <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}`}>
+        {!sidebarOpen && view === "workspace" && (
+          <button
+            className="sidebar-show"
+            onClick={toggleSidebar}
+            title="Show projects panel"
+            aria-label="Show projects panel"
+          >
+            <IconPanel size={15} />
+            <span className="sidebar-show-label">Projects</span>
+          </button>
+        )}
         <div className="home-wrap" style={view !== "home" ? { display: "none" } : undefined}>
           <HomePage
             active={view === "home"}
@@ -378,9 +391,18 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         <aside className="sidebar" style={view !== "workspace" ? { display: "none" } : undefined}>
           <div className="sidebar-head">
             <span>Projects</span>
-            <span className="muted" style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
+            <span className="muted sidebar-count">
               {scenarios.length}
             </span>
+            <span className="spacer" />
+            <button
+              className="icon-btn sidebar-collapse"
+              onClick={toggleSidebar}
+              title="Hide projects panel"
+              aria-label="Hide projects panel"
+            >
+              <IconPanel size={15} />
+            </button>
           </div>
           <div className="sidebar-list">
             {scenarios.length === 0 && (
@@ -388,15 +410,39 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
                 No scenarios yet — craft one with the LLM.
               </div>
             )}
-            {scenarios.map((s) => (
-              <div className="scenario-row" key={s.name}>
+            {scenarios.map((s) => {
+              const d = dashMap.get(s.name);
+              const selected = !draft && name === s.name;
+              const assets = d ? (d.refDone ? 1 : 0) + d.imageCount + d.videoCount : null;
+              return (
+              <div className={`scenario-row${selected ? " selected" : ""}`} key={s.name}>
                 <button
-                  className={`scenario-item ${!draft && name === s.name ? "on" : ""}`}
+                  className={`scenario-item ${selected ? "on" : ""}`}
                   onClick={() => openProject(s.name)}
                   title={s.name}
+                  aria-current={selected ? "page" : undefined}
                 >
-                  <span className="scenario-name">{s.name}</span>
-                  <span className="scenario-date">{fmtDate(s.mtimeMs)}</span>
+                  <span className="scenario-avatar" aria-hidden="true">
+                    {s.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="scenario-main">
+                    <span className="scenario-name">{s.name}</span>
+                    <span className="scenario-date">{fmtDate(s.mtimeMs)}</span>
+                  </span>
+                  <span className="scenario-stats" title={
+                    d
+                      ? `${assets} assets · ${d.imageCount} images · ${d.videoCount} videos · ${d.sceneCount} scenes`
+                      : "Asset counts unavailable"
+                  }>
+                    {d ? (
+                      <>
+                        <span className="stat-line"><b>{assets}</b> assets</span>
+                        <span className="stat-line dim">{d.imageCount} img · {d.videoCount} vid</span>
+                      </>
+                    ) : (
+                      <span className="stat-line dim">—</span>
+                    )}
+                  </span>
                 </button>
                 <button
                   className={`icon-btn scenario-fav ${s.favorite ? "on" : ""}`}
@@ -415,7 +461,8 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
                   <IconTrash size={13} />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
         )}
@@ -466,6 +513,21 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
                 </span>
               </div>
             </section>
+          )}
+          {!draft && name && editor && (
+            <ShotList
+              name={name}
+              engine={engine}
+              config={editor?.config ?? null}
+              refreshKey={refreshKey}
+              generatingScenario={runActive ? runScenario : null}
+              regenTarget={runActive ? regenTarget : null}
+              progress={topProgress}
+              comfyQueue={comfyQueue}
+              onRegen={handleRegen}
+              onStitch={() => !runActive && setPendingRun({ nonce: Date.now(), stitch: true })}
+              runBusy={runActive}
+            />
           )}
           <RunPanel
             scenario={draft ? "" : name}
