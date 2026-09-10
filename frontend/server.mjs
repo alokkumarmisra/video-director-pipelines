@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS project_assets (
   CONSTRAINT project_assets_project_fkey FOREIGN KEY (project_id)
     REFERENCES public.projects(project_id) ON DELETE CASCADE,
   CONSTRAINT project_assets_asset_type_check CHECK (
-    asset_type IN ('REFERENCE', 'IMAGE', 'KEYFRAME', 'VIDEO')),
+    asset_type IN ('REFERENCE', 'IMAGE', 'KEYFRAME', 'VIDEO', 'FINAL')),
   CONSTRAINT project_assets_status_check CHECK (
     status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'SKIPPED')),
   CONSTRAINT project_assets_version_check CHECK (version > 0),
@@ -222,6 +222,15 @@ async function pgProbe() {
   catch (e) { pgUp = false; console.warn(`[pg] unreachable: ${e.message} — gallery falls back to disk`); }
   return pgUp;
 }
+// Final-cut filename -> 1-based stitch version:
+//   <prefix>_final.mp4 -> 1, <prefix>_final_vN.mp4 -> N, anything else -> null.
+// A FINAL project_assets row is stored per stitch with beat_index = this
+// version, so every Stitch click inserts a NEW row (the UNIQUE key is
+// (project_id, version, asset_type, beat_index)).
+function finalCutVersion(file) {
+  const m = String(file || "").match(/_final(?:_v(\d+))?\.mp4$/);
+  return m ? (m[1] ? Number(m[1]) : 1) : null;
+}
 // filename -> { kind, beat_index, beat_title, version }
 function classifyAsset(file) {
   let m = file.match(/_seq(\d+)_(.+)\.png$/);
@@ -230,7 +239,8 @@ function classifyAsset(file) {
   if (m) return splitBeat("clip", Number(m[1]), m[2]);
   m = file.match(/_ref(?:_v(\d+))?\.png$/);
   if (m) return { kind: "reference", beat_index: null, beat_title: null, version: m[1] ? Number(m[1]) : 1 };
-  if (/_final\.mp4$/.test(file)) return { kind: "final", beat_index: null, beat_title: null, version: null };
+  m = file.match(/_final(?:_v(\d+))?\.mp4$/);
+  if (m) return { kind: "final", beat_index: null, beat_title: null, version: m[1] ? Number(m[1]) : 1 };
   return { kind: "other", beat_index: null, beat_title: null, version: null };
   function splitBeat(kind, idx, rest) {
     let version = 1;
@@ -413,7 +423,7 @@ async function pgSaveVersion(name, cfg) {
 }
 // Current main files for a project (nulls when nothing generated yet).
 function mainsFor(dirName, cfg) {
-  const out = { ref: null, beats: {} };
+  const out = { ref: null, beats: {}, final: null, finalV: null };
   try {
     const dir = path.join(OUTPUTS, dirName);
     if (!fs.existsSync(dir)) return out;
@@ -421,6 +431,8 @@ function mainsFor(dirName, cfg) {
     const vm = versionMap(dir, prefixFor(dirName), seq);
     out.ref = vm.refMain ?? null;
     out.beats = vm.beats ?? {};
+    out.final = vm.finalMain ?? null;
+    out.finalV = (vm.final || []).find((x) => x.file === out.final)?.v ?? null;
   } catch { /* unversionable dir — mains stay null */ }
   return out;
 }
@@ -429,6 +441,9 @@ function mainsFor(dirName, cfg) {
 //   asset_type='REFERENCE', beat_index=0 -> Flux reference visual
 //   asset_type='KEYFRAME',  beat_index=N -> beat N Flux keyframe (b.image)
 //   asset_type='VIDEO',     beat_index=N -> beat N i2v clip (b.motion)
+//   asset_type='FINAL',     beat_index=V -> stitch V of the final cut
+//     (v1 = <prefix>_final.mp4, vN = <prefix>_final_vN.mp4; one NEW row per
+//     stitch, scene_id 0, workflow 'ffmpeg-concat')
 // ('IMAGE' is valid for ad-hoc stills; this pipeline writes KEYFRAME.)
 // Each row has its own prompt/status/file_path/model/workflow/attempts/
 // metadata/started_at/completed_at. Size/dims live inside metadata JSONB.
@@ -550,6 +565,16 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
       cl ? JSON.stringify({ engine, file: cl, beat: n, fps: videoFps, duration: videoDur, ...clFacts }) : null,
       cl ? nowISO : null, cl ? nowISO : null]);
   }
+  // Stitched final cut (one row per stitch; beat_index = stitch version).
+  if (mains.final) {
+    const finalV = mains.finalV ?? finalCutVersion(mains.final) ?? 1;
+    const ff = diskFacts(folder, mains.final);
+    await pgPool.query(UPSERT, [projectId, version, 0, finalV, null,
+      "FINAL", "COMPLETED", null, negative,
+      relPath(mains.final), null, "ffmpeg-concat", 1,
+      JSON.stringify({ engine, file: mains.final, final_version: finalV, ...ff }),
+      nowISO, nowISO]);
+  }
   return projectId;
 }
 // ---------------------------------------------------------------- delta versioning
@@ -643,6 +668,12 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
           engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW,
           cl, { ...diskFacts(folder, cl), beat: n });
       }
+      // Stitched final cut (one row per stitch; beat_index = stitch version).
+      if (mains.final) {
+        const finalV = mains.finalV ?? finalCutVersion(mains.final) ?? 1;
+        await full(0, finalV, null, "FINAL", null, null, "ffmpeg-concat",
+          mains.final, { ...diskFacts(folder, mains.final), final_version: finalV });
+      }
     } else {
       // v2+ = delta only: insert PENDING rows for changed scenes, nothing else.
       const folder = name;
@@ -695,9 +726,10 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
 // on the same row.
 // asset: { file, stage: 'reference'|'keyframe'|'clip'|'final', index? }
 // Stage -> (asset_type, beat_index): reference -> (REFERENCE, 0),
-// keyframe -> (KEYFRAME, N), clip -> (VIDEO, N). UPDATE first; when the row
-// does not exist yet (e.g. never saved), INSERT it as COMPLETED.
-// 'final' has no project_assets row (only REFERENCE/KEYFRAME/VIDEO kinds).
+// keyframe -> (KEYFRAME, N), clip -> (VIDEO, N), final -> (FINAL, V) where V
+// is the 1-based stitch version — every stitch INSERTs a new FINAL row.
+// UPDATE first; when the row does not exist yet (e.g. never saved), INSERT
+// it as COMPLETED.
 async function pgMarkAssetComplete(projectName, asset, opts = {}) {
   if (!pgUp) return;
   try {
@@ -723,10 +755,17 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
       target = { type: "VIDEO", beat, model: engine === "wan" ? WAN_MODEL : LTX_MODEL,
         workflow: engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW,
         meta: { engine, file: asset.file, beat, ...facts } };
+    } else if (asset.stage === "final") {
+      // Stitched final cut: one NEW row per stitch (beat_index = 1-based
+      // stitch version parsed from the filename), same COMPLETED/file_path/
+      // attempts/metadata mechanics as every other asset.
+      const finalV = finalCutVersion(asset.file) ?? 1;
+      target = { type: "FINAL", beat: finalV, scene: 0, model: null, workflow: "ffmpeg-concat",
+        meta: { engine, file: asset.file, final_version: finalV, ...facts } };
     } else {
       return;
     }
-    const sceneId = target.beat;
+    const sceneId = target.scene ?? target.beat;
     const upd = await pgPool.query(
       `UPDATE project_assets SET file_path = $1, status = 'COMPLETED', error_message = NULL,
          attempts = attempts + 1,
@@ -790,6 +829,11 @@ async function pgRefreshProjectFiles(projectName, outputFolder) {
       const bm = (mains.beats && mains.beats[String(n)]) || {};
       await touch("KEYFRAME", n, bm.keyframeMain ?? null);
       await touch("VIDEO", n, bm.clipMain ?? null);
+    }
+    // Latest stitched final cut (update-only, like everything else here —
+    // the row itself is created by pgMarkAssetComplete on each stitch).
+    if (mains.final) {
+      await touch("FINAL", mains.finalV ?? finalCutVersion(mains.final) ?? 1, mains.final);
     }
   } catch (e) { console.warn("[pg] project files refresh failed:", e.message); }
 }
@@ -856,6 +900,25 @@ async function pgInit() {
           `ALTER TABLE project_assets ALTER COLUMN scene_id TYPE INTEGER USING scene_id::integer`);
       }
     } catch (e) { console.warn("[pg] scene_id type migration failed:", e.message); }
+    // Widen the asset_type CHECK to admit 'FINAL' (stitched final-cut rows).
+    // Drops any pre-existing asset_type CHECK (whatever its constraint name)
+    // and re-adds the canonical one — fresh installs already get it from
+    // PG_SCHEMA above.
+    try {
+      const cons = await pgPool.query(
+        `SELECT conname FROM pg_constraint WHERE conrelid = 'public.project_assets'::regclass AND contype = 'c'`);
+      for (const r of cons.rows) {
+        const defR = await pgPool.query(
+          `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+            WHERE conrelid = 'public.project_assets'::regclass AND conname = $1`, [r.conname]);
+        if (/asset_type/i.test(defR.rows[0]?.def || "")) {
+          await pgPool.query(`ALTER TABLE project_assets DROP CONSTRAINT "${String(r.conname).replace(/"/g, '""')}"`);
+        }
+      }
+      await pgPool.query(`ALTER TABLE project_assets DROP CONSTRAINT IF EXISTS project_assets_asset_type_check`);
+      await pgPool.query(`ALTER TABLE project_assets ADD CONSTRAINT project_assets_asset_type_check
+        CHECK (asset_type IN ('REFERENCE', 'IMAGE', 'KEYFRAME', 'VIDEO', 'FINAL'))`);
+    } catch (e) { console.warn("[pg] asset_type check migration failed:", e.message); }
     try {
       await pgPool.query(`CREATE UNIQUE INDEX IF NOT EXISTS project_assets_project_version_type_beat_key
         ON public.project_assets(project_id, version, asset_type, beat_index)`);
@@ -1203,7 +1266,7 @@ function serveStatic(req, res, urlPath) {
 function serveOutput(res, scenario, file) {
   const p = path.join(OUTPUTS, scenario, file);
   if (!isSafe(scenario) || !isSafe(file) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { "Content-Type": MIME[path.extname(p)] || "application/octet-stream" });
+  res.writeHead(200, { "Content-Type": MIME[path.extname(p)] || "application/octet-stream", "Cache-Control": "no-store" });
   fs.createReadStream(p).pipe(res);
 }
 
@@ -1230,8 +1293,8 @@ async function outputsPayload(name) {
   const listed = await pgAssetFiles(name);
   const files = [...new Set([...(listed || []), ...onDisk])]
     .filter((f) => fs.existsSync(path.join(dir, f)));
-  const versions = { ref: [], beats: {} };
-  const mains = { ref: null, beats: {} };
+  const versions = { ref: [], beats: {}, final: [] };
+  const mains = { ref: null, beats: {}, final: null };
   // Config for version mapping: prompts JSON first, store copy as fallback
   // (a scenario can live in the store while its JSON is missing/renamed).
   let cfg = null;
@@ -1253,6 +1316,8 @@ async function outputsPayload(name) {
       mains.beats[n] = { keyframe: b.keyframeMain, clip: b.clipMain };
     }
     versions.ref = vm.ref;
+    versions.final = vm.final ?? [];
+    mains.final = vm.finalMain ?? null;
   }
   return { files, versions, mains };
 }
@@ -1297,7 +1362,9 @@ const server = http.createServer(async (req, res) => {
         return {
           name: r.name,
           isSequence: !!(c.sequence && c.referencePrompt),
-          mtimeMs: r.updated_at,
+          // node-pg returns BIGINT as string — coerce so the UI gets a real
+          // epoch-ms number (a string renders as NaN-undefined-NaN).
+          mtimeMs: Number(r.updated_at),
           favorite: favs.includes(r.name),
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
@@ -1529,6 +1596,54 @@ const server = http.createServer(async (req, res) => {
       fs.writeFileSync(path.join(outDir, file), buf);
       setMain(outDir, prefix, "ref", 0, null, file);
       pgUpsertAsset(scenario, file)
+        .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
+        .catch((e) => console.warn("[pg] catalog failed:", e.message));
+      return json(res, 200, await outputsPayload(scenario));
+    }
+    if (p === "/api/upload/keyframe" && req.method === "POST") {
+      // Upload an image as beat N's keyframe. Stored as the next keyframe
+      // version in outputs/<scenario>/ and selected as main, so a later
+      // clip (re)generation runs i2v from the uploaded image instead of the
+      // Flux keyframe. Same versioning mechanics as every other asset.
+      const body = await readJson(req);
+      const scenario = String(body.scenario || "");
+      const n = Number(body.index);
+      if (!isSafe(scenario)) return json(res, 400, { error: "bad scenario" });
+      if (!Number.isInteger(n) || n < 1) return json(res, 400, { error: "index (1-based beat) required" });
+      if (typeof body.data !== "string") return json(res, 400, { error: "data (base64) required" });
+      const m = body.data.match(/^data:image\/\w+;base64,(.+)$/s);
+      if (!m) return json(res, 400, { error: "expected a data:image base64 payload" });
+      const buf = Buffer.from(m[1], "base64");
+      if (!buf.length) return json(res, 400, { error: "empty image" });
+      const outDir = path.join(OUTPUTS, scenario);
+      if (!fs.existsSync(outDir)) return json(res, 404, { error: "no outputs" });
+      // Beat title feeds the versioned filename — resolve it from the
+      // prompts JSON first, stored scenario copy as fallback.
+      let title = null;
+      const cfgPath = path.join(PROMPTS, cfgNameFor(scenario) + ".json");
+      try {
+        if (fs.existsSync(cfgPath)) {
+          const seq = JSON.parse(fs.readFileSync(cfgPath, "utf8")).sequence;
+          title = Array.isArray(seq) ? seq[n - 1]?.title ?? null : null;
+        }
+      } catch { title = null; }
+      if (title == null) {
+        try {
+          const raw = await dbGetScenario(cfgNameFor(scenario));
+          const seq = raw ? JSON.parse(raw).sequence : null;
+          title = Array.isArray(seq) ? seq[n - 1]?.title ?? null : null;
+        } catch { title = null; }
+      }
+      if (title == null) return json(res, 400, { error: `no beat ${n}` });
+      const prefix = prefixFor(scenario);
+      const v = nextVersion(outDir, prefix, "seq", n, ".png", title);
+      const file = v === 1 ? `${prefix}_seq${n}_${title}.png` : `${prefix}_seq${n}_${title}_v${v}.png`;
+      fs.writeFileSync(path.join(outDir, file), buf);
+      setMain(outDir, prefix, "seq", n, title, file);
+      pgUpsertAsset(scenario, file)
+        .then(() => pgMarkAssetComplete(cfgNameFor(scenario),
+          { file, stage: "keyframe", index: n },
+          { engine: engineForFolder(scenario), outputFolder: scenario }))
         .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
         .catch((e) => console.warn("[pg] catalog failed:", e.message));
       return json(res, 200, await outputsPayload(scenario));

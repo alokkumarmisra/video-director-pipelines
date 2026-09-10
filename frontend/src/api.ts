@@ -23,12 +23,12 @@ export const listScenarios = () => get<ScenarioInfo[]>("/api/scenarios");
 // 06-Sep-2025
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const fmtDate = (ms: number) => {
-  const d = new Date(ms);
+  const d = new Date(Number(ms));
   return `${String(d.getDate()).padStart(2, "0")}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
 };
 // 06-Sep-2026 14:04 (local time)
 export const fmtDateTime = (ms: number) => {
-  const d = new Date(ms);
+  const d = new Date(Number(ms));
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
@@ -120,6 +120,16 @@ export const uploadRef = (scenario: string, data: string) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ scenario, data }),
+  }).then((r) => (r.ok ? r.json() as Promise<OutputsInfo> : r.json().then((d) => Promise.reject(new Error(d.error || "upload failed")))));
+
+// Upload an image (data URL) as beat N's keyframe — stored as the next
+// keyframe version and selected as main (clip generation then runs i2v
+// from the uploaded image).
+export const uploadKeyframe = (scenario: string, index: number, data: string) =>
+  fetch("/api/upload/keyframe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scenario, index, data }),
   }).then((r) => (r.ok ? r.json() as Promise<OutputsInfo> : r.json().then((d) => Promise.reject(new Error(d.error || "upload failed")))));
 
 // Re-stitch the final cut from the currently selected main versions.

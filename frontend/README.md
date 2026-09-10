@@ -52,6 +52,9 @@ npm run dev       # vite dev server on :5173 (proxies /api + /outputs to :8790)
 | `/api/runs/:id/logs` | GET | SSE log tail (`event: close` on exit) |
 | `/api/runs/:id` | DELETE | kill a running run |
 | `/api/outputs?scenario=` | GET | list files in `outputs/<scenario>/` |
+| `/api/outputs/select` | POST | pick an asset's main version |
+| `/api/upload/ref` | POST | upload the reference image (new version, set as main) |
+| `/api/upload/keyframe` | POST `{scenario, index, data}` | upload beat N's keyframe image (new version, set as main) |
 | `/api/comfy` | GET | remote ComfyUI system_stats + queue |
 | `/outputs/<scenario>/<file>` | GET | stream an output asset (video/image) |
 

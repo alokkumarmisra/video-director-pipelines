@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent } from "../api";
+import { listOutputs, outputUrl, selectMain, uploadRef, uploadKeyframe, type AssetEvent } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
 import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
@@ -35,9 +35,12 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 // pickers + regenerate), final cut.
 export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded, onEngineSwitch }: Props) {
   const [files, setFiles] = useState<string[]>([]);
-  const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {} });
-  const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {} });
+  const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
+  const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
   const [error, setError] = useState("");
+  // Which final-cut version is previewed (null = latest). Reset whenever the
+  // scenario or file list changes so a fresh stitch always shows the new cut.
+  const [viewFinal, setViewFinal] = useState<string | null>(null);
   // Reference source: generate with Flux, or upload/paste an image.
   const [refMode, setRefMode] = useState<RefMode>("generate");
   const [uploading, setUploading] = useState(false);
@@ -86,8 +89,9 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
   useEffect(() => {
     setFiles([]);
-    setVersions({ ref: [], beats: {} });
-    setMains({ ref: null, beats: {} });
+    setVersions({ ref: [], beats: {}, final: [] });
+    setMains({ ref: null, beats: {}, final: null });
+    setViewFinal(null);
     setError("");
     if (!scenario) return;
     if (!assets) {
@@ -183,7 +187,26 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   }
 
   // Static view with versioning.
-  const final = files.find((f) => f.endsWith("_final.mp4"));
+  // Final cuts are versioned like every other asset (v1 = <prefix>_final.mp4,
+  // vN = <prefix>_final_vN.mp4) — every stitch writes a NEW file, so the
+  // gallery can show v1, v2, … and the browser never replays a cached cut.
+  const finalVersions: AssetVersion[] = (versions.final && versions.final.length > 0)
+    ? [...versions.final].sort((a, b) => a.v - b.v)
+    : files
+        .filter((f) => /_final(_v\d+)?\.mp4$/.test(f))
+        .map((f) => {
+          const m = f.match(/_final_v(\d+)\.mp4$/);
+          return { file: f, v: m ? Number(m[1]) : 1 };
+        })
+        .sort((a, b) => a.v - b.v);
+  const latestFinal = mains.final || finalVersions[finalVersions.length - 1]?.file
+    || files.find((f) => f.endsWith("_final.mp4")) || null;
+  // Preview selection: explicit pick when the user clicks a v-chip, otherwise
+  // the latest stitch. Falls back to latest when the picked file is gone.
+  const shownFinal = viewFinal && finalVersions.some((v) => v.file === viewFinal)
+    ? viewFinal
+    : latestFinal;
+  const shownFinalV = finalVersions.find((v) => v.file === shownFinal)?.v ?? null;
   const refFile = mains.ref || versions.ref[versions.ref.length - 1]?.file
     || files.find((f) => /_ref(\.png|_v\d+\.png)$/.test(f)) || null;
   const beatNums = Object.keys(versions.beats).map(Number).sort((a, b) => a - b);
@@ -238,6 +261,23 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   };
 
   const doStitch = () => onStitch?.();
+
+  // Upload an image as beat N's keyframe: stored as the next keyframe
+  // version and set as main, so a later clip regen runs i2v from it.
+  const uploadKf = async (n: number, f: File) => {
+    if (!f.type.startsWith("image/")) { setError("not an image file"); return; }
+    try {
+      const data = await readAsDataUrl(f);
+      const r = await uploadKeyframe(scenario, n, data);
+      setVersions(r.versions);
+      setMains(r.mains);
+      setFiles(r.files);
+      setError("");
+      onUploaded?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   // Shared Browse / Paste buttons (used in both upload layouts below).
   const browseButton = (
@@ -310,7 +350,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     </div>
   );
 
-  const mediaCount = beatNums.length + (refFile ? 1 : 0) + (final ? 1 : 0);
+  const mediaCount = beatNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
 
   const Tag = bare || section === "reference" ? "div" : "section";
   return (
@@ -343,10 +383,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       {error && <p className="hint err-text">{error}</p>}
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
-      {section !== "reference" && final && (
+      {section !== "reference" && shownFinal && (
         <>
           <div className="section-label">
             Final cut
+            {finalVersions.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {finalVersions.length} versions</span>}
             {generating && genTarget === null && (
               <span className="gen-flag" title="Re-stitching the final cut from the selected main versions">
                 <span className="dot pulse" /> stitching
@@ -354,9 +395,31 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             )}
           </div>
           <div className="video-frame">
-            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, final), kind: "video", alt: "final cut" })} />
-            <video controls src={outputUrl(scenario, final)} />
+            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, shownFinal), kind: "video", alt: "final cut" })} />
+            <video
+              key={shownFinal}
+              controls
+              src={`${outputUrl(scenario, shownFinal)}?v=${encodeURIComponent(shownFinal)}`}
+            />
           </div>
+          {finalVersions.length > 0 && (
+            <div className="versions">
+              {finalVersions.map((v) => (
+                <button
+                  key={v.file}
+                  className={`vchip ${shownFinal === v.file ? "on" : ""}`}
+                  title={shownFinal === v.file ? `${v.file} (showing)` : `Show ${v.file}`}
+                  onClick={() => setViewFinal(v.file)}
+                >
+                  {shownFinal === v.file && <IconCheck size={10} />}
+                  v{v.v}
+                </button>
+              ))}
+              {shownFinalV != null && latestFinal && shownFinal !== latestFinal && (
+                <span className="muted" style={{ fontSize: 11 }}>showing v{shownFinalV} · latest is v{finalVersions[finalVersions.length - 1]?.v}</span>
+              )}
+            </div>
+          )}
         </>
       )}
       {scenario && section !== "rest" ? (
@@ -454,6 +517,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     kind="image"
                     onSelect={(f) => pickMain("keyframe", n, f)}
                     onRegen={() => onRegen?.("keyframe", n)}
+                    onUpload={(f) => uploadKf(n, f)}
                     generating={genTarget === `kf:${n}`}
                     busy={generating}
                   />
@@ -495,7 +559,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </div>
           <p className="hint">
             Pick a version to make it <b>main</b> — the final cut stitches the main version of every beat.
-            Regenerate keeps old versions.
+            Regenerate keeps old versions. Upload swaps in your own keyframe image (new version, set as main) —
+            regen the clip afterwards to generate video from it.
           </p>
         </>
       )}
@@ -556,15 +621,18 @@ function GenChip({ v }: { v: number }) {
 }
 
 // Version chips (v1, v2, …) + regenerate button for one versioned asset.
-function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy }: {
+function VersionRow({ versions, main, kind, onSelect, onRegen, onUpload, generating, busy }: {
   versions: AssetVersion[];
   main: string | null;
   kind: "image" | "video";
   onSelect: (file: string) => void;
   onRegen?: () => void;
+  onUpload?: (f: File) => Promise<void>; // keyframes only: swap in your own image
   generating?: boolean; // a run is producing the next version right now
   busy?: boolean; // a run is active in this output dir — regen would be ignored
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   if (versions.length === 0) return null;
   const nextV = versions[versions.length - 1].v + 1;
   return (
@@ -585,6 +653,32 @@ function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy 
           <span className="dot pulse" />
           v{nextV} generating
         </span>
+      )}
+      {onUpload && (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (inputRef.current) inputRef.current.value = "";
+              if (!f) return;
+              setUploading(true);
+              try { await onUpload(f); } finally { setUploading(false); }
+            }}
+          />
+          <button
+            className="vchip regen"
+            title={busy ? "A run is already in progress" : "Upload your own image as this keyframe — stored as a new version and set as main; regen the clip to generate video from it"}
+            onClick={() => inputRef.current?.click()}
+            disabled={busy || uploading}
+          >
+            {uploading ? <Spinner size={10} /> : <IconUpload size={10} />}
+            {uploading ? "uploading…" : "upload"}
+          </button>
+        </>
       )}
       {onRegen && (
         <button
