@@ -55,11 +55,17 @@ export interface BeatVersions {
 export interface VersionsInfo {
   ref: AssetVersion[];
   beats: Record<string, BeatVersions>;
+  // Stitched final cuts: v1 = <prefix>_final.mp4, vN = <prefix>_final_vN.mp4.
+  // Optional so old payloads still type-check; the gallery falls back to
+  // scanning the file list.
+  final?: AssetVersion[];
 }
 
 export interface MainsInfo {
   ref: string | null;
   beats: Record<string, { keyframe: string | null; clip: string | null }>;
+  // Latest final-cut file (the one the gallery plays). Optional for compat.
+  final?: string | null;
 }
 
 export interface OutputsInfo {
@@ -71,7 +77,7 @@ export interface OutputsInfo {
 export type AssetKind = "ref" | "keyframe" | "clip";
 
 // One row of the narrow public.project_assets table (one row per asset).
-export type ProjectAssetType = "REFERENCE" | "IMAGE" | "KEYFRAME" | "VIDEO";
+export type ProjectAssetType = "REFERENCE" | "IMAGE" | "KEYFRAME" | "VIDEO" | "FINAL";
 export type ProjectAssetStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "SKIPPED";
 
 export interface ProjectAsset {

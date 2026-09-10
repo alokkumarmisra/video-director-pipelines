@@ -221,7 +221,7 @@ body {
   display: flex; align-items: center; gap: 6px;
   margin: 0; font-size: 11.5px; white-space: nowrap;
 }
-.version-pick select { width: auto; padding: 5px 8px; font-size: 12px; }
+.version-pick select { width: 100px; padding: 5px 8px; font-size: 12px; }
 /* Workflow label row: name left, last-edited datetime top-right above the select. */
 .workflow-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .workflow-head label { margin-bottom: 5px; }
