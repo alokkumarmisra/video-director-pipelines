@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { listScenarios, getScenario, saveScenario, deleteScenario, setFavorite, comfyStatus, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import RunPanel from "./components/RunPanel";
+import GenerationProgressBar, { emptyProgress, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
 import CraftPanel from "./components/CraftPanel";
+import HomePage from "./components/HomePage";
 import Login from "./components/Login";
 import { IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
@@ -64,6 +66,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   onToggleTheme: () => void;
 }) {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
+  const [view, setView] = useState<"home" | "workspace">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
@@ -74,6 +77,86 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
   const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null>(null);
+  const [genProgress, setGenProgress] = useState<GenerationProgress>(emptyProgress);
+  // Server-side fallback: a run started in another tab (or before a page
+  // refresh) leaves this tab's RunPanel idle while the backend — and the
+  // Home → Recent Projects card — still report generating. Poll the same
+  // dashboard payload so the menu bar shows the same thing.
+  const [remoteGen, setRemoteGen] = useState<GenerationProgress | null>(null);
+  // Ticking clock so the menu bar's Elapsed/Remaining stay live between the
+  // 15s dashboard polls (same 5s cadence as RunPanel's local ticker).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!remoteGen || genProgress.status === "running") return;
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, [remoteGen, genProgress.status]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const d = await getDashboard();
+        if (cancelled) return;
+        const g = (d.projects || []).find((p) => p.generating);
+        if (!g) {
+          setRemoteGen(null);
+          return;
+        }
+        const startedAt = g.startedAt ?? null;
+        const at = Date.now();
+        const elapsedMs = startedAt != null ? Math.max(0, at - startedAt) : 0;
+        // Linear fallback ETA from overall % (no per-asset timings available
+        // remotely): elapsed * remaining-fraction / done-fraction.
+        const etaMs =
+          elapsedMs > 0 && g.progress > 0 && g.progress < 100
+            ? Math.round((elapsedMs / g.progress) * (100 - g.progress))
+            : null;
+        setRemoteGen({
+          ...emptyProgress,
+          status: "running",
+          pct: g.progress,
+          scene: null,
+          totalScenes: g.sceneCount || null,
+          imagesDone: (g.refDone ? 1 : 0) + g.imageCount,
+          imagesTotal: 1 + g.sceneCount,
+          videosDone: g.videoCount,
+          videosTotal: g.sceneCount,
+          etaMs,
+          elapsedMs,
+          startedAt,
+          scenario: g.name,
+        });
+      } catch {
+        if (!cancelled) setRemoteGen(null);
+      }
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  // Live local run wins; otherwise mirror whatever the server reports as
+  // generating (same source as the Home card); otherwise keep local
+  // done/error/idle state.
+  // Remote fallback is re-derived every tick so Elapsed/Remaining count up
+  // live from the server-reported start time between dashboard polls.
+  const liveRemoteGen = remoteGen && genProgress.status !== "running"
+    ? (() => {
+        if (remoteGen.startedAt == null) return remoteGen;
+        const elapsedMs = Math.max(0, now - remoteGen.startedAt);
+        const etaMs =
+          elapsedMs > 0 && remoteGen.pct > 0 && remoteGen.pct < 100
+            ? Math.round((elapsedMs / remoteGen.pct) * (100 - remoteGen.pct))
+            : null;
+        return { ...remoteGen, elapsedMs, etaMs };
+      })()
+    : remoteGen;
+  const topProgress =
+    genProgress.status === "running" ? genProgress : (liveRemoteGen ?? genProgress);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => localStorage.getItem("ss-sidebar") !== "closed");
   const toggleSidebar = () =>
     setSidebarOpen((o) => {
@@ -86,12 +169,23 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const handleRegen = (kind: AssetKind, index: number | null) =>
     !runActive && setPendingRun({ nonce: Date.now(), regen: { kind, index: index ?? undefined } });
 
+  // Home -> workspace navigation. The workspace itself is unchanged —
+  // opening a project just selects it and switches the view.
+  const openProject = useCallback((n: string) => {
+    setDraft(null);
+    setName(n);
+    setView("workspace");
+  }, []);
+
   const handleDelete = async (s: string) => {
     if (!window.confirm(`Delete scenario "${s}"?\nIts generated outputs will be removed too.`)) return;
     try {
       await deleteScenario(s);
       if (draft && draft.name === s) setDraft(null);
-      if (name === s) setName("");
+      if (name === s) {
+        setName("");
+        setView("home");
+      }
       await refreshScenarios();
       refresh();
     } catch (e) {
@@ -122,10 +216,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   };
 
   useEffect(() => {
-    refreshScenarios().then((seq) => {
-      // Default project: the DUMMY example, loaded from the database.
-      if (seq.some((s) => s.name === "dummy_example")) setName("dummy_example");
-    }).catch(() => {});
+    refreshScenarios().catch(() => {});
   }, [refreshScenarios]);
 
   useEffect(() => {
@@ -173,12 +264,19 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
       ...(meta.topic ? { topic: meta.topic } : {}),
       ...(meta.requirements ? { requirements: meta.requirements } : {}),
     };
+    // Targeted craft (craftTarget = the open saved scenario): keep the SAME
+    // name so explicit Save stores a new *version* of that project (delta
+    // rows for changed scenes only) instead of minting a new project.
+    const inPlace = !draft && !!name && n === name;
     let target = n;
-    for (let i = 2; scenarios.some((s) => s.name === target); i++) target = `${n}_${i}`;
+    if (!inPlace) {
+      for (let i = 2; scenarios.some((s) => s.name === target); i++) target = `${n}_${i}`;
+    }
     // Server already saved the project under `n` (unique there); if the
     // sidebar needed a _2 suffix, the Save below creates that project row —
     // either way project_assets always carry the right project_id.
     setDraft({ name: target, config: full, project_id: target === n ? project_id ?? null : null });
+    setView("workspace");
   };
 
   const editor = draft
@@ -202,8 +300,31 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           <span className="brand-mark">
             <IconClapper size={17} />
           </span>
-          <span className="brand-name">Video Generator</span>
-          <span className="brand-sub">ComfyUI character-sequence pipeline</span>
+          <span className="brand-name">Sanskriti AI</span>
+          <span className="brand-sub">AI Video Generator</span>
+        </div>
+        <nav className="topnav" aria-label="Primary">
+          <button
+            className={`topnav-btn ${view === "home" ? "on" : ""}`}
+            onClick={() => setView("home")}
+            aria-current={view === "home" ? "page" : undefined}
+          >
+            Home
+          </button>
+          <button
+            className={`topnav-btn ${view === "workspace" ? "on" : ""}`}
+            onClick={() => draft || name ? setView("workspace") : setView("home")}
+            aria-current={view === "workspace" ? "page" : undefined}
+            title={draft ? `Workspace: ${draft.name} (unsaved)` : name ? `Workspace: ${name}` : "Open a project from Home first"}
+          >
+            Projects
+          </button>
+        </nav>
+        {/* Global generation status — permanently centered in the main menu
+            bar (Sanskriti AI · Home · Projects), visible on every page.
+            Shows live progress while generating, idle state otherwise. */}
+        <div className="topbar-center">
+          <GenerationProgressBar progress={topProgress} compact />
         </div>
         <div className="topbar-right">
           <button
@@ -238,9 +359,23 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         </div>
       </header>
 
+      {/* Both views stay mounted — the inactive one is hidden, not unmounted —
+          so a running generation keeps its live log, progress bar and SSE tail
+          (and Craft keeps its spinner) when flipping between Home and the
+          workspace. */}
       <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}`}>
+        <div className="home-wrap" style={view !== "home" ? { display: "none" } : undefined}>
+          <HomePage
+            active={view === "home"}
+            onOpen={openProject}
+            onProjectsChanged={() => {
+              refreshScenarios();
+              refresh();
+            }}
+          />
+        </div>
         {sidebarOpen && (
-        <aside className="sidebar">
+        <aside className="sidebar" style={view !== "workspace" ? { display: "none" } : undefined}>
           <div className="sidebar-head">
             <span>Projects</span>
             <span className="muted" style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
@@ -257,7 +392,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               <div className="scenario-row" key={s.name}>
                 <button
                   className={`scenario-item ${!draft && name === s.name ? "on" : ""}`}
-                  onClick={() => { setDraft(null); setName(s.name); }}
+                  onClick={() => openProject(s.name)}
                   title={s.name}
                 >
                   <span className="scenario-name">{s.name}</span>
@@ -285,12 +420,13 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         </aside>
         )}
 
-        <div className="col">
+        <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
           <CraftPanel
             onCrafted={handleCrafted}
+            craftTarget={!draft && name ? name : null}
             scenarios={scenarios}
             selected={draft ? "" : name}
-            onSelect={(n) => { setDraft(null); setName(n); }}
+            onSelect={(n) => openProject(n)}
             contextKey={draft ? `draft:${draft.name}` : (name ? `saved:${name}` : "new")}
             contextTopic={(draft ? draft.config : cfg)?.topic ?? ""}
             contextReqs={(draft ? draft.config : cfg)?.requirements ?? ""}
@@ -345,10 +481,11 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               setRegenTarget(s === "running" ? regen : null);
             }}
             pendingRun={pendingRun}
+            onProgress={setGenProgress}
           />
         </div>
 
-        <div className="col">
+        <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
           <OutputGallery
             scenario={outScenario(draft ? draft.name : name, engine)}
             refreshKey={refreshKey}

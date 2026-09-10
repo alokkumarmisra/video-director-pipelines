@@ -13,6 +13,11 @@ interface Props {
   // Which sections to render: everything, only Reference (embedded in the
   // Scenario Editor under Generate Reference), or everything but Reference.
   section?: "all" | "reference" | "rest";
+  // Total scene (beat) count for the "n/total" overlay in the live view.
+  // The static view derives it from its versioned beats; the live view only
+  // sees finished assets so the caller (RunPanel) passes the real total from
+  // the scenario config. Falls back to the highest seen beat index.
+  totalScenes?: number | null;
   regenTarget?: { kind: AssetKind; index?: number } | null; // exact asset a regen run is producing
   onStitch?: () => void; // ask the run panel to re-stitch the final cut
   onRegen?: (kind: AssetKind, index: number | null) => void;
@@ -33,7 +38,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded, onEngineSwitch }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -123,12 +128,19 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   }, [scenario, sibScenario, files, assets, bare, section]);
 
   // Live-run view: no versioning UI (versions are created by the run itself).
+  // Scene numbers come from the real asset beat index (never array position),
+  // total from the scenario config via totalScenes (fallback: highest index).
   if (assets) {
     const live = assets;
     const final = live.find((a) => a.stage === "final")?.file;
     const ref = live.find((a) => a.stage === "reference")?.file;
-    const keyframes = live.filter((a) => a.stage === "keyframe").sort(byIndex).map((a) => a.file);
-    const clips = live.filter((a) => a.stage === "clip").sort(byIndex).map((a) => a.file);
+    const keyframes = live.filter((a) => a.stage === "keyframe").sort(byIndex);
+    const clips = live.filter((a) => a.stage === "clip").sort(byIndex);
+    const clipByIndex = new Map(clips.map((c) => [c.index ?? -1, c.file]));
+    const liveTotal =
+      totalScenes != null && totalScenes > 0
+        ? totalScenes
+        : Math.max(0, ...keyframes.map((k) => k.index ?? 0), ...clips.map((c) => c.index ?? 0)) || null;
     const mediaCount = keyframes.length + clips.length + (ref ? 1 : 0) + (final ? 1 : 0);
     const Tag = bare ? "div" : "section";
     return (
@@ -139,6 +151,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <>
             <div className="section-label">Final cut</div>
             <div className="video-frame">
+              <SceneBadge label="FINAL" title="Stitched final cut" />
               <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, final), kind: "video", alt: "final cut" })} />
               <video controls src={outputUrl(scenario, final)} />
             </div>
@@ -148,6 +161,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <>
             <div className="section-label">Reference</div>
             <div className="img-frame">
+              <SceneBadge label="REF" title="Reference visual" />
               <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, ref), kind: "image", alt: "reference" })} />
               <img src={outputUrl(scenario, ref)} alt="reference" loading="lazy" />
             </div>
@@ -156,21 +170,27 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         {keyframes.length > 0 && (
           <>
             <div className="section-label">Keyframes → clips</div>
-            <div className="grid">
-              {keyframes.map((kf, i) => (
-                <div className="shot" key={kf}>
+            <div className="grid grid-compact">
+              {keyframes.map((kf) => {
+                const n = kf.index ?? 0;
+                const clip = clipByIndex.get(n);
+                return (
+                <div className="shot" key={kf.file}>
                   <div className="img-frame">
-                    <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf), kind: "image", alt: pretty(kf) })} />
-                    <img src={outputUrl(scenario, kf)} alt={pretty(kf)} loading="lazy" />
+                    {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
+                    <ExpandButton title={`Fullscreen preview of ${pretty(kf.file)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf.file), kind: "image", alt: pretty(kf.file) })} />
+                    <img src={outputUrl(scenario, kf.file)} alt={pretty(kf.file)} loading="lazy" />
                   </div>
-                  {clips[i] && (
+                  {clip && (
                     <div className="video-frame">
-                      <ExpandButton title={`Fullscreen preview of ${pretty(clips[i])}`} onOpen={() => setPreview({ src: outputUrl(scenario, clips[i]), kind: "video", alt: pretty(clips[i]) })} />
-                      <video controls src={outputUrl(scenario, clips[i])} />
+                      {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
+                      <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clip), kind: "video", alt: pretty(clip) })} />
+                      <video controls src={outputUrl(scenario, clip)} />
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
@@ -322,6 +342,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             title={mains.ref === v.file ? `${v.file} (main)` : `Set ${v.file} as main`}
           >
             <span className="ver-badge">v{v.v}</span>
+            <SceneBadge label="REF" title="Reference visual" />
             {mains.ref === v.file && <span className="main-badge"><IconCheck size={10} /> main</span>}
             <ExpandButton title={`Fullscreen preview of ${v.file}`} onOpen={() => setPreview({ src: outputUrl(scenario, v.file), kind: "image", alt: `reference V${v.v}` })} />
             <img
@@ -395,6 +416,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             )}
           </div>
           <div className="video-frame">
+            <SceneBadge label="FINAL" title="Stitched final cut" />
             <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, shownFinal), kind: "video", alt: "final cut" })} />
             <video
               key={shownFinal}
@@ -462,6 +484,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               >
                 {refFile ? (
                   <div className="upload-side">
+                    <SceneBadge label="REF" title="Reference visual" />
                     <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, refFile), kind: "image", alt: "reference" })} />
                     <img src={outputUrl(scenario, refFile)} alt="reference" loading="lazy" />
                     <div className="upload-side-actions">
@@ -493,16 +516,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       {section !== "reference" && (beatNums.length > 0 || fallbackShots.length > 0) && (
         <>
           <div className="section-label">Keyframes → clips</div>
-          <div className="grid">
+          <div className="grid grid-compact">
             {beatNums.map((n) => {
               const bv = versions.beats[String(n)];
               const kfMain = mains.beats[String(n)]?.keyframe || bv.keyframe[bv.keyframe.length - 1]?.file || null;
               const clipMain = mains.beats[String(n)]?.clip || bv.clip[bv.clip.length - 1]?.file || null;
+              const total = beatNums.length;
               return (
                 <div className="shot" key={n}>
                   <div className="img-frame">
                     {kfMain
                       ? <>
+                        <SceneBadge scene={n} total={total} />
                         <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
                         <img src={outputUrl(scenario, kfMain)} alt={pretty(kfMain)} loading="lazy" />
                       </>
@@ -524,6 +549,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   <div className="video-frame">
                     {clipMain
                       ? <>
+                        <SceneBadge scene={n} total={total} />
                         <ExpandButton title={`Fullscreen preview of ${pretty(clipMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clipMain), kind: "video", alt: pretty(clipMain) })} />
                         <video controls src={outputUrl(scenario, clipMain)} />
                       </>
@@ -544,18 +570,26 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 </div>
               );
             })}
-            {fallbackShots.map(({ kf, clip }) => (
+            {fallbackShots.map(({ kf, clip }, fi) => {
+              const m = kf.match(/_seq(\d+)_/);
+              const fn = m ? Number(m[1]) : fi + 1;
+              return (
               <div className="shot" key={kf}>
                 <div className="img-frame">
+                  <SceneBadge scene={fn} total={fallbackShots.length} />
+                  <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf), kind: "image", alt: pretty(kf) })} />
                   <img src={outputUrl(scenario, kf)} alt={pretty(kf)} loading="lazy" />
                 </div>
                 {clip && (
                   <div className="video-frame">
+                    <SceneBadge scene={fn} total={fallbackShots.length} />
+                    <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clip), kind: "video", alt: pretty(clip) })} />
                     <video controls src={outputUrl(scenario, clip)} />
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           <p className="hint">
             Pick a version to make it <b>main</b> — the final cut stitches the main version of every beat.
@@ -590,6 +624,26 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </div>
       )}
     </Tag>
+  );
+}
+
+// Scene-number overlay (top-right): "n/total" from real scene metadata, or a
+// stage label (REF / FINAL) where no scene number applies. Pure frontend
+// overlay — never modifies the generated file. Offset left of the expand
+// button so the two never overlap.
+export function SceneBadge({ scene, total, label, title }: {
+  scene?: number;
+  total?: number | null;
+  label?: string;
+  title?: string;
+}) {
+  const text =
+    label ?? (scene != null && total != null ? `${scene}/${total}` : scene != null ? String(scene) : "");
+  if (!text) return null;
+  return (
+    <span className="scene-badge" title={title ?? `Scene ${scene} of ${total}`}>
+      {text}
+    </span>
   );
 }
 

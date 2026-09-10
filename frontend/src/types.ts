@@ -104,3 +104,47 @@ export interface ProjectAsset {
   created_at: string;
   updated_at: string;
 }
+
+// Home dashboard (GET /api/dashboard). Status is derived from real asset
+// coverage — the project has no status column of its own:
+//   draft = nothing generated yet, in_progress = assets exist,
+//   completed = a final cut exists. `generating` overlays a live run.
+export type DashboardStatus = "draft" | "in_progress" | "completed";
+
+export interface DashboardProject {
+  name: string;
+  description: string;
+  status: DashboardStatus;
+  generating: boolean;
+  progress: number;
+  sceneCount: number;
+  imageCount: number;
+  videoCount: number;
+  refDone: boolean;
+  hasFinal: boolean;
+  /** ms epoch when the active run started (null when not generating). */
+  startedAt: number | null;
+  thumbnailUrl: string | null;
+  createdAt: number | null;
+  updatedAt: number | null;
+}
+
+export interface DashboardStatistics {
+  total: number;
+  active: number;
+  inProgress: number;
+  completed: number;
+}
+
+export interface DashboardResponse {
+  statistics: DashboardStatistics;
+  projects: DashboardProject[];
+}
+
+// Combined service health (GET /api/health). Each service is probed
+// independently — one being offline never blocks the others.
+export interface HealthResponse {
+  db: { up: boolean };
+  comfy: { up: boolean; queueRunning: number | null; queuePending: number | null; error?: string };
+  llm: { up: boolean; error?: string };
+}

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { startRun, killRun, tailRun, outScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
 import OutputGallery from "./OutputGallery";
+import GenerationProgressBar, { type GenerationProgress } from "./GenerationProgressBar";
 import { IconPlay, IconScissors, IconStop, IconTerminal, Spinner } from "./Icons";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
@@ -17,12 +18,14 @@ interface Props {
   // External run trigger (Stitch final / Regenerate from the output gallery /
   // Generate Reference from the scenario editor; count batches ref regens).
   pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null;
+  // Live progress reports (real assets/timing — App renders the sticky global bar).
+  onProgress?: (p: GenerationProgress) => void;
 }
 
-const STAGES = ["Reference", "Keyframes", "Clips", "Stitch"];
-
 // Start / stitch / stop a run + live log tail (SSE) + live asset gallery.
-export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun }: Props) {
+// Progress + ETA are derived from the real asset stream (see `progress`
+// below) — never fake timers.
+export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, onProgress }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>("idle");
   // Scenario this panel's run is generating (captured at start, so it stays
@@ -43,11 +46,27 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [assets, setAssets] = useState<AssetEvent[]>([]);
   const closeTail = useRef<() => void>(() => {});
   const boxRef = useRef<HTMLPreElement>(null);
+  // Real progress inputs: total beats from the scenario config, run shape,
+  // start/end timestamps, and per-asset completion times for the ETA.
+  const [totalBeats, setTotalBeats] = useState<number | null>(null);
+  const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number }>({ stitch: false, regen: null, count: 1 });
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [endedAt, setEndedAt] = useState<number | null>(null);
+  const [assetTimes, setAssetTimes] = useState<{ time: number; stage: AssetEvent["stage"] }[]>([]);
+  const [cancelled, setCancelled] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => () => closeTail.current(), []);
   useEffect(() => {
     boxRef.current?.scrollTo(0, boxRef.current.scrollHeight);
   }, [log]);
+
+  // Tick the clock while running so elapsed/ETA stay live between assets.
+  useEffect(() => {
+    if (status !== "running") return;
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, [status]);
 
   const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external") => {
     if (!scenario) return;
@@ -59,6 +78,17 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       setRunId(id);
       setRunScenario(scenario);
       setRunRegen(regen);
+      setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
+      setTotalBeats(null);
+      setStartedAt(Date.now());
+      setEndedAt(null);
+      setAssetTimes([]);
+      setCancelled(false);
+      setNow(Date.now());
+      // Real total comes from the saved scenario config (sequence length).
+      getScenario(scenario)
+        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
+        .catch(() => setTotalBeats(null));
       setStatus("running");
       setLog("");
       setAssets([]);
@@ -66,10 +96,16 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       closeTail.current = tailRun(
         id,
         (line) => setLog((l) => l + line),
-        (s) => { setStatus(s === "done" ? "done" : "error"); onDone(); },
-        (a) => setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a])
+        (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
+        (a) => {
+          const t = Date.now();
+          setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
+          setNow(t);
+          setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
+        }
       );
     } catch (e) {
+      setEndedAt(Date.now());
       setStatus("error");
       setLog(`run failed to start: ${e instanceof Error ? e.message : String(e)}\n`);
     } finally {
@@ -84,13 +120,116 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 
-  // Derive a coarse stage from the live asset stream.
-  const stage =
-    assets.some((a) => a.stage === "final") ? 3 :
-    assets.some((a) => a.stage === "clip") ? 2 :
-    assets.some((a) => a.stage === "keyframe") ? 1 :
-    assets.some((a) => a.stage === "reference") ? 0.5 : 0;
-  const pct = Math.min(100, (stage / 3) * 100);
+  // Real progress from the live asset stream + scenario totals.
+  // Pipeline order is sequential: reference → N keyframes → N clips → stitch.
+  // Full run total = 1 + 2N tasks; regen/stitch runs total = their own task(s).
+  const progress: GenerationProgress = useMemo(() => {
+    const N = totalBeats;
+    const { stitch, regen, count } = runMeta;
+    const refDone = assets.some((a) => a.stage === "reference") ? 1 : 0;
+    const kfIdx = new Set(assets.filter((a) => a.stage === "keyframe").map((a) => a.index ?? -1));
+    const clipIdx = new Set(assets.filter((a) => a.stage === "clip").map((a) => a.index ?? -1));
+    kfIdx.delete(-1);
+    clipIdx.delete(-1);
+    const hasFinal = assets.some((a) => a.stage === "final");
+    const start = startedAt ?? now;
+    const end = status === "running" ? now : (endedAt ?? now);
+    const elapsedMs = Math.max(0, end - start);
+
+    let total = 0;
+    let completed = 0;
+    let imagesDone = 0;
+    let imagesTotal = 0;
+    let videosDone = 0;
+    let videosTotal = 0;
+    let scene: number | null = null;
+    let etaMs: number | null = null;
+
+    if (stitch) {
+      total = 1;
+      completed = hasFinal ? 1 : 0;
+      videosDone = completed;
+      videosTotal = 1;
+    } else if (regen?.kind === "ref") {
+      total = Math.max(1, count);
+      completed = Math.min(total, assets.filter((a) => a.stage === "reference").length);
+      imagesDone = completed;
+      imagesTotal = total;
+    } else if (regen && (regen.kind === "keyframe" || regen.kind === "clip")) {
+      total = 1;
+      completed = assets.length > 0 ? 1 : 0;
+      scene = regen.index ?? null;
+      if (regen.kind === "keyframe") { imagesDone = completed; imagesTotal = 1; }
+      else { videosDone = completed; videosTotal = 1; }
+    } else if (N != null) {
+      // Full run: 1 reference + N keyframes (images) + N clips (videos).
+      total = 1 + 2 * N;
+      imagesTotal = 1 + N;
+      videosTotal = N;
+      imagesDone = refDone + kfIdx.size;
+      videosDone = clipIdx.size;
+      completed = imagesDone + videosDone;
+      const seen = Math.max(0, ...[...kfIdx, ...clipIdx]);
+      scene = N === 0 ? null : Math.min(N, Math.max(1, seen || 1));
+      if (regen?.index != null) scene = regen.index;
+    } else {
+      // Totals still loading — report what has actually landed.
+      completed = assets.length;
+      total = 0;
+      imagesDone = refDone + kfIdx.size;
+      videosDone = clipIdx.size;
+    }
+
+    let pct = total > 0 ? Math.min(100, (completed / total) * 100) : 0;
+    if (hasFinal) pct = 100;
+
+    // ETA from real per-asset durations: each completion interval is
+    // attributed to the asset that just finished, so image and video averages
+    // stay separate (clips usually take much longer than keyframes).
+    if (status === "running" && startedAt != null && completed > 0 && total > completed) {
+      const times = assetTimes;
+      const durs: { d: number; image: boolean }[] = [];
+      let prev = startedAt;
+      for (const t of times) {
+        durs.push({ d: Math.max(0, t.time - prev), image: t.stage !== "clip" && t.stage !== "final" });
+        prev = t.time;
+      }
+      const img = durs.filter((x) => x.image).map((x) => x.d);
+      const vid = durs.filter((x) => !x.image).map((x) => x.d);
+      const avg = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+      const overall = durs.length ? avg(durs.map((x) => x.d)) : elapsedMs / completed;
+      const avgImg = img.length ? avg(img) : overall;
+      const avgVid = vid.length ? avg(vid) : overall;
+      const remImg = Math.max(0, imagesTotal - imagesDone);
+      const remVid = Math.max(0, videosTotal - videosDone);
+      if (imagesTotal + videosTotal > 0 && (remImg + remVid) > 0 && (img.length || vid.length)) {
+        etaMs = Math.round(remImg * avgImg + remVid * avgVid);
+      } else {
+        const remaining = total - completed;
+        etaMs = Math.round((elapsedMs / completed) * remaining);
+      }
+    }
+
+    return {
+      status: status === "idle" ? "idle" : status === "running" ? "running" : status === "done" ? "done" : "error",
+      cancelled: status === "error" && cancelled,
+      pct,
+      completed,
+      total,
+      scene,
+      totalScenes: N,
+      imagesDone,
+      imagesTotal,
+      videosDone,
+      videosTotal,
+      etaMs,
+      elapsedMs,
+      startedAt,
+      scenario: runScenario ?? scenario,
+    };
+  }, [assets, assetTimes, totalBeats, runMeta, status, startedAt, endedAt, now, cancelled, runScenario, scenario]);
+
+  useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
 
   const statusPill = {
     idle: <span className="pill">idle</span>,
@@ -123,16 +262,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         {statusPill}
       </div>
 
-      {status === "running" && (
-        <div className="progress">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="progress-meta">
-            <span>{STAGES[Math.min(3, Math.floor(stage))]}…</span>
-            <span className="muted">{assets.length} asset{assets.length === 1 ? "" : "s"}</span>
-          </div>
-        </div>
+      {(status === "running" || status === "done" || status === "error") && (progress.total > 0 || status !== "running") && (
+        <GenerationProgressBar progress={progress} />
       )}
 
       <div className="row">
@@ -150,6 +281,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           onClick={async () => {
             if (!runId || stopping) return;
             setStopping(true);
+            setCancelled(true);
             try {
               await killRun(runId);
             } catch {
@@ -170,7 +302,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       </pre>
 
       {assets.length > 0 && (
-        <OutputGallery scenario={outScenario(scenario, engine)} refreshKey={0} assets={assets} bare />
+        <OutputGallery scenario={outScenario(scenario, engine)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} />
       )}
     </section>
   );

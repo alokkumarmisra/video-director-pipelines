@@ -1,4 +1,4 @@
-import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset } from "./types";
+import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, DashboardResponse, HealthResponse } from "./types";
 
 const get = async <T,>(url: string) => (await fetch(url)).json() as Promise<T>;
 
@@ -104,6 +104,30 @@ export const killRun = (id: string) => fetch(`/api/runs/${id}`, { method: "DELET
 export const comfyStatus = () => get<ComfyStatus>("/api/comfy");
 export const listOutputs = (scenario: string) =>
   get<OutputsInfo>(`/api/outputs?scenario=${scenario}`);
+
+// Home dashboard + combined service health (real data, no mocks).
+export const getDashboard = () =>
+  fetch("/api/dashboard").then((r) =>
+    r.ok
+      ? r.json() as Promise<DashboardResponse>
+      : r.json().then((d) => Promise.reject(new Error(d.error || `HTTP ${r.status}`)))
+  );
+export const getHealth = () => get<HealthResponse>("/api/health");
+
+// "10 minutes ago" / "3 hours ago" / "2 days ago", falling back to fmtDate.
+export const fmtRelative = (ms: number | null | undefined) => {
+  if (ms == null || !Number.isFinite(Number(ms))) return "—";
+  const diff = Date.now() - Number(ms);
+  if (diff < 0) return fmtDate(Number(ms));
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} day${d === 1 ? "" : "s"} ago`;
+  return fmtDate(Number(ms));
+};
 
 // Pick which version of an asset is "main" (used for stitching / clip generation).
 export const selectMain = (scenario: string, kind: AssetKind, index: number | null, file: string) =>

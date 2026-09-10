@@ -5,6 +5,10 @@ import { IconSparkles, Spinner } from "./Icons";
 
 interface Props {
   onCrafted: (name: string, config: Scenario, meta: { topic: string; requirements: string }, project_id?: number | null) => void;
+  // Saved scenario the craft applies to (the open project) — the LLM drafts
+  // a new version of THIS project, so Save stores v(N+1) with delta rows for
+  // changed scenes only. Null = craft a brand-new project.
+  craftTarget: string | null;
   // Existing workflow (scenario) JSONs + which one is selected, so the user
   // can switch to another workflow (or clear the selection) without
   // refreshing the page.
@@ -19,7 +23,7 @@ interface Props {
 }
 
 // High-level topic + requirements -> local LLM crafts a scenario JSON.
-export default function CraftPanel({ onCrafted, scenarios, selected, onSelect, contextKey, contextTopic, contextReqs }: Props) {
+export default function CraftPanel({ onCrafted, craftTarget, scenarios, selected, onSelect, contextKey, contextTopic, contextReqs }: Props) {
   const [topic, setTopic] = useState("");
   const [reqs, setReqs] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,7 +51,7 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect, c
       const r = await fetch("/api/craft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, requirements: reqs }),
+        body: JSON.stringify({ topic, requirements: reqs, ...(craftTarget ? { target: craftTarget } : {}) }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
@@ -125,8 +129,11 @@ export default function CraftPanel({ onCrafted, scenarios, selected, onSelect, c
       </div>
       {error && <p className="hint err-text">{error}</p>}
       <p className="hint">
-        The LLM drafts a full scenario below with its topic, requirements and all
-        prompts — review it, then Save scenario to store it as v1.
+        {craftTarget ? (
+          <>The LLM drafts a new version of <b>{craftTarget}</b> below — review it, then Save scenario to store it as the next version (only changed scenes get new rows).</>
+        ) : (
+          <>The LLM drafts a full scenario below with its topic, requirements and all prompts — review it, then Save scenario to store it as v1.</>
+        )}
       </p>
     </section>
   );

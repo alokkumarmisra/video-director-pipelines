@@ -1086,6 +1086,203 @@ async function comfyStatus() {
   }
 }
 
+// ---------------------------------------------------------------- LLM status
+async function llmStatus() {
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) return { up: false, error: "LLM_BASE not set" };
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 4000);
+    let r;
+    try { r = await fetch(`${base}/v1/models`, { signal: ctl.signal }); }
+    finally { clearTimeout(t); }
+    if (!r.ok) return { up: false, error: `HTTP ${r.status}` };
+    return { up: true };
+  } catch (e) {
+    return { up: false, error: String(e?.message || e).slice(0, 120) };
+  }
+}
+
+// ---------------------------------------------------------------- dashboard
+// Home-page payload: project list + real per-project progress, aggregated
+// with a fixed number of queries (no N+1):
+//   scenarios (1) + asset coverage GROUP BY (1) + latest image DISTINCT ON (1)
+//   + project created dates (1).
+// When Postgres is down the scenario list falls back to prompts/*.json and
+// coverage falls back to a disk scan, so the Home page still renders — AI
+// services being offline never blocks project data either (health is a
+// separate endpoint). Error details stay server-side (logs), the client only
+// gets "dashboard unavailable".
+const folderProject = (folder) => (String(folder).endsWith("_wan") ? String(folder).slice(0, -4) : String(folder));
+const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null });
+
+// Disk coverage for one project dir (PG-down fallback + thumbnail existence).
+// Prefers the ltx dir, then the _wan dir; thumbnail = highest-beat keyframe
+// main, else the reference main.
+function diskCoverageFor(name, cfg) {
+  const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+  const cov = newCoverage();
+  for (const dir of [name, `${name}_wan`]) {
+    const full = path.join(OUTPUTS, dir);
+    if (!fs.existsSync(full)) continue;
+    let vm = null;
+    try { vm = versionMap(full, prefixFor(dir), seq); } catch { vm = null; }
+    if (!vm) continue;
+    if (vm.refMain) {
+      cov.ref = true;
+      cov.thumb ||= { dir, file: vm.refMain };
+    }
+    for (const [n, b] of Object.entries(vm.beats || {})) {
+      if (b.keyframeMain) {
+        cov.kf.add(Number(n));
+        cov.thumb = { dir, file: b.keyframeMain }; // beats iterate ascending — last wins = highest beat
+      }
+      if (b.clipMain) cov.clips.add(Number(n));
+    }
+    if (vm.finalMain) cov.final = true;
+    if (cov.thumb && cov.thumb.dir === dir && cov.kf.size) break; // ltx dir already has keyframes
+  }
+  return cov;
+}
+
+async function dashboardPayload() {
+  // 1) Scenario list (PG canonical; prompts/*.json fallback when PG is down).
+  let rows;
+  try {
+    rows = (await dbListScenarios()).map((r) => ({
+      name: r.name, configText: String(r.config), updated_at: Number(r.updated_at),
+    }));
+  } catch (e) {
+    console.warn("[dashboard] scenario store unreachable, falling back to prompts/*.json");
+    rows = [];
+    try {
+      fs.mkdirSync(PROMPTS, { recursive: true });
+      for (const f of fs.readdirSync(PROMPTS).filter((f) => f.endsWith(".json"))) {
+        const full = path.join(PROMPTS, f);
+        try {
+          rows.push({ name: f.replace(/\.json$/, ""), configText: fs.readFileSync(full, "utf8"), updated_at: Math.round(fs.statSync(full).mtimeMs) });
+        } catch { /* skip unreadable prompt files */ }
+      }
+    } catch { /* no prompts dir — empty list */ }
+  }
+  const cfgs = new Map();
+  for (const r of rows) {
+    try { cfgs.set(r.name, JSON.parse(r.configText)); }
+    catch { cfgs.set(r.name, null); }
+  }
+  const names = rows.map((r) => r.name);
+  const folders = [...new Set(names.flatMap((n) => [n, `${n}_wan`]))];
+
+  // 2) Coverage from the PG assets catalog (one GROUP BY), else disk scan.
+  const covs = new Map(); // name -> coverage
+  const get = (n) => {
+    let c = covs.get(n);
+    if (!c) { c = newCoverage(); covs.set(n, c); }
+    return c;
+  };
+  let thumbs = new Map();
+  if (pgUp && names.length) {
+    try {
+      const cov = await pgPool.query(
+        `SELECT scenario, kind, beat_index FROM assets
+          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe','clip','final')`,
+        [folders]);
+      for (const row of cov.rows) {
+        const c = get(folderProject(row.scenario));
+        if (row.kind === "reference") c.ref = true;
+        else if (row.kind === "keyframe" && row.beat_index != null) c.kf.add(Number(row.beat_index));
+        else if (row.kind === "clip" && row.beat_index != null) c.clips.add(Number(row.beat_index));
+        else if (row.kind === "final") c.final = true;
+      }
+      const th = await pgPool.query(
+        `SELECT DISTINCT ON (scenario) scenario, file FROM assets
+          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe')
+          ORDER BY scenario, mtime DESC`,
+        [folders]);
+      thumbs = new Map(th.rows.map((r) => [r.scenario, r.file]));
+    } catch (e) {
+      console.warn("[dashboard] asset aggregate failed, using disk scan:", e.message);
+    }
+  }
+  if (!pgUp) {
+    for (const n of names) covs.set(n, diskCoverageFor(n, cfgs.get(n)));
+  } else {
+    // PG was up: fill projects that have no catalog rows from disk (CLI runs
+    // / backfill gaps must never report zero progress), and resolve thumbs.
+    for (const n of names) {
+      const c = get(n);
+      if (!c.ref && !c.kf.size && !c.clips.size && !c.final) {
+        const d = diskCoverageFor(n, cfgs.get(n));
+        if (d.ref || d.kf.size || d.clips.size || d.final) covs.set(n, d);
+      }
+    }
+  }
+
+  // 3) Project created dates (one query; nulls when unavailable).
+  let created = new Map();
+  if (pgUp && names.length) {
+    try {
+      const r = await pgPool.query("SELECT name, created_at FROM projects WHERE name = ANY($1)", [names]);
+      created = new Map(r.rows.map((x) => [x.name, x.created_at ? new Date(x.created_at).getTime() : null]));
+    } catch (e) { console.warn("[dashboard] projects lookup failed:", e.message); }
+  }
+
+  // 4) Currently generating (in-memory runs — ComfyUI queue is serial).
+  const runningByScenario = new Map();
+  for (const r of runs.values()) {
+    if (r.status === "running" && !runningByScenario.has(r.scenario)) {
+      runningByScenario.set(r.scenario, r);
+      // A _wan run is stored under the base scenario name; also match the
+      // suffixed folder name so both dashboard keys resolve.
+      runningByScenario.set(`${r.scenario}_wan`, r);
+    }
+  }
+  const generating = new Set(runningByScenario.keys());
+
+  const projects = rows.map((r) => {
+    const cfg = cfgs.get(r.name);
+    const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+    const beats = seq.length;
+    const c = covs.get(r.name) || newCoverage();
+    const total = 1 + 2 * beats; // reference + keyframe + clip per beat
+    const done = (c.ref ? 1 : 0) + c.kf.size + c.clips.size;
+    const progress = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    const status = c.final ? "completed" : (done > 0 ? "in_progress" : "draft");
+    // Thumbnail: PG catalog pick, else disk pick; must exist on disk.
+    let thumbFile = thumbs.get(r.name) ?? thumbs.get(`${r.name}_wan`) ?? c.thumb?.file ?? null;
+    let thumbDir = thumbs.has(r.name) ? r.name : (thumbs.has(`${r.name}_wan`) ? `${r.name}_wan` : (c.thumb?.dir ?? r.name));
+    if (thumbFile && !fs.existsSync(path.join(OUTPUTS, thumbDir, thumbFile))) {
+      thumbFile = c.thumb && fs.existsSync(path.join(OUTPUTS, c.thumb.dir, c.thumb.file)) ? c.thumb.file : null;
+      if (thumbFile) thumbDir = c.thumb.dir;
+    }
+    return {
+      name: r.name,
+      description: typeof cfg?.description === "string" ? cfg.description : "",
+      status,
+      generating: generating.has(r.name) || generating.has(`${r.name}_wan`),
+      startedAt: runningByScenario.get(r.name)?.startedAt
+        ?? runningByScenario.get(`${r.name}_wan`)?.startedAt ?? null,
+      progress,
+      sceneCount: beats,
+      imageCount: c.kf.size,
+      videoCount: c.clips.size,
+      refDone: c.ref,
+      hasFinal: c.final,
+      thumbnailUrl: thumbFile ? `/outputs/${thumbDir}/${thumbFile}` : null,
+      createdAt: created.get(r.name) ?? null,
+      updatedAt: Number.isFinite(r.updated_at) ? r.updated_at : null,
+    };
+  }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
+  const statistics = {
+    total: projects.length,
+    active: projects.filter((p) => p.generating).length,
+    inProgress: projects.filter((p) => p.status === "in_progress").length,
+    completed: projects.filter((p) => p.status === "completed").length,
+  };
+  return { statistics, projects };
+}
+
 // ---------------------------------------------------------------- LLM craft
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "scenario";
 
@@ -1662,7 +1859,23 @@ const server = http.createServer(async (req, res) => {
       // exists in projects from the click on, and Save Scenario later reuses
       // this same project_id for its project_assets rows.
       let project_id = null;
-      if (pgUp) {
+      // Targeted craft: the UI asked to re-craft the OPEN project (body.target
+      // names an existing scenario). Keep that SAME name — the next Save then
+      // stores a new version of the project (delta rows for changed scenes
+      // only) instead of minting a new project. The project row already
+      // exists, so nothing is inserted here.
+      const target = typeof body.target === "string" && isSafe(body.target) ? body.target : null;
+      let targeted = false;
+      if (target && pgUp) {
+        try {
+          if ((await dbGetScenario(target)) !== null) {
+            crafted.name = target;
+            targeted = true;
+            project_id = await pgProjectId(target);
+          }
+        } catch (e) { console.warn("[pg] craft target lookup failed:", e.message); }
+      }
+      if (pgUp && !targeted) {
         try {
           // Unique name: never clobber an existing scenario/project (the
           // editor would show it as a _2 draft otherwise, orphaning this row).
@@ -1696,6 +1909,35 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
     }
     if (p === "/api/comfy" && req.method === "GET") return json(res, 200, await comfyStatus());
+    // Combined health for the Home page (one round trip). Each service is
+    // probed independently — an offline LLM/ComfyUI never blocks project data.
+    if (p === "/api/health" && req.method === "GET") {
+      const [dbUp, comfy, llm] = await Promise.all([
+        pgProbe().catch(() => false),
+        comfyStatus().catch(() => ({ up: false, error: "status check failed" })),
+        llmStatus().catch(() => ({ up: false, error: "status check failed" })),
+      ]);
+      const q = (comfy && comfy.queue) || {};
+      return json(res, 200, {
+        db: { up: !!dbUp },
+        comfy: {
+          up: !!comfy.up,
+          queueRunning: Array.isArray(q.queue_running) ? q.queue_running.length : null,
+          queuePending: Array.isArray(q.queue_pending) ? q.queue_pending.length : null,
+          error: comfy.error,
+        },
+        llm: { up: !!llm.up, error: llm.error },
+      });
+    }
+    // Aggregated Home-page dashboard (statistics + per-project progress).
+    if (p === "/api/dashboard" && req.method === "GET") {
+      try {
+        return json(res, 200, await dashboardPayload());
+      } catch (e) {
+        console.warn("[dashboard] failed:", e.message);
+        return json(res, 500, { error: "dashboard unavailable" });
+      }
+    }
     // Narrow project_assets rows for a project (one row per asset).
     // GET /api/project/:name/assets[?version=N][&mode=exact] — version
     // defaults to latest. Default mode is EFFECTIVE: because versions are
