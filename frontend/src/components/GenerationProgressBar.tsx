@@ -253,7 +253,7 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
       ? "progress-fill failed"
       : cancelled
         ? "progress-fill cancelled"
-        : "progress-fill fill-overall";
+        : `progress-fill fill-overall${running && !done ? " sweep" : ""}`;
     return (
       <div
         className="gen-progress gen-compact gen-stacked"
@@ -273,7 +273,7 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
                 <span className="gen-compact-label">images</span>
                 <div className="progress-bar gen-compact-bar" aria-hidden="true">
                   <div
-                    className="progress-fill fill-images"
+                    className={`progress-fill fill-images${running ? " sweep" : ""}`}
                     style={{ width: `${Math.min(100, Math.max(0, imgPct))}%` }}
                   />
                 </div>
@@ -287,7 +287,7 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
                 <span className="gen-compact-label">videos</span>
                 <div className="progress-bar gen-compact-bar" aria-hidden="true">
                   <div
-                    className="progress-fill fill-videos"
+                    className={`progress-fill fill-videos${running ? " sweep" : ""}`}
                     style={{ width: `${Math.min(100, Math.max(0, vidPct))}%` }}
                   />
                 </div>
@@ -325,7 +325,7 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
       </div>
       <div className="progress-bar gen-progress-bar">
         <div
-          className={`progress-fill${failed ? " failed" : ""}${cancelled ? " cancelled" : ""}`}
+          className={`progress-fill${failed ? " failed" : ""}${cancelled ? " cancelled" : ""}${status === "running" ? " sweep" : ""}`}
           style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
         />
       </div>

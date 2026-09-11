@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { listOutputs, outputUrl, selectMain, uploadRef, uploadKeyframe, type AssetEvent } from "../api";
+import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent, type RunRequest } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
 import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
+import SmoothImage from "./SmoothImage";
 
 interface Props {
   scenario: string;
@@ -19,6 +20,9 @@ interface Props {
   // the scenario config. Falls back to the highest seen beat index.
   totalScenes?: number | null;
   regenTarget?: { kind: AssetKind; index?: number } | null; // exact asset a regen run is producing
+  // Requests waiting behind the active run — matching regen chips read
+  // "queued" and stay clickable instead of locking like before.
+  runQueue?: RunRequest[];
   onStitch?: () => void; // ask the run panel to re-stitch the final cut
   onRegen?: (kind: AssetKind, index: number | null) => void;
   onUploaded?: () => void; // a ref upload landed — ask the app to re-list outputs
@@ -38,7 +42,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -53,6 +57,14 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<PreviewItem | null>(null);
+  // Output dir whose listing is actually on screen. Stale-while-revalidate:
+  // the previous project's files stay mounted until the new listing lands —
+  // clearing them first is what flashed "No outputs yet" on every click.
+  // All visible URLs/API calls bind to `viewScenario` so filenames are never
+  // mixed with the wrong output dir mid-switch.
+  const [loadedFor, setLoadedFor] = useState(scenario);
+  const viewScenario = loadedFor || scenario;
+  const switchingGallery = !assets && !!scenario && loadedFor !== scenario;
 
   const readAsDataUrl = (f: File) =>
     new Promise<string>((resolve, reject) => {
@@ -63,13 +75,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     });
 
   const doUpload = async (f: File) => {
-    if (!scenario || uploading) return;
+    if (!viewScenario || uploading || switchingGallery) return;
     if (!f.type.startsWith("image/")) { setUploadError("not an image file"); return; }
     setUploading(true);
     setUploadError("");
     try {
       const data = await readAsDataUrl(f);
-      await uploadRef(scenario, data);
+      await uploadRef(viewScenario, data);
       onUploaded?.();
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : String(e));
@@ -90,34 +102,52 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [refMode, scenario, uploading, assets]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refMode, viewScenario, uploading, assets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    setFiles([]);
-    setVersions({ ref: [], beats: {}, final: [] });
-    setMains({ ref: null, beats: {}, final: null });
-    setViewFinal(null);
-    setError("");
-    if (!scenario) return;
-    if (!assets) {
-      listOutputs(scenario).then((r) => {
-        setFiles(r.files);
-        setVersions(r.versions);
-        setMains(r.mains);
-      }).catch((e) => setError(String(e.message || e)));
+    if (!scenario) {
+      setFiles([]);
+      setVersions({ ref: [], beats: {}, final: [] });
+      setMains({ ref: null, beats: {}, final: null });
+      setViewFinal(null);
+      setLoadedFor("");
+      setError("");
+      return;
     }
-  }, [scenario, refreshKey, assets]);
+    if (assets) return;
+    // Keep the old listing on screen until the new one lands (no blanking).
+    let cancelled = false;
+    listOutputs(scenario).then((r) => {
+      if (cancelled) return;
+      setFiles(r.files);
+      setVersions(r.versions);
+      setMains(r.mains);
+      setLoadedFor(scenario);
+      setError("");
+    }).catch((e) => {
+      // A failed background refresh must never wipe already-shown data —
+      // keep the stale listing, just surface the error.
+      if (!cancelled) setError(String((e as Error).message || e));
+    });
+    return () => { cancelled = true; };
+  }, [scenario, refreshKey, assets]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset the picked final-cut version only when moving to another project
+  // (a refreshKey bump from a fresh stitch keeps working via `shownFinal`
+  // falling back to latest when the picked file is gone).
+  useEffect(() => { setViewFinal(null); }, [scenario]);
 
   // Sibling engine dir (LTX <-> Wan): when THIS dir is empty, check whether
   // the project's renders live under the other engine, so the empty state
   // can point there instead of looking like nothing was ever generated.
-  const isWan = scenario.endsWith("_wan");
-  const sibScenario = isWan ? scenario.slice(0, -4) : `${scenario}_wan`;
+  // Bound to the on-screen listing (viewScenario), not the in-flight target.
+  const isWan = viewScenario.endsWith("_wan");
+  const sibScenario = isWan ? viewScenario.slice(0, -4) : `${viewScenario}_wan`;
   const sibLabel = isWan ? "LTX 2.5" : "Wan 2.1";
   const [sibCount, setSibCount] = useState<number | null>(null);
   useEffect(() => {
     setSibCount(null);
-    if (assets || bare || section === "reference" || !scenario) return;
+    if (assets || bare || section === "reference" || !viewScenario || switchingGallery) return;
     if (files.length > 0) return; // own dir has renders — no need to look
     let cancelled = false;
     listOutputs(sibScenario).then((r) => {
@@ -125,7 +155,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       setSibCount((r.files || []).filter((f) => /\.(png|mp4)$/i.test(f)).length);
     }).catch(() => { if (!cancelled) setSibCount(null); });
     return () => { cancelled = true; };
-  }, [scenario, sibScenario, files, assets, bare, section]);
+  }, [viewScenario, sibScenario, files, assets, bare, section, switchingGallery]);
 
   // Live-run view: no versioning UI (versions are created by the run itself).
   // Scene numbers come from the real asset beat index (never array position),
@@ -152,8 +182,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             <div className="section-label">Final cut</div>
             <div className="video-frame">
               <SceneBadge label="FINAL" title="Stitched final cut" />
-              <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, final), kind: "video", alt: "final cut" })} />
-              <video controls src={outputUrl(scenario, final)} />
+              <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(viewScenario, final), kind: "video", alt: "final cut" })} />
+              <video controls src={outputUrl(viewScenario, final)} />
             </div>
           </>
         )}
@@ -162,8 +192,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             <div className="section-label">Reference</div>
             <div className="img-frame">
               <SceneBadge label="REF" title="Reference visual" />
-              <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, ref), kind: "image", alt: "reference" })} />
-              <img src={outputUrl(scenario, ref)} alt="reference" loading="lazy" />
+              <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(viewScenario, ref), kind: "image", alt: "reference" })} />
+              <SmoothImage src={outputUrl(viewScenario, ref)} alt="reference" />
             </div>
           </>
         )}
@@ -178,14 +208,14 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 <div className="shot" key={kf.file}>
                   <div className="img-frame">
                     {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
-                    <ExpandButton title={`Fullscreen preview of ${pretty(kf.file)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf.file), kind: "image", alt: pretty(kf.file) })} />
-                    <img src={outputUrl(scenario, kf.file)} alt={pretty(kf.file)} loading="lazy" />
+                    <ExpandButton title={`Fullscreen preview of ${pretty(kf.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf.file), kind: "image", alt: pretty(kf.file) })} />
+                    <SmoothImage src={outputUrl(viewScenario, kf.file)} alt={pretty(kf.file)} />
                   </div>
                   {clip && (
                     <div className="video-frame">
                       {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
-                      <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clip), kind: "video", alt: pretty(clip) })} />
-                      <video controls src={outputUrl(scenario, clip)} />
+                      <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clip), kind: "video", alt: pretty(clip) })} />
+                      <video controls src={outputUrl(viewScenario, clip)} />
                     </div>
                   )}
                 </div>
@@ -242,12 +272,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     : [];
   const hasClips = beatNums.some((n) => (versions.beats[String(n)].clip?.length ?? 0) > 0) || fallbackShots.some((s) => s.clip);
 
-  // True when the active run is generating into THIS output dir. The version
-  // rows then show a blinking "generating vN" chip on the asset that is
-  // actually in progress. For regen runs the exact target is known; for full
-  // runs it's the first asset in pipeline order (ref -> keyframes -> clips)
-  // without a version yet.
-  const generating = !!generatingScenario && generatingScenario === scenario;
+  // True when the active run is generating into the output dir on screen.
+  // Compared against the visible listing (viewScenario) so a mid-run project
+  // switch keeps the chip on the right gallery. The version rows then show a
+  // blinking "generating vN" chip on the asset actually in progress.
+  const generating = !!generatingScenario && generatingScenario === viewScenario;
   const genTarget = (() => {
     if (!generating) return null;
     if (regenTarget) {
@@ -268,9 +297,15 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // so no asset chip is blinking — the button itself spins instead.
   const stitching = generating && genTarget === null;
 
+  // Queued regen for one versioned asset (App drains serially) — its chip
+  // reads "queued" and stays clickable; only the generating chip locks.
+  const queuedRegen = (kind: "keyframe" | "clip", index: number) =>
+    runQueue.some((q) => !q.stitch && q.regen?.kind === kind && (q.regen?.index ?? index) === index);
+
   const pickMain = async (kind: "ref" | "keyframe" | "clip", index: number | null, file: string) => {
+    if (switchingGallery) return;
     try {
-      const r = await selectMain(scenario, kind, index, file);
+      const r = await selectMain(viewScenario, kind, index, file);
       setVersions(r.versions);
       setMains(r.mains);
       setFiles(r.files);
@@ -282,33 +317,16 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
   const doStitch = () => onStitch?.();
 
-  // Upload an image as beat N's keyframe: stored as the next keyframe
-  // version and set as main, so a later clip regen runs i2v from it.
-  const uploadKf = async (n: number, f: File) => {
-    if (!f.type.startsWith("image/")) { setError("not an image file"); return; }
-    try {
-      const data = await readAsDataUrl(f);
-      const r = await uploadKeyframe(scenario, n, data);
-      setVersions(r.versions);
-      setMains(r.mains);
-      setFiles(r.files);
-      setError("");
-      onUploaded?.();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
   // Shared Browse / Paste buttons (used in both upload layouts below).
   const browseButton = (
-    <button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+    <button onClick={() => fileInputRef.current?.click()} disabled={uploading || switchingGallery}>
       <IconUpload size={11} />
       Browse
     </button>
   );
   const pasteButton = (
     <button
-      disabled={uploading}
+      disabled={uploading || switchingGallery}
       title="Paste the clipboard image (or press Ctrl+V anywhere)"
       onClick={async () => {
         try {
@@ -344,11 +362,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             <span className="ver-badge">v{v.v}</span>
             <SceneBadge label="REF" title="Reference visual" />
             {mains.ref === v.file && <span className="main-badge"><IconCheck size={10} /> main</span>}
-            <ExpandButton title={`Fullscreen preview of ${v.file}`} onOpen={() => setPreview({ src: outputUrl(scenario, v.file), kind: "image", alt: `reference V${v.v}` })} />
-            <img
-              src={outputUrl(scenario, v.file)}
+            <ExpandButton title={`Fullscreen preview of ${v.file}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, v.file), kind: "image", alt: `reference V${v.v}` })} />
+            <SmoothImage
+              src={outputUrl(viewScenario, v.file)}
               alt={`reference V${v.v}`}
-              loading="lazy"
               onClick={() => pickMain("ref", null, v.file)}
             />
           </div>
@@ -383,19 +400,24 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             Outputs
           </h2>
           <span className="spacer" />
+          {switchingGallery && (
+            <span className="pill running switching-pill" title="Loading the newly selected project…">
+              <span className="dot pulse" /> switching…
+            </span>
+          )}
           {hasClips && (
             <button
               onClick={doStitch}
-              disabled={generating}
+              disabled={generating || switchingGallery}
               title={stitching ? "Stitching the final cut…" : "Concatenate the selected main clip versions into the final cut"}
             >
               {stitching ? <Spinner size={12} /> : <IconScissors size={12} />}
               {stitching ? "Stitching…" : "Stitch final"}
             </button>
           )}
-          {scenario && (
+          {viewScenario && (
             <span className="muted" style={{ fontSize: 12, fontFamily: "var(--mono)" }}>
-              outputs/{scenario}/
+              outputs/{viewScenario}/
             </span>
           )}
         </div>
@@ -417,11 +439,15 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </div>
           <div className="video-frame">
             <SceneBadge label="FINAL" title="Stitched final cut" />
-            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(scenario, shownFinal), kind: "video", alt: "final cut" })} />
+            {shownFinalV != null && (
+              <span className="ver-badge" title={`Final cut v${shownFinalV} (showing)`}>v{shownFinalV}</span>
+            )}
+            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(viewScenario, shownFinal), kind: "video", alt: "final cut" })} />
             <video
               key={shownFinal}
               controls
-              src={`${outputUrl(scenario, shownFinal)}?v=${encodeURIComponent(shownFinal)}`}
+              preload="metadata"
+              src={`${outputUrl(viewScenario, shownFinal)}?v=${encodeURIComponent(shownFinal)}`}
             />
           </div>
           {finalVersions.length > 0 && (
@@ -444,7 +470,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           )}
         </>
       )}
-      {scenario && section !== "rest" ? (
+      {viewScenario && section !== "rest" ? (
         <>
           <div className="section-label">
             Reference
@@ -485,8 +511,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 {refFile ? (
                   <div className="upload-side">
                     <SceneBadge label="REF" title="Reference visual" />
-                    <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(scenario, refFile), kind: "image", alt: "reference" })} />
-                    <img src={outputUrl(scenario, refFile)} alt="reference" loading="lazy" />
+                    <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(viewScenario, refFile), kind: "image", alt: "reference" })} />
+                    <SmoothImage src={outputUrl(viewScenario, refFile)} alt="reference" />
                     <div className="upload-side-actions">
                       {browseButton}
                       {pasteButton}
@@ -521,6 +547,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const bv = versions.beats[String(n)];
               const kfMain = mains.beats[String(n)]?.keyframe || bv.keyframe[bv.keyframe.length - 1]?.file || null;
               const clipMain = mains.beats[String(n)]?.clip || bv.clip[bv.clip.length - 1]?.file || null;
+              const kfV = kfMain ? bv.keyframe.find((v) => v.file === kfMain)?.v ?? null : null;
+              const clipV = clipMain ? bv.clip.find((v) => v.file === clipMain)?.v ?? null : null;
               const total = beatNums.length;
               return (
                 <div className="shot" key={n}>
@@ -528,8 +556,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     {kfMain
                       ? <>
                         <SceneBadge scene={n} total={total} />
-                        <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
-                        <img src={outputUrl(scenario, kfMain)} alt={pretty(kfMain)} loading="lazy" />
+                        {kfV != null && (
+                          <span className="ver-badge" title={`Scene ${n} keyframe v${kfV} (main)`}>v{kfV}</span>
+                        )}
+                        <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
+                        <SmoothImage src={outputUrl(viewScenario, kfMain)} alt={pretty(kfMain)} />
                       </>
                       : <div className="frame-missing">no keyframe</div>}
                   </div>
@@ -542,19 +573,23 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     kind="image"
                     onSelect={(f) => pickMain("keyframe", n, f)}
                     onRegen={() => onRegen?.("keyframe", n)}
-                    onUpload={(f) => uploadKf(n, f)}
                     generating={genTarget === `kf:${n}`}
-                    busy={generating}
+                    busy={switchingGallery}
+                    queued={!generating && queuedRegen("keyframe", n)}
                   />
-                  <div className="video-frame">
-                    {clipMain
-                      ? <>
-                        <SceneBadge scene={n} total={total} />
-                        <ExpandButton title={`Fullscreen preview of ${pretty(clipMain)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clipMain), kind: "video", alt: pretty(clipMain) })} />
-                        <video controls src={outputUrl(scenario, clipMain)} />
-                      </>
-                      : <div className="frame-missing">no clip</div>}
-                  </div>
+                  {clipMain ? (
+                    <div className="shot-clip-frame">
+                      <SceneBadge scene={n} total={total} />
+                      {clipV != null && (
+                        <span className="ver-badge" title={`Scene ${n} clip v${clipV} (main)`}>v{clipV}</span>
+                      )}
+                      <video controls preload="metadata" src={outputUrl(viewScenario, clipMain)} className="shot-clip-bare" />
+                    </div>
+                  ) : (
+                    <div className="video-frame">
+                      <div className="frame-missing">no clip</div>
+                    </div>
+                  )}
                   {genTarget === `clip:${n}` && !bv.clip.length && (
                     <GenChip v={1} />
                   )}
@@ -565,7 +600,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     onSelect={(f) => pickMain("clip", n, f)}
                     onRegen={() => onRegen?.("clip", n)}
                     generating={genTarget === `clip:${n}`}
-                    busy={generating}
+                    busy={switchingGallery}
+                    queued={!generating && queuedRegen("clip", n)}
                   />
                 </div>
               );
@@ -577,14 +613,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               <div className="shot" key={kf}>
                 <div className="img-frame">
                   <SceneBadge scene={fn} total={fallbackShots.length} />
-                  <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(scenario, kf), kind: "image", alt: pretty(kf) })} />
-                  <img src={outputUrl(scenario, kf)} alt={pretty(kf)} loading="lazy" />
+                  <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
+                  <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
                 </div>
                 {clip && (
-                  <div className="video-frame">
+                  <div className="shot-clip-frame">
                     <SceneBadge scene={fn} total={fallbackShots.length} />
-                    <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(scenario, clip), kind: "video", alt: pretty(clip) })} />
-                    <video controls src={outputUrl(scenario, clip)} />
+                    <video controls preload="metadata" src={outputUrl(viewScenario, clip)} className="shot-clip-bare" />
                   </div>
                 )}
               </div>
@@ -593,19 +628,26 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </div>
           <p className="hint">
             Pick a version to make it <b>main</b> — the final cut stitches the main version of every beat.
-            Regenerate keeps old versions. Upload swaps in your own keyframe image (new version, set as main) —
-            regen the clip afterwards to generate video from it.
+            Regenerate keeps old versions; regen the clip afterwards to generate video from the main keyframe.
           </p>
         </>
       )}
-      {section !== "reference" && mediaCount === 0 && !generating && (
+      {section !== "reference" && switchingGallery && mediaCount === 0 && (
+        <div className="empty" aria-label="Loading outputs">
+          <span className="empty-icon">
+            <Spinner size={20} />
+          </span>
+          <span className="empty-title">Loading outputs…</span>
+        </div>
+      )}
+      {section !== "reference" && !switchingGallery && mediaCount === 0 && !generating && (
         <div className="empty">
           <span className="empty-icon">
             <IconImage size={20} />
           </span>
           <span className="empty-title">No outputs yet</span>
           <span className="empty-sub">
-            {scenario
+            {viewScenario
               ? "Start a run to see the reference, keyframes, and final cut land here."
               : "Select a scenario to view its outputs."}
           </span>
@@ -675,18 +717,16 @@ function GenChip({ v }: { v: number }) {
 }
 
 // Version chips (v1, v2, …) + regenerate button for one versioned asset.
-function VersionRow({ versions, main, kind, onSelect, onRegen, onUpload, generating, busy }: {
+function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy, queued }: {
   versions: AssetVersion[];
   main: string | null;
   kind: "image" | "video";
   onSelect: (file: string) => void;
   onRegen?: () => void;
-  onUpload?: (f: File) => Promise<void>; // keyframes only: swap in your own image
   generating?: boolean; // a run is producing the next version right now
-  busy?: boolean; // a run is active in this output dir — regen would be ignored
+  busy?: boolean; // gallery is mid-switch — regen would hit the wrong dir
+  queued?: boolean; // a regen is queued behind the active run
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
   if (versions.length === 0) return null;
   const nextV = versions[versions.length - 1].v + 1;
   return (
@@ -708,41 +748,15 @@ function VersionRow({ versions, main, kind, onSelect, onRegen, onUpload, generat
           v{nextV} generating
         </span>
       )}
-      {onUpload && (
-        <>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (inputRef.current) inputRef.current.value = "";
-              if (!f) return;
-              setUploading(true);
-              try { await onUpload(f); } finally { setUploading(false); }
-            }}
-          />
-          <button
-            className="vchip regen"
-            title={busy ? "A run is already in progress" : "Upload your own image as this keyframe — stored as a new version and set as main; regen the clip to generate video from it"}
-            onClick={() => inputRef.current?.click()}
-            disabled={busy || uploading}
-          >
-            {uploading ? <Spinner size={10} /> : <IconUpload size={10} />}
-            {uploading ? "uploading…" : "upload"}
-          </button>
-        </>
-      )}
       {onRegen && (
         <button
           className="vchip regen"
-          title={busy ? (generating ? `Regenerating ${kind}…` : "A run is already in progress") : `Regenerate ${kind} — keeps previous versions`}
+          title={generating ? `Regenerating ${kind}…` : queued ? "Queued — starts when the current run finishes" : `Regenerate ${kind} — keeps previous versions`}
           onClick={onRegen}
-          disabled={busy}
+          disabled={busy || generating}
         >
           {generating ? <Spinner size={10} /> : <IconRefresh size={10} />}
-          {generating ? "generating…" : "regen"}
+          {generating ? "generating…" : queued ? "queued" : "regen"}
         </button>
       )}
     </div>

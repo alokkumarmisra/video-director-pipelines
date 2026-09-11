@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fmtRelative } from "../api";
 import type { DashboardProject } from "../types";
 import { IconDots, IconFilm, IconFolder } from "./Icons";
+import SmoothImage from "./SmoothImage";
 
 const STATUS_LABEL: Record<DashboardProject["status"], string> = {
   draft: "Draft",
@@ -10,21 +11,25 @@ const STATUS_LABEL: Record<DashboardProject["status"], string> = {
 };
 
 function Thumb({ project }: { project: DashboardProject }) {
-  const [broken, setBroken] = useState(false);
-  if (!project.thumbnailUrl || broken) {
+  if (!project.thumbnailUrl) {
     return (
       <div className="proj-thumb proj-thumb-fallback" aria-hidden="true">
         <IconFilm size={28} />
       </div>
     );
   }
+  // SmoothImage preloads behind the old frame + fades in, so card thumbnail
+  // swaps (filter/sort/poll) never flash blank.
   return (
-    <img
-      className="proj-thumb"
+    <SmoothImage
       src={project.thumbnailUrl}
       alt=""
-      loading="lazy"
-      onError={() => setBroken(true)}
+      frameClassName="proj-thumb"
+      fallback={
+        <span className="smooth-fallback" aria-hidden="true">
+          <IconFilm size={28} />
+        </span>
+      }
     />
   );
 }

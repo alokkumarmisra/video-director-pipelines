@@ -17,7 +17,9 @@ interface Props {
   onStatus?: (s: RunStatus, scenario: string, regen: RegenSpec | null) => void;
   // External run trigger (Stitch final / Regenerate from the output gallery /
   // Generate Reference from the scenario editor; count batches ref regens).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null;
+  // Queued requests carry the engine they were asked for (it may have been
+  // switched since they were queued).
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null;
   // Live progress reports (real assets/timing — App renders the sticky global bar).
   onProgress?: (p: GenerationProgress) => void;
 }
@@ -74,11 +76,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     return () => clearInterval(t);
   }, [status]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external") => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external", runEngine: Engine = engine) => {
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
-      const res = await startRun(scenario, { stitch, regen, engine, count });
+      const res = await startRun(scenario, { stitch, regen, engine: runEngine, count });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
@@ -138,7 +140,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // Runs triggered from the output gallery (stitch / regenerate) or the
   // scenario editor (batch reference generation).
   useEffect(() => {
-    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1);
+    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 

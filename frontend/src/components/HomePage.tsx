@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteScenario,
   getDashboard,
@@ -86,8 +86,12 @@ export default function HomePage({
 
   // Reload on every return to Home; live-update while visible (a generation
   // started in the workspace keeps running and flips cards to Generating).
+  // Stale-while-revalidate: returning with cached cards refreshes quietly in
+  // the background instead of flashing the full skeleton grid.
+  const dataRef = useRef<DashboardResponse | null>(null);
+  dataRef.current = data;
   useEffect(() => {
-    if (active) load();
+    if (active) load(dataRef.current?.projects.length ? true : false);
   }, [active, load]);
   useEffect(() => {
     if (!active) return;

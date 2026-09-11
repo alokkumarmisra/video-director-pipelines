@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  craftBeat,
   listOutputs,
   listProjectAssets,
   listVersions,
   outputUrl,
   outScenario,
+  saveScenario,
   type Engine,
+  type RunRequest,
   type ScenarioVersionInfo,
 } from "../api";
 import type {
@@ -19,6 +22,7 @@ import type {
 } from "../types";
 import type { GenerationProgress } from "./GenerationProgressBar";
 import Lightbox, { type PreviewItem } from "./Lightbox";
+import SmoothImage from "./SmoothImage";
 import { SceneBadge } from "./OutputGallery";
 import {
   IconCheck,
@@ -27,7 +31,11 @@ import {
   IconFilm,
   IconImage,
   IconPlay,
+  IconPlus,
   IconRefresh,
+  IconSparkles,
+  IconTrash,
+  IconX,
   Spinner,
 } from "./Icons";
 
@@ -48,6 +56,9 @@ function classifyBeat(b: Beat): ShotType {
 }
 
 type ShotStatus = "generated" | "generating" | "failed" | "pending";
+
+const slug = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
 interface ShotRow {
   /** 1-based scene (= beat) number. */
@@ -82,6 +93,16 @@ interface Props {
   onStitch?: () => void;
   /** True while any run is active (disables regen triggers — queue is serial). */
   runBusy?: boolean;
+  /** Run requests waiting behind the active run (App drains them serially).
+      Buttons for queued targets read "Queued" and stay enabled; only the
+      actively generating button is disabled. */
+  runQueue?: RunRequest[];
+  /** Draft mode: beats edit the unsaved draft locally (no server calls, no regen). */
+  isDraft?: boolean;
+  /** Draft mode: receives the updated config after each local beat edit. */
+  onDraftChange?: (cfg: Scenario) => void;
+  /** Saved mode: receives the updated config after each persisted beat edit. */
+  onChanged?: (cfg: Scenario) => void;
 }
 
 /** Max scene tabs shown; the trailing All tab reveals every scene. */
@@ -108,6 +129,10 @@ export default function ShotList({
   onRegen,
   onStitch,
   runBusy,
+  runQueue = [],
+  isDraft,
+  onDraftChange,
+  onChanged,
 }: Props) {
   const [outputs, setOutputs] = useState<OutputsInfo>(emptyOutputs);
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
@@ -116,6 +141,20 @@ export default function ShotList({
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const [loadError, setLoadError] = useState("");
+
+  // Inline beat editing — the same fields the Scenario Editor beat blocks
+  // used to carry (title, keyframe image, motion & camera). `editing` is the
+  // 1-based shot being edited, or "new" for the appended-shot form.
+  const [editing, setEditing] = useState<number | "new" | null>(null);
+  const [draftBeat, setDraftBeat] = useState<Beat>({ title: "", image: "", motion: "" });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [genBusy, setGenBusy] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [genCount, setGenCount] = useState(1);
+  // Beat mutations stay disabled mid-run for saved scenarios (queue is
+  // serial); drafts have no runs, so they stay editable.
+  const mutBusy = saving || genBusy || (!isDraft && !!runBusy);
 
   const outDir = name ? outScenario(name, engine) : "";
   const seq = useMemo(() => (config && Array.isArray(config.sequence) ? config.sequence : []), [config]);
@@ -130,8 +169,10 @@ export default function ShotList({
     if (filter !== "all" && (filter < 1 || filter > seq.length)) setFilter("all");
   }, [filter, seq.length]);
 
+  // Drafts have no server state yet (nothing saved to list) — beats edit
+  // the draft locally until Save Scenario.
   useEffect(() => {
-    if (!name) {
+    if (!name || isDraft) {
       setOutputs(emptyOutputs);
       setAssets([]);
       setVersions([]);
@@ -168,7 +209,7 @@ export default function ShotList({
     return () => {
       cancelled = true;
     };
-  }, [name, outDir, refreshKey, generatingScenario]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [name, outDir, refreshKey, generatingScenario, isDraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const versionsInfo: VersionsInfo = outputs.versions ?? { ref: [], beats: {} };
   const mainsInfo: MainsInfo = outputs.mains ?? { ref: null, beats: {} };
@@ -182,6 +223,14 @@ export default function ShotList({
   };
 
   const generatingHere = !!generatingScenario && !!outDir && generatingScenario === outDir;
+
+  // Per-button run state: only the actively generating target is disabled —
+  // everything else stays clickable and queues behind the running job.
+  const targetRunning = (kind: "keyframe" | "clip", n: number) =>
+    !!runBusy && generatingHere && !!regenTarget &&
+    regenTarget.kind === kind && (regenTarget.index ?? n) === n;
+  const targetQueued = (kind: "keyframe" | "clip", n: number) =>
+    runQueue.some((q) => !q.stitch && q.regen?.kind === kind && (q.regen?.index ?? n) === n);
 
   // First asset in pipeline order without a file — where a full run is headed.
   const nextMissing = useMemo((): { kind: "keyframe" | "clip"; index: number } | null => {
@@ -283,9 +332,8 @@ export default function ShotList({
       return next;
     });
 
-  // Selecting a scene tab reveals that scene's full Scenario Editor data
-  // (Keyframe image — Flux + Motion & camera — i2v prompts). All reveals the
-  // full data for every scene. Details / Edit still toggles rows individually.
+  // Selecting a scene tab reveals that scene's full prompts. All reveals
+  // the full data for every scene. Details toggles rows individually.
   const selectScene = (n: number) => {
     setFilter(n);
     setExpanded((prev) => new Set(prev).add(n));
@@ -299,17 +347,167 @@ export default function ShotList({
     });
   };
 
-  // Jump to the matching beat block in the Scenario Editor (same workspace
-  // column) so prompt edits happen where they always have.
-  const editInEditor = (n: number) => {
-    const beats = document.querySelectorAll(".beat");
-    const el = beats[n - 1];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      const input = el.querySelector("input, textarea") as HTMLElement | null;
-      input?.focus({ preventScroll: true });
+  // Persist a beat list: drafts update locally (Save Scenario persists
+  // them later), saved scenarios store a new version via the API.
+  const persistSequence = async (nextSeq: Beat[]): Promise<void> => {
+    if (!config) return;
+    const next: Scenario = { ...config, sequence: nextSeq };
+    if (isDraft) {
+      onDraftChange?.(next);
+      return;
+    }
+    setSaving(true);
+    setSaveError("");
+    try {
+      await saveScenario(name, next);
+      onChanged?.(next);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+      throw e;
+    } finally {
+      setSaving(false);
     }
   };
+
+  const startEdit = (n: number) => {
+    const b = seq[n - 1];
+    if (!b) return;
+    setDraftBeat({ ...b });
+    setSaveError("");
+    setEditing(n);
+    setExpanded((prev) => new Set(prev).add(n));
+  };
+  const cancelEdit = () => {
+    setEditing(null);
+    setSaveError("");
+  };
+  const updateShot = async () => {
+    if (editing === null || !config) return;
+    const title =
+      draftBeat.title.trim() ||
+      (editing === "new" ? `beat${seq.length + 1}` : (seq[editing - 1]?.title ?? `beat${editing}`));
+    const next: Beat = { ...draftBeat, title };
+    const nextSeq =
+      editing === "new" ? [...seq, next] : seq.map((b, i) => (i === editing - 1 ? next : b));
+    try {
+      await persistSequence(nextSeq);
+    } catch {
+      return; // saveError already set — keep the form open
+    }
+    if (editing === "new") {
+      const n = seq.length + 1;
+      setFilter("all");
+      setExpanded((prev) => new Set(prev).add(n));
+    }
+    setEditing(null);
+  };
+  const deleteShot = async (n: number) => {
+    const b = seq[n - 1];
+    if (!b) return;
+    if (
+      !window.confirm(
+        `Delete shot ${n}.1 (${b.title || "untitled"})? Its prompts are removed from the scenario (generated files are kept).`
+      )
+    )
+      return;
+    try {
+      await persistSequence(seq.filter((_, i) => i !== n - 1));
+    } catch {
+      return;
+    }
+    setEditing(null);
+  };
+  const addShot = () => {
+    setDraftBeat({ title: `beat${seq.length + 1}`, image: "", motion: "" });
+    setSaveError("");
+    setEditing("new");
+    setFilter("all");
+  };
+
+  // LLM proposes the next N beats from the scenario JSON, each continuing
+  // from the previous one, and appends them — review them with Edit.
+  const generateBeats = async () => {
+    if (!config || genBusy) return;
+    setGenBusy(true);
+    setGenError("");
+    try {
+      const res = await craftBeat(config, genCount);
+      const beats = res.beats ?? (res.beat ? [res.beat] : []); // beat = old server shape
+      const used = new Set(seq.map((b) => b.title));
+      const next = beats.map((b, k) => {
+        let title = slug(b.title) || `beat${seq.length + k + 1}`;
+        if (used.has(title)) title = `${title}_next`;
+        used.add(title);
+        return { ...b, title };
+      });
+      await persistSequence([...seq, ...next]);
+      setFilter("all");
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  // Inline edit form — same attributes as the old editor beat blocks.
+  const renderEditForm = (isNew: boolean, n: number | null) => (
+    <>
+      <label>Shot title</label>
+      <input
+        value={draftBeat.title}
+        placeholder="title (file-safe)"
+        disabled={saving}
+        onChange={(e) => setDraftBeat({ ...draftBeat, title: e.target.value })}
+      />
+      <p className="beat-meta">{slug(draftBeat.title) || "untitled"}</p>
+      <label>Keyframe image — Flux</label>
+      <textarea
+        rows={2}
+        value={draftBeat.image}
+        disabled={saving}
+        onChange={(e) => setDraftBeat({ ...draftBeat, image: e.target.value })}
+      />
+      <label>Motion &amp; camera — i2v</label>
+      <textarea
+        rows={2}
+        value={draftBeat.motion}
+        disabled={saving}
+        onChange={(e) => setDraftBeat({ ...draftBeat, motion: e.target.value })}
+      />
+      {saveError && <p className="hint err-text">{saveError}</p>}
+      <div className="row" style={{ marginTop: 8 }}>
+        <button
+          className="primary"
+          onClick={() => void updateShot()}
+          disabled={saving || mutBusy}
+          title={
+            isDraft
+              ? "Apply to the unsaved draft (Save Scenario persists it)"
+              : "Save prompts as a new scenario version"
+          }
+        >
+          {saving ? <Spinner size={13} /> : <IconCheck size={13} />}
+          {saving ? "Updating…" : isNew ? "Add shot" : "Update shot"}
+        </button>
+        <button className="ghost" onClick={cancelEdit} disabled={saving}>
+          <IconX size={13} />
+          Cancel
+        </button>
+        <span className="spacer" />
+        {!isNew && n != null && (
+          <button
+            className="ghost"
+            onClick={() => void deleteShot(n)}
+            disabled={saving || mutBusy}
+            title={`Delete shot ${n}.1 (prompts only — generated files are kept)`}
+          >
+            <IconTrash size={13} />
+            Delete shot
+          </button>
+        )}
+      </div>
+    </>
+  );
 
   if (!name) {
     return (
@@ -352,9 +550,7 @@ export default function ShotList({
               v{latestVersion}
             </span>
           )}
-          <button className="ghost shotlist-edit" onClick={() => editInEditor(filter === "all" ? 1 : filter)}>
-            Edit
-          </button>
+          {isDraft && <span className="pill warn">draft · unsaved</span>}
         </div>
       </div>
 
@@ -469,7 +665,7 @@ export default function ShotList({
             <IconFilm size={20} />
           </span>
           <span className="empty-title">No beats yet</span>
-          <span className="empty-sub">Add beats in the Scenario Editor, then save — they appear here as shots.</span>
+          <span className="empty-sub">Add your first shot with Add shot below — it appears here.</span>
         </div>
       ) : (
         <div className="shotlist-list" role="table" aria-label="Shots">
@@ -484,7 +680,13 @@ export default function ShotList({
           <div className="shotlist-rows">
             {visible.map((r) => {
               const open = expanded.has(r.n);
-              const busy = !!runBusy;
+              // Local beat-mutation states only — an active run no longer
+              // locks every button (it queues instead).
+              const localBusy = saving || genBusy;
+              const imgRunning = targetRunning("keyframe", r.n);
+              const imgQueued = !imgRunning && targetQueued("keyframe", r.n);
+              const clipRunning = targetRunning("clip", r.n);
+              const clipQueued = !clipRunning && targetQueued("clip", r.n);
               return (
                 <div className="shotlist-row-wrap" key={r.n} role="rowgroup">
                   <div className="shotlist-row" role="row">
@@ -507,7 +709,7 @@ export default function ShotList({
                                 setPreview({ src: outputUrl(outDir, r.imageFile), kind: "image", alt: `shot ${r.shot} image` });
                             }}
                           >
-                            <img src={outputUrl(outDir, r.imageFile)} alt="" loading="lazy" />
+                            <SmoothImage src={outputUrl(outDir, r.imageFile)} alt="" />
                             <span className="shotlist-thumb-tag">{r.shot}</span>
                           </span>
                         ) : (
@@ -567,84 +769,108 @@ export default function ShotList({
                       <StatusLine label="Video" status={r.videoStatus} title={r.videoError ?? undefined} />
                     </span>
                     <span className="shotlist-actions num" role="cell">
-                      {!r.imageFile ? (
-                        <button
-                          className="ghost shotlist-btn"
-                          disabled={busy}
-                          title={busy ? "A run is already in progress" : `Generate image for shot ${r.shot}`}
-                          onClick={() => onRegen("keyframe", r.n)}
-                        >
-                          <IconImage size={11} />
-                          Gen image
-                        </button>
-                      ) : (
-                        <button
-                          className="ghost shotlist-btn"
-                          disabled={busy}
-                          title={busy ? "A run is already in progress" : `Regenerate image for shot ${r.shot} (keeps versions)`}
-                          onClick={() => onRegen("keyframe", r.n)}
-                        >
-                          <IconRefresh size={11} />
-                          {r.imageStatus === "generating" ? "Working…" : "Regen img"}
-                        </button>
-                      )}
-                      {!r.clipFile ? (
-                        <button
-                          className="ghost shotlist-btn"
-                          disabled={busy || !r.imageFile}
-                          title={
-                            busy
-                              ? "A run is already in progress"
-                              : !r.imageFile
+                      <button
+                        className="ghost shotlist-btn"
+                        disabled={mutBusy}
+                        title={mutBusy ? "A run is already in progress" : `Edit prompts for shot ${r.shot}`}
+                        onClick={() => (editing === r.n ? cancelEdit() : startEdit(r.n))}
+                      >
+                        {editing === r.n ? "Close" : "Edit"}
+                      </button>
+                      {!isDraft &&
+                        (!r.imageFile ? (
+                          <button
+                            className="ghost shotlist-btn"
+                            disabled={localBusy}
+                            title={imgQueued ? "Queued — starts when the current run finishes" : `Generate image for shot ${r.shot}`}
+                            onClick={() => onRegen("keyframe", r.n)}
+                          >
+                            <IconImage size={11} />
+                            {imgQueued ? "Queued" : "Gen image"}
+                          </button>
+                        ) : (
+                          <button
+                            className="ghost shotlist-btn"
+                            disabled={localBusy || imgRunning}
+                            title={imgRunning ? `Regenerating image for shot ${r.shot}…` : imgQueued ? "Queued — starts when the current run finishes" : `Regenerate image for shot ${r.shot} (keeps versions)`}
+                            onClick={() => onRegen("keyframe", r.n)}
+                          >
+                            {imgRunning ? <Spinner size={11} /> : <IconRefresh size={11} />}
+                            {imgRunning ? "Working…" : imgQueued ? "Queued" : "Regen img"}
+                          </button>
+                        ))}
+                      {!isDraft &&
+                        (!r.clipFile ? (
+                          <button
+                            className="ghost shotlist-btn"
+                            disabled={localBusy || !r.imageFile}
+                            title={
+                              !r.imageFile
                                 ? "Generate the image first — video runs from the keyframe"
-                                : `Generate video for shot ${r.shot}`
-                          }
-                          onClick={() => onRegen("clip", r.n)}
-                        >
-                          <IconPlay size={11} />
-                          Gen video
-                        </button>
-                      ) : (
-                        <button
-                          className="ghost shotlist-btn"
-                          disabled={busy}
-                          title={busy ? "A run is already in progress" : `Regenerate video for shot ${r.shot} (keeps versions)`}
-                          onClick={() => onRegen("clip", r.n)}
-                        >
-                          <IconRefresh size={11} />
-                          {r.videoStatus === "generating" ? "Working…" : "Regen vid"}
-                        </button>
-                      )}
+                                : clipQueued
+                                  ? "Queued — starts when the current run finishes"
+                                  : `Generate video for shot ${r.shot}`
+                            }
+                            onClick={() => onRegen("clip", r.n)}
+                          >
+                            <IconPlay size={11} />
+                            {clipQueued ? "Queued" : "Gen video"}
+                          </button>
+                        ) : (
+                          <button
+                            className="ghost shotlist-btn"
+                            disabled={localBusy || clipRunning}
+                            title={clipRunning ? `Regenerating video for shot ${r.shot}…` : clipQueued ? "Queued — starts when the current run finishes" : `Regenerate video for shot ${r.shot} (keeps versions)`}
+                            onClick={() => onRegen("clip", r.n)}
+                          >
+                            {clipRunning ? <Spinner size={11} /> : <IconRefresh size={11} />}
+                            {clipRunning ? "Working…" : clipQueued ? "Queued" : "Regen vid"}
+                          </button>
+                        ))}
                     </span>
                   </div>
                   {open && (
                     <div className="shotlist-detail">
-                      <div className="shotlist-detail-title" title="Beat title as saved in the Scenario Editor">
-                        Scene {r.n} · {r.beat.title || `beat${r.n}`}
-                      </div>
-                      <div className="shotlist-detail-grid">
-                        <div>
-                          <div className="shotlist-detail-label">Keyframe prompt — Flux</div>
-                          <p>{r.beat.image || <span className="muted">—</span>}</p>
-                        </div>
-                        <div>
-                          <div className="shotlist-detail-label">Motion &amp; camera — i2v</div>
-                          <p>{r.beat.motion || <span className="muted">—</span>}</p>
-                        </div>
-                      </div>
-                      <div className="shotlist-detail-meta">
-                        <span className="muted">
-                          {r.imageFile ? `img: ${r.imageFile}` : "img: —"}
-                          {" · "}
-                          {r.clipFile ? `vid: ${r.clipFile}` : "vid: —"}
-                        </span>
-                        {(r.imageError || r.videoError) && (
-                          <span className="err-text">{r.imageError ?? r.videoError}</span>
-                        )}
-                        <span className="spacer" />
-                        <button className="ghost shotlist-btn" onClick={() => editInEditor(r.n)}>
-                          Edit in Scenario Editor
-                        </button>
+                      {editing === r.n ? (
+                        <>
+                          <div className="shotlist-detail-title">
+                            Scene {r.n} · editing {r.beat.title || `beat${r.n}`}
+                          </div>
+                          {renderEditForm(false, r.n)}
+                        </>
+                      ) : (
+                        <>
+                          <div className="shotlist-detail-title" title="Beat title">
+                            Scene {r.n} · {r.beat.title || `beat${r.n}`}
+                          </div>
+                          <div className="shotlist-detail-grid">
+                            <div>
+                              <div className="shotlist-detail-label">Keyframe prompt — Flux</div>
+                              <p>{r.beat.image || <span className="muted">—</span>}</p>
+                            </div>
+                            <div>
+                              <div className="shotlist-detail-label">Motion &amp; camera — i2v</div>
+                              <p>{r.beat.motion || <span className="muted">—</span>}</p>
+                            </div>
+                          </div>
+                          <div className="shotlist-detail-meta">
+                            <span className="muted">
+                              {r.imageFile ? `img: ${r.imageFile}` : "img: —"}
+                              {" · "}
+                              {r.clipFile ? `vid: ${r.clipFile}` : "vid: —"}
+                            </span>
+                            {(r.imageError || r.videoError) && (
+                              <span className="err-text">{r.imageError ?? r.videoError}</span>
+                            )}
+                            <span className="spacer" />
+                            <button
+                              className="ghost shotlist-btn"
+                              disabled={mutBusy}
+                              title={mutBusy ? "A run is already in progress" : `Edit prompts for shot ${r.shot}`}
+                              onClick={() => startEdit(r.n)}
+                            >
+                              Edit shot
+                            </button>
                         {r.imageFile && (
                           <button
                             className="ghost shotlist-btn"
@@ -666,6 +892,8 @@ export default function ShotList({
                           </button>
                         )}
                       </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -675,8 +903,55 @@ export default function ShotList({
         </div>
       )}
 
+      {/* Beat tools: add + LLM-generate (moved here from the editor) */}
+      <div className="row" style={{ marginTop: 4 }}>
+        <button
+          className="ghost"
+          onClick={addShot}
+          disabled={mutBusy}
+          title={mutBusy ? "A run is already in progress" : "Append a shot — fill in its prompts, then Add shot"}
+        >
+          <IconPlus size={13} />
+          Add shot
+        </button>
+        <button
+          className="ghost"
+          onClick={() => void generateBeats()}
+          disabled={mutBusy}
+          title="LLM proposes the next beat(s) from the scenario + existing shots"
+        >
+          {genBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
+          {genBusy ? "Generating…" : "Generate beat"}
+        </button>
+        <label className="gen-count wide" title="How many next beats to generate (1 or more)">
+          ×
+          <input
+            type="number"
+            min={1}
+            value={genCount}
+            disabled={mutBusy}
+            onChange={(e) => setGenCount(Math.max(1, Number(e.target.value) || 1))}
+          />
+        </label>
+      </div>
+      {genError && <p className="hint err-text">{genError}</p>}
+      <p className="hint">
+        {isDraft
+          ? "Shot edits apply to the unsaved draft — press Save Scenario to persist them."
+          : "Shot edits save immediately as a new scenario version."}{" "}
+        Generate beat asks the LLM for the next story beat(s) from the scenario JSON.
+      </p>
+
+      {/* Appended-shot form */}
+      {editing === "new" && (
+        <div className="shotlist-detail">
+          <div className="shotlist-detail-title">New shot · Scene {seq.length + 1}</div>
+          {renderEditForm(true, null)}
+        </div>
+      )}
+
       {/* Footer: stitch shortcut reuses the existing final-cut run */}
-      {totalShots > 0 && onStitch && (
+      {!isDraft && totalShots > 0 && onStitch && (
         <div className="shotlist-foot">
           <span className="muted">
             {clipDone}/{totalShots} clips · {refDone ? "ref ready" : "ref pending"}

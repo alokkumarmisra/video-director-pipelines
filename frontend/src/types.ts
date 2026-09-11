@@ -20,6 +20,8 @@ export interface ScenarioInfo {
   isSequence: boolean;
   mtimeMs: number;
   favorite?: boolean;
+  /** Integer id from the projects table (null in SQLite mode / unknown). */
+  project_id?: number | null;
 }
 
 export interface Run {
@@ -113,6 +115,8 @@ export type DashboardStatus = "draft" | "in_progress" | "completed";
 
 export interface DashboardProject {
   name: string;
+  /** Integer id from the projects table (null when unavailable). */
+  project_id: number | null;
   description: string;
   status: DashboardStatus;
   generating: boolean;

@@ -38,18 +38,6 @@
   --scrollbar-hover: #4b5563;
   --log-bg: #060b14;
   --log-color: #b9c2d4;
-  --sc-pink-bg: rgba(244, 114, 182, 0.12);
-  --sc-pink-bg-hover: rgba(244, 114, 182, 0.19);
-  --sc-pink-line: rgba(244, 114, 182, 0.30);
-  --sc-green-bg: rgba(52, 211, 153, 0.12);
-  --sc-green-bg-hover: rgba(52, 211, 153, 0.19);
-  --sc-green-line: rgba(52, 211, 153, 0.30);
-  --sc-yellow-bg: rgba(251, 191, 36, 0.12);
-  --sc-yellow-bg-hover: rgba(251, 191, 36, 0.19);
-  --sc-yellow-line: rgba(251, 191, 36, 0.30);
-  --sc-blue-bg: rgba(96, 165, 250, 0.13);
-  --sc-blue-bg-hover: rgba(96, 165, 250, 0.20);
-  --sc-blue-line: rgba(96, 165, 250, 0.32);
   --glow-1: rgba(16, 185, 129, 0.14);
   --glow-2: rgba(16, 185, 129, 0.08);
   --glow-3: rgba(52, 211, 153, 0.05);
@@ -59,6 +47,11 @@
   --radius-s: 8px;
   --radius-m: 14px;
   --radius-l: 16px;
+  /* One height + one track color for EVERY progress bar in the app. */
+  --bar-h: 3px;
+  --bar-track: #374151; /* gray-700 */
+  /* One corner radius for every generated image/video in every section. */
+  --radius-media: 10px;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.40);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
 
@@ -100,6 +93,7 @@
 
   --shadow-1: 0 1px 2px rgba(23, 30, 51, 0.06);
   --shadow-2: 0 8px 24px rgba(23, 30, 51, 0.10), 0 1px 3px rgba(23, 30, 51, 0.07);
+  --bar-track: #d3d0c7; /* warm gray-300 */
 
   --topbar-bg: rgba(250, 248, 244, 0.80); /* warm white/80 */
   --btn-hover-bg: #e6e2d8;
@@ -109,18 +103,6 @@
   --scrollbar-hover: #b3ac9d;
   --log-bg: #111827;
   --log-color: #b9c2d4;
-  --sc-pink-bg: #fdeef4;
-  --sc-pink-bg-hover: #fbe0ec;
-  --sc-pink-line: rgba(236, 72, 153, 0.28);
-  --sc-green-bg: #e8f7ee;
-  --sc-green-bg-hover: #d9f1e3;
-  --sc-green-line: rgba(16, 185, 129, 0.30);
-  --sc-yellow-bg: #fdf6df;
-  --sc-yellow-bg-hover: #faedc4;
-  --sc-yellow-line: rgba(202, 138, 4, 0.30);
-  --sc-blue-bg: #e9f1fe;
-  --sc-blue-bg-hover: #d8e7fd;
-  --sc-blue-line: rgba(59, 130, 246, 0.30);
   --glow-1: rgba(16, 185, 129, 0.10);
   --glow-2: rgba(16, 185, 129, 0.06);
   --glow-3: rgba(5, 150, 105, 0.05);
@@ -196,7 +178,7 @@ body {
 .shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) minmax(380px, 460px);
+  grid-template-columns: 336px minmax(0, 1fr) minmax(380px, 460px);
   gap: 20px;
   max-width: 1648px;
   width: 100%;
@@ -205,6 +187,8 @@ body {
   align-items: start;
 }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* Project switch keeps the old content mounted until the new config lands
+   (see App `shown`), so no global dimming — the incoming row alone spins. */
 .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(380px, 460px); }
 
 /* ============================================================
@@ -433,33 +417,21 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   position: relative; overflow: hidden;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-/* repeating pastels (unselected only): pink → green → yellow → blue */
-.sidebar-list > .scenario-row:nth-child(4n + 1):not(.selected) {
-  background: var(--sc-pink-bg); border-color: var(--sc-pink-line);
+/* uniform rows (unselected): every project shares the same theme surface */
+.sidebar-list > .scenario-row:not(.selected) {
+  background: var(--surface-2); border-color: var(--line);
 }
-.sidebar-list > .scenario-row:nth-child(4n + 1):not(.selected):hover { background: var(--sc-pink-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 2):not(.selected) {
-  background: var(--sc-green-bg); border-color: var(--sc-green-line);
-}
-.sidebar-list > .scenario-row:nth-child(4n + 2):not(.selected):hover { background: var(--sc-green-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 3):not(.selected) {
-  background: var(--sc-yellow-bg); border-color: var(--sc-yellow-line);
-}
-.sidebar-list > .scenario-row:nth-child(4n + 3):not(.selected):hover { background: var(--sc-yellow-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 4):not(.selected) {
-  background: var(--sc-blue-bg); border-color: var(--sc-blue-line);
-}
-.sidebar-list > .scenario-row:nth-child(4n + 4):not(.selected):hover { background: var(--sc-blue-bg-hover); }
+.sidebar-list > .scenario-row:not(.selected):hover { background: var(--btn-hover-bg); }
 .scenario-row:not(.selected):hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-1);
 }
 .scenario-item {
-  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  display: flex; flex-direction: row; align-items: center; gap: 8px;
   flex: 1; min-width: 0; width: 100%;
   background: transparent; border: 0;
   border-radius: 9px;
-  padding: 7px 8px;
+  padding: 7px 6px;
   color: var(--text-2);
   font: 500 13px/1.3 var(--font);
   text-align: left;
@@ -471,47 +443,95 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   background: transparent; color: #fff;
   box-shadow: none;
 }
-/* avatar chip — gradient cycles with the row pastel */
+/* avatar chip — deterministic per-project tone (hashed from the name), so
+   each project reads as its own color in the bar */
 .scenario-avatar {
   width: 32px; height: 32px; border-radius: 10px; flex: none;
   display: grid; place-items: center;
-  font: 700 14px var(--font); color: #fff;
-  background: linear-gradient(135deg, #ec4899, #f472b6);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  font: 700 14px var(--font);
+  color: var(--accent-2);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
 }
-.sidebar-list > .scenario-row:nth-child(4n + 2):not(.selected) .scenario-avatar {
-  background: linear-gradient(135deg, #10b981, #34d399);
-}
-.sidebar-list > .scenario-row:nth-child(4n + 3):not(.selected) .scenario-avatar {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
-}
-.sidebar-list > .scenario-row:nth-child(4n + 4):not(.selected) .scenario-avatar {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-}
+.scenario-avatar.av-0 { color: #34d399; background: rgba(52, 211, 153, 0.13); border-color: rgba(52, 211, 153, 0.45); }
+.scenario-avatar.av-1 { color: #38bdf8; background: rgba(56, 189, 248, 0.13); border-color: rgba(56, 189, 248, 0.45); }
+.scenario-avatar.av-2 { color: #a78bfa; background: rgba(167, 139, 250, 0.14); border-color: rgba(167, 139, 250, 0.45); }
+.scenario-avatar.av-3 { color: #f59e0b; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.45); }
+.scenario-avatar.av-4 { color: #fb7185; background: rgba(251, 113, 133, 0.13); border-color: rgba(251, 113, 133, 0.45); }
+.scenario-avatar.av-5 { color: #22d3ee; background: rgba(34, 211, 238, 0.13); border-color: rgba(34, 211, 238, 0.45); }
+.scenario-avatar.av-6 { color: #fb923c; background: rgba(251, 146, 60, 0.14); border-color: rgba(251, 146, 60, 0.45); }
+.scenario-avatar.av-7 { color: #84cc16; background: rgba(132, 204, 22, 0.14); border-color: rgba(132, 204, 22, 0.45); }
+:root[data-theme="light"] .scenario-avatar.av-3 { color: #b45309; }
+:root[data-theme="light"] .scenario-avatar.av-6 { color: #c2410c; }
+:root[data-theme="light"] .scenario-avatar.av-7 { color: #4d7c0f; }
 .scenario-main {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; gap: 2px;
 }
 .scenario-name {
-  width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  width: 100%; overflow: hidden;
+  display: flex; align-items: center; gap: 6px;
   font-weight: 600; font-size: 13px; letter-spacing: -0.01em;
 }
 .scenario-item.on .scenario-name { font-weight: 700; }
+.scenario-name-text {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* integer project id chip */
+.scenario-id {
+  flex: none;
+  font: 700 10px var(--mono);
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+/* render-status tick: green check = all videos done, hollow dot = partial,
+   spinner = generating */
+.scenario-tick {
+  flex: none;
+  display: grid; place-items: center;
+  width: 18px; height: 18px; border-radius: 50%;
+}
+.scenario-tick.done {
+  background: rgba(5, 150, 105, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #10b981;
+}
+:root[data-theme="light"] .scenario-tick.done {
+  background: rgba(5, 150, 105, 0.12);
+  color: #047857;
+}
+.scenario-tick.pending { border: 1px solid var(--line-2); background: transparent; }
+.scenario-tick.pending .tick-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--text-3);
+}
+.scenario-tick.running { color: var(--accent-2); }
 .scenario-date {
   flex: none;
-  font: 500 10.5px var(--mono);
+  width: 100%;
+  font: 500 10px var(--mono);
+  letter-spacing: 0;
   color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* right-side mini asset stats, small font, right aligned */
+/* right-side mini asset stats — deliberately narrow cluster so the
+   datetime lane next to it always fits date + time in full */
 .scenario-stats {
-  flex: none; min-width: 74px; max-width: 96px;
+  flex: none; min-width: 0; max-width: 70px;
   display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
-  font-size: 10.5px; line-height: 1.35; text-align: right;
+  font-size: 10px; line-height: 1.35; text-align: right;
   color: var(--text-3); font-variant-numeric: tabular-nums;
 }
 .scenario-stats .stat-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .scenario-stats .stat-line b { color: var(--text-2); font-weight: 700; }
-.scenario-stats .stat-line.dim { font-size: 10px; opacity: 0.95; }
+.scenario-stats .stat-line.dim { font-size: 9.5px; opacity: 0.95; }
+/* row action buttons stay compact so they don't steal datetime width */
+.scenario-row > .icon-btn { padding: 4px; flex: none; }
 /* ---- selected project: unmistakably different (emerald gradient) ---- */
 .sidebar-list > .scenario-row.selected {
   background: linear-gradient(135deg, #10b981 0%, #059669 55%, #047857 100%);
@@ -534,6 +554,22 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   color: #fff;
 }
 .sidebar-list > .scenario-row.selected .scenario-name { color: #fff; }
+.sidebar-list > .scenario-row.selected .scenario-id {
+  color: #fff; background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.done {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.pending {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.pending .tick-dot {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.running { color: #fff; }
 .sidebar-list > .scenario-row.selected .scenario-date,
 .sidebar-list > .scenario-row.selected .scenario-stats { color: rgba(255, 255, 255, 0.88); }
 .sidebar-list > .scenario-row.selected .scenario-stats .stat-line b { color: #fff; }
@@ -550,14 +586,13 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   box-shadow: 0 0 0 1px var(--accent-line) inset;
 }
 .scenario-del {
-  flex: none; opacity: 0;
+  flex: none; opacity: 1;
+  color: var(--err);
   transition: opacity 0.12s, color 0.12s, background 0.12s;
 }
-.scenario-row:hover .scenario-del,
-.scenario-row.selected .scenario-del,
-.scenario-del:focus-visible { opacity: 1; }
+.scenario-del:hover { color: var(--err); background: var(--err-soft); }
 .scenario-fav {
-  flex: none; opacity: 0;
+  flex: none; opacity: 1;
   color: var(--text-3);
   transition: opacity 0.12s, color 0.12s, background 0.12s;
 }
@@ -566,7 +601,43 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .scenario-fav:focus-visible { opacity: 1; }
 .scenario-fav.on { opacity: 1; color: #fbbf24; }
 .scenario-fav:hover { color: #fbbf24; }
+/* vertical action stack at the very end of the row: favorite on top,
+   delete just below — always visible */
+.scenario-actions {
+  display: flex; flex-direction: column; gap: 2px; flex: none;
+  align-items: stretch; justify-content: center;
+}
+/* delete confirmation popup */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  animation: smoothIn 0.15s ease;
+}
+.confirm-box {
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  padding: 20px;
+}
+.confirm-title { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+.confirm-text { margin: 0 0 4px; font-size: 13px; color: var(--text-2); overflow-wrap: break-word; }
+.confirm-sub { margin: 0 0 16px; font-size: 12px; color: var(--text-3); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .sidebar-empty { padding: 18px 10px; font-size: 12.5px; color: var(--text-3); text-align: center; }
+/* Incoming project row: avatar spins, layout untouched. */
+.scenario-row.loading .scenario-avatar { display: grid; place-items: center; }
+/* First-open skeleton: same card footprint as real content, so the editor
+   mounting later doesn't reflow the page. */
+.ws-loading {
+  min-height: 220px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: var(--text-3); font-size: 13px;
+}
+/* Gallery header pill while the newly selected project's listing loads. */
+.switching-pill { flex: none; }
 
 /* ============================================================
    Beats (scenario editor)
@@ -646,13 +717,15 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .section-label:first-child { margin-top: 0; }
 .video-frame {
-  position: relative; border-radius: var(--radius-m);
+  position: relative; border-radius: var(--radius-media);
   overflow: hidden; background: var(--inset);
   border: 1px solid var(--line);
 }
 .video-frame video { width: 100%; display: block; border-radius: 0; }
+/* Bare generated clip in Keyframes → clips: no frame, badge, or overlay. */
+.shot-clip-bare { width: 100%; display: block; border-radius: var(--radius-media); }
 .img-frame {
-  border-radius: var(--radius-m); overflow: hidden;
+  border-radius: var(--radius-media); overflow: hidden;
   border: 1px solid var(--line); background: var(--inset);
 }
 .img-frame img { width: 100%; display: block; border-radius: 0; }
@@ -668,6 +741,64 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   background: var(--inset);
 }
 
+/* ============================================================
+   SmoothImage — loading placeholder + fade so media swaps never flash.
+   The frame keeps a shimmer background + reserved height while the file
+   loads; the <img> fades in on paint. Project switches preload behind
+   the old frame, so no blank/half-decoded frame is ever visible.
+   ============================================================ */
+.smooth-img {
+  position: relative; display: block; overflow: hidden;
+  background: var(--inset);
+  min-height: 64px;
+}
+.smooth-img.clickable { cursor: pointer; }
+.smooth-img img {
+  position: relative; z-index: 1;
+  display: block; width: 100%; height: auto;
+  animation: smoothIn 0.32s ease;
+}
+@keyframes smoothIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* shimmer sweep while the first frame is still loading */
+.smooth-img.is-loading::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, rgba(148, 163, 184, 0.16) 50%, transparent 80%);
+  background-size: 200% 100%;
+  animation: smoothShimmer 1.2s linear infinite;
+}
+@keyframes smoothShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.smooth-spin {
+  position: absolute; inset: 0; z-index: 0;
+  display: grid; place-items: center;
+  color: var(--text-3);
+}
+.smooth-fallback {
+  display: grid; place-items: center;
+  min-height: inherit;
+  padding: 14px;
+  color: var(--text-3);
+}
+/* context fits — the frame inherits the box it sits in */
+.shot .img-frame .smooth-img { width: 100%; height: 100%; min-height: 0; }
+.shotlist-thumb .smooth-img { width: 100%; height: 100%; min-height: 0; }
+.ref-embed .img-frame .smooth-img { width: auto; max-width: 100%; background: transparent; }
+.upload-zone .upload-side .smooth-img { flex: none; max-width: 46%; min-height: 0; }
+.upload-zone .upload-side .smooth-img img { max-width: 100%; }
+/* project-card thumbnail fills its 16:9 aspect box */
+.proj-thumb.smooth-img { min-height: 0; }
+.proj-thumb.smooth-img img { height: 100%; object-fit: cover; }
+/* videos can't crossfade — reserve the space + shimmer bg instead so the
+   layout never collapses while first frames/metadata load */
+.video-frame { min-height: 160px; }
+.shot .video-frame { min-height: 0; } /* aspect-ratio already reserves it */
+.shot-clip-bare { background: var(--inset); min-height: 120px; }
+
 /* version chips + regen */
 .versions {
   display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
@@ -679,7 +810,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   font: 600 11px/1.4 var(--mono);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 99px;
+  border-radius: 5px;
   color: var(--text-2);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s, color 0.1s;
@@ -716,7 +847,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 /* reference upload zone (browse / drag-drop / paste) */
 .upload-zone {
   position: relative;
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-media);
   border: 1.5px dashed var(--line-2);
   background: var(--inset);
   overflow: hidden;
@@ -741,7 +872,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .upload-zone .upload-side { display: flex; align-items: center; gap: 12px; padding: 10px; }
 .upload-zone .upload-side img {
   flex: none; width: auto; max-width: 46%; max-height: 160px; min-height: 0;
-  object-fit: contain; background: #000; border-radius: var(--radius-s);
+  object-fit: contain; background: #000; border-radius: var(--radius-media);
 }
 .upload-side-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .upload-side-actions .upload-hint { margin-left: 0; }
@@ -777,7 +908,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .ref-card .img-frame { cursor: pointer; }
 .ref-card .img-frame:hover { border-color: var(--btn-hover-line); }
-.ref-card .img-frame, .ref-card .img-frame img { border-radius: 0; }
+.ref-card .img-frame, .ref-card .img-frame img { border-radius: var(--radius-media); }
 .ref-card.on .img-frame {
   border-color: var(--accent-line);
 }
@@ -813,8 +944,9 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .lightbox img, .lightbox video {
   max-width: 94vw; max-height: 88vh;
-  border-radius: var(--radius-m); border: 1px solid var(--line);
+  border-radius: var(--radius-media); border: 1px solid var(--line);
   background: #000; cursor: default;
+  animation: smoothIn 0.25s ease;
 }
 .lightbox-close {
   position: fixed; top: 14px; right: 14px;
@@ -861,12 +993,18 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   pointer-events: none;
 }
 .upload-side { position: relative; }
+/* bare clip wrapper: carries the scene + version badges over the video
+   (badges never intercept video controls) */
+.shot-clip-frame { position: relative; }
+.shot-clip-frame .ver-badge,
+.video-frame .ver-badge { pointer-events: none; }
 
-/* Compact "Generated So Far" grid (~30% of the old 2-up size):
-   4+/row on desktop, 3–4 on tablet, 2 on mobile. Aspect ratio and all
-   preview/play/open/download/regenerate controls are unchanged. */
+/* Compact "Generated So Far" grid (cells floored 30% larger so keyframe
+   images and clips render bigger: fewer per row on desktop, 2 on mobile).
+   Aspect ratio and all preview/play/open/download/regenerate controls
+   are unchanged. */
 .grid-compact {
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(167px, 1fr));
   gap: 8px;
 }
 .grid-compact .shot { gap: 6px; }
@@ -904,22 +1042,22 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
 }
 .gen-compact-table {
-  display: flex; flex-direction: column;
-  gap: 2px;
-}
-.gen-compact-trow { display: flex; flex-direction: column; gap: 0; min-width: 0; }
-.gen-compact-trow-main {
+  /* One shared grid so the Images / Videos / Overall bars start and end at
+     the exact same x — identical size regardless of label/count lengths. */
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   column-gap: 8px;
+  row-gap: 2px;
   align-items: center;
 }
+.gen-compact-trow { display: contents; min-width: 0; }
+.gen-compact-trow-main { display: contents; }
 .gen-compact-label {
   font-size: 8.5px; font-weight: 700; letter-spacing: 0.02em;
   color: var(--text-3);
   min-width: 52px; white-space: nowrap;
 }
-.gen-compact-table .gen-compact-bar { width: 100%; margin: 0; height: 2px; border: 0; }
+.gen-compact-table .gen-compact-bar { width: 100%; margin: 0; }
 .gen-compact-count {
   font: 600 9px var(--mono); color: var(--text-2); text-align: right;
   min-width: 48px; white-space: nowrap; font-variant-numeric: tabular-nums;
@@ -965,13 +1103,26 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .progress-fill.cancelled { background: linear-gradient(90deg, var(--warn) 0%, #fde68a 100%); }
 .progress { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; }
 .progress-bar {
-  height: 5px; border-radius: 99px; background: var(--inset);
+  height: var(--bar-h); border-radius: 99px; background: var(--bar-track);
   overflow: hidden; border: 1px solid var(--line);
 }
 .progress-fill {
+  position: relative; overflow: hidden;
   height: 100%; border-radius: 99px;
   background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
-  transition: width 0.4s ease;
+  transition: width 0.5s ease;
+}
+/* live left-to-right sweep while a generation is running (gray track stays
+   visible ahead of the fill) */
+.progress-fill.sweep::after,
+.shotlist-live .progress-fill::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+@keyframes barSweep {
+  to { transform: translateX(101%); }
 }
 .progress-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); }
 .progress-meta .muted { font-variant-numeric: tabular-nums; }
@@ -1538,7 +1689,7 @@ select:focus-visible, textarea:focus-visible {
 .shotlist-thumbs { display: flex; gap: 6px; flex: none; }
 .shotlist-thumb {
   position: relative; flex: none;
-  width: 62px; height: 36px; border-radius: 7px; overflow: hidden;
+  width: 62px; height: 36px; border-radius: var(--radius-media); overflow: hidden;
   background: var(--surface-2);
   border: 1px solid var(--line);
   cursor: zoom-in;
@@ -1550,7 +1701,8 @@ select:focus-visible, textarea:focus-visible {
 .shotlist-thumb-empty { display: grid; place-items: center; color: var(--text-3); cursor: default; }
 .shotlist-thumb-play {
   position: absolute; inset: 0; display: grid; place-items: center;
-  color: #fff; background: rgba(0, 0, 0, 0.25); pointer-events: none;
+  color: #fff; background: none; pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
 }
 .shotlist-thumb-tag {
   position: absolute; top: 2px; right: 2px; z-index: 1;

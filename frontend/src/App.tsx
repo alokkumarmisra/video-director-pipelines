@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import ShotList from "./components/ShotList";
@@ -9,9 +9,28 @@ import OutputGallery from "./components/OutputGallery";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
 import Login from "./components/Login";
-import { IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { IconCheck, IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
+
+// Queue dedupe: same stitch flag, same regen target (ref count matters —
+// batch sizes differ; keyframe/clip always run once).
+function sameRequest(a: RunRequest, b: RunRequest): boolean {
+  return (
+    !!a.stitch === !!b.stitch &&
+    (a.regen?.kind ?? null) === (b.regen?.kind ?? null) &&
+    (a.regen?.index ?? null) === (b.regen?.index ?? null) &&
+    (a.regen?.kind === "ref" ? (a.count ?? 1) : 0) === (b.regen?.kind === "ref" ? (b.count ?? 1) : 0)
+  );
+}
+const AVATAR_TONES = 8;
+// Deterministic per-project avatar tone: hash the name into one of 8
+// `.scenario-avatar.av-N` palettes so each project keeps its own color.
+function avatarTone(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h % AVATAR_TONES;
+}
 
 export default function App() {
   const [auth, setAuth] = useState<AuthUser | null>(null);
@@ -70,6 +89,14 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [view, setView] = useState<"home" | "workspace">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
+  const [cfgLoading, setCfgLoading] = useState(false);
+  // Last fully loaded project (name + config updated together). The sidebar
+  // highlights `name` immediately, but all workspace content renders from
+  // `shown` — so clicking another project never blanks/flashes the page: the
+  // old project stays mounted until the new config has arrived.
+  const [shownName, setShownName] = useState("");
+  // True while the newly selected project's config is loading. The old
+  // content stays mounted (dimmed) until it lands — no blank flash.
   const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
   const [engine, setEngine] = useState<Engine>("ltx");
   const [comfy, setComfy] = useState<ComfyStatus | null>(null);
@@ -80,7 +107,12 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [runActive, setRunActive] = useState(false);
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null>(null);
+  // Serial run queue: Regen clicks that land while a run is active wait here
+  // (the server rejects concurrent runs) and fire one-by-one as each run
+  // ends. Only the actively targeted button is disabled — the rest stay
+  // clickable so shots can be queued up.
+  const [runQueue, setRunQueue] = useState<RunRequest[]>([]);
   const [genProgress, setGenProgress] = useState<GenerationProgress>(emptyProgress);
   // Server-side fallback: a run started in another tab (or before a page
   // refresh) leaves this tab's RunPanel idle while the backend — and the
@@ -221,8 +253,37 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
+  // Fire now when idle; queue behind the active run otherwise (identical
+  // requests already queued are ignored). The engine is captured per request
+  // so a queued regen still runs under the engine it was asked for.
+  const requestRun = (spec: RunRequest) => {
+    const item: RunRequest = {
+      stitch: !!spec.stitch,
+      regen: spec.regen ?? null,
+      count: spec.count ?? 1,
+      engine: spec.engine ?? engine,
+    };
+    if (runActive) {
+      setRunQueue((q) => (q.some((x) => sameRequest(x, item)) ? q : [...q, item]));
+    } else {
+      setPendingRun({ nonce: Date.now(), ...item });
+    }
+  };
+
+  // Drain the queue serially: each run end fires the next request (StrictMode
+  // safe — the shift happens in the effect body, not a state updater).
+  const runActivePrev = useRef(false);
+  useEffect(() => {
+    if (runActivePrev.current && !runActive && runQueue.length > 0) {
+      const [next, ...rest] = runQueue;
+      setRunQueue(rest);
+      setPendingRun({ nonce: Date.now(), ...next });
+    }
+    runActivePrev.current = runActive;
+  }, [runActive, runQueue]);
+
   const handleRegen = (kind: AssetKind, index: number | null) =>
-    !runActive && setPendingRun({ nonce: Date.now(), regen: { kind, index: index ?? undefined } });
+    requestRun({ regen: { kind, index: index ?? undefined } });
 
   // Home -> workspace navigation. The workspace itself is unchanged —
   // opening a project just selects it and switches the view.
@@ -232,24 +293,57 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     setView("workspace");
   }, []);
 
-  const handleDelete = async (s: string) => {
-    if (!window.confirm(`Delete scenario "${s}"?\nIts generated outputs will be removed too.`)) return;
+  // Delete confirmation popup for the Project bar (Yes/No — no native
+  // window.confirm). `confirmDelete` is the pending project name, if any.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const requestDelete = (s: string) => {
+    if (!deleting) setConfirmDelete(s);
+  };
+
+  const doDelete = async () => {
+    const s = confirmDelete;
+    if (!s || deleting) return;
+    setDeleting(true);
     try {
       await deleteScenario(s);
       if (draft && draft.name === s) setDraft(null);
       if (name === s) {
         setName("");
+        setShownName("");
+        setCfg(null);
         setView("home");
+      } else if (shownName === s) {
+        setShownName("");
+        setCfg(null);
       }
       await refreshScenarios();
       refresh();
     } catch (e) {
       window.alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(null);
     }
   };
+
+  // Escape dismisses the delete popup.
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setConfirmDelete(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDelete]);
+  // Project bar order: integer project_id descending (newest project first);
+  // rows without an id (SQLite mode) sink below, ordered by latest edit.
+  const byProjectIdDesc = (a: ScenarioInfo, b: ScenarioInfo) =>
+    (b.project_id ?? -1) - (a.project_id ?? -1) || b.mtimeMs - a.mtimeMs;
   const refreshScenarios = useCallback(async () => {
     const all = await listScenarios();
-    const seq = all.filter((s) => s.isSequence);
+    const seq = all.filter((s) => s.isSequence).sort(byProjectIdDesc);
     setScenarios(seq);
     // Best-effort asset counts for the sidebar (never blocks the list).
     getDashboard()
@@ -260,11 +354,12 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
 
   const handleFavorite = async (s: ScenarioInfo) => {
     const on = !s.favorite;
-    // Optimistic toggle; the server re-sorts (favorites pinned on top).
+    // Optimistic toggle; the star flips in place — row order always stays
+    // project_id descending.
     setScenarios((prev) =>
       prev
         .map((x) => (x.name === s.name ? { ...x, favorite: on } : x))
-        .sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)
+        .sort(byProjectIdDesc)
     );
     try {
       await setFavorite(s.name, on);
@@ -281,16 +376,27 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   useEffect(() => {
     if (!name) {
       setCfg(null);
+      setShownName("");
+      setCfgLoading(false);
       return;
     }
     let cancelled = false;
-    setCfg(null);
-    getScenario(name)
+    // Keep the previous project's content mounted while the new config
+    // loads (blanking it here is what made the page flick on every click).
+    // `shownName`/`cfg` only flip together once the fetch lands.
+    setCfgLoading(true);
+    const req = name;
+    getScenario(req)
       .then((r) => {
-        if (!cancelled) setCfg(r.config);
+        if (!cancelled) {
+          setCfg(r.config);
+          setShownName(req);
+          setCfgLoading(false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setCfg(null);
+        // Keep the old project mounted on failure — never blank the page.
+        if (!cancelled) setCfgLoading(false);
       });
     return () => {
       cancelled = true;
@@ -308,11 +414,13 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   }, []);
 
   const handleSave = async (c: Scenario) => {
-    const target = draft ? draft.name : name;
+    const target = draft ? draft.name : (shownName || name);
     await saveScenario(target, c);
     if (draft) {
       await refreshScenarios();
       setName(target);
+      setShownName(target);
+      setCfg(c);
       setDraft(null);
     }
   };
@@ -330,7 +438,8 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     // Targeted craft (craftTarget = the open saved scenario): keep the SAME
     // name so explicit Save stores a new *version* of that project (delta
     // rows for changed scenes only) instead of minting a new project.
-    const inPlace = !draft && !!name && n === name;
+    const shownForCraft = draft ? draft.name : (shownName || name);
+    const inPlace = !draft && !!shownForCraft && n === shownForCraft;
     let target = n;
     if (!inPlace) {
       for (let i = 2; scenarios.some((s) => s.name === target); i++) target = `${n}_${i}`;
@@ -342,9 +451,17 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     setView("workspace");
   };
 
+  // Workspace content renders from the last fully loaded project (`shown`),
+  // never from the just-clicked `name` — name/config flip together when the
+  // fetch lands, so the page never shows a half-switched state.
   const editor = draft
     ? { name: draft.name, config: draft.config }
-    : cfg ? { name, config: cfg } : null;
+    : cfg && shownName ? { name: shownName, config: cfg } : null;
+  // True while the requested project differs from what's on screen (its
+  // config is still flying in). Sidebar shows a spinner; content stays put.
+  const switching = !draft && (!!cfgLoading || (!!name && name !== shownName));
+  // Project whose content is actually on screen right now.
+  const contentName = draft ? draft.name : shownName;
 
   const comfyQueue = comfy?.queue
     ? (comfy.queue.queue_running?.length ?? 0) + (comfy.queue.queue_pending?.length ?? 0)
@@ -354,7 +471,7 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   // active — the Generate Reference button spins on exactly this, not on
   // every unrelated run (full Generate, stitch, beat regen, …).
   const refGenerating =
-    runActive && regenTarget?.kind === "ref" && !!name && !draft && runScenario === name;
+    runActive && regenTarget?.kind === "ref" && !!contentName && !draft && runScenario === contentName;
 
   return (
     <div className="app">
@@ -427,7 +544,8 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
       {/* Both views stay mounted — the inactive one is hidden, not unmounted —
           so a running generation keeps its live log, progress bar and SSE tail
           (and Craft keeps its spinner) when flipping between Home and the
-          workspace. */}
+          workspace. Workspace content renders from the last loaded project,
+          so switching projects never unmounts/remounts the page. */}
       <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}`}>
         {!sidebarOpen && view === "workspace" && (
           <button
@@ -476,21 +594,42 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             {scenarios.map((s) => {
               const d = dashMap.get(s.name);
               const selected = !draft && name === s.name;
+              const loadingThis = switching && name === s.name;
               const assets = d ? (d.refDone ? 1 : 0) + d.imageCount + d.videoCount : null;
+              // Fully rendered = every scene's video clip exists (and at
+              // least one scene). Live runs show a spinner instead of a tick.
+              const scenes = d?.sceneCount ?? 0;
+              const vids = d?.videoCount ?? 0;
+              const running = !!d?.generating;
+              const complete = !!d && !running && scenes > 0 && vids >= scenes;
+              const tickTitle = running
+                ? "Generating…"
+                : !d
+                  ? "Render status unavailable"
+                  : complete
+                    ? `Fully rendered — all ${scenes} video${scenes === 1 ? "" : "s"} done`
+                    : scenes > 0
+                      ? `${vids}/${scenes} videos rendered`
+                      : "No scenes yet";
               return (
-              <div className={`scenario-row${selected ? " selected" : ""}`} key={s.name}>
+              <div className={`scenario-row${selected ? " selected" : ""}${loadingThis ? " loading" : ""}`} key={s.name}>
                 <button
                   className={`scenario-item ${selected ? "on" : ""}`}
                   onClick={() => openProject(s.name)}
-                  title={s.name}
+                  title={s.project_id != null ? `#${s.project_id} · ${s.name}` : s.name}
                   aria-current={selected ? "page" : undefined}
                 >
-                  <span className="scenario-avatar" aria-hidden="true">
-                    {s.name.slice(0, 1).toUpperCase()}
+                  <span className={`scenario-avatar av-${avatarTone(s.name)}`} aria-hidden="true">
+                    {loadingThis ? <Spinner size={13} /> : s.name.slice(0, 1).toUpperCase()}
                   </span>
                   <span className="scenario-main">
-                    <span className="scenario-name">{s.name}</span>
-                    <span className="scenario-date">{fmtDate(s.mtimeMs)}</span>
+                    <span className="scenario-name">
+                      {s.project_id != null && (
+                        <span className="scenario-id" title={`Project #${s.project_id}`}>#{s.project_id}</span>
+                      )}
+                      <span className="scenario-name-text">{s.name}</span>
+                    </span>
+                    <span className="scenario-date" title={fmtDateTime(s.mtimeMs)}>{fmtDateTime(s.mtimeMs)}</span>
                   </span>
                   <span className="scenario-stats" title={
                     d
@@ -499,30 +638,50 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
                   }>
                     {d ? (
                       <>
-                        <span className="stat-line"><b>{assets}</b> assets</span>
-                        <span className="stat-line dim">{d.imageCount} img · {d.videoCount} vid</span>
+                        <span className="stat-line">Assets: <b>{assets}</b></span>
+                        <span className="stat-line dim">Images: <b>{d.imageCount}</b></span>
+                        <span className="stat-line dim">Videos: <b>{d.videoCount}</b></span>
                       </>
                     ) : (
                       <span className="stat-line dim">—</span>
                     )}
                   </span>
+                  {running ? (
+                    <span className="scenario-tick running" title={tickTitle} aria-label={tickTitle}>
+                      <Spinner size={11} />
+                    </span>
+                  ) : d ? (
+                    complete ? (
+                      <span className="scenario-tick done" title={tickTitle} aria-label={tickTitle}>
+                        <IconCheck size={12} />
+                      </span>
+                    ) : (
+                      <span className="scenario-tick pending" title={tickTitle} aria-label={tickTitle} aria-hidden="true">
+                        <span className="tick-dot" />
+                      </span>
+                    )
+                  ) : null}
                 </button>
-                <button
-                  className={`icon-btn scenario-fav ${s.favorite ? "on" : ""}`}
-                  title={s.favorite ? `Unfavorite ${s.name}` : `Favorite ${s.name}`}
-                  aria-label={s.favorite ? `Unfavorite ${s.name}` : `Favorite ${s.name}`}
-                  onClick={() => handleFavorite(s)}
-                >
-                  <IconStar size={13} filled={!!s.favorite} />
-                </button>
-                <button
-                  className="icon-btn scenario-del"
-                  title={`Delete ${s.name}`}
-                  aria-label={`Delete scenario ${s.name}`}
-                  onClick={() => handleDelete(s.name)}
-                >
-                  <IconTrash size={13} />
-                </button>
+                {/* Vertical action stack, last in the row: favorite on top,
+                    delete just below. Always visible (never hover-only). */}
+                <div className="scenario-actions">
+                  <button
+                    className={`icon-btn scenario-fav ${s.favorite ? "on" : ""}`}
+                    title={s.favorite ? `Unfavorite ${s.name}` : `Favorite ${s.name}`}
+                    aria-label={s.favorite ? `Unfavorite ${s.name}` : `Favorite ${s.name}`}
+                    onClick={() => handleFavorite(s)}
+                  >
+                    <IconStar size={13} filled={!!s.favorite} />
+                  </button>
+                  <button
+                    className="icon-btn scenario-del"
+                    title={`Delete ${s.name}`}
+                    aria-label={`Delete scenario ${s.name}`}
+                    onClick={() => requestDelete(s.name)}
+                  >
+                    <IconTrash size={13} />
+                  </button>
+                </div>
               </div>
               );
             })}
@@ -531,69 +690,34 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         )}
 
         <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
-          <CraftPanel
-            onCrafted={handleCrafted}
-            craftTarget={!draft && name ? name : null}
-            scenarios={scenarios}
-            selected={draft ? "" : name}
-            onSelect={(n) => openProject(n)}
-            contextKey={draft ? `draft:${draft.name}` : (name ? `saved:${name}` : "new")}
-            contextTopic={(draft ? draft.config : cfg)?.topic ?? ""}
-            contextReqs={(draft ? draft.config : cfg)?.requirements ?? ""}
-          />
-          {editor ? (
-            <ScenarioEditor
-              key={editor.name}
-              name={editor.name}
-              config={editor.config}
-              isDraft={!!draft}
-              onSave={handleSave}
-              refBusy={runActive}
-              refGenerating={refGenerating}
-              onGenerateRef={(count) =>
-                !runActive && !draft && setPendingRun({ nonce: Date.now(), regen: { kind: "ref" }, count })}
-              referenceSlot={!draft && name ? (
-                <OutputGallery
-                  scenario={outScenario(name, engine)}
-                  refreshKey={refreshKey}
-                  section="reference"
-                  generatingScenario={runActive ? runScenario : null}
-                  regenTarget={runActive ? regenTarget : null}
-                  onRegen={handleRegen}
-                  onUploaded={refresh}
-                />
-              ) : null}
-            />
+          {/* First open (nothing loaded yet): stable loading skeleton with the
+              same card layout, so the editor mounting later doesn't reflow. */}
+          {switching && !editor ? (
+            <>
+              <section className="card ws-loading" aria-label="Loading project">
+                <Spinner size={16} /> Loading {name}…
+              </section>
+              <section className="card ws-loading" aria-label="Loading run panel">
+                <Spinner size={16} /> Loading {name}…
+              </section>
+            </>
           ) : (
-            <section className="card">
-              <div className="empty">
-                <span className="empty-icon">
-                  <IconFolder size={20} />
-                </span>
-                <span className="empty-title">No scenario selected</span>
-                <span className="empty-sub">
-                  Pick a scenario from the list, or craft a new one above.
-                </span>
-              </div>
-            </section>
-          )}
-          {!draft && name && editor && (
-            <ShotList
-              name={name}
-              engine={engine}
-              config={editor?.config ?? null}
-              refreshKey={refreshKey}
-              generatingScenario={runActive ? runScenario : null}
-              regenTarget={runActive ? regenTarget : null}
-              progress={topProgress}
-              comfyQueue={comfyQueue}
-              onRegen={handleRegen}
-              onStitch={() => !runActive && setPendingRun({ nonce: Date.now(), stitch: true })}
-              runBusy={runActive}
-            />
-          )}
+          <>
+          {/* Output Box on top, generation (Run window) directly below it. */}
+          <OutputGallery
+            scenario={contentName ? outScenario(contentName, engine) : ""}
+            refreshKey={refreshKey}
+            section="rest"
+            generatingScenario={runActive ? runScenario : null}
+            regenTarget={runActive ? regenTarget : null}
+            runQueue={runQueue}
+            onStitch={() => requestRun({ stitch: true })}
+            onRegen={handleRegen}
+            onUploaded={refresh}
+            onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
+          />
           <RunPanel
-            scenario={draft ? "" : name}
+            scenario={draft ? "" : contentName}
             engine={engine}
             onEngine={setEngine}
             onDone={refresh}
@@ -608,22 +732,130 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             pendingRun={pendingRun}
             onProgress={setGenProgress}
           />
+          {/* Scenario Editor lives in the right column, just below AI Craft. */}
+          {editor && (
+            <ShotList
+              name={editor.name}
+              engine={engine}
+              config={editor.config}
+              isDraft={!!draft}
+              onDraftChange={(next) => setDraft((d) => (d ? { ...d, config: next } : d))}
+              onChanged={(next) => {
+                setCfg(next);
+                refreshScenarios().catch(() => {});
+                refresh();
+              }}
+              refreshKey={refreshKey}
+              generatingScenario={runActive ? runScenario : null}
+              regenTarget={runActive ? regenTarget : null}
+              progress={topProgress}
+              comfyQueue={comfyQueue}
+              onRegen={handleRegen}
+              onStitch={() => requestRun({ stitch: true })}
+              runBusy={runActive}
+              runQueue={runQueue}
+            />
+          )}
+          </>
+          )}
         </div>
 
+        {/* AI Craft + Scenario Editor in the right column. */}
         <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
-          <OutputGallery
-            scenario={outScenario(draft ? draft.name : name, engine)}
-            refreshKey={refreshKey}
-            section="rest"
-            generatingScenario={runActive ? runScenario : null}
-            regenTarget={runActive ? regenTarget : null}
-            onStitch={() => !runActive && setPendingRun({ nonce: Date.now(), stitch: true })}
-            onRegen={handleRegen}
-            onUploaded={refresh}
-            onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
+          <CraftPanel
+            onCrafted={handleCrafted}
+            craftTarget={!draft && name ? name : null}
+            scenarios={scenarios}
+            selected={draft ? "" : name}
+            onSelect={(n) => openProject(n)}
+            contextKey={draft ? `draft:${draft.name}` : (contentName ? `saved:${contentName}` : "new")}
+            contextTopic={(draft ? draft.config : cfg)?.topic ?? ""}
+            contextReqs={(draft ? draft.config : cfg)?.requirements ?? ""}
           />
+          {switching && !editor ? (
+            <section className="card ws-loading" aria-label="Loading scenario editor">
+              <Spinner size={16} /> Loading {name}…
+            </section>
+          ) : editor ? (
+            // No key={editor.name}: remounting the whole editor on every
+            // project click is what flushed inputs/scroll. It resyncs from
+            // the new name/config props on its own.
+            <ScenarioEditor
+              name={editor.name}
+              config={editor.config}
+              isDraft={!!draft}
+              onSave={handleSave}
+              refBusy={runActive}
+              refGenerating={refGenerating}
+              onGenerateRef={(count) =>
+                !draft && requestRun({ regen: { kind: "ref" }, count })}
+              referenceSlot={!draft && contentName ? (
+                <OutputGallery
+                  scenario={outScenario(contentName, engine)}
+                  refreshKey={refreshKey}
+                  section="reference"
+                  generatingScenario={runActive ? runScenario : null}
+                  regenTarget={runActive ? regenTarget : null}
+                  runQueue={runQueue}
+                  onRegen={handleRegen}
+                  onUploaded={refresh}
+                />
+              ) : null}
+            />
+          ) : (
+            <section className="card">
+              <div className="empty">
+                <span className="empty-icon">
+                  <IconFolder size={20} />
+                </span>
+                <span className="empty-title">No scenario selected</span>
+                <span className="empty-sub">
+                  Pick a scenario from the list, or craft a new one with the AI Craft panel above.
+                </span>
+              </div>
+            </section>
+          )}
         </div>
       </div>
+
+      {/* Delete confirmation popup for the Project bar. */}
+      {confirmDelete && (
+        <div
+          className="confirm-overlay"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label={`Delete project ${confirmDelete}`}
+          onClick={() => !deleting && setConfirmDelete(null)}
+        >
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3 className="confirm-title">Delete project?</h3>
+            <p className="confirm-text">
+              Delete <b>{confirmDelete}</b>?
+            </p>
+            <p className="confirm-sub">
+              Its generated outputs will be removed too. This cannot be undone.
+            </p>
+            <div className="confirm-actions">
+              <button
+                className="ghost"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                autoFocus
+              >
+                No
+              </button>
+              <button
+                className="danger"
+                onClick={() => void doDelete()}
+                disabled={deleting}
+              >
+                {deleting ? <Spinner size={12} /> : <IconTrash size={12} />}
+                {deleting ? "Deleting…" : "Yes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

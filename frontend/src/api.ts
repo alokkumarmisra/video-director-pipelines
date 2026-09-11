@@ -82,6 +82,16 @@ export interface RegenSpec {
   index?: number;
 }
 
+// One run request: full run (neither set), stitch-only, or a single-asset
+// regen. Queued client-side and drained serially (the server — and the
+// ComfyUI queue behind it — accepts only one active run).
+export interface RunRequest {
+  stitch?: boolean;
+  regen?: RegenSpec | null;
+  count?: number;
+  engine?: Engine;
+}
+
 export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; regen?: RegenSpec | null; count?: number } = {}) =>
   fetch("/api/runs", {
     method: "POST",

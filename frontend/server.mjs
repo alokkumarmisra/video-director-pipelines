@@ -1218,12 +1218,14 @@ async function dashboardPayload() {
     }
   }
 
-  // 3) Project created dates (one query; nulls when unavailable).
+  // 3) Project created dates + integer ids (one query; nulls when unavailable).
   let created = new Map();
+  let pids = new Map();
   if (pgUp && names.length) {
     try {
-      const r = await pgPool.query("SELECT name, created_at FROM projects WHERE name = ANY($1)", [names]);
+      const r = await pgPool.query("SELECT name, project_id, created_at FROM projects WHERE name = ANY($1)", [names]);
       created = new Map(r.rows.map((x) => [x.name, x.created_at ? new Date(x.created_at).getTime() : null]));
+      pids = new Map(r.rows.map((x) => [x.name, x.project_id != null ? Number(x.project_id) : null]));
     } catch (e) { console.warn("[dashboard] projects lookup failed:", e.message); }
   }
 
@@ -1257,6 +1259,7 @@ async function dashboardPayload() {
     }
     return {
       name: r.name,
+      project_id: pids.get(r.name) ?? null,
       description: typeof cfg?.description === "string" ? cfg.description : "",
       status,
       generating: generating.has(r.name) || generating.has(`${r.name}_wan`),
@@ -1554,6 +1557,16 @@ const server = http.createServer(async (req, res) => {
       let rows;
       try { rows = await dbListScenarios(); }
       catch (e) { return json(res, 503, { error: "database unavailable" }); }
+      // Integer project ids for the sidebar (desc sort + #id chip). The
+      // scenarios store itself has no project_id column — it lives on the
+      // projects table. Null in SQLite mode / pre-migration rows.
+      let pidMap = new Map();
+      if (pgUp) {
+        try {
+          const pr = await pgPool.query("SELECT name, project_id FROM projects");
+          pidMap = new Map(pr.rows.map((x) => [x.name, Number(x.project_id)]));
+        } catch { /* ids stay null — sidebar falls back to mtime order */ }
+      }
       return json(res, 200, rows.map((r) => {
         const c = JSON.parse(r.config);
         return {
@@ -1563,6 +1576,7 @@ const server = http.createServer(async (req, res) => {
           // epoch-ms number (a string renders as NaN-undefined-NaN).
           mtimeMs: Number(r.updated_at),
           favorite: favs.includes(r.name),
+          project_id: pidMap.has(r.name) ? pidMap.get(r.name) : null,
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
     }

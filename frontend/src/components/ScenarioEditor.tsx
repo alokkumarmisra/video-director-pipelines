@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
-import { craftBeat, getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi } from "../api";
-import { IconCheck, IconPlus, IconX, IconLayers, IconSparkles, IconTrash, Spinner } from "./Icons";
+import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi } from "../api";
+import { IconCheck, IconLayers, IconSparkles, IconTrash, Spinner } from "./Icons";
 
 interface Props {
   name: string;
@@ -22,12 +22,10 @@ interface Props {
   referenceSlot?: ReactNode;
 }
 
-const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-
-// Editable prompt JSON: reference prompt, duration, and the keyframe beats.
-// Nothing saves automatically — every explicit Save stores ALL fields
-// (topic, requirements, prompts, camera) as a new version in the database.
+// Editable prompt JSON: reference prompt and clip duration. Keyframe beats
+// (title, keyframe image, motion & camera) live in the Shot List, which edits
+// them inline with the same fields. Nothing saves automatically — every
+// explicit Save stores ALL fields as a new version in the database.
 export default function ScenarioEditor({ name, config, isDraft, onSave, onGenerateRef, refBusy, refGenerating, referenceSlot }: Props) {
   const [cfg, setCfg] = useState<Scenario>(config);
   const [pristine, setPristine] = useState<Scenario>(config);
@@ -37,9 +35,6 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
   // reverting counts as clean). Save stays disabled while clean.
   const dirty = JSON.stringify(cfg) !== JSON.stringify(pristine);
   const [error, setError] = useState("");
-  const [genBusy, setGenBusy] = useState(false);
-  const [genError, setGenError] = useState("");
-  const [genCount, setGenCount] = useState(1);
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [delBusy, setDelBusy] = useState(false);
@@ -59,7 +54,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
   }, [isDraft, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resync when a different workflow is picked from the dropdown (parent
-  // passes a new name/config). Internal edits (set/setBeat) don't change
+  // passes a new name/config). Internal edits (set) don't change
   // the prop identity, so typing is never wiped by this.
   useEffect(() => {
     setCfg(config);
@@ -68,45 +63,35 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
     setError("");
     setViewVersion(null);
   }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    setCfg(config);
-    setPristine(config);
-  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The parent swaps the config identity when a different scenario finishes
+  // loading, and when the Shot List persists beat edits for this scenario.
+  // Tell them apart by the non-beat fields: a full reset on scenario switch,
+  // sequence-only adoption for same-scenario beat saves (preserves
+  // in-progress edits to the fields that live in this editor).
+  const [lastSeen, setLastSeen] = useState(config);
+  if (config !== lastSeen) {
+    setLastSeen(config);
+    const rest = (c: Scenario) => {
+      const { sequence, ...fields } = c;
+      return JSON.stringify(fields);
+    };
+    if (rest(config) === rest(pristine)) {
+      const seq = JSON.stringify(config.sequence);
+      setCfg((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
+      setPristine((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
+    } else {
+      setCfg(config);
+      setPristine(config);
+      setSaved(false);
+      setError("");
+      setViewVersion(null);
+    }
+  }
 
   const set = (patch: Partial<Scenario>) => {
     setCfg({ ...cfg, ...patch });
     setSaved(false);
-  };
-  const setBeat = (i: number, patch: Partial<Scenario["sequence"][number]>) => {
-    const sequence = cfg.sequence.map((b, j) => (j === i ? { ...b, ...patch } : b));
-    set({ sequence });
-  };
-  const addBeat = () =>
-    set({ sequence: [...cfg.sequence, { title: `beat${cfg.sequence.length + 1}`, image: "", motion: "" }] });
-  const removeBeat = (i: number) => set({ sequence: cfg.sequence.filter((_, j) => j !== i) });
-
-  // LLM proposes the next N beats from the scenario JSON (description + existing
-  // beats), each continuing from the previous one, and appends them —
-  // review/edit them here, then Save + run the pipeline.
-  const generateBeat = async () => {
-    setGenBusy(true);
-    setGenError("");
-    try {
-      const res = await craftBeat(cfg, genCount);
-      const beats = res.beats ?? (res.beat ? [res.beat] : []); // beat = old server shape
-      const used = new Set(cfg.sequence.map((b) => b.title));
-      const next = beats.map((b, k) => {
-        let title = slug(b.title) || `beat${cfg.sequence.length + k + 1}`;
-        if (used.has(title)) title = `${title}_next`;
-        used.add(title);
-        return { ...b, title };
-      });
-      set({ sequence: [...cfg.sequence, ...next] });
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setGenBusy(false);
-    }
   };
 
   // Explicit save: persists everything as a NEW version of the same project.
@@ -290,62 +275,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
         style={{ maxWidth: 140 }}
         onChange={(e) => set({ duration: Number(e.target.value) })}
       />
-
-      {cfg.sequence.map((b, i) => (
-        <div className={`beat ${i % 2 ? "alt" : ""}`} key={i}>
-          <div className="beat-head">
-            <span className="beat-index">{i + 1}</span>
-            <input
-              className="beat-title"
-              value={b.title}
-              placeholder="title (file-safe)"
-              onChange={(e) => setBeat(i, { title: e.target.value })}
-            />
-            <button
-              className="icon-btn danger"
-              title="Remove beat"
-              onClick={() => removeBeat(i)}
-            >
-              <IconX size={13} />
-            </button>
-          </div>
-          <p className="beat-meta">{slug(b.title) || "untitled"}</p>
-          <label>Keyframe image — Flux</label>
-          <textarea
-            rows={2}
-            value={b.image}
-            onChange={(e) => setBeat(i, { image: e.target.value })}
-          />
-          <label>Motion &amp; camera — i2v</label>
-          <textarea
-            rows={2}
-            value={b.motion}
-            onChange={(e) => setBeat(i, { motion: e.target.value })}
-          />
-        </div>
-      ))}
-      <div className="row" style={{ marginTop: 4 }}>
-        <button className="ghost" onClick={addBeat} disabled={genBusy}>
-          <IconPlus size={13} />
-          Add beat
-        </button>
-        <button className="ghost" onClick={generateBeat} disabled={genBusy} title="LLM proposes the next beat(s) from the scenario + existing beats">
-          {genBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
-          {genBusy ? "Generating…" : "Generate beat"}
-        </button>
-        <label className="gen-count wide" title="How many next beats to generate (1 or more)">
-          ×
-          <input
-            type="number"
-            min={1}
-            value={genCount}
-            disabled={genBusy}
-            onChange={(e) => setGenCount(Math.max(1, Number(e.target.value) || 1))}
-          />
-        </label>
-      </div>
-      {genError && <p className="hint err-text">{genError}</p>}
-      <p className="hint">Generate beat asks the LLM for the next story beat(s) from the scenario JSON. Nothing saves until you press Save — every save stores a new version.</p>
+      <p className="hint">
+        Shots live in the Shot List — edit, add, generate or delete them there with the same prompts.
+      </p>
     </section>
   );
 }
