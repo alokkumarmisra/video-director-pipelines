@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent, type RunRequest } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
-import { IconFilm, IconImage, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
+import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
 
@@ -12,8 +12,10 @@ interface Props {
   bare?: boolean; // render without the outer card (for nesting in RunPanel)
   generatingScenario?: string | null; // output dir of the scenario currently being generated
   // Which sections to render: everything, only Reference (embedded in the
-  // Scenario Editor under Generate Reference), or everything but Reference.
-  section?: "all" | "reference" | "rest";
+  // Scenario Editor under Generate Reference), only the Output card (final
+  // cut), or only the Keyframes → clips card. The workspace renders Output +
+  // Keyframes as two separate cards, each with its own hide/show toggle.
+  section?: "all" | "reference" | "output" | "beats";
   // Total scene (beat) count for the "n/total" overlay in the live view.
   // The static view derives it from its versioned beats; the live view only
   // sees finished assets so the caller (RunPanel) passes the real total from
@@ -276,7 +278,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // Compared against the visible listing (viewScenario) so a mid-run project
   // switch keeps the chip on the right gallery. The version rows then show a
   // blinking "generating vN" chip on the asset actually in progress.
-  const generating = !!generatingScenario && generatingScenario === viewScenario;
+  // generatingScenario arrives as the base scenario name; Wan runs render
+  // into the suffixed dir, so both forms match.
+  const generating = !!generatingScenario && !!viewScenario &&
+    (generatingScenario === viewScenario || `${generatingScenario}_wan` === viewScenario);
   const genTarget = (() => {
     if (!generating) return null;
     if (regenTarget) {
@@ -391,13 +396,33 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const mediaCount = beatNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
 
   const Tag = bare || section === "reference" ? "div" : "section";
+  // Full card only (embeds have no header to host the toggle): hide/show,
+  // persisted like the Projects panel — one key per card. Collapsing only
+  // hides the body JSX — listings keep refreshing underneath.
+  const isCard = !bare && section !== "reference";
+  const isBeats = section === "beats";
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(isBeats ? "ss-sec-beats" : "ss-sec-outputs") === "closed");
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      localStorage.setItem(isBeats ? "ss-sec-beats" : "ss-sec-outputs", c ? "open" : "closed");
+      return !c;
+    });
   return (
-    <Tag className={bare || section === "reference" ? (section === "reference" ? "ref-embed" : undefined) : "card"}>
+    <Tag className={isCard ? `card${collapsed ? " collapsed" : ""}` : (section === "reference" ? "ref-embed" : undefined)}>
       {!bare && section !== "reference" && (
         <div className="card-head">
           <h2>
-            <span className="head-icon"><IconFilm size={15} /></span>
-            Outputs
+            {isBeats ? (
+              <>
+                <span className="head-icon hi-beats"><IconFilm size={15} /></span>
+                Keyframes → clips
+              </>
+            ) : (
+              <>
+                <span className="head-icon hi-output"><IconClapper size={15} /></span>
+                Output
+              </>
+            )}
           </h2>
           <span className="spacer" />
           {switchingGallery && (
@@ -405,7 +430,17 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               <span className="dot pulse" /> switching…
             </span>
           )}
-          {hasClips && (
+          {isBeats && beatNums.length > 0 && (
+            <span className="muted" style={{ fontSize: 12 }} title={`${beatNums.length} scenes with keyframe versions`}>
+              {beatNums.length} scene{beatNums.length === 1 ? "" : "s"}
+            </span>
+          )}
+          {isBeats && generating && genTarget !== null && genTarget !== "ref" && (
+            <span className="pill running" title="A run is producing a keyframe or clip right now">
+              <span className="dot pulse" /> generating…
+            </span>
+          )}
+          {!isBeats && hasClips && (
             <button
               onClick={doStitch}
               disabled={generating || switchingGallery}
@@ -415,18 +450,29 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               {stitching ? "Stitching…" : "Stitch final"}
             </button>
           )}
-          {viewScenario && (
+          {!isBeats && viewScenario && (
             <span className="muted" style={{ fontSize: 12, fontFamily: "var(--mono)" }}>
               outputs/{viewScenario}/
             </span>
           )}
+          <button
+            className="icon-btn"
+            onClick={toggleCollapsed}
+            title={collapsed ? (isBeats ? "Show keyframes and clips" : "Show output") : (isBeats ? "Hide keyframes and clips" : "Hide output")}
+            aria-label={collapsed ? (isBeats ? "Show keyframes and clips" : "Show output") : (isBeats ? "Hide keyframes and clips" : "Hide output")}
+            aria-expanded={!collapsed}
+          >
+            <IconPanel size={15} />
+          </button>
         </div>
       )}
 
+      {!(isCard && collapsed) && (
+      <>
       {error && <p className="hint err-text">{error}</p>}
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
-      {section !== "reference" && shownFinal && (
+      {(section === "all" || section === "output") && shownFinal && (
         <>
           <div className="section-label">
             Final cut
@@ -470,7 +516,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           )}
         </>
       )}
-      {viewScenario && section !== "rest" ? (
+      {viewScenario && (section === "all" || section === "reference") ? (
         <>
           <div className="section-label">
             Reference
@@ -539,9 +585,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           )}
         </>
       ) : null}
-      {section !== "reference" && (beatNums.length > 0 || fallbackShots.length > 0) && (
+      {(section === "all" || section === "beats") && (beatNums.length > 0 || fallbackShots.length > 0) && (
         <>
-          <div className="section-label">Keyframes → clips</div>
+          {/* The Keyframes card header already carries this title. */}
+          {!isBeats && <div className="section-label">Keyframes → clips</div>}
           <div className="grid grid-compact">
             {beatNums.map((n) => {
               const bv = versions.beats[String(n)];
@@ -632,7 +679,9 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </p>
         </>
       )}
-      {section !== "reference" && switchingGallery && mediaCount === 0 && (
+      {((section === "all" && switchingGallery && mediaCount === 0) ||
+        (section === "output" && switchingGallery && !shownFinal) ||
+        (section === "beats" && switchingGallery && beatNums.length === 0 && fallbackShots.length === 0)) && (
         <div className="empty" aria-label="Loading outputs">
           <span className="empty-icon">
             <Spinner size={20} />
@@ -640,15 +689,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <span className="empty-title">Loading outputs…</span>
         </div>
       )}
-      {section !== "reference" && !switchingGallery && mediaCount === 0 && !generating && (
+      {((section === "all" && !switchingGallery && mediaCount === 0) ||
+        (section === "output" && !switchingGallery && !shownFinal)) && !generating && (
         <div className="empty">
           <span className="empty-icon">
             <IconImage size={20} />
           </span>
-          <span className="empty-title">No outputs yet</span>
+          <span className="empty-title">{section === "output" ? "No final cut yet" : "No outputs yet"}</span>
           <span className="empty-sub">
             {viewScenario
-              ? "Start a run to see the reference, keyframes, and final cut land here."
+              ? (section === "output"
+                ? "Generate clips, then stitch them into the final cut."
+                : "Start a run to see the reference, keyframes, and final cut land here.")
               : "Select a scenario to view its outputs."}
           </span>
           {sibCount != null && sibCount > 0 && (
@@ -664,6 +716,21 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             </>
           )}
         </div>
+      )}
+      {section === "beats" && !switchingGallery && beatNums.length === 0 && fallbackShots.length === 0 && !generating && (
+        <div className="empty">
+          <span className="empty-icon">
+            <IconImage size={20} />
+          </span>
+          <span className="empty-title">No keyframes yet</span>
+          <span className="empty-sub">
+            {viewScenario
+              ? "Start a run to generate keyframes and clips for every scene."
+              : "Select a scenario to view its keyframes."}
+          </span>
+        </div>
+      )}
+      </>
       )}
     </Tag>
   );

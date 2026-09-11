@@ -30,6 +30,7 @@ import {
   IconClapper,
   IconFilm,
   IconImage,
+  IconPanel,
   IconPlay,
   IconPlus,
   IconRefresh,
@@ -141,6 +142,14 @@ export default function ShotList({
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const [loadError, setLoadError] = useState("");
+  // Hide/show toggle (same as the Projects panel — persisted). Collapsing
+  // only hides the body JSX; polling and live progress keep running.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-shots") === "closed");
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      localStorage.setItem("ss-sec-shots", c ? "open" : "closed");
+      return !c;
+    });
 
   // Inline beat editing — the same fields the Scenario Editor beat blocks
   // used to carry (title, keyframe image, motion & camera). `editing` is the
@@ -222,7 +231,10 @@ export default function ShotList({
     return rows.reduce((a, b) => (b.version > a.version ? b : a));
   };
 
-  const generatingHere = !!generatingScenario && !!outDir && generatingScenario === outDir;
+  // generatingScenario arrives as the base scenario name; Wan renders into
+  // the suffixed outDir, so both forms match (ltx needs no suffix).
+  const generatingHere = !!generatingScenario && !!outDir &&
+    (generatingScenario === outDir || generatingScenario === name);
 
   // Per-button run state: only the actively generating target is disabled —
   // everything else stays clickable and queues behind the running job.
@@ -531,15 +543,18 @@ export default function ShotList({
   }
 
   return (
-    <section className="card shotlist" aria-label={`Shot list for ${name}`}>
+    <section className={`card shotlist${collapsed ? " collapsed" : ""}`} aria-label={`Shot list for ${name}`}>
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
       {/* Header */}
       <div className="shotlist-head">
         <div className="shotlist-head-left">
-          <div className="shotlist-kicker">Shot List</div>
-          <h2 className="shotlist-title">Shot List</h2>
-          <p className="shotlist-sub">— every scene, every beat</p>
+          <span className="head-icon hi-shots" aria-hidden="true"><IconPlay size={16} /></span>
+          <div>
+            <div className="shotlist-kicker">Shot List</div>
+            <h2 className="shotlist-title">Shot List</h2>
+            <p className="shotlist-sub">— every scene, every beat</p>
+          </div>
         </div>
         <div className="shotlist-head-right">
           <span className="shotlist-of" title={`${shotsDone} of ${totalShots} shots fully generated (image + video)`}>
@@ -551,9 +566,20 @@ export default function ShotList({
             </span>
           )}
           {isDraft && <span className="pill warn">draft · unsaved</span>}
+          <button
+            className="icon-btn"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Show shot list" : "Hide shot list"}
+            aria-label={collapsed ? "Show shot list" : "Hide shot list"}
+            aria-expanded={!collapsed}
+          >
+            <IconPanel size={15} />
+          </button>
         </div>
       </div>
 
+      {!collapsed && (
+      <>
       {/* Overall generation progress (real coverage, persistent at the top) */}
       <div className="shotlist-progress" role="status" aria-label={`Overall generation ${pct} percent`}>
         <div className="shotlist-progress-top">
@@ -969,6 +995,8 @@ export default function ShotList({
         <SceneBadge scene={1} total={1} />
         <IconCheck size={1} />
       </span>
+      </>
+      )}
     </section>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
 import OutputGallery from "./OutputGallery";
-import GenerationProgressBar, { MIN_TASK_MS, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
-import { IconPlay, IconScissors, IconStop, IconTerminal, Spinner } from "./Icons";
+import GenerationProgressBar, { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
+import { IconPanel, IconPlay, IconScissors, IconStop, IconTerminal, Spinner } from "./Icons";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
 
@@ -20,6 +20,16 @@ interface Props {
   // Queued requests carry the engine they were asked for (it may have been
   // switched since they were queued).
   pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null;
+  // Reattach target: a run that was already active on the server when this
+  // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
+  // server replays the full log + asset events — so progress, the header bar
+  // and every generating button pick up the live run instead of idling.
+  attachRun?: { id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number } | null;
+  // Run the server reports as active (from GET /api/runs, polled by App) —
+  // independent of this panel's own run. While set and this panel is idle,
+  // the backend rejects new runs, so the panel names the blocker and offers
+  // to stop it instead of failing silently into the log.
+  serverRun?: { id: string; scenario: string; startedAt: number } | null;
   // Live progress reports (real assets/timing — App renders the sticky global bar).
   onProgress?: (p: GenerationProgress) => void;
 }
@@ -27,7 +37,7 @@ interface Props {
 // Start / stitch / stop a run + live log tail (SSE) + live asset gallery.
 // Progress + ETA are derived from the real asset stream (see `progress`
 // below) — never fake timers.
-export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, onProgress }: Props) {
+export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>("idle");
   // Scenario this panel's run is generating (captured at start, so it stays
@@ -41,6 +51,10 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // the startRun round-trip, before status flips to "running".
   const [starting, setStarting] = useState<"run" | "stitch" | null>(null);
   const [stopping, setStopping] = useState(false);
+  // Stopping a FOREIGN server run (the banner below) — separate from stopping
+  // this panel's own run. Resets once the server stops reporting it.
+  const [stoppingServer, setStoppingServer] = useState(false);
+  useEffect(() => { if (!serverRun) setStoppingServer(false); }, [serverRun]);
 
   useEffect(() => { onStatus?.(status, runScenario ?? scenario, status === "running" ? runRegen : null); }, [status, onStatus, runScenario, runRegen, scenario]);
   useEffect(() => { if (status !== "running") setStopping(false); }, [status]);
@@ -57,6 +71,15 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [assetTimes, setAssetTimes] = useState<{ time: number; stage: AssetEvent["stage"] }[]>([]);
   const [cancelled, setCancelled] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Hide/show toggle (same as the Projects panel — persisted). Collapsing
+  // only hides the body JSX; the component stays mounted so a running
+  // generation keeps its live log, progress and SSE tail.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-run") === "closed");
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      localStorage.setItem("ss-sec-run", c ? "open" : "closed");
+      return !c;
+    });
   // Pace bookkeeping (refs, not state — written from the SSE callback):
   // last completion time + already-seen files, so each landed asset records
   // exactly one duration sample even if the server re-emits an event.
@@ -69,12 +92,13 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   }, [log]);
 
   // Tick the clock every second while running so elapsed + all Remaining
-  // countdowns tick live in real time between asset completions.
+  // countdowns tick live in real time between asset completions — and while
+  // a foreign server run blocks this panel, so its elapsed stays live too.
   useEffect(() => {
-    if (status !== "running") return;
+    if (status !== "running" && !serverRun) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [status]);
+  }, [status, serverRun]);
 
   const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external", runEngine: Engine = engine) => {
     if (!scenario) return;
@@ -143,6 +167,64 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
+
+  // Reattach to a run that outlived the page (refresh while generating).
+  // Same live tail as a locally started run — replayed log + asset events
+  // rebuild progress from the real stream — but the run shape comes from the
+  // server record, never from a guess. Runs once per run id (StrictMode
+  // safe); never steals a locally started run.
+  const attachedId = useRef<string | null>(null);
+  useEffect(() => { if (!attachRun) attachedId.current = null; }, [attachRun]);
+  useEffect(() => {
+    if (!attachRun || attachedId.current === attachRun.id) return;
+    // Never steal a live run (local or already attached); a finished
+    // previous run (done/error, different id) may re-attach freely.
+    if (status === "running" || (runId && runId === attachRun.id)) return;
+    attachedId.current = attachRun.id;
+    const meta = attachRun;
+    const regen = meta.regen ?? null;
+    setRunId(meta.id);
+    // The run's own scenario, not the currently viewed one — the user may
+    // have refreshed while looking at a different project.
+    setRunScenario(meta.scenario);
+    setRunRegen(regen);
+    setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1 });
+    setTotalBeats(null);
+    setStartedAt(meta.startedAt ?? Date.now());
+    lastAssetAt.current = meta.startedAt ?? Date.now();
+    seenFiles.current = new Set();
+    setEndedAt(null);
+    setAssetTimes([]);
+    setCancelled(false);
+    setNow(Date.now());
+    getScenario(meta.scenario)
+      .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
+      .catch(() => setTotalBeats(null));
+    setStatus("running");
+    setLog("");
+    setAssets([]);
+    closeTail.current();
+    closeTail.current = tailRun(
+      meta.id,
+      (line) => setLog((l) => l + line),
+      (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
+      (a) => {
+        const t = Date.now();
+        if (!seenFiles.current.has(a.file)) {
+          seenFiles.current.add(a.file);
+          const image = a.stage === "reference" || a.stage === "keyframe";
+          if (image || a.stage === "clip") {
+            recordPaceDuration(image, t - lastAssetAt.current);
+          }
+          lastAssetAt.current = t;
+          setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
+        }
+        setNow(t);
+        setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachRun?.id]);
 
   // Real progress from the live asset stream + scenario totals.
   // Pipeline order is sequential: reference → N keyframes → N clips → stitch.
@@ -299,10 +381,10 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   }[status];
 
   return (
-    <section className="card">
+    <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="Run">
       <div className="card-head">
         <h2>
-          <span className="head-icon"><IconTerminal size={15} /></span>
+          <span className="head-icon hi-run"><IconTerminal size={15} /></span>
           Run
         </h2>
         <span className="spacer" />
@@ -315,8 +397,52 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           </button>
         </span>
         {statusPill}
+        <button
+          className="icon-btn"
+          onClick={toggleCollapsed}
+          title={collapsed ? "Show run panel" : "Hide run panel"}
+          aria-label={collapsed ? "Show run panel" : "Hide run panel"}
+          aria-expanded={!collapsed}
+        >
+          <IconPanel size={15} />
+        </button>
       </div>
 
+      {!collapsed && (
+      <>
+      {/* Another run owns the (serial) backend — name the blocker and offer
+          to stop it. Hidden while this panel's own run is active (its Stop
+          button covers that case). */}
+      {status !== "running" && serverRun && (
+        <div className="server-busy" role="status">
+          <span className="pill warn">
+            <span className="dot pulse" />
+            server busy
+          </span>
+          <span className="server-busy-text">
+            <b>{serverRun.scenario}</b> generating since {formatStarted(serverRun.startedAt)} ({formatElapsed(now - serverRun.startedAt)}).
+            New runs are rejected until it finishes.
+          </span>
+          <button
+            className="danger"
+            disabled={stoppingServer}
+            title={`Stop the active ${serverRun.scenario} run on the server`}
+            onClick={async () => {
+              if (!serverRun || stoppingServer) return;
+              setStoppingServer(true);
+              try {
+                await killRun(serverRun.id);
+              } catch (e) {
+                setStoppingServer(false);
+                window.alert(`Stop failed: ${e instanceof Error ? e.message : String(e)}`);
+              }
+            }}
+          >
+            {stoppingServer ? <Spinner size={12} /> : <IconStop size={12} />}
+            {stoppingServer ? "Stopping…" : "Stop server run"}
+          </button>
+        </div>
+      )}
       {(status === "running" || status === "done" || status === "error") && (progress.total > 0 || status !== "running") && (
         <GenerationProgressBar progress={progress} />
       )}
@@ -358,6 +484,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
 
       {assets.length > 0 && (
         <OutputGallery scenario={outScenario(scenario, engine)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} />
+      )}
+      </>
       )}
     </section>
   );

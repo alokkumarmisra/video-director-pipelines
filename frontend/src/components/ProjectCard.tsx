@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fmtRelative } from "../api";
 import type { DashboardProject } from "../types";
-import { IconDots, IconFilm, IconFolder } from "./Icons";
+import { IconDots, IconFilm, IconFolder, Spinner } from "./Icons";
 import SmoothImage from "./SmoothImage";
 
 const STATUS_LABEL: Record<DashboardProject["status"], string> = {
@@ -79,13 +79,16 @@ export default function ProjectCard({
   );
 
   return (
-    <article className="card proj-card" aria-label={`Project ${project.name}`}>
+    <article
+      className={`card proj-card${project.generating ? " generating" : ""}`}
+      aria-label={`Project ${project.name}${project.generating ? " (generating)" : ""}`}
+    >
       <div className="proj-media">
         <Thumb project={project} />
         {project.generating && (
-          <span className="pill running proj-gen">
-            <span className="dot pulse" />
-            Generating
+          <span className="pill running proj-gen" role="status">
+            <Spinner size={11} />
+            Generating {project.progress}%
           </span>
         )}
         <div className="proj-menu" ref={menuRef}>
@@ -115,10 +118,20 @@ export default function ProjectCard({
         </button>
         {project.description && <p className="proj-desc">{project.description}</p>}
 
-        <div className="proj-status-row">
-          <span className={`pill proj-status ${project.status === "completed" ? "ok" : project.status === "in_progress" ? "running" : ""}`}>
-            {STATUS_LABEL[project.status]}
-          </span>
+        {/* While a run is active the card reports Generating (pulsing) instead
+            of the coverage status — a fresh project still says Draft
+            underneath, which hides the live run. */}
+        <div className="proj-status-row" aria-live="polite">
+          {project.generating ? (
+            <span className="pill running proj-status">
+              <span className="dot pulse" />
+              Generating…
+            </span>
+          ) : (
+            <span className={`pill proj-status ${project.status === "completed" ? "ok" : project.status === "in_progress" ? "running" : ""}`}>
+              {STATUS_LABEL[project.status]}
+            </span>
+          )}
           <span className="proj-progress-num">{project.progress}%</span>
         </div>
         <div
@@ -129,7 +142,10 @@ export default function ProjectCard({
           aria-valuemin={0}
           aria-valuemax={100}
         >
-          <div className="progress-fill" style={{ width: `${project.progress}%` }} />
+          <div
+            className={`progress-fill${project.generating ? " sweep" : ""}`}
+            style={{ width: `${project.progress}%` }}
+          />
         </div>
 
         <div className="proj-counts">

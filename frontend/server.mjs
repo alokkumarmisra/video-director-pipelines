@@ -1014,7 +1014,12 @@ function startRun(scenario, opts = {}) {
     argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
   }
   const id = Date.now().toString(36);
-  const run = { id, scenario, engine, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  // Run shape (stitch/regen/count) is stored on the record — not just the
+  // argv — so a fresh page can reattach after a refresh: GET /api/runs
+  // reveals the active run and the SSE log endpoint replays its log + asset
+  // events, letting the client rebuild progress and button state from the
+  // real stream instead of guessing.
+  const run = { id, scenario, engine, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {

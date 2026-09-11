@@ -88,8 +88,11 @@ export default function HomePage({
   // started in the workspace keeps running and flips cards to Generating).
   // Stale-while-revalidate: returning with cached cards refreshes quietly in
   // the background instead of flashing the full skeleton grid.
+  // Poll cadence adapts: 5s while any project is generating (live % ticks and
+  // the card flips off Generating promptly at finish), 15s otherwise.
   const dataRef = useRef<DashboardResponse | null>(null);
   dataRef.current = data;
+  const anyGenerating = (data?.projects ?? []).some((p) => p.generating);
   useEffect(() => {
     if (active) load(dataRef.current?.projects.length ? true : false);
   }, [active, load]);
@@ -97,9 +100,9 @@ export default function HomePage({
     if (!active) return;
     const t = setInterval(() => {
       load(true);
-    }, 15000);
+    }, anyGenerating ? 5000 : 15000);
     return () => clearInterval(t);
-  }, [active, load]);
+  }, [active, anyGenerating, load]);
 
   const handleDuplicate = useCallback(
     async (name: string) => {
@@ -136,7 +139,9 @@ export default function HomePage({
     const q = query.trim().toLowerCase();
     let list = (data?.projects ?? []).filter(
       (p) =>
-        (filter === "all" || p.status === filter) &&
+        // A live run counts as In Progress for filtering even before its
+        // first asset lands (coverage status would still say Draft).
+        (filter === "all" || p.status === filter || (filter === "in_progress" && p.generating)) &&
         (!q || p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q))
     );
     list = [...list].sort((a, b) => {

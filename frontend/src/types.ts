@@ -30,6 +30,14 @@ export interface Run {
   status: "running" | "done" | "error";
   log: string;
   startedAt: number;
+  /** Engine the run was started with (present on runs started after Re-Design-V2). */
+  engine?: string;
+  /** Run shape (present on runs started after Re-Design-V2) — lets a fresh
+      page reattach to an active run after a refresh and rebuild progress +
+      button state from the real SSE stream. Absent = full ltx run, count 1. */
+  stitch?: boolean;
+  regen?: { kind: "ref" | "keyframe" | "clip"; index?: number } | null;
+  count?: number;
 }
 
 export interface AuthUser {

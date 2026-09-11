@@ -336,9 +336,6 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
         )}
         {done && <span className="muted">Completed</span>}
       </div>
-      {!done && status === "running" && (
-        <span className="gen-progress-remaining">{formatRemaining(etaMs)}</span>
-      )}
       {(progress.imagesTotal > 0 || progress.videosTotal > 0) && (
         <>
           {progress.imagesTotal > 0 && (
@@ -346,9 +343,6 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
               <span className="muted">
                 Images: {progress.imagesDone} / {progress.imagesTotal}
               </span>
-              {status === "running" && (
-                <span className="muted">{formatRemaining(progress.imagesEtaMs)}</span>
-              )}
             </div>
           )}
           {progress.videosTotal > 0 && (
@@ -356,9 +350,6 @@ export default function GenerationProgressBar({ progress, compact }: Props) {
               <span className="muted">
                 Videos: {progress.videosDone} / {progress.videosTotal}
               </span>
-              {status === "running" && (
-                <span className="muted">{formatRemaining(progress.videosEtaMs)}</span>
-              )}
             </div>
           )}
         </>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
-import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse } from "./types";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
+import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
@@ -108,6 +108,11 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
   const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null>(null);
+  // Reattach target for RunPanel: a run that was already active on the server
+  // when this page loaded (refresh mid-generation). Restored here — not in
+  // RunPanel — so the header bar, sidebar spinners and every generating
+  // button flip to generating immediately, before the SSE tail replays.
+  const [attachRun, setAttachRun] = useState<{ id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number } | null>(null);
   // Serial run queue: Regen clicks that land while a run is active wait here
   // (the server rejects concurrent runs) and fire one-by-one as each run
   // ends. Only the actively targeted button is disabled — the rest stay
@@ -173,58 +178,119 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     return () => clearInterval(t);
   }, [remoteGen, genProgress.status]);
 
+  // The run the SERVER reports as active (full shape from GET /api/runs) —
+  // independent of this tab's local run state. Powers the "server busy"
+  // banner in the Run window and lets any tab attach to a run started
+  // elsewhere, so opening the generating project shows full live status
+  // (exact regen target, working Stop) instead of a coarse fallback.
+  const [serverRun, setServerRun] = useState<Run | null>(null);
+
+  // Dashboard + active-run sync, extracted so project opens (Continue) and
+  // run start/finish can trigger it immediately instead of waiting out the
+  // poll interval. A failed poll keeps the previous live state — it must
+  // never wipe a Generating header back to Ready on a transient error.
+  const refreshRemote = useCallback(async () => {
+    try {
+      const [d, rs] = await Promise.all([
+        getDashboard(),
+        listRuns().catch(() => [] as Run[]),
+      ]);
+      setDashMap(new Map((d.projects || []).map((p) => [p.name, p])));
+      // Identity-preserving update — a fresh object every poll must not
+      // retrigger the interval effect (serverRun.id is a dep there).
+      const active = [...rs].reverse().find((r) => r.status === "running") ?? null;
+      setServerRun((prev) => {
+        if (!active) return prev === null ? prev : null;
+        return prev && prev.id === active.id && prev.scenario === active.scenario &&
+          prev.startedAt === active.startedAt && (prev.status ?? "running") === active.status
+          ? prev
+          : active;
+      });
+      const g = (d.projects || []).find((p) => p.generating);
+      if (!g) {
+        setRemoteGen(null);
+        return;
+      }
+      const startedAt = g.startedAt ?? null;
+      const at = Date.now();
+      const elapsedMs = startedAt != null ? Math.max(0, at - startedAt) : 0;
+      // Linear fallback ETA from real asset counts (no per-asset timings
+      // available remotely) — estimated total minus elapsed, split across
+      // the Images / Videos rows.
+      const imagesDone = (g.refDone ? 1 : 0) + g.imageCount;
+      const imagesTotal = 1 + g.sceneCount;
+      const videosDone = g.videoCount;
+      const videosTotal = g.sceneCount;
+      const { etaMs, imagesEtaMs, videosEtaMs } = remoteEta(
+        elapsedMs, imagesDone, imagesTotal, videosDone, videosTotal);
+      setRemoteGen({
+        ...emptyProgress,
+        status: "running",
+        pct: g.progress,
+        scene: null,
+        totalScenes: g.sceneCount || null,
+        imagesDone,
+        imagesTotal,
+        videosDone,
+        videosTotal,
+        etaMs,
+        imagesEtaMs,
+        videosEtaMs,
+        elapsedMs,
+        startedAt,
+        scenario: g.name,
+      });
+    } catch {
+      // Transient failure (backend hiccup, proxy blip): keep the previous
+      // live state. Wiping to null here is what flashed a Generating header
+      // back to Ready for no reason.
+    }
+  }, []);
+
+  // Refresh recovery: if a run is still active on the server (started before
+  // this page loaded — refresh, or a run from another tab), restore the run
+  // state immediately so the header progress bar and all generating buttons
+  // reflect reality, and hand RunPanel the reattach target so it reopens the
+  // live SSE tail. The server is serial (one active run max); the latest
+  // running record wins. Runs predating the shape fields reattach as a full
+  // run — progress still rebuilds from the replayed asset stream.
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const d = await getDashboard();
+    listRuns()
+      .then((rs) => {
         if (cancelled) return;
-        setDashMap(new Map((d.projects || []).map((p) => [p.name, p])));
-        const g = (d.projects || []).find((p) => p.generating);
-        if (!g) {
-          setRemoteGen(null);
-          return;
-        }
-        const startedAt = g.startedAt ?? null;
-        const at = Date.now();
-        const elapsedMs = startedAt != null ? Math.max(0, at - startedAt) : 0;
-        // Linear fallback ETA from real asset counts (no per-asset timings
-        // available remotely) — estimated total minus elapsed, split across
-        // the Images / Videos rows.
-        const imagesDone = (g.refDone ? 1 : 0) + g.imageCount;
-        const imagesTotal = 1 + g.sceneCount;
-        const videosDone = g.videoCount;
-        const videosTotal = g.sceneCount;
-        const { etaMs, imagesEtaMs, videosEtaMs } = remoteEta(
-          elapsedMs, imagesDone, imagesTotal, videosDone, videosTotal);
-        setRemoteGen({
-          ...emptyProgress,
-          status: "running",
-          pct: g.progress,
-          scene: null,
-          totalScenes: g.sceneCount || null,
-          imagesDone,
-          imagesTotal,
-          videosDone,
-          videosTotal,
-          etaMs,
-          imagesEtaMs,
-          videosEtaMs,
-          elapsedMs,
-          startedAt,
-          scenario: g.name,
+        const active = [...rs].reverse().find((r) => r.status === "running");
+        if (!active) return;
+        const regen = active.regen ?? null;
+        setRunActive(true);
+        setRunScenario(active.scenario);
+        setRegenTarget(regen ? { kind: regen.kind, index: regen.index } : null);
+        setAttachRun({
+          id: active.id,
+          scenario: active.scenario,
+          stitch: !!active.stitch,
+          regen: regen ? { kind: regen.kind, index: regen.index } : null,
+          count: active.count ?? 1,
+          startedAt: active.startedAt,
         });
-      } catch {
-        if (!cancelled) setRemoteGen(null);
-      }
-    };
-    load();
-    const t = setInterval(load, 15000);
+        if (active.engine === "wan" || active.engine === "ltx") setEngine(active.engine);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
-      clearInterval(t);
     };
   }, []);
+
+  // Poll remote state: 5s while anything is active locally or server-side
+  // (live header, fast busy-banner clearing), 15s otherwise. Re-running on
+  // runActive/serverRun.id also syncs immediately on run start/finish
+  // instead of waiting out the interval.
+  useEffect(() => {
+    refreshRemote();
+    const t = setInterval(refreshRemote, runActive || serverRun ? 5000 : 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runActive, serverRun?.id, refreshRemote]);
 
   // Live local run wins; otherwise mirror whatever the server reports as
   // generating (same source as the Home card); otherwise keep local
@@ -462,6 +528,39 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const switching = !draft && (!!cfgLoading || (!!name && name !== shownName));
   // Project whose content is actually on screen right now.
   const contentName = draft ? draft.name : shownName;
+
+  // Opening a project (Continue) syncs remote state immediately — the
+  // workspace header shows server truth within ~a second even when the last
+  // background poll is stale.
+  useEffect(() => {
+    if (view === "workspace") refreshRemote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, contentName]);
+
+  // Attach to whatever the server reports as running — not just once at page
+  // load. A run started after this tab loaded (another tab, a phone, the CLI
+  // era) still gives this tab full live status: exact regen target, working
+  // Stop, live log. Skipped while a local run owns the panel; a stale target
+  // clears once the server no longer reports it (so a later run can attach).
+  useEffect(() => {
+    if (runActive || !serverRun) return;
+    setAttachRun((prev) => {
+      if (prev?.id === serverRun.id) return prev;
+      const regen = serverRun.regen ?? null;
+      return {
+        id: serverRun.id,
+        scenario: serverRun.scenario,
+        stitch: !!serverRun.stitch,
+        regen: regen ? { kind: regen.kind, index: regen.index } : null,
+        count: serverRun.count ?? 1,
+        startedAt: serverRun.startedAt,
+      };
+    });
+  }, [runActive, serverRun]);
+  useEffect(() => {
+    if (runActive || !attachRun) return;
+    if (!serverRun || serverRun.id !== attachRun.id) setAttachRun(null);
+  }, [runActive, attachRun, serverRun]);
 
   const comfyQueue = comfy?.queue
     ? (comfy.queue.queue_running?.length ?? 0) + (comfy.queue.queue_pending?.length ?? 0)
@@ -703,11 +802,13 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             </>
           ) : (
           <>
-          {/* Output Box on top, generation (Run window) directly below it. */}
+          {/* Output box on top, keyframes → clips right below it, then the
+              generation (Run window). Each outputs card hides/shows on its
+              own toggle. */}
           <OutputGallery
             scenario={contentName ? outScenario(contentName, engine) : ""}
             refreshKey={refreshKey}
-            section="rest"
+            section="output"
             generatingScenario={runActive ? runScenario : null}
             regenTarget={runActive ? regenTarget : null}
             runQueue={runQueue}
@@ -715,6 +816,16 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             onRegen={handleRegen}
             onUploaded={refresh}
             onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
+          />
+          <OutputGallery
+            scenario={contentName ? outScenario(contentName, engine) : ""}
+            refreshKey={refreshKey}
+            section="beats"
+            generatingScenario={runActive ? runScenario : null}
+            regenTarget={runActive ? regenTarget : null}
+            runQueue={runQueue}
+            onRegen={handleRegen}
+            onUploaded={refresh}
           />
           <RunPanel
             scenario={draft ? "" : contentName}
@@ -730,6 +841,8 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               setRegenTarget(s === "running" ? regen : null);
             }}
             pendingRun={pendingRun}
+            attachRun={attachRun}
+            serverRun={serverRun}
             onProgress={setGenProgress}
           />
           {/* Scenario Editor lives in the right column, just below AI Craft. */}

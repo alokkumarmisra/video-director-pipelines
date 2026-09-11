@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
 import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi } from "../api";
-import { IconCheck, IconLayers, IconSparkles, IconTrash, Spinner } from "./Icons";
+import { IconCheck, IconLayers, IconPanel, IconSparkles, IconTrash, Spinner } from "./Icons";
 
 interface Props {
   name: string;
@@ -38,6 +38,14 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [delBusy, setDelBusy] = useState(false);
+  // Hide/show toggle (same as the Projects panel — persisted). Collapsing
+  // only hides the body JSX; edits stay in state.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-editor") === "closed");
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      localStorage.setItem("ss-sec-editor", c ? "open" : "closed");
+      return !c;
+    });
   const [refCount, setRefCount] = useState(3);
 
   const loadVersions = async () => {
@@ -154,10 +162,10 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
   };
 
   return (
-    <section className="card">
+    <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="Scenario Editor">
       <div className="card-head">
         <h2>
-          <span className="head-icon"><IconLayers size={15} /></span>
+          <span className="head-icon hi-editor"><IconLayers size={15} /></span>
           Scenario Editor
           {isDraft && <span className="pill warn">draft · unsaved</span>}
         </h2>
@@ -195,7 +203,6 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
         {viewVersion !== null && versions.length > 0 && versions[0] && viewVersion !== versions[0].version && (
           <span className="pill warn">viewing v{viewVersion}</span>
         )}
-        <span className="muted" style={{ fontSize: 12, fontFamily: "var(--mono)" }}>{name}</span>
         <button
           className="primary"
           onClick={() => doSave()}
@@ -205,7 +212,18 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
           {saving ? <Spinner size={13} /> : <IconCheck size={13} />}
           {saving ? "Saving…" : "Save Scenario"}
         </button>
+        <button
+          className="icon-btn"
+          onClick={toggleCollapsed}
+          title={collapsed ? "Show scenario editor" : "Hide scenario editor"}
+          aria-label={collapsed ? "Show scenario editor" : "Hide scenario editor"}
+          aria-expanded={!collapsed}
+        >
+          <IconPanel size={15} />
+        </button>
       </div>
+      {!collapsed && (
+      <>
       {cfg.description && <p className="card-desc">{cfg.description}</p>}
       {error && <p className="hint err-text">{error}</p>}
       {saved && !dirty && (
@@ -278,6 +296,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
       <p className="hint">
         Shots live in the Shot List — edit, add, generate or delete them there with the same prompts.
       </p>
+      </>
+      )}
     </section>
   );
 }

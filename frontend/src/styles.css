@@ -28,6 +28,8 @@
   --err-2: #fca5a5;                       /* red-300 (Overall bar) */
   --vid: #3b82f6;                         /* blue-500 (Videos bar) */
   --vid-2: #60a5fa;                       /* blue-400 */
+  --craft: #c084fc;                       /* purple-400 (AI Craft header icon) */
+  --edit: #22d3ee;                        /* cyan-400 (Scenario Editor header icon) */
 
   /* component-level tokens */
   --topbar-bg: rgba(3, 7, 18, 0.80);      /* gray-950/80 */
@@ -90,6 +92,8 @@
   --err-2: #f87171;                       /* red-400 (Overall bar) */
   --vid: #2563eb;                         /* blue-600 (Videos bar) */
   --vid-2: #3b82f6;                       /* blue-500 */
+  --craft: #9333ea;                       /* purple-600 (AI Craft header icon) */
+  --edit: #0891b2;                        /* cyan-600 (Scenario Editor header icon) */
 
   --shadow-1: 0 1px 2px rgba(23, 30, 51, 0.06);
   --shadow-2: 0 8px 24px rgba(23, 30, 51, 0.10), 0 1px 3px rgba(23, 30, 51, 0.07);
@@ -213,7 +217,19 @@ body {
 .card-head .head-icon {
   color: var(--text-3); display: grid; place-items: center;
 }
+/* Colorful section header icons — one identity color per workspace section
+   (theme-aware tokens above, readable on dark + light). */
+.head-icon.hi-output { color: var(--warn); }
+.head-icon.hi-beats { color: var(--vid-2); }
+.head-icon.hi-run { color: var(--accent-2); }
+.head-icon.hi-craft { color: var(--craft); }
+.head-icon.hi-editor { color: var(--edit); }
+.head-icon.hi-shots { color: var(--err-2); }
 .card-head .spacer { flex: 1; }
+/* Collapsed section card (hide/show toggle in the header, same as the
+   Projects panel): header only, no bottom gap where the body was. */
+.card.collapsed { padding-bottom: 12px; }
+.card.collapsed .card-head { margin-bottom: 0; }
 /* Version picker in the middle of the Scenario Editor card head. */
 .version-pick {
   display: flex; align-items: center; gap: 6px;
@@ -762,6 +778,18 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+/* Server-busy banner in the Run window: another run owns the serial backend,
+   so new runs would be rejected — name the blocker, offer to stop it. */
+.server-busy {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 12px;
+  background: var(--warn-soft);
+  border: 1px solid rgba(251, 191, 36, 0.30);
+  border-radius: var(--radius-s);
+  font-size: 12px;
+}
+.server-busy-text { flex: 1; min-width: 0; color: var(--text-2); }
+.server-busy-text b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* shimmer sweep while the first frame is still loading */
 .smooth-img.is-loading::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -1058,6 +1086,17 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   min-width: 52px; white-space: nowrap;
 }
 .gen-compact-table .gen-compact-bar { width: 100%; margin: 0; }
+/* Top menu bars float without the gray track — fill lines only, with a faint
+   outline so the full bar length stays visible even at 0% (no fill yet).
+   A running fill keeps a small nub so the sweep animation reads as activity
+   from the very first second instead of an empty outline. */
+.gen-compact-table .progress-bar.gen-compact-bar {
+  background: transparent;
+  border-color: var(--line);
+}
+.gen-compact-table .progress-fill.sweep {
+  min-width: 10px;
+}
 .gen-compact-count {
   font: 600 9px var(--mono); color: var(--text-2); text-align: right;
   min-width: 48px; white-space: nowrap; font-variant-numeric: tabular-nums;
@@ -1385,6 +1424,12 @@ select:focus-visible, textarea:focus-visible {
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
 }
 .proj-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+/* Actively generating card: accent ring + soft glow so the running project
+   stands out in the Recent Projects grid at a glance. */
+.proj-card.generating {
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--accent-line), 0 0 24px -6px var(--accent-soft);
+}
 .proj-media {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -1561,6 +1606,8 @@ select:focus-visible, textarea:focus-visible {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 12px; margin-bottom: 14px;
 }
+.shotlist-head-left { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.shotlist-head-left .head-icon { display: grid; place-items: center; margin-top: 3px; }
 .shotlist-kicker {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--text-3); margin-bottom: 2px;
@@ -1570,6 +1617,7 @@ select:focus-visible, textarea:focus-visible {
 }
 .shotlist-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--text-3); }
 .shotlist-head-right { display: flex; align-items: center; gap: 8px; flex: none; }
+.shotlist.collapsed .shotlist-head { margin-bottom: 0; }
 .shotlist-of {
   font: 700 12px var(--mono); letter-spacing: 0.06em;
   color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scenario, ScenarioInfo } from "../types";
 import { fmtDateTime } from "../api";
-import { IconSparkles, Spinner } from "./Icons";
+import { IconPanel, IconSparkles, Spinner } from "./Icons";
 
 interface Props {
   onCrafted: (name: string, config: Scenario, meta: { topic: string; requirements: string }, project_id?: number | null) => void;
@@ -29,6 +29,13 @@ export default function CraftPanel({ onCrafted, craftTarget, scenarios, selected
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
+  // Hide/show toggle (same as the Projects panel — persisted).
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-craft") === "closed");
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      localStorage.setItem("ss-sec-craft", c ? "open" : "closed");
+      return !c;
+    });
 
   // Show what the selected scenario was crafted from. Local typing never
   // retriggers this (props only change on selection / loaded data) — and
@@ -67,10 +74,10 @@ export default function CraftPanel({ onCrafted, craftTarget, scenarios, selected
   };
 
   return (
-    <section className="card">
+    <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="AI Craft">
       <div className="card-head">
         <h2>
-          <span className="head-icon"><IconSparkles size={15} /></span>
+          <span className="head-icon hi-craft"><IconSparkles size={15} /></span>
           AI Craft
         </h2>
         {busy && (
@@ -79,8 +86,20 @@ export default function CraftPanel({ onCrafted, craftTarget, scenarios, selected
             {Math.round(seconds)}s
           </span>
         )}
+        <span className="spacer" />
+        <button
+          className="icon-btn"
+          onClick={toggleCollapsed}
+          title={collapsed ? "Show AI Craft" : "Hide AI Craft"}
+          aria-label={collapsed ? "Show AI Craft" : "Hide AI Craft"}
+          aria-expanded={!collapsed}
+        >
+          <IconPanel size={15} />
+        </button>
       </div>
 
+      {!collapsed && (
+      <>
       <div className="workflow-head">
         <label>Workflow</label>
         {selInfo && (
@@ -135,6 +154,8 @@ export default function CraftPanel({ onCrafted, craftTarget, scenarios, selected
           <>The LLM drafts a full scenario below with its topic, requirements and all prompts — review it, then Save scenario to store it as v1.</>
         )}
       </p>
+      </>
+      )}
     </section>
   );
 }
