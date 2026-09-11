@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   deleteScenario,
   getDashboard,
-  getHealth,
   getScenario,
   saveScenario,
 } from "../api";
-import type { DashboardProject, DashboardResponse, HealthResponse } from "../types";
+import type { DashboardProject, DashboardResponse } from "../types";
 import CreateProjectDialog from "./CreateProjectDialog";
 import ProjectCard from "./ProjectCard";
-import SystemStatus from "./SystemStatus";
 import { IconAlert, IconClapper, IconPlus, IconRefresh, IconSearch, Spinner } from "./Icons";
 
 type LoadState = "loading" | "success" | "empty" | "error";
@@ -66,7 +64,6 @@ export default function HomePage({
 }) {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [state, setState] = useState<LoadState>("loading");
-  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("updated");
@@ -94,9 +91,7 @@ export default function HomePage({
   }, [active, load]);
   useEffect(() => {
     if (!active) return;
-    getHealth().then(setHealth).catch(() => setHealth(null));
     const t = setInterval(() => {
-      getHealth().then(setHealth).catch(() => {});
       load(true);
     }, 15000);
     return () => clearInterval(t);
@@ -162,7 +157,6 @@ export default function HomePage({
           <button className="primary hero-cta" onClick={() => setDialogOpen(true)}>
             <IconPlus size={14} /> Create New Project
           </button>
-          <SystemStatus health={health} />
         </div>
       </section>
 

@@ -184,6 +184,14 @@ body {
   border-left: 1px solid var(--line-2); padding-left: 12px; margin-left: 2px;
 }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+/* Stacked service-status pills (PostgreSQL / LM Studio / ComfyUI), kept
+   compact so the 3-row stack fits the menu-bar height. */
+.topbar-health { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.topbar-health .pill {
+  font-size: 10px; line-height: 1.3; font-weight: 600;
+  padding: 1px 8px; gap: 5px;
+}
+.topbar-health .dot { width: 6px; height: 6px; }
 
 .shell {
   flex: 1;
@@ -584,6 +592,8 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   text-align: center;
 }
 .gen-count input:focus { outline: none; border-color: var(--accent-line); background: var(--input-focus-bg); }
+/* Wide variant for large counts (Generate beat: 100+). */
+.gen-count.wide input { width: 100px; }
 /* Alternate beat tint so consecutive beats are easy to tell apart. */
 .beat.alt {
   background: var(--warn-soft);
@@ -894,44 +904,42 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
 }
 .gen-compact-table {
+  display: flex; flex-direction: column;
+  gap: 2px;
+}
+.gen-compact-trow { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.gen-compact-trow-main {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   column-gap: 8px;
-  row-gap: 3px;
   align-items: center;
 }
-.gen-compact-trow { display: contents; }
 .gen-compact-label {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.02em;
   color: var(--text-3);
   min-width: 52px; white-space: nowrap;
 }
-.gen-compact-table .gen-compact-bar { width: 100%; margin: 0; }
+.gen-compact-table .gen-compact-bar { width: 100%; margin: 0; height: 2px; border: 0; }
 .gen-compact-count {
-  font: 600 10px var(--mono); color: var(--text-2); text-align: right;
+  font: 600 9px var(--mono); color: var(--text-2); text-align: right;
   min-width: 48px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 /* Per-row fill identity: Images green, Videos blue, Overall red. */
 .progress-fill.fill-images { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%); }
 .progress-fill.fill-videos { background: linear-gradient(90deg, var(--vid) 0%, var(--vid-2) 100%); }
 .progress-fill.fill-overall { background: linear-gradient(90deg, var(--err) 0%, var(--err-2) 100%); }
-.gen-compact-row2 {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-}
-.gen-compact-line {
-  font-size: 10px; line-height: 1.45; white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; font-variant-numeric: tabular-nums;
-}
-.gen-compact-row2 .gen-compact-line { flex: 1; min-width: 0; }
-.gen-compact-remaining {
-  flex: none; font-size: 10px; line-height: 1.45; font-weight: 650;
-  color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums;
+/* Full Run-card variant: total Remaining on its own right-aligned line
+   just below the progress bar. */
+.gen-progress-remaining {
+  display: block; text-align: right;
+  font-size: 11.5px; color: var(--text-3);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 .gen-compact-title {
-  font-size: 11.5px; font-weight: 650; white-space: nowrap;
+  font-size: 10px; font-weight: 650; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; max-width: 220px; flex: none;
 }
-.gen-compact-pct { font: 700 11px var(--mono); font-variant-numeric: tabular-nums; }
+.gen-compact-pct { font: 700 10px var(--mono); font-variant-numeric: tabular-nums; }
 .gen-compact-bar { flex: 1; min-width: 60px; }
 .gen-compact-sub {
   font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -940,7 +948,6 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .gen-idle { justify-content: center; opacity: 0.75; }
 @media (max-width: 1020px) {
   .gen-compact-sub { display: none; }
-  .gen-compact-row2 { display: none; }
   .gen-compact-trow.trow-detail { display: none; }
   .gen-compact.gen-stacked { justify-content: center; }
 }

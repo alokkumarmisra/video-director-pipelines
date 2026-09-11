@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
-import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject } from "./types";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDate, type Engine, type AuthUser, type RegenSpec } from "./api";
+import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
-import GenerationProgressBar, { emptyProgress, type GenerationProgress } from "./components/GenerationProgressBar";
+import GenerationProgressBar, { emptyProgress, loadPace, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
@@ -73,6 +73,9 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
   const [engine, setEngine] = useState<Engine>("ltx");
   const [comfy, setComfy] = useState<ComfyStatus | null>(null);
+  // Combined DB/LLM/ComfyUI health for the topbar status pills (same
+  // /api/health payload the Home hero used to show — now always visible).
+  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [runActive, setRunActive] = useState(false);
   const [runScenario, setRunScenario] = useState<string | null>(null);
@@ -85,15 +88,56 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   // dashboard payload so the menu bar shows the same thing.
   const [remoteGen, setRemoteGen] = useState<GenerationProgress | null>(null);
   // Ticking clock so the menu bar's Elapsed/Remaining stay live between the
-  // 15s dashboard polls (same 5s cadence as RunPanel's local ticker).
+  // 15s dashboard polls (1s cadence = a real-time countdown).
   const [now, setNow] = useState(() => Date.now());
   // Per-project asset coverage for the Projects sidebar (images/videos/assets
   // in small type on the right of each row). Same dashboard payload as the
   // topbar progress — no extra endpoint.
   const [dashMap, setDashMap] = useState<Map<string, DashboardProject>>(new Map());
+
+  // Live countdown from a linear pace estimate: estimated total duration
+  // minus elapsed time. The old formula (elapsed/done*remaining) froze
+  // between polls — and even grew while % was stale; subtracting elapsed
+  // makes Remaining tick down every second instead.
+  const liveEta = (elapsedMs: number, done: number, total: number): number | null => {
+    if (!(elapsedMs > 0) || !(done > 0) || !(total > done)) return null;
+    return Math.max(0, Math.round((elapsedMs / done) * total - elapsedMs));
+  };
+  // Split a total remaining estimate across the Images / Videos rows in
+  // proportion to each row's unfinished work (no per-asset timings exist
+  // remotely), so both row countdowns tick down live and sum to the total.
+  const splitEta = (totalRem: number | null, remA: number, remB: number): [number | null, number | null] => {
+    if (totalRem == null || remA + remB <= 0) return [null, null];
+    return [
+      Math.max(0, Math.round((totalRem * remA) / (remA + remB))),
+      Math.max(0, Math.round((totalRem * remB) / (remA + remB))),
+    ];
+  };
+  // Remote Time Remaining for a generating project: live linear pace from
+  // real asset counts while assets are landing; historical pace (previous
+  // runs) seeds the countdown before the first asset lands so it still
+  // ticks in real time instead of sitting at zero.
+  const remoteEta = (
+    elapsedMs: number,
+    imgDone: number, imgTotal: number,
+    vidDone: number, vidTotal: number,
+  ): { etaMs: number | null; imagesEtaMs: number | null; videosEtaMs: number | null } => {
+    const remI = Math.max(0, imgTotal - imgDone);
+    const remV = Math.max(0, vidTotal - vidDone);
+    let eta = liveEta(elapsedMs, imgDone + vidDone, imgTotal + vidTotal);
+    if (eta == null && elapsedMs > 0 && remI + remV > 0) {
+      const pace = loadPace();
+      if (pace.img != null || pace.vid != null) {
+        const est = remI * (pace.img ?? 0) + remV * (pace.vid ?? 0);
+        if (est > 0) eta = Math.max(0, Math.round(est - elapsedMs));
+      }
+    }
+    const [imagesEtaMs, videosEtaMs] = splitEta(eta, remI, remV);
+    return { etaMs: eta, imagesEtaMs, videosEtaMs };
+  };
   useEffect(() => {
     if (!remoteGen || genProgress.status === "running") return;
-    const t = setInterval(() => setNow(Date.now()), 5000);
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [remoteGen, genProgress.status]);
 
@@ -112,23 +156,28 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
         const startedAt = g.startedAt ?? null;
         const at = Date.now();
         const elapsedMs = startedAt != null ? Math.max(0, at - startedAt) : 0;
-        // Linear fallback ETA from overall % (no per-asset timings available
-        // remotely): elapsed * remaining-fraction / done-fraction.
-        const etaMs =
-          elapsedMs > 0 && g.progress > 0 && g.progress < 100
-            ? Math.round((elapsedMs / g.progress) * (100 - g.progress))
-            : null;
+        // Linear fallback ETA from real asset counts (no per-asset timings
+        // available remotely) — estimated total minus elapsed, split across
+        // the Images / Videos rows.
+        const imagesDone = (g.refDone ? 1 : 0) + g.imageCount;
+        const imagesTotal = 1 + g.sceneCount;
+        const videosDone = g.videoCount;
+        const videosTotal = g.sceneCount;
+        const { etaMs, imagesEtaMs, videosEtaMs } = remoteEta(
+          elapsedMs, imagesDone, imagesTotal, videosDone, videosTotal);
         setRemoteGen({
           ...emptyProgress,
           status: "running",
           pct: g.progress,
           scene: null,
           totalScenes: g.sceneCount || null,
-          imagesDone: (g.refDone ? 1 : 0) + g.imageCount,
-          imagesTotal: 1 + g.sceneCount,
-          videosDone: g.videoCount,
-          videosTotal: g.sceneCount,
+          imagesDone,
+          imagesTotal,
+          videosDone,
+          videosTotal,
           etaMs,
+          imagesEtaMs,
+          videosEtaMs,
           elapsedMs,
           startedAt,
           scenario: g.name,
@@ -154,11 +203,11 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
     ? (() => {
         if (remoteGen.startedAt == null) return remoteGen;
         const elapsedMs = Math.max(0, now - remoteGen.startedAt);
-        const etaMs =
-          elapsedMs > 0 && remoteGen.pct > 0 && remoteGen.pct < 100
-            ? Math.round((elapsedMs / remoteGen.pct) * (100 - remoteGen.pct))
-            : null;
-        return { ...remoteGen, elapsedMs, etaMs };
+        const { etaMs, imagesEtaMs, videosEtaMs } = remoteEta(
+          elapsedMs,
+          remoteGen.imagesDone, remoteGen.imagesTotal,
+          remoteGen.videosDone, remoteGen.videosTotal);
+        return { ...remoteGen, elapsedMs, etaMs, imagesEtaMs, videosEtaMs };
       })()
     : remoteGen;
   const topProgress =
@@ -249,8 +298,12 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   }, [name]);
 
   useEffect(() => {
-    comfyStatus().then(setComfy);
-    const t = setInterval(() => comfyStatus().then(setComfy), 15000);
+    comfyStatus().then(setComfy).catch(() => {});
+    getHealth().then(setHealth).catch(() => setHealth(null));
+    const t = setInterval(() => {
+      comfyStatus().then(setComfy).catch(() => {});
+      getHealth().then(setHealth).catch(() => {});
+    }, 15000);
     return () => clearInterval(t);
   }, []);
 
@@ -337,12 +390,22 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           <GenerationProgressBar progress={topProgress} compact />
         </div>
         <div className="topbar-right">
-          <span className={`pill ${comfy?.up ? "ok" : "err"}`} title={comfy?.error ?? ""}>
-            <span className={`dot ${comfy?.up ? "pulse" : ""}`} />
-            {comfy?.up
-              ? `ComfyUI online${comfyQueue > 0 ? ` · ${comfyQueue} queued` : ""}`
-              : "ComfyUI offline"}
-          </span>
+          <div className="topbar-health" role="status" aria-label="Service status">
+            <span className={`pill ${health ? (health.db.up ? "ok" : "err") : ""}`} title="PostgreSQL database">
+              <span className={`dot ${health?.db.up ? "pulse" : ""}`} />
+              {health ? (health.db.up ? "PostgreSQL connected" : "PostgreSQL offline") : "PostgreSQL checking"}
+            </span>
+            <span className={`pill ${health ? (health.llm.up ? "ok" : "err") : ""}`} title={health?.llm.error ?? "LM Studio (LLM)"}>
+              <span className={`dot ${health?.llm.up ? "pulse" : ""}`} />
+              {health ? (health.llm.up ? "LM Studio connected" : "LM Studio offline") : "LM Studio checking"}
+            </span>
+            <span className={`pill ${comfy?.up ? "ok" : "err"}`} title={comfy?.error ?? ""}>
+              <span className={`dot ${comfy?.up ? "pulse" : ""}`} />
+              {comfy?.up
+                ? `ComfyUI online${comfyQueue > 0 ? ` · ${comfyQueue} queued` : ""}`
+                : "ComfyUI offline"}
+            </span>
+          </div>
           <button
             className="icon-btn theme-toggle"
             onClick={onToggleTheme}

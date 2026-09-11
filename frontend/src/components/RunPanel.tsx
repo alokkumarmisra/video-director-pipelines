@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
 import OutputGallery from "./OutputGallery";
-import GenerationProgressBar, { type GenerationProgress } from "./GenerationProgressBar";
+import GenerationProgressBar, { MIN_TASK_MS, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
 import { IconPlay, IconScissors, IconStop, IconTerminal, Spinner } from "./Icons";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
@@ -55,16 +55,22 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [assetTimes, setAssetTimes] = useState<{ time: number; stage: AssetEvent["stage"] }[]>([]);
   const [cancelled, setCancelled] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Pace bookkeeping (refs, not state — written from the SSE callback):
+  // last completion time + already-seen files, so each landed asset records
+  // exactly one duration sample even if the server re-emits an event.
+  const lastAssetAt = useRef<number>(0);
+  const seenFiles = useRef<Set<string>>(new Set());
 
   useEffect(() => () => closeTail.current(), []);
   useEffect(() => {
     boxRef.current?.scrollTo(0, boxRef.current.scrollHeight);
   }, [log]);
 
-  // Tick the clock while running so elapsed/ETA stay live between assets.
+  // Tick the clock every second while running so elapsed + all Remaining
+  // countdowns tick live in real time between asset completions.
   useEffect(() => {
     if (status !== "running") return;
-    const t = setInterval(() => setNow(Date.now()), 5000);
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [status]);
 
@@ -81,6 +87,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
       setTotalBeats(null);
       setStartedAt(Date.now());
+      lastAssetAt.current = Date.now();
+      seenFiles.current = new Set();
       setEndedAt(null);
       setAssetTimes([]);
       setCancelled(false);
@@ -99,7 +107,21 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
         (a) => {
           const t = Date.now();
-          setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
+          // First sighting only: record one pace sample (completion interval
+          // attributed to the asset that just finished) and keep assetTimes
+          // duplicate-free so ETA averages never double-count.
+          if (!seenFiles.current.has(a.file)) {
+            seenFiles.current.add(a.file);
+            // Only real generations seed the pace: reference/keyframe images
+            // and i2v clips. The fast ffmpeg stitch ("final") and any
+            // resume-skip are filtered by duration inside recordPaceDuration.
+            const image = a.stage === "reference" || a.stage === "keyframe";
+            if (image || a.stage === "clip") {
+              recordPaceDuration(image, t - lastAssetAt.current);
+            }
+            lastAssetAt.current = t;
+            setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
+          }
           setNow(t);
           setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
         }
@@ -186,27 +208,56 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     // ETA from real per-asset durations: each completion interval is
     // attributed to the asset that just finished, so image and video averages
     // stay separate (clips usually take much longer than keyframes).
-    if (status === "running" && startedAt != null && completed > 0 && total > completed) {
+    // Live countdown: the static remaining-work estimate minus the time
+    // already spent on the asset currently in flight, so every Time Remaining
+    // ticks down each second instead of freezing between completions.
+    // Before anything has completed, the historical pace (previous runs on
+    // this machine) seeds the estimate so the countdown moves from second
+    // one; live measurements take over as assets land.
+    let imagesEtaMs: number | null = null;
+    let videosEtaMs: number | null = null;
+    if (status === "running" && startedAt != null && total > completed) {
       const times = assetTimes;
-      const durs: { d: number; image: boolean }[] = [];
+      // Completion intervals attributed to the asset that just finished.
+      // "gen" buckets real generations only: clips are video, reference +
+      // keyframes are images, the ffmpeg stitch ("final") is neither.
+      // The prev-chain advances through every event (so in-flight time stays
+      // exact), but sub-threshold resume-skips are dropped from the averages
+      // below — otherwise a re-run's instant skips collapse the pace toward
+      // zero and Time Remaining freezes at 00:00:00 for the whole run.
+      const durs: { d: number; gen: "image" | "video" | null }[] = [];
       let prev = startedAt;
       for (const t of times) {
-        durs.push({ d: Math.max(0, t.time - prev), image: t.stage !== "clip" && t.stage !== "final" });
+        const gen =
+          t.stage === "clip" ? "video"
+          : t.stage === "reference" || t.stage === "keyframe" ? "image"
+          : null;
+        durs.push({ d: Math.max(0, t.time - prev), gen });
         prev = t.time;
       }
-      const img = durs.filter((x) => x.image).map((x) => x.d);
-      const vid = durs.filter((x) => !x.image).map((x) => x.d);
+      const real = durs.filter((x) => x.gen != null && x.d >= MIN_TASK_MS);
+      const img = real.filter((x) => x.gen === "image").map((x) => x.d);
+      const vid = real.filter((x) => x.gen === "video").map((x) => x.d);
       const avg = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
-      const overall = durs.length ? avg(durs.map((x) => x.d)) : elapsedMs / completed;
-      const avgImg = img.length ? avg(img) : overall;
-      const avgVid = vid.length ? avg(vid) : overall;
+      const overall = real.length ? avg(real.map((x) => x.d)) : NaN;
+      const pace = loadPace();
+      const avgImg = img.length ? avg(img) : (pace.img ?? overall);
+      const avgVid = vid.length ? avg(vid) : (pace.vid ?? overall);
+      const usable = (v: number) => Number.isFinite(v) && v >= 0;
       const remImg = Math.max(0, imagesTotal - imagesDone);
       const remVid = Math.max(0, videosTotal - videosDone);
-      if (imagesTotal + videosTotal > 0 && (remImg + remVid) > 0 && (img.length || vid.length)) {
-        etaMs = Math.round(remImg * avgImg + remVid * avgVid);
-      } else {
-        const remaining = total - completed;
-        etaMs = Math.round((elapsedMs / completed) * remaining);
+      // Pipeline is sequential with at most one asset in flight; images
+      // render before clips, so in-flight time belongs to images while any
+      // image is still pending, otherwise to videos.
+      const sinceLast = Math.max(0, now - prev);
+      if (imagesTotal + videosTotal > 0 && (remImg + remVid) > 0 && usable(avgImg) && usable(avgVid)) {
+        const imgActive = remImg > 0;
+        imagesEtaMs = Math.max(0, Math.round(remImg * avgImg - (imgActive ? sinceLast : 0)));
+        videosEtaMs = Math.max(0, Math.round(remVid * avgVid - (imgActive ? 0 : sinceLast)));
+        etaMs = imagesEtaMs + videosEtaMs;
+      } else if (completed > 0) {
+        const avgAll = elapsedMs / completed;
+        etaMs = Math.max(0, Math.round(avgAll * total - elapsedMs));
       }
     }
 
@@ -223,6 +274,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       videosDone,
       videosTotal,
       etaMs,
+      imagesEtaMs,
+      videosEtaMs,
       elapsedMs,
       startedAt,
       scenario: runScenario ?? scenario,

@@ -333,15 +333,14 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
           {genBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
           {genBusy ? "Generating…" : "Generate beat"}
         </button>
-        <label className="gen-count" title="How many next beats to generate (1–8)">
+        <label className="gen-count wide" title="How many next beats to generate (1 or more)">
           ×
           <input
             type="number"
             min={1}
-            max={8}
             value={genCount}
             disabled={genBusy}
-            onChange={(e) => setGenCount(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
+            onChange={(e) => setGenCount(Math.max(1, Number(e.target.value) || 1))}
           />
         </label>
       </div>

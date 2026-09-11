@@ -1905,7 +1905,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const cfg = body.config;
       if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
-      const count = Math.min(8, Math.max(1, Number(body.count) || 1));
+      const count = Math.max(1, Number(body.count) || 1);
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
     }
     if (p === "/api/comfy" && req.method === "GET") return json(res, 200, await comfyStatus());
