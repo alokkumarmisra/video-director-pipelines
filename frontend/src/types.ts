@@ -10,9 +10,6 @@ export interface Scenario {
   referencePrompt: string;
   duration: number;
   sequence: Beat[];
-  // Craft origin (saved automatically with a crafted scenario).
-  topic?: string;
-  requirements?: string;
 }
 
 export interface ScenarioInfo {
@@ -20,6 +17,8 @@ export interface ScenarioInfo {
   isSequence: boolean;
   mtimeMs: number;
   favorite?: boolean;
+  /** Integer id from the projects table (null in SQLite mode / unknown). */
+  project_id?: number | null;
 }
 
 export interface Run {
@@ -28,6 +27,14 @@ export interface Run {
   status: "running" | "done" | "error";
   log: string;
   startedAt: number;
+  /** Engine the run was started with (present on runs started after Re-Design-V2). */
+  engine?: string;
+  /** Run shape (present on runs started after Re-Design-V2) — lets a fresh
+      page reattach to an active run after a refresh and rebuild progress +
+      button state from the real SSE stream. Absent = full ltx run, count 1. */
+  stitch?: boolean;
+  regen?: { kind: "ref" | "keyframe" | "clip"; index?: number } | null;
+  count?: number;
 }
 
 export interface AuthUser {
@@ -103,4 +110,50 @@ export interface ProjectAsset {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Home dashboard (GET /api/dashboard). Status is derived from real asset
+// coverage — the project has no status column of its own:
+//   draft = nothing generated yet, in_progress = assets exist,
+//   completed = a final cut exists. `generating` overlays a live run.
+export type DashboardStatus = "draft" | "in_progress" | "completed";
+
+export interface DashboardProject {
+  name: string;
+  /** Integer id from the projects table (null when unavailable). */
+  project_id: number | null;
+  description: string;
+  status: DashboardStatus;
+  generating: boolean;
+  progress: number;
+  sceneCount: number;
+  imageCount: number;
+  videoCount: number;
+  refDone: boolean;
+  hasFinal: boolean;
+  /** ms epoch when the active run started (null when not generating). */
+  startedAt: number | null;
+  thumbnailUrl: string | null;
+  createdAt: number | null;
+  updatedAt: number | null;
+}
+
+export interface DashboardStatistics {
+  total: number;
+  active: number;
+  inProgress: number;
+  completed: number;
+}
+
+export interface DashboardResponse {
+  statistics: DashboardStatistics;
+  projects: DashboardProject[];
+}
+
+// Combined service health (GET /api/health). Each service is probed
+// independently — one being offline never blocks the others.
+export interface HealthResponse {
+  db: { up: boolean };
+  comfy: { up: boolean; queueRunning: number | null; queuePending: number | null; error?: string };
+  llm: { up: boolean; error?: string };
 }

@@ -25,9 +25,14 @@
   --warn-soft: rgba(251, 191, 36, 0.12);
   --err: #f87171;                         /* red-400 */
   --err-soft: rgba(248, 113, 113, 0.10);
+  --err-2: #fca5a5;                       /* red-300 (Overall bar) */
+  --vid: #3b82f6;                         /* blue-500 (Videos bar) */
+  --vid-2: #60a5fa;                       /* blue-400 */
+  --craft: #c084fc;                       /* purple-400 (AI Craft header icon) */
+  --edit: #22d3ee;                        /* cyan-400 (Scenario Editor header icon) */
 
   /* component-level tokens */
-  --topbar-bg: rgba(3, 7, 18, 0.80);      /* gray-950/80 */
+  --topbar-bg: #030712;                         /* solid, opaque (dark) */
   --btn-hover-bg: #273244;
   --btn-hover-line: rgba(255, 255, 255, 0.22);
   --input-focus-bg: #0d1523;
@@ -35,18 +40,6 @@
   --scrollbar-hover: #4b5563;
   --log-bg: #060b14;
   --log-color: #b9c2d4;
-  --sc-pink-bg: rgba(244, 114, 182, 0.12);
-  --sc-pink-bg-hover: rgba(244, 114, 182, 0.19);
-  --sc-pink-line: rgba(244, 114, 182, 0.30);
-  --sc-green-bg: rgba(52, 211, 153, 0.12);
-  --sc-green-bg-hover: rgba(52, 211, 153, 0.19);
-  --sc-green-line: rgba(52, 211, 153, 0.30);
-  --sc-yellow-bg: rgba(251, 191, 36, 0.12);
-  --sc-yellow-bg-hover: rgba(251, 191, 36, 0.19);
-  --sc-yellow-line: rgba(251, 191, 36, 0.30);
-  --sc-blue-bg: rgba(96, 165, 250, 0.13);
-  --sc-blue-bg-hover: rgba(96, 165, 250, 0.20);
-  --sc-blue-line: rgba(96, 165, 250, 0.32);
   --glow-1: rgba(16, 185, 129, 0.14);
   --glow-2: rgba(16, 185, 129, 0.08);
   --glow-3: rgba(52, 211, 153, 0.05);
@@ -56,6 +49,11 @@
   --radius-s: 8px;
   --radius-m: 14px;
   --radius-l: 16px;
+  /* One height + one track color for EVERY progress bar in the app. */
+  --bar-h: 3px;
+  --bar-track: #374151; /* gray-700 */
+  /* One corner radius for every generated image/video in every section. */
+  --radius-media: 10px;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.40);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
 
@@ -91,11 +89,17 @@
   --warn-soft: rgba(251, 191, 36, 0.16);
   --err: #dc2626;                         /* red-600 */
   --err-soft: rgba(220, 38, 38, 0.08);
+  --err-2: #f87171;                       /* red-400 (Overall bar) */
+  --vid: #2563eb;                         /* blue-600 (Videos bar) */
+  --vid-2: #3b82f6;                       /* blue-500 */
+  --craft: #9333ea;                       /* purple-600 (AI Craft header icon) */
+  --edit: #0891b2;                        /* cyan-600 (Scenario Editor header icon) */
 
   --shadow-1: 0 1px 2px rgba(23, 30, 51, 0.06);
   --shadow-2: 0 8px 24px rgba(23, 30, 51, 0.10), 0 1px 3px rgba(23, 30, 51, 0.07);
+  --bar-track: #d3d0c7; /* warm gray-300 */
 
-  --topbar-bg: rgba(250, 248, 244, 0.80); /* warm white/80 */
+  --topbar-bg: #ffffff; /* solid white, opaque */
   --btn-hover-bg: #e6e2d8;
   --btn-hover-line: #d3cec2;
   --input-focus-bg: #faf8f4;
@@ -103,18 +107,6 @@
   --scrollbar-hover: #b3ac9d;
   --log-bg: #111827;
   --log-color: #b9c2d4;
-  --sc-pink-bg: #fdeef4;
-  --sc-pink-bg-hover: #fbe0ec;
-  --sc-pink-line: rgba(236, 72, 153, 0.28);
-  --sc-green-bg: #e8f7ee;
-  --sc-green-bg-hover: #d9f1e3;
-  --sc-green-line: rgba(16, 185, 129, 0.30);
-  --sc-yellow-bg: #fdf6df;
-  --sc-yellow-bg-hover: #faedc4;
-  --sc-yellow-line: rgba(202, 138, 4, 0.30);
-  --sc-blue-bg: #e9f1fe;
-  --sc-blue-bg-hover: #d8e7fd;
-  --sc-blue-line: rgba(59, 130, 246, 0.30);
   --glow-1: rgba(16, 185, 129, 0.10);
   --glow-2: rgba(16, 185, 129, 0.06);
   --glow-3: rgba(5, 150, 105, 0.05);
@@ -130,6 +122,10 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+/* Reserve the vertical scrollbar gutter at all times so the topbar menu
+   (brand, Progress Status, health pills) never shifts left/right when
+   navigating between pages with and without a scrollbar. */
+html { scrollbar-gutter: stable; }
 body {
   margin: 0;
   background: var(--bg);
@@ -158,10 +154,10 @@ body {
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 14px;
-  height: 56px; padding: 0 20px;
+  min-height: 56px; padding: 4px 20px;
+  /* Solid + opaque in both themes (no translucency / blur). Follows the
+     theme via --topbar-bg: dark in dark mode, white in light mode. */
   background: var(--topbar-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -177,12 +173,24 @@ body {
   font-size: 12px; color: var(--text-3); white-space: nowrap;
   border-left: 1px solid var(--line-2); padding-left: 12px; margin-left: 2px;
 }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Service-status pills (PostgreSQL / LM Studio / ComfyUI) in one horizontal
+   row on the right of the menu bar. */
+.topbar-health {
+  display: flex; flex-direction: row; align-items: center; gap: 6px;
+  flex-wrap: nowrap;
+}
+.topbar-health .pill {
+  font-size: 10px; line-height: 1.3; font-weight: 600;
+  padding: 3px 9px; gap: 5px;
+  white-space: nowrap; flex: none;
+}
+.topbar-health .dot { width: 6px; height: 6px; }
 
 .shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) minmax(380px, 460px);
+  grid-template-columns: 336px minmax(0, 1fr) minmax(380px, 460px);
   gap: 20px;
   max-width: 1648px;
   width: 100%;
@@ -191,7 +199,21 @@ body {
   align-items: start;
 }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.shell.no-sidebar { grid-template-columns: minmax(0, 1fr) minmax(380px, 460px); }
+/* Project switch keeps the old content mounted until the new config lands
+   (see App `shown`), so no global dimming — the incoming row alone spins. */
+.shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(380px, 460px); }
+/* Right column collapsed (AI Craft + Scenario Editor both hidden): the right
+   column shrinks to rail width and the middle section expands. Mirrors the
+   Projects panel collapsing to the left. */
+.shell.no-right { grid-template-columns: 336px minmax(0, 1fr) auto; }
+.shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
+/* Right-column rails dock to the RIGHT edge of the window (the Projects rail
+   docks left). Rails-only column stays narrow so the middle keeps the space. */
+.col.right-col.rails-only { gap: 12px; }
+.sidebar-show.rail-right { align-self: end; }
+/* Two stacked right rails stick at different offsets so they never overlap
+   while scrolling (mirrors the single sticky Projects rail on the left). */
+.col.right-col.rails-only .sidebar-show.rail-right + .sidebar-show.rail-right { top: 240px; }
 
 /* ============================================================
    Cards
@@ -215,7 +237,33 @@ body {
 .card-head .head-icon {
   color: var(--text-3); display: grid; place-items: center;
 }
+/* Colorful section header icons — one identity color per workspace section
+   (theme-aware tokens above, readable on dark + light). */
+.head-icon.hi-output { color: var(--warn); }
+.head-icon.hi-beats { color: var(--vid-2); }
+.head-icon.hi-run { color: var(--accent-2); }
+.head-icon.hi-craft { color: var(--craft); }
+.head-icon.hi-editor { color: var(--edit); }
+.head-icon.hi-shots { color: var(--err-2); }
+/* Generate Reference follows the picked theme color exactly (the --accent
+   token the swatch / primary buttons use — not the lighter --accent-2). */
+.head-icon.hi-ref { color: var(--accent); }
 .card-head .spacer { flex: 1; }
+/* Run controls centered in the header, between the "Run" title (left) and
+   the LTX 2.5 / Wan engine switch (right). Compact so the header stays slim. */
+.run-head-actions {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.run-head-btn { padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .run-head-actions { order: 3; flex-basis: 100%; justify-content: flex-start; }
+}
+/* Collapsed section card (hide/show toggle in the header, same as the
+   Projects panel): header only, no bottom gap where the body was. */
+.card.collapsed { padding-bottom: 12px; }
+.card.collapsed .card-head { margin-bottom: 0; }
 /* Version picker in the middle of the Scenario Editor card head. */
 .version-pick {
   display: flex; align-items: center; gap: 6px;
@@ -269,47 +317,54 @@ select {
   cursor: pointer;
 }
 
-/* buttons */
+/* buttons — default buttons are theme-tinted (accent-soft bg + accent
+   border/text) so they pick up the picked theme color instead of flat gray.
+   primary/danger/ghost/icon-btn keep their own styles below. */
 button {
   font: 600 13px/1.4 var(--font);
-  background: var(--surface-2);
-  border: 1px solid var(--line-2);
-  color: var(--text);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-2);
   border-radius: var(--radius-s);
   padding: 8px 14px;
   cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.05s, box-shadow 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.05s, box-shadow 0.12s, filter 0.12s;
 }
-button:hover { background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
+button:hover {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 14px -4px var(--accent-line);
+  filter: brightness(1.07);
+}
 button:active { transform: translateY(1px); }
-button:disabled { opacity: 0.45; cursor: default; transform: none; }
-button:disabled:hover { background: var(--surface-2); border-color: var(--line-2); }
+button:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; filter: none; }
+button:disabled:hover { background: var(--accent-soft); border-color: var(--accent-line); box-shadow: none; filter: none; }
 button.primary {
   background: var(--accent);
   border-color: transparent;
   color: #fff;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.35);
 }
-button.primary:hover { background: #059669; border-color: transparent; }
+button.primary:hover { background: var(--accent); border-color: transparent; filter: brightness(0.92); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.35); }
 :root[data-theme="light"] button.primary {
   background: var(--accent);
   border-color: transparent;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 3px rgba(5, 150, 105, 0.35);
 }
 :root[data-theme="light"] button.primary:hover {
-  background: #059669;
+  background: var(--accent);
   border-color: transparent;
+  filter: brightness(0.92);
 }
 button.danger { background: var(--err-soft); border-color: rgba(248, 113, 113, 0.4); color: var(--err); }
 button.danger:hover { background: rgba(248, 113, 113, 0.2); border-color: rgba(248, 113, 113, 0.55); }
 button.ghost { background: transparent; border-color: var(--line-2); color: var(--text-2); }
-button.ghost:hover { color: var(--text); background: var(--surface-2); }
+button.ghost:hover { color: var(--accent-2); background: var(--accent-soft); border-color: var(--accent-line); }
 button.icon-btn {
   padding: 6px; border-radius: var(--radius-s);
   background: transparent; border-color: transparent; color: var(--text-3);
 }
-button.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+button.icon-btn:hover { color: var(--accent-2); background: var(--accent-soft); }
 button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -343,7 +398,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   border: 1px solid var(--line);
   white-space: nowrap;
 }
-.pill.ok, .pill.done { background: var(--ok-soft); color: var(--ok); border-color: rgba(52, 211, 153, 0.3); }
+.pill.ok, .pill.done { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
 .pill.err, .pill.error { background: var(--err-soft); color: var(--err); border-color: rgba(248, 113, 113, 0.3); }
 .pill.running { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(251, 191, 36, 0.3); }
@@ -381,18 +436,59 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   display: flex; flex-direction: column;
 }
 .sidebar-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 8px 10px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px 10px 8px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-3);
 }
-.sidebar-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+.sidebar-head .sidebar-count { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.sidebar-head .spacer { flex: 1; }
+.sidebar-collapse {
+  padding: 6px; border-radius: 8px;
+}
+.sidebar-collapse:hover { color: var(--text); }
+/* slim reopen rail shown in the workspace when the panel is hidden */
+.sidebar-show {
+  position: sticky; top: 76px;
+  align-self: start;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  color: var(--text-3);
+  box-shadow: var(--shadow-1);
+  writing-mode: horizontal-tb;
+}
+.sidebar-show:hover { color: var(--accent-2); border-color: var(--accent-line); background: var(--accent-soft); }
+.sidebar-show-label {
+  writing-mode: vertical-rl;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.sidebar-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+.scenario-row {
+  display: flex; align-items: center; gap: 2px;
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 3px 4px 3px 3px;
+  position: relative; overflow: hidden;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+/* uniform rows (unselected): every project shares the same theme surface */
+.sidebar-list > .scenario-row:not(.selected) {
+  background: var(--surface-2); border-color: var(--line);
+}
+.sidebar-list > .scenario-row:not(.selected):hover { background: var(--btn-hover-bg); }
+.scenario-row:not(.selected):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
+}
 .scenario-item {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
-  width: 100%;
+  display: flex; flex-direction: row; align-items: center; gap: 8px;
+  flex: 1; min-width: 0; width: 100%;
   background: transparent; border: 0;
-  border-radius: var(--radius-s);
-  padding: 10px 12px;
+  border-radius: 9px;
+  padding: 7px 6px;
   color: var(--text-2);
   font: 500 13px/1.3 var(--font);
   text-align: left;
@@ -401,64 +497,204 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .scenario-item:hover { background: transparent; color: var(--text); }
 .scenario-item.on {
-  background: transparent; color: var(--text);
+  background: transparent; color: #fff;
   box-shadow: none;
 }
-.scenario-name {
-  width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-weight: 600; font-size: 13.5px;
+/* avatar chip — deterministic per-project tone (hashed from the name), so
+   each project reads as its own color in the bar */
+.scenario-avatar {
+  width: 32px; height: 32px; border-radius: 10px; flex: none;
+  display: grid; place-items: center;
+  font: 700 14px var(--font);
+  color: var(--accent-2);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
 }
+.scenario-avatar.av-0 { color: #34d399; background: rgba(52, 211, 153, 0.13); border-color: rgba(52, 211, 153, 0.45); }
+.scenario-avatar.av-1 { color: #38bdf8; background: rgba(56, 189, 248, 0.13); border-color: rgba(56, 189, 248, 0.45); }
+.scenario-avatar.av-2 { color: #a78bfa; background: rgba(167, 139, 250, 0.14); border-color: rgba(167, 139, 250, 0.45); }
+.scenario-avatar.av-3 { color: #f59e0b; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.45); }
+.scenario-avatar.av-4 { color: #fb7185; background: rgba(251, 113, 133, 0.13); border-color: rgba(251, 113, 133, 0.45); }
+.scenario-avatar.av-5 { color: #22d3ee; background: rgba(34, 211, 238, 0.13); border-color: rgba(34, 211, 238, 0.45); }
+.scenario-avatar.av-6 { color: #fb923c; background: rgba(251, 146, 60, 0.14); border-color: rgba(251, 146, 60, 0.45); }
+.scenario-avatar.av-7 { color: #84cc16; background: rgba(132, 204, 22, 0.14); border-color: rgba(132, 204, 22, 0.45); }
+:root[data-theme="light"] .scenario-avatar.av-3 { color: #b45309; }
+:root[data-theme="light"] .scenario-avatar.av-6 { color: #c2410c; }
+:root[data-theme="light"] .scenario-avatar.av-7 { color: #4d7c0f; }
+.scenario-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.scenario-name {
+  width: 100%; overflow: hidden;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 600; font-size: 13px; letter-spacing: -0.01em;
+}
+.scenario-item.on .scenario-name { font-weight: 700; }
+.scenario-name-text {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* integer project id chip */
+.scenario-id {
+  flex: none;
+  font: 700 10px var(--mono);
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+}
+/* render-status tick: green check = all videos done, hollow dot = partial,
+   spinner = generating */
+.scenario-tick {
+  flex: none;
+  display: grid; place-items: center;
+  width: 18px; height: 18px; border-radius: 50%;
+}
+.scenario-tick.done {
+  background: rgba(5, 150, 105, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #10b981;
+}
+:root[data-theme="light"] .scenario-tick.done {
+  background: rgba(5, 150, 105, 0.12);
+  color: #047857;
+}
+.scenario-tick.pending { border: 1px solid var(--line-2); background: transparent; }
+.scenario-tick.pending .tick-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--text-3);
+}
+.scenario-tick.running { color: var(--accent-2); }
 .scenario-date {
   flex: none;
-  font: 500 11px var(--mono);
-  color: var(--text-2);
+  width: 100%;
+  font: 500 10px var(--mono);
+  letter-spacing: 0;
+  color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.scenario-item.on .scenario-name { font-weight: 650; }
-.scenario-row {
-  display: flex; align-items: center; gap: 2px;
-  border: 1px solid;
-  border-radius: var(--radius-s);
-  padding-right: 4px;
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+/* right-side mini asset stats — deliberately narrow cluster so the
+   datetime lane next to it always fits date + time in full */
+.scenario-stats {
+  flex: none; min-width: 0; max-width: 70px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  font-size: 10px; line-height: 1.35; text-align: right;
+  color: var(--text-3); font-variant-numeric: tabular-nums;
 }
-/* repeating pastels: pink → green → yellow → blue */
-.sidebar-list > .scenario-row:nth-child(4n + 1) {
-  background: var(--sc-pink-bg); border-color: var(--sc-pink-line);
+.scenario-stats .stat-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.scenario-stats .stat-line b { color: var(--text-2); font-weight: 700; }
+.scenario-stats .stat-line.dim { font-size: 9.5px; opacity: 0.95; }
+/* row action buttons stay compact so they don't steal datetime width */
+.scenario-row > .icon-btn { padding: 4px; flex: none; }
+/* ---- selected project: unmistakably different (emerald gradient) ---- */
+.sidebar-list > .scenario-row.selected {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, color-mix(in srgb, var(--accent-2) 72%, black) 100%);
+  border-color: var(--accent-2);
+  box-shadow: 0 4px 18px var(--accent-line), 0 0 0 1px rgba(255, 255, 255, 0.16) inset;
 }
-.sidebar-list > .scenario-row:nth-child(4n + 1):hover { background: var(--sc-pink-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 2) {
-  background: var(--sc-green-bg); border-color: var(--sc-green-line);
+.sidebar-list > .scenario-row.selected:hover {
+  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 55%, color-mix(in srgb, var(--accent-2) 72%, black) 100%);
+  transform: translateY(-1px);
 }
-.sidebar-list > .scenario-row:nth-child(4n + 2):hover { background: var(--sc-green-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 3) {
-  background: var(--sc-yellow-bg); border-color: var(--sc-yellow-line);
+.sidebar-list > .scenario-row.selected::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 4px 0 0 4px;
 }
-.sidebar-list > .scenario-row:nth-child(4n + 3):hover { background: var(--sc-yellow-bg-hover); }
-.sidebar-list > .scenario-row:nth-child(4n + 4) {
-  background: var(--sc-blue-bg); border-color: var(--sc-blue-line);
+.sidebar-list > .scenario-row.selected .scenario-item { padding-left: 10px; }
+.sidebar-list > .scenario-row.selected .scenario-avatar {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
 }
-.sidebar-list > .scenario-row:nth-child(4n + 4):hover { background: var(--sc-blue-bg-hover); }
-.scenario-row:has(.scenario-item.on) {
+.sidebar-list > .scenario-row.selected .scenario-name { color: #fff; }
+.sidebar-list > .scenario-row.selected .scenario-id {
+  color: #fff; background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.done {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.pending {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.pending .tick-dot {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+.sidebar-list > .scenario-row.selected .scenario-tick.running { color: #fff; }
+.sidebar-list > .scenario-row.selected .scenario-date,
+.sidebar-list > .scenario-row.selected .scenario-stats { color: rgba(255, 255, 255, 0.88); }
+.sidebar-list > .scenario-row.selected .scenario-stats .stat-line b { color: #fff; }
+.sidebar-list > .scenario-row.selected .scenario-fav,
+.sidebar-list > .scenario-row.selected .scenario-del { color: rgba(255, 255, 255, 0.85); }
+.sidebar-list > .scenario-row.selected .scenario-fav:hover,
+.sidebar-list > .scenario-row.selected .scenario-del:hover {
+  color: #fff; background: rgba(255, 255, 255, 0.18);
+}
+.sidebar-list > .scenario-row.selected .scenario-fav.on { color: #fde68a; opacity: 1; }
+/* keep :has(.on) in sync for any row marked via the button class */
+.scenario-row:has(.scenario-item.on):not(.selected) {
   border-color: var(--accent-line);
   box-shadow: 0 0 0 1px var(--accent-line) inset;
 }
-.scenario-item { flex: 1; min-width: 0; }
 .scenario-del {
-  flex: none; opacity: 0;
+  flex: none; opacity: 1;
+  color: var(--err);
   transition: opacity 0.12s, color 0.12s, background 0.12s;
 }
-.scenario-row:hover .scenario-del,
-.scenario-del:focus-visible { opacity: 1; }
+.scenario-del:hover { color: var(--err); background: var(--err-soft); }
 .scenario-fav {
-  flex: none; opacity: 0;
+  flex: none; opacity: 1;
   color: var(--text-3);
   transition: opacity 0.12s, color 0.12s, background 0.12s;
 }
 .scenario-row:hover .scenario-fav,
+.scenario-row.selected .scenario-fav,
 .scenario-fav:focus-visible { opacity: 1; }
 .scenario-fav.on { opacity: 1; color: #fbbf24; }
 .scenario-fav:hover { color: #fbbf24; }
+/* vertical action stack at the very end of the row: favorite on top,
+   delete just below — always visible */
+.scenario-actions {
+  display: flex; flex-direction: column; gap: 2px; flex: none;
+  align-items: stretch; justify-content: center;
+}
+/* delete confirmation popup */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  animation: smoothIn 0.15s ease;
+}
+.confirm-box {
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  padding: 20px;
+}
+.confirm-title { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+.confirm-text { margin: 0 0 4px; font-size: 13px; color: var(--text-2); overflow-wrap: break-word; }
+.confirm-sub { margin: 0 0 16px; font-size: 12px; color: var(--text-3); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .sidebar-empty { padding: 18px 10px; font-size: 12.5px; color: var(--text-3); text-align: center; }
+/* Incoming project row: avatar spins, layout untouched. */
+.scenario-row.loading .scenario-avatar { display: grid; place-items: center; }
+/* First-open skeleton: same card footprint as real content, so the editor
+   mounting later doesn't reflow the page. */
+.ws-loading {
+  min-height: 220px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: var(--text-3); font-size: 13px;
+}
+/* Gallery header pill while the newly selected project's listing loads. */
+.switching-pill { flex: none; }
 
 /* ============================================================
    Beats (scenario editor)
@@ -484,6 +720,8 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   text-align: center;
 }
 .gen-count input:focus { outline: none; border-color: var(--accent-line); background: var(--input-focus-bg); }
+/* Wide variant for large counts (Generate beat: 100+). */
+.gen-count.wide input { width: 100px; }
 /* Alternate beat tint so consecutive beats are easy to tell apart. */
 .beat.alt {
   background: var(--warn-soft);
@@ -496,6 +734,10 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   box-shadow: 0 0 0 3px var(--bg-raise) inset;
 }
 .beat-head { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
+.beat-head .spacer { flex: 1; }
+/* Collapsed scene section — header only, no bottom gap where the fields were. */
+.beat.is-collapsed { padding-bottom: 10px; }
+.beat.is-collapsed .beat-head { margin-bottom: 0; }
 .beat-index {
   width: 22px; height: 22px; border-radius: 50%; flex: none;
   display: grid; place-items: center;
@@ -505,6 +747,10 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .beat-title {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--mono);
   font-size: 12.5px;
   font-weight: 600;
@@ -536,18 +782,34 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .section-label:first-child { margin-top: 0; }
 .video-frame {
-  position: relative; border-radius: var(--radius-m);
+  position: relative; border-radius: var(--radius-media);
   overflow: hidden; background: var(--inset);
   border: 1px solid var(--line);
 }
 .video-frame video { width: 100%; display: block; border-radius: 0; }
+/* Bare generated clip in Keyframes → clips: no frame, badge, or overlay. */
+.shot-clip-bare { width: 100%; display: block; border-radius: var(--radius-media); }
 .img-frame {
-  border-radius: var(--radius-m); overflow: hidden;
+  border-radius: var(--radius-media); overflow: hidden;
   border: 1px solid var(--line); background: var(--inset);
 }
 .img-frame img { width: 100%; display: block; border-radius: 0; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.shot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* Scene group card — the keyframe image + video clip of one scene live in
+   a single bordered container (with a "Scene N" header) so the pair reads
+   as one group. */
+.shot {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-media);
+  padding: 8px;
+}
+.shot-head {
+  font: 700 11px var(--mono); color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  padding: 0 2px;
+}
 .shot video { margin-top: 0; }
 .shot .video-frame, .shot .img-frame { aspect-ratio: 16 / 9; }
 .shot .img-frame img { object-fit: cover; height: 100%; }
@@ -557,6 +819,81 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   font-size: 11.5px; color: var(--text-3);
   background: var(--inset);
 }
+/* Pending placeholder content: media-type icon stacked above the label
+   (single grid child so the pair stays centered as one block). */
+.frame-missing-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+
+/* ============================================================
+   SmoothImage — loading placeholder + fade so media swaps never flash.
+   The frame keeps a shimmer background + reserved height while the file
+   loads; the <img> fades in on paint. Project switches preload behind
+   the old frame, so no blank/half-decoded frame is ever visible.
+   ============================================================ */
+.smooth-img {
+  position: relative; display: block; overflow: hidden;
+  background: var(--inset);
+  min-height: 64px;
+}
+.smooth-img.clickable { cursor: pointer; }
+.smooth-img img {
+  position: relative; z-index: 1;
+  display: block; width: 100%; height: auto;
+  animation: smoothIn 0.32s ease;
+}
+@keyframes smoothIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* Server-busy banner in the Run window: another run owns the serial backend,
+   so new runs would be rejected — name the blocker, offer to stop it. */
+.server-busy {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 12px;
+  background: var(--warn-soft);
+  border: 1px solid rgba(251, 191, 36, 0.30);
+  border-radius: var(--radius-s);
+  font-size: 12px;
+}
+.server-busy-text { flex: 1; min-width: 0; color: var(--text-2); }
+.server-busy-text b { color: var(--text); font-variant-numeric: tabular-nums; }
+/* shimmer sweep while the first frame is still loading */
+.smooth-img.is-loading::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, rgba(148, 163, 184, 0.16) 50%, transparent 80%);
+  background-size: 200% 100%;
+  animation: smoothShimmer 1.2s linear infinite;
+}
+@keyframes smoothShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.smooth-spin {
+  position: absolute; inset: 0; z-index: 0;
+  display: grid; place-items: center;
+  color: var(--text-3);
+}
+.smooth-fallback {
+  display: grid; place-items: center;
+  min-height: inherit;
+  padding: 14px;
+  color: var(--text-3);
+}
+/* context fits — the frame inherits the box it sits in */
+.shot .img-frame .smooth-img { width: 100%; height: 100%; min-height: 0; }
+.shotlist-thumb .smooth-img { width: 100%; height: 100%; min-height: 0; }
+.ref-embed .img-frame .smooth-img { width: auto; max-width: 100%; background: transparent; }
+.upload-zone .upload-side .smooth-img { flex: none; max-width: 46%; min-height: 0; }
+.upload-zone .upload-side .smooth-img img { max-width: 100%; }
+/* project-card thumbnail fills its 16:9 aspect box */
+.proj-thumb.smooth-img { min-height: 0; }
+.proj-thumb.smooth-img img { height: 100%; object-fit: cover; }
+/* videos can't crossfade — reserve the space + shimmer bg instead so the
+   layout never collapses while first frames/metadata load */
+.video-frame { min-height: 160px; }
+.shot .video-frame { min-height: 0; } /* aspect-ratio already reserves it */
+.shot-clip-bare { background: var(--inset); min-height: 120px; }
 
 /* version chips + regen */
 .versions {
@@ -569,7 +906,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   font: 600 11px/1.4 var(--mono);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 99px;
+  border-radius: 5px;
   color: var(--text-2);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s, color 0.1s;
@@ -606,7 +943,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 /* reference upload zone (browse / drag-drop / paste) */
 .upload-zone {
   position: relative;
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-media);
   border: 1.5px dashed var(--line-2);
   background: var(--inset);
   overflow: hidden;
@@ -631,7 +968,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .upload-zone .upload-side { display: flex; align-items: center; gap: 12px; padding: 10px; }
 .upload-zone .upload-side img {
   flex: none; width: auto; max-width: 46%; max-height: 160px; min-height: 0;
-  object-fit: contain; background: #000; border-radius: var(--radius-s);
+  object-fit: contain; background: #000; border-radius: var(--radius-media);
 }
 .upload-side-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .upload-side-actions .upload-hint { margin-left: 0; }
@@ -667,7 +1004,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .ref-card .img-frame { cursor: pointer; }
 .ref-card .img-frame:hover { border-color: var(--btn-hover-line); }
-.ref-card .img-frame, .ref-card .img-frame img { border-radius: 0; }
+.ref-card .img-frame, .ref-card .img-frame img { border-radius: var(--radius-media); }
 .ref-card.on .img-frame {
   border-color: var(--accent-line);
 }
@@ -703,8 +1040,9 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .lightbox img, .lightbox video {
   max-width: 94vw; max-height: 88vh;
-  border-radius: var(--radius-m); border: 1px solid var(--line);
+  border-radius: var(--radius-media); border: 1px solid var(--line);
   background: #000; cursor: default;
+  animation: smoothIn 0.25s ease;
 }
 .lightbox-close {
   position: fixed; top: 14px; right: 14px;
@@ -734,17 +1072,263 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .empty-sub { font-size: 12px; line-height: 1.5; max-width: 300px; }
 
 /* ============================================================
+   Scene-number overlay (top-right of every preview frame)
+   Frontend-only badge — never touches the generated file. Offset left
+   of the expand button (top:6px right:6px) so the two never overlap,
+   pointer-events:none so controls/menus keep working.
+   ============================================================ */
+.scene-badge {
+  position: absolute; top: 6px; right: 38px; z-index: 1;
+  padding: 2px 7px; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font: 700 11px/1.5 var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Smaller variant for the video-count badges (V1/26, V2/26, …) —
+   pinned flush to the video container's top-right corner (unlike the
+   scene badges, which sit left of the expand button). */
+.scene-badge-sm { font-size: 9.5px; padding: 1px 6px; right: 6px; }
+.upload-side { position: relative; }
+/* bare clip wrapper: carries the scene + version badges over the video
+   (badges never intercept video controls) */
+.shot-clip-frame { position: relative; }
+.shot-clip-frame .ver-badge,
+.video-frame .ver-badge { pointer-events: none; }
+
+/* Compact "Generated So Far" grid (cells floored 30% larger so keyframe
+   images and clips render bigger: fewer per row on desktop, 2 on mobile).
+   Aspect ratio and all preview/play/open/download/regenerate controls
+   are unchanged. */
+.grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(167px, 1fr));
+  gap: 8px;
+}
+.grid-compact .shot { gap: 6px; }
+@media (max-width: 760px) {
+  .grid-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ============================================================
    Progress (run)
    ============================================================ */
+.gen-progress {
+  display: flex; flex-direction: column; gap: 6px;
+}
+/* Center slot in the main menu bar (between nav and right controls).
+   Anchors the toggleable Progress Status window. */
+.topbar-center {
+  flex: 1; min-width: 0;
+  display: flex; justify-content: center;
+  padding: 0 12px;
+  position: relative;
+}
+/* Progress Status toggle in the top menu bar — carries its own inline
+   progress bar pinned to its bottom edge. */
+.progress-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  position: relative; overflow: hidden;
+  padding-bottom: 10px;
+}
+.progress-toggle-track {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 5px; background: var(--bar-track);
+  border-radius: 0 0 7px 7px;
+  overflow: hidden; pointer-events: none;
+}
+.progress-toggle-fill {
+  display: block; height: 100%; border-radius: 0 99px 99px 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+  transition: width 0.5s ease;
+  position: relative; overflow: hidden;
+}
+.progress-toggle-fill.status-done { background: linear-gradient(90deg, var(--ok) 0%, var(--accent-2) 100%); }
+.progress-toggle-fill.status-error { background: linear-gradient(90deg, var(--err) 0%, #fca5a5 100%); }
+/* live sweep while running, same language as the other bars */
+.progress-toggle-fill.sweep::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+.progress-toggle.is-running {
+  background: var(--accent-soft); color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+.progress-toggle-dot.status-running { background: var(--accent-2); }
+.progress-toggle-dot.status-done { background: var(--ok); }
+.progress-toggle-dot.status-error { background: var(--err); }
+.progress-toggle-dot.status-idle { background: var(--text-3); }
+.progress-toggle-pct {
+  font: 700 12px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+/* Remaining-time readout on the Progress Status toggle (live countdown,
+   tabular figures so it never shifts width while ticking). */
+.progress-toggle-eta {
+  font: 600 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-2); white-space: nowrap;
+}
+.progress-toggle.is-running .progress-toggle-eta { color: var(--accent-2); }
+/* Files processed / remaining on the Progress Status toggle. */
+.progress-toggle-files {
+  font: 600 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-2); white-space: nowrap;
+}
+.progress-toggle.is-running .progress-toggle-files { color: var(--text-2); }
+.progress-toggle-caret {
+  font-size: 10px; color: var(--text-3);
+  transition: transform 0.15s;
+  display: inline-flex; align-items: center;
+}
+.progress-toggle-caret.open { transform: rotate(180deg); }
+/* Toggleable Progress Status window: all Images / Videos / Overall bars
+   live in here (topbar itself shows only the toggle). */
+.progress-window-overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: transparent;
+}
+.progress-window {
+  position: absolute; top: calc(100% + 10px); left: 50%;
+  transform: translateX(-50%);
+  z-index: 41;
+  width: min(420px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: smoothIn 0.16s ease;
+}
+.progress-window-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.progress-window-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-2);
+}
+.progress-window-close { padding: 4px 8px; font-size: 12px; }
+.progress-window-body { padding: 12px 14px 14px; }
+/* The bars keep full width inside the window (no longer squeezed inline). */
+.progress-window-body .gen-compact {
+  max-width: none;
+}
+/* Slim single-row progress for the topbar center. */
+.gen-compact {
+  flex-direction: row; align-items: center; gap: 8px;
+  width: 100%; max-width: 560px; min-width: 0;
+  margin: 0;
+}
+/* Stacked tabular variant for an active generation in the topbar:
+   Line 1 = "Generating <project>" + pct,
+   Table  = Images (green) / Videos (blue) / Overall (red) status bars,
+   Line 2 = scene + started/elapsed (left) + remaining (right, below the bars). */
+.gen-compact.gen-stacked {
+  flex-direction: column; align-items: stretch; gap: 3px;
+  padding: 2px 0;
+}
+.gen-compact-row1 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.gen-compact-table {
+  /* One shared grid so the Images / Videos / Overall bars start and end at
+     the exact same x — identical size regardless of label/count lengths. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: center;
+}
+.gen-compact-trow { display: contents; min-width: 0; }
+.gen-compact-trow-main { display: contents; }
+.gen-compact-label {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--text-3);
+  min-width: 52px; white-space: nowrap;
+}
+.gen-compact-table .gen-compact-bar { width: 100%; margin: 0; }
+/* Top menu bars float without the gray track — fill lines only, with a faint
+   outline so the full bar length stays visible even at 0% (no fill yet).
+   A running fill keeps a small nub so the sweep animation reads as activity
+   from the very first second instead of an empty outline. */
+.gen-compact-table .progress-bar.gen-compact-bar {
+  background: transparent;
+  border-color: var(--line);
+}
+.gen-compact-table .progress-fill.sweep {
+  min-width: 10px;
+}
+.gen-compact-count {
+  font: 600 9px var(--mono); color: var(--text-2); text-align: right;
+  min-width: 48px; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+/* Per-row fill identity (pipeline pattern): Images cyan, Videos blue,
+   Overall emerald. Red is reserved for failed state only. */
+.progress-fill.fill-images { background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%); }
+.progress-fill.fill-videos { background: linear-gradient(90deg, var(--vid) 0%, var(--vid-2) 100%); }
+.progress-fill.fill-overall { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%); }
+/* Full Run-card variant: total Remaining on its own right-aligned line
+   just below the progress bar. */
+.gen-progress-remaining {
+  display: block; text-align: right;
+  font-size: 11.5px; color: var(--text-3);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.gen-compact-title {
+  font-size: 10px; font-weight: 650; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 220px; flex: none;
+}
+.gen-compact-pct { font: 700 10px var(--mono); font-variant-numeric: tabular-nums; }
+.gen-compact-bar { flex: 1; min-width: 60px; }
+.gen-compact-sub {
+  font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.gen-idle { justify-content: center; opacity: 0.75; }
+@media (max-width: 1020px) {
+  .gen-compact-sub { display: none; }
+  .gen-compact-trow.trow-detail { display: none; }
+  .gen-compact.gen-stacked { justify-content: center; }
+}
+@media (max-width: 760px) {
+  .gen-compact-title { display: none; }
+  .topbar-center { padding: 0 4px; }
+}
+.gen-progress-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.gen-progress-title { font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+.gen-progress-pct { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+.gen-progress-meta { font-variant-numeric: tabular-nums; }
+.progress-fill.failed { background: linear-gradient(90deg, var(--err) 0%, #fca5a5 100%); }
+.progress-fill.cancelled { background: linear-gradient(90deg, var(--warn) 0%, #fde68a 100%); }
 .progress { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; }
 .progress-bar {
-  height: 5px; border-radius: 99px; background: var(--inset);
+  height: var(--bar-h); border-radius: 99px; background: var(--bar-track);
   overflow: hidden; border: 1px solid var(--line);
 }
 .progress-fill {
+  position: relative; overflow: hidden;
   height: 100%; border-radius: 99px;
   background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
-  transition: width 0.4s ease;
+  transition: width 0.5s ease;
+}
+/* live left-to-right sweep while a generation is running (gray track stays
+   visible ahead of the fill) */
+.progress-fill.sweep::after,
+.shotlist-live .progress-fill::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+@keyframes barSweep {
+  to { transform: translateX(101%); }
 }
 .progress-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); }
 .progress-meta .muted { font-variant-numeric: tabular-nums; }
@@ -890,6 +1474,35 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .theme-toggle:hover { color: var(--text); background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
 
+/* topbar theme color picker — same footprint as the theme toggle; the
+   native color input stays invisible, the swatch shows the saved color. */
+.theme-color {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  cursor: pointer; margin: 0;
+}
+.theme-color:hover { background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
+.theme-color-swatch {
+  width: 18px; height: 18px; border-radius: 6px; flex: none;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.theme-color input[type="color"] {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+  padding: 0; border: 0; background: none;
+}
+.theme-color-reset {
+  position: relative; z-index: 1;
+  padding: 1px 5px; font-size: 10px; line-height: 1.4;
+  border-radius: 6px;
+}
+
 /* topbar user chip */
 .user-chip {
   display: flex; align-items: center; gap: 8px;
@@ -912,14 +1525,811 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .user-chip .icon-btn { padding: 4px; }
 
 /* ============================================================
+   Top nav (Home / Projects)
+   ============================================================ */
+.topnav { display: flex; align-items: center; gap: 2px; margin-left: 6px; }
+.topnav-btn {
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-2); border-radius: var(--radius-s);
+  padding: 6px 13px; font-size: 13px; font-weight: 600;
+}
+.topnav-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.topnav-btn.on {
+  background: var(--accent-soft); color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent-2); outline-offset: 2px;
+}
+
+/* ============================================================
+   Home dashboard
+   ============================================================ */
+.home-wrap { grid-column: 1 / -1; min-width: 0; }
+.home { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* compact hero */
+.hero {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 20px 22px;
+}
+.hero-text { flex: 1; min-width: 220px; }
+.hero-text h1 {
+  margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+}
+.hero-text p { margin: 0; font-size: 13px; color: var(--text-2); }
+.hero-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.hero-cta { padding: 10px 18px; font-size: 13.5px; }
+
+/* system status strip */
+.sys-status {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.sys-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--text-3); white-space: nowrap;
+}
+.sys-item .dot { background: var(--text-3); }
+.sys-item:has(.sys-state.ok) .dot { background: var(--ok); }
+.sys-item:has(.sys-state.err) .dot { background: var(--err); }
+.sys-label { font-weight: 600; }
+.sys-state { font-weight: 600; }
+.sys-state.ok { color: var(--ok); }
+.sys-state.err { color: var(--err); }
+
+/* statistics */
+.stat-row {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 14px 18px;
+}
+.stat-value {
+  font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label { font-size: 12px; color: var(--text-3); font-weight: 600; }
+
+/* toolbar */
+.toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.toolbar h2 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
+.toolbar-controls {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.toolbar-controls select { width: auto; }
+.search-wrap { position: relative; }
+.search-wrap svg {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); pointer-events: none;
+}
+.search-wrap input { padding-left: 30px; width: 210px; }
+.search-wrap input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+
+/* project grid: 3-4 cols desktop, 2 tablet, 1 mobile — no fixed widths */
+.proj-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.proj-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+/* Actively generating card: accent ring + soft glow so the running project
+   stands out in the Recent Projects grid at a glance. */
+.proj-card.generating {
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--accent-line), 0 0 24px -6px var(--accent-soft);
+}
+.proj-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--inset);
+  border-bottom: 1px solid var(--line);
+}
+/* Absolute positioning: a height derived from aspect-ratio is not a definite
+   size, so height:100% on in-flow children resolves to auto and tall portrait
+   images stretch the box. Inset-positioned children size against the ratio
+   box correctly and object-fit crops them to 16:9. */
+.proj-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.proj-thumb-fallback {
+  display: grid; place-items: center;
+  color: var(--text-3);
+}
+/* Generating overlay on the card thumbnail: solid background so it stays
+   readable over any bright/dark image (the default translucent pill
+   washes out on top of thumbnails). */
+.proj-gen {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.proj-gen .dot { background: #fff; }
+.proj-menu { position: absolute; top: 6px; right: 6px; }
+.proj-menu-btn {
+  background: rgba(0, 0, 0, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #fff !important;
+  width: 28px; height: 28px; padding: 0 !important;
+}
+.proj-menu-btn:hover { background: rgba(0, 0, 0, 0.8) !important; }
+.menu {
+  position: absolute; right: 0; top: 32px; z-index: 10;
+  min-width: 150px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-2);
+  padding: 4px;
+  display: flex; flex-direction: column;
+}
+.menu-item {
+  background: transparent; border: 0; border-radius: 6px;
+  justify-content: flex-start;
+  padding: 8px 10px; font-weight: 550; font-size: 12.5px;
+  color: var(--text-2); width: 100%;
+}
+.menu-item:hover { background: var(--surface-2); color: var(--text); }
+.menu-item.danger { color: var(--err); }
+.menu-item.danger:hover { background: var(--err-soft); }
+
+.proj-body {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px 16px; min-width: 0;
+}
+.proj-name {
+  background: none; border: 0; padding: 0;
+  font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em;
+  color: var(--text); text-align: left; justify-content: flex-start;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; width: 100%;
+}
+.proj-name:hover { background: none; color: var(--accent-2); }
+.proj-desc {
+  margin: 0; font-size: 12.5px; color: var(--text-3); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.proj-status-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.proj-status { font-size: 11px; }
+.proj-progress-num {
+  font: 600 11.5px var(--mono); color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.proj-progress { margin: 0; }
+.proj-counts {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 12px; color: var(--text-2);
+}
+.proj-counts span { display: inline-flex; align-items: center; gap: 5px; }
+.proj-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 2px; font-size: 12px;
+}
+.proj-continue { padding: 7px 16px; font-size: 12.5px; }
+
+/* dialog */
+.overlay {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.dialog {
+  width: 100%; max-width: 520px; max-height: calc(100vh - 60px); overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  padding: 20px 22px;
+}
+.dialog-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.dialog-head h2 { margin: 0; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; }
+.dialog .card-desc { margin: 6px 0 4px; }
+.dialog-2col { display: grid; grid-template-columns: 1fr 130px; gap: 12px; }
+.dialog-error { margin: 10px 0 0; font-size: 12.5px; }
+.dialog-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 16px;
+}
+
+/* skeleton loading */
+.skeleton { pointer-events: none; }
+.sk-media { aspect-ratio: 16 / 9; background: var(--surface-2); }
+.sk-line {
+  height: 12px; border-radius: 6px; background: var(--surface-2);
+  margin: 14px 16px 0;
+}
+.sk-line.sk-title { height: 16px; width: 60%; }
+.sk-line.sk-short { width: 40%; margin-bottom: 16px; }
+.skeleton .sk-media, .skeleton .sk-line {
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.home-loading-note {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px; font-size: 12.5px; color: var(--text-3);
+}
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 1280px) {
   .shell { grid-template-columns: 280px minmax(0, 1fr) minmax(340px, 400px); }
-  .shell.no-sidebar { grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); }
+  .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(340px, 400px); }
+  .shell.no-right { grid-template-columns: 280px minmax(0, 1fr) auto; }
+  .shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+@media (max-width: 1180px) {
+  /* Service pills stay in one horizontal row — allow the bar to wrap
+     instead of overflowing on narrower widths. */
+  .topbar { flex-wrap: wrap; row-gap: 8px; }
+  .topbar-health { flex-wrap: wrap; row-gap: 4px; }
+  .topbar-right { flex-wrap: wrap; row-gap: 6px; }
 }
 @media (max-width: 1020px) {
   .shell { grid-template-columns: 1fr; }
+  .shell.no-sidebar { grid-template-columns: 1fr; }
+  .shell.no-right { grid-template-columns: 1fr; }
+  .shell.no-sidebar.no-right { grid-template-columns: 1fr; }
+  .sidebar-show { flex-direction: row; position: static; width: 100%; }
+  .sidebar-show-label { writing-mode: horizontal-tb; }
   .sidebar { position: static; max-height: none; }
   .brand-sub { display: none; }
 }
+@media (max-width: 760px) {
+  .hero { flex-direction: column; align-items: stretch; }
+  .hero-side { align-items: stretch; }
+  .hero-cta { width: 100%; }
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toolbar-controls { margin-left: 0; width: 100%; }
+  .search-wrap { flex: 1; min-width: 160px; }
+  .search-wrap input { width: 100%; }
+  .dialog-2col { grid-template-columns: 1fr; }
+  .topnav { margin-left: 0; }
+}
+
+/* ============================================================
+   Shot List — central production-control screen.
+   Reuses the Sanskriti tokens above (surface/line/text/accent,
+   radius, pills, progress bars). No new palette.
+   ============================================================ */
+.shotlist { padding: 18px; }
+.shotlist-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.shotlist-head-left { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.shotlist-head-left .head-icon { display: grid; place-items: center; margin-top: 3px; }
+.shotlist-kicker {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 2px;
+}
+.shotlist-title {
+  margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+}
+.shotlist-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--text-3); }
+.shotlist-head-right { display: flex; align-items: center; gap: 8px; flex: none; }
+.shotlist.collapsed .shotlist-head { margin-bottom: 0; }
+.shotlist-of {
+  font: 700 12px var(--mono); letter-spacing: 0.06em;
+  color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.shotlist-edit { padding: 6px 14px; font-size: 12.5px; }
+
+/* persistent per-project progress */
+.shotlist-progress {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.shotlist-progress-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.shotlist-progress-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.shotlist-progress-pct { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; }
+.shotlist-progress-meta {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--text-3); margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.shotlist-live {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.shotlist-live-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.shotlist-live-title {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 650; color: var(--accent-2);
+}
+.shotlist-live-pct { font: 700 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+
+/* compact summary — same card language, small type */
+.shotlist-stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  margin-bottom: 12px;
+}
+.shotlist-stat {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 1px;
+  min-width: 0;
+}
+.shotlist-stat-value {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.shotlist-stat-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* scene filter tabs */
+.shotlist-scenes {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.shotlist-scene {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; font-size: 12.5px;
+}
+.shotlist-scene .dot { background: var(--text-3); }
+.shotlist-scene .dot.ok { background: var(--ok); }
+.shotlist-scene.on {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(16, 185, 129, 0.12);
+}
+
+/* rounded shot-list container.
+   ONE shared column template — Shot | Media | Description | Status |
+   Duration | Action — used identically by the header row and every data
+   row, so headers always sit exactly above their content. The container
+   scrolls horizontally on narrow widths; columns never squeeze. */
+.shotlist-list {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  /* Single scroll container for the whole table (header + rows), so all
+     six columns always move together horizontally and vertically. */
+  overflow: auto;
+  max-height: 620px;
+  /* Compact grid sized to fit the Story Board card (~740px center column):
+     no min-width, description is the only flexible track. */
+  --shot-grid-columns: 40px 150px minmax(0, 1fr) 112px 58px 140px;
+}
+.shotlist-row-head {
+  display: grid;
+  grid-template-columns: var(--shot-grid-columns);
+  gap: 8px; align-items: center;
+  padding: 8px 12px;
+  position: sticky; top: 0; z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+/* Header cells never wrap — each stays on one line inside its column,
+   left-aligned above its content (Duration right-aligned). */
+.shotlist-head-cell {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  /* Centered over its column content (Media over the thumbnail pair,
+     Description over the title, Status over the status lines, Duration
+     over the value, Action over the buttons). Shot stays left. */
+  text-align: center;
+}
+.shotlist-head-cell:first-child { text-align: left; }
+/* Each shot wrapper IS the grid row: its first row holds the 6 data cells
+   (via display:contents on .shotlist-row) and the expanded editor spans
+   the full width below as grid-column 1 / -1 — alignment never shifts. */
+.shotlist-row-wrap {
+  display: grid;
+  grid-template-columns: var(--shot-grid-columns);
+  gap: 8px; align-items: start;
+  padding: 10px 12px;
+}
+.shotlist-row { display: contents; }
+.shotlist-row-wrap + .shotlist-row-wrap { border-top: 1px solid var(--line); }
+.shotlist-row-wrap:hover { background: rgba(255, 255, 255, 0.015); }
+:root[data-theme="light"] .shotlist-row-wrap:hover { background: rgba(60, 50, 30, 0.03); }
+.shotlist-shot {
+  font: 700 12.5px var(--mono); color: var(--text);
+  font-variant-numeric: tabular-nums;
+  padding-top: 15px;
+  white-space: nowrap;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+/* MEDIA column — IMAGE + VIDEO previews live here only, side by side,
+   capped at the 150px column width so they never overlap Description. */
+.shotlist-media {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  max-width: 150px; min-width: 0;
+  /* Group box — the scene's image + video thumbs share one bordered
+     container so the pair reads as a single group. */
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-media);
+  padding: 6px;
+}
+.shotlist-media-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.shotlist-media-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+  white-space: nowrap;
+}
+.shotlist-thumb {
+  position: relative; flex: none;
+  width: 100%; height: 46px; border-radius: var(--radius-media); overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  cursor: zoom-in;
+}
+.shotlist-thumb img, .shotlist-thumb video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.shotlist-thumb:hover { border-color: var(--btn-hover-line); }
+.shotlist-thumb-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--text-3); cursor: default;
+}
+.shotlist-thumb-pending { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
+.shotlist-thumb-play {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: #fff; background: none; pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+}
+/* Generating status overlay on the thumbnail being produced right now —
+   bottom strip with a blinking spinner so the in-flight Scene/Video reads
+   as generating even before its file lands. */
+.shotlist-thumb.is-generating { border-color: var(--accent-line); }
+.shotlist-thumb-gen {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 1px 2px;
+  background: rgba(0, 0, 0, 0.68);
+  color: var(--accent-2);
+  font: 700 9px/1.6 var(--mono); white-space: nowrap;
+  pointer-events: none;
+}
+.shotlist-thumb-tag {
+  position: absolute; top: 2px; right: 2px; z-index: 1;
+  padding: 0 5px; border-radius: 5px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff; font: 700 9.5px/1.6 var(--mono);
+  pointer-events: none; white-space: nowrap;
+}
+/* DESCRIPTION column — the flexible area. Title on one line, prompt
+   clamped to 3 lines so long text never pushes other columns around. */
+.shotlist-desc {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0; padding-top: 1px;
+}
+.shotlist-desc-title {
+  font: 600 12px var(--mono); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.shotlist-desc-text {
+  min-width: 0;
+  font-size: 12.5px; color: var(--text-2); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shotlist-dur {
+  font: 600 12px var(--mono); color: var(--text-2);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  text-align: center; padding-top: 3px;
+}
+
+/* STATUS column — image + video states stacked, compact typography,
+   existing status colors untouched. */
+.shotlist-status { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 2px; }
+.shotlist-st { display: flex; align-items: center; gap: 5px; font-size: 11px; min-width: 0; }
+.shotlist-st-tag {
+  flex: none; width: 34px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.shotlist-st-val {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 600; color: var(--text-2); white-space: nowrap;
+}
+.shotlist-st-val .dot { width: 6px; height: 6px; background: var(--accent-2); }
+.shotlist-st-ok .shotlist-st-val { color: var(--ok); }
+.shotlist-st-run .shotlist-st-val { color: var(--accent-2); }
+.shotlist-st-err .shotlist-st-val { color: var(--err); }
+
+/* ACTION column — compact buttons, left-aligned under the Action header,
+   wrapping into two short rows instead of three full-width bars. */
+.shotlist-actions {
+  display: flex; flex-direction: row; gap: 5px;
+  align-items: flex-start; align-content: flex-start; justify-content: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.shotlist-btn {
+  padding: 3px 9px; font-size: 11px; font-weight: 600;
+  white-space: nowrap; width: auto; flex: none; justify-content: center;
+}
+.shotlist-btn:disabled { opacity: 0.4; }
+
+/* expanded Details / Edit — full-width panel below the row
+   (grid-column 1 / -1), slightly lighter than the row, subtle border,
+   comfortable padding, no excessive shadow. */
+.shotlist-detail {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  animation: smoothIn 0.18s ease;
+  min-width: 0;
+}
+.shotlist-detail-title {
+  font: 700 12px var(--mono); color: var(--text);
+  margin-bottom: 8px; letter-spacing: 0;
+}
+.shotlist-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.shotlist-detail-grid p {
+  margin: 4px 0 0; font-size: 12px; color: var(--text-2);
+  white-space: pre-wrap; word-break: break-word; line-height: 1.55;
+}
+.shotlist-detail-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.shotlist-detail-meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 11.5px; font-family: var(--mono);
+}
+.shotlist-foot {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; font-size: 12px;
+}
+
+@media (max-width: 1280px) {
+  .shotlist-list { --shot-grid-columns: 36px 128px minmax(0, 1fr) 104px 54px 128px; }
+  .shotlist-row-head,
+  .shotlist-row-wrap { gap: 6px; }
+  .shotlist-thumb { height: 42px; }
+}
+@media (max-width: 1020px) {
+  /* Desktop-first table: keep the identical 6-column grid at small widths
+     and scroll the table container horizontally — never squeeze, never
+     stack cells, never hide the header. */
+  .shotlist-list { max-height: none; }
+  .shotlist-detail-grid { grid-template-columns: 1fr; }
+  .shotlist-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ============================================================
+   RenderMonitor — broadcast-style program monitor
+   (PROGRAM viewport + pass/step/speed/ETA/total/queue stats +
+   REF / keyframe / clip / CUT frame grids + console).
+   Presentation only: every number is fed by RunPanel's live run
+   state (progress + asset stream + log), never fake timers.
+   ============================================================ */
+.rm { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.rm-screen {
+  background: #0a0c12;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+:root[data-theme="light"] .rm-screen { background: #10131b; }
+.rm-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+}
+.rm-program {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  color: #cbd5e1;
+}
+.rm-monitor-icon { color: #64748b; font-size: 12px; }
+.rm-live {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+  padding: 2px 9px; border-radius: 6px;
+  background: rgba(148, 163, 184, 0.14); color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.rm-live .dot { width: 6px; height: 6px; background: currentColor; }
+.rm-live.on { background: rgba(239, 68, 68, 0.9); border-color: transparent; color: #fff; }
+.rm-stage {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em;
+  padding: 2px 9px; border-radius: 6px; white-space: nowrap;
+  background: rgba(168, 85, 247, 0.18); color: #c4b5fd;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
+.rm-stage-video { background: rgba(59, 130, 246, 0.16); color: #93c5fd; border-color: rgba(59, 130, 246, 0.45); }
+.rm-stage-cut { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+.rm-timer {
+  font: 700 12px var(--mono); color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px; padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.rm-viewport {
+  position: relative;
+  min-height: 240px;
+  display: grid; place-items: center;
+  background: #000;
+  /* corner brackets (broadcast viewfinder) */
+}
+.rm-viewport::before, .rm-viewport::after {
+  content: ""; position: absolute; width: 18px; height: 18px; z-index: 3;
+  border: 1.5px solid rgba(255, 255, 255, 0.35); pointer-events: none;
+}
+.rm-viewport::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+.rm-viewport::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+.rm-media { width: 100%; max-height: 420px; display: block; background: #000; }
+.rm-media-img { width: 100%; max-height: 420px; }
+.rm-media-img img { max-height: 420px; object-fit: contain; background: #000; }
+.rm-rendering { text-align: center; padding: 56px 20px; }
+.rm-rendering-title { font-size: 17px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.01em; }
+.rm-rendering-sub { margin-top: 8px; font-size: 12px; color: #7d8aa0; max-width: 420px; }
+.rm-rendering-pill {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.65); border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 99px; padding: 3px 11px; white-space: nowrap;
+  max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis;
+}
+.rm-caption {
+  position: absolute; left: 12px; bottom: 12px; z-index: 2;
+  max-width: min(480px, calc(100% - 24px));
+  background: rgba(0, 0, 0, 0.62);
+  border-left: 2px solid var(--err);
+  border-radius: 0 8px 8px 0;
+  padding: 6px 12px;
+  text-align: left;
+}
+.rm-caption-main {
+  font-size: 12px; font-weight: 700; color: #f1f5f9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rm-caption-sub { font-size: 11px; color: #9aa7bd; }
+.rm-progress { padding: 8px 12px 0; background: #0a0c12; }
+.rm-progress-track {
+  height: 5px; border-radius: 99px; overflow: hidden;
+  background: #232b3a; border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.rm-progress-fill {
+  position: relative; overflow: hidden;
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+  transition: width 0.5s ease;
+}
+.rm-progress-fill.sweep::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+.rm-stats {
+  display: flex; align-items: center; gap: 16px;
+  padding: 8px 14px 10px;
+  background: #0a0c12;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.rm-stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.rm-stat-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #64748b; }
+.rm-stat-value { font: 700 12px var(--mono); color: #e2e8f0; white-space: nowrap; }
+.rm-stat-value.is-total { color: #f59e0b; }
+.rm-frames {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 12px 14px 14px;
+}
+.rm-frames-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.rm-frames-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; }
+.rm-engine button:disabled { opacity: 1; cursor: default; }
+.rm-engine button:not(.on):disabled { opacity: 0.55; }
+.rm-rendering-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; color: var(--err);
+  background: var(--err-soft); border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 99px; padding: 3px 11px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rm-rendering-badge .dot { width: 6px; height: 6px; }
+.rm-current {
+  font-size: 12px; font-weight: 700; color: var(--err);
+  margin: 0 0 10px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rm-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .rm-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.rm-col-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-3); margin-bottom: 6px; white-space: nowrap;
+}
+.rm-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.rm-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 26px; padding: 3px 7px;
+  font: 700 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+}
+.rm-chip.is-done {
+  color: #34d399; background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+.rm-chip.is-active {
+  color: #fff; background: rgba(239, 68, 68, 0.85);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+/* Pinned in the PROGRAM viewport (clicked chip) — accent outline so it
+   reads apart from the red in-flight highlight and green done state. */
+.rm-chip.is-selected {
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+/* Pending slots render as chips but aren't clickable — keep them neutral
+   on hover instead of picking up the global button accent glow. */
+button.rm-chip:disabled:hover { background: transparent; border-color: var(--line-2); box-shadow: none; filter: none; }
+:root[data-theme="light"] .rm-chip.is-done { color: #047857; }
+.rm-counts { margin-top: 10px; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.rm-empty-note { color: var(--text-3); font-size: 12px; }
+.rm-console-toggle {
+  margin-top: 10px; background: transparent; border: 0; color: var(--text-2);
+  font-size: 12.5px; font-weight: 600; padding: 4px 0;
+}
+.rm-console-toggle:hover { color: var(--text); background: transparent; border: 0; box-shadow: none; filter: none; }
+.rm-console-caret { display: inline-block; color: var(--text-3); margin-right: 4px; transition: transform 0.15s; }
+.rm-console-caret.open { transform: rotate(90deg); }
+.rm-console { margin-top: 6px; max-height: 220px; }

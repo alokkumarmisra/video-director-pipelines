@@ -225,6 +225,21 @@ export const IconExpand = (p: P) => (
   </svg>
 );
 
+export const IconDots = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconSearch = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4.3-4.3" />
+  </svg>
+);
+
 export const Spinner = ({ size = 14, ...props }: P) => (
   <svg
     width={size}

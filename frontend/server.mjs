@@ -36,6 +36,22 @@ const readFavs = () => {
   try { return JSON.parse(fs.readFileSync(FAVS, "utf8")).names; }
   catch { return []; }
 };
+// UI theme persisted in a file (data/theme.json) so the chosen mode + accent
+// color survive reloads, restarts and browsers — localStorage is only a cache.
+// Shape: { mode: "dark" | "light", color: "" | "#rrggbb" }.
+const THEME_FILE = path.join(ROOT, "data", "theme.json");
+const readThemeFile = () => {
+  try {
+    const t = JSON.parse(fs.readFileSync(THEME_FILE, "utf8"));
+    const mode = t.mode === "light" ? "light" : "dark";
+    const color = typeof t.color === "string" && /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : "";
+    return { mode, color };
+  } catch { return { mode: "dark", color: "" }; }
+};
+const writeThemeFile = (t) => {
+  fs.mkdirSync(path.dirname(THEME_FILE), { recursive: true });
+  fs.writeFileSync(THEME_FILE, JSON.stringify(t, null, 2));
+};
 // ---------------------------------------------------------------- scenarios store
 // Scenario configs live in Postgres (scenarios table) by default — SQLite is
 // NOT used unless explicitly enabled. Set USE_SQLITE=true in the root .env to
@@ -105,6 +121,94 @@ const dbDeleteScenario = async (name) => {
   if (USE_SQLITE) { db.prepare("DELETE FROM scenarios WHERE name = ?").run(name); return; }
   await pgPool.query("DELETE FROM scenarios WHERE name = $1", [name]);
 };
+// Escape LIKE wildcards in user-chosen names (spaces, %, _ … are all legal).
+const pgLike = (s) => String(s).replace(/[\\%_]/g, (c) => `\\${c}`);
+// Rename a project across the name-keyed catalog rows. project_assets needs
+// no change (keyed by project_id — only projects.name moves). Filenames
+// embed the scenario prefix, so swap the LEADING "<old>_" / "<old>_wan_"
+// only — never a blind substring replace (beat titles can contain anything).
+async function pgRenameRows(oldName, newName) {
+  const now = Date.now();
+  await pgPool.query("UPDATE scenarios SET name = $2, updated_at_ms = $3 WHERE name = $1", [oldName, newName, now]);
+  await pgPool.query("UPDATE scenario_versions SET name = $2 WHERE name = $1", [oldName, newName]);
+  await pgPool.query("UPDATE projects SET name = $2, updated_at = now() WHERE name = $1", [oldName, newName]);
+  await pgPool.query(
+    `UPDATE assets SET
+       scenario = CASE WHEN scenario = $1 THEN $2 ELSE $2 || '_wan' END,
+       file = CASE
+         WHEN file LIKE $3 || '\\_%' ESCAPE '\\' THEN $4 || substr(file, length($3) + 2)
+         WHEN file LIKE $5 || '\\_%' ESCAPE '\\' THEN $6 || substr(file, length($5) + 2)
+         ELSE file END,
+       rel_path = CASE
+         WHEN rel_path LIKE $7 || '%' ESCAPE '\\' THEN $8 || substr(rel_path, length($7) + 1)
+         WHEN rel_path LIKE $9 || '%' ESCAPE '\\' THEN $10 || substr(rel_path, length($9) + 1)
+         ELSE rel_path END
+     WHERE scenario = $1 OR scenario = $1 || '_wan'`,
+    [oldName, newName,
+     pgLike(oldName), newName, pgLike(`${oldName}_wan`), `${newName}_wan`,
+     pgLike(`outputs/${oldName}/`), `outputs/${newName}/`,
+     pgLike(`outputs/${oldName}_wan/`), `outputs/${newName}_wan/`]);
+}
+async function dbRenameScenario(oldName, newName) {
+  if (USE_SQLITE) {
+    // SQLite mode only has the scenarios table (versions/catalog are PG-only).
+    db.prepare("UPDATE scenarios SET name = ?, updated_at = ? WHERE name = ?").run(newName, Date.now(), oldName);
+    return;
+  }
+  if (!pgUp) throw new Error("database unavailable");
+  await pgRenameRows(oldName, newName);
+}
+async function pgRenameScenarioMirror(oldName, newName) {
+  if (!pgUp) return;
+  await pgRenameRows(oldName, newName);
+}
+// Swap a leading filename prefix ("<old>_" -> "<new>_"); anything else
+// (state.json, foreign files) passes through untouched.
+const swapPrefix = (file, oldPrefix, newPrefix) =>
+  (typeof file === "string" && file.startsWith(oldPrefix)) ? newPrefix + file.slice(oldPrefix.length) : file;
+// Move prompts/<old>.json + outputs/<old>[/_wan] to the new name, swapping
+// the embedded filename prefix and state.json mains (generated files are
+// namespaced "<name>_" / "<name>_wan_"). Throws before touching anything
+// when a target dir already exists (checked by the caller too).
+function renameScenarioFiles(oldName, newName) {
+  const pj = path.join(PROMPTS, oldName + ".json");
+  if (fs.existsSync(pj)) fs.renameSync(pj, path.join(PROMPTS, newName + ".json"));
+  for (const suffix of ["", "_wan"]) {
+    const oldDir = path.join(OUTPUTS, oldName + suffix);
+    if (!fs.existsSync(oldDir)) continue;
+    const newDir = path.join(OUTPUTS, newName + suffix);
+    if (fs.existsSync(newDir)) throw new Error(`outputs folder ${newName + suffix} already exists`);
+    const from = oldName + suffix + "_";
+    const to = newName + suffix + "_";
+    for (const f of fs.readdirSync(oldDir)) {
+      const swapped = swapPrefix(f, from, to);
+      if (swapped !== f) fs.renameSync(path.join(oldDir, f), path.join(oldDir, swapped));
+    }
+    // state.json mains reference filenames — swap the same prefix. A corrupt
+    // file is left alone (versionMap falls back to latest-on-disk).
+    const sf = path.join(oldDir, "state.json");
+    if (fs.existsSync(sf)) {
+      try {
+        const st = JSON.parse(fs.readFileSync(sf, "utf8"));
+        if (st && typeof st === "object") {
+          if (st.ref) st.ref = swapPrefix(st.ref, from, to);
+          if (st.final) st.final = swapPrefix(st.final, from, to);
+          if (st.beats && typeof st.beats === "object") {
+            for (const k of Object.keys(st.beats)) {
+              const b = st.beats[k];
+              if (b && typeof b === "object") {
+                if (b.keyframe) b.keyframe = swapPrefix(b.keyframe, from, to);
+                if (b.clip) b.clip = swapPrefix(b.clip, from, to);
+              }
+            }
+          }
+          fs.writeFileSync(sf, JSON.stringify(st, null, 2));
+        }
+      } catch { /* keep old mains */ }
+    }
+    fs.renameSync(oldDir, newDir);
+  }
+}
 
 // ---------------------------------------------------------------- pg catalog
 // Every generated image/video is indexed in Postgres `video_generator`
@@ -156,8 +260,6 @@ CREATE TABLE IF NOT EXISTS projects (
   project_id SERIAL UNIQUE,
   name TEXT PRIMARY KEY,
   description TEXT,
-  topic TEXT,
-  requirements TEXT,
   duration INT,
   beats INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -400,13 +502,13 @@ async function pgProjectId(name) {
 async function pgEnsureProject(name, cfg) {
   const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
   const proj = await pgPool.query(
-    `INSERT INTO projects (name, description, topic, requirements, duration, beats, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, now())
-     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, topic = EXCLUDED.topic,
-       requirements = EXCLUDED.requirements, duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+    `INSERT INTO projects (name, description, duration, beats, updated_at)
+     VALUES ($1, $2, $3, $4, now())
+     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
+       duration = EXCLUDED.duration, beats = EXCLUDED.beats,
        updated_at = now()
      RETURNING project_id`,
-    [name, cfg.description ?? null, cfg.topic ?? null, cfg.requirements ?? null,
+    [name, cfg.description ?? null,
      Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length]);
   const projectId = proj.rows[0]?.project_id;
   if (projectId == null) throw new Error(`pgEnsureProject: no project_id for ${name}`);
@@ -601,13 +703,13 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
     const version = vRow.rows[0].version;
     const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
     const proj = await client.query(
-      `INSERT INTO projects (name, description, topic, requirements, duration, beats, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())
-       ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, topic = EXCLUDED.topic,
-         requirements = EXCLUDED.requirements, duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+      `INSERT INTO projects (name, description, duration, beats, updated_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
+         duration = EXCLUDED.duration, beats = EXCLUDED.beats,
          updated_at = now()
        RETURNING project_id`,
-      [name, cfg.description ?? null, cfg.topic ?? null, cfg.requirements ?? null,
+      [name, cfg.description ?? null,
         Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length]);
     const projectId = proj.rows[0]?.project_id;
     if (projectId == null) throw new Error(`pgSaveVersionDelta: no project_id for ${name}`);
@@ -934,6 +1036,17 @@ async function pgInit() {
         `UPDATE projects SET project_id = nextval(pg_get_serial_sequence('projects', 'project_id'))
          WHERE project_id IS NULL`);
     } catch (e) { console.warn("[pg] projects id backfill failed:", e.message); }
+    // Retired brief fields: Song/Topic + Lyrics/Requirements no longer exist
+    // in the UI or the Scenario model. Drop the columns and strip the keys
+    // from every stored config so no stale data lingers.
+    try {
+      await pgPool.query(`ALTER TABLE projects DROP COLUMN IF EXISTS topic`);
+      await pgPool.query(`ALTER TABLE projects DROP COLUMN IF EXISTS requirements`);
+    } catch (e) { console.warn("[pg] projects topic/requirements drop failed:", e.message); }
+    try {
+      await pgPool.query(`UPDATE scenarios SET config = (config - 'topic' - 'requirements') WHERE config ?| ARRAY['topic','requirements']`);
+      await pgPool.query(`UPDATE scenario_versions SET config = (config - 'topic' - 'requirements') WHERE config ?| ARRAY['topic','requirements']`);
+    } catch (e) { console.warn("[pg] scenario topic/requirements strip failed:", e.message); }
     await syncAllToPg();
   } catch (e) { console.warn("[pg] init failed:", e.message); }
 }
@@ -979,7 +1092,15 @@ function sessionCookie(token, maxAgeSec) {
 }
 
 // ---------------------------------------------------------------- helpers
-const isSafe = (name) => !name.includes("..") && !name.includes("/") && !name.includes("\\");
+const isSafe = (name) => typeof name === "string" && name.length > 0 && !name.includes("..") && !name.includes("/") && !name.includes("\\");
+// Path segments arrive percent-encoded (spaces stay %20 in u.pathname), so
+// decode before any DB/FS use — plain-text project names must work
+// end-to-end. Runs AFTER isSafe-relevant checks happen on the decoded value.
+// Malformed sequences decode to "" (rejected by isSafe).
+const pathName = (seg) => {
+  try { return decodeURIComponent(seg || ""); }
+  catch { return ""; }
+};
 const json = (res, code, data) => {
   // Never let the browser cache API JSON (a cached empty gallery list from
   // before a fix/backfill would otherwise keep rendering "No outputs yet").
@@ -1014,7 +1135,12 @@ function startRun(scenario, opts = {}) {
     argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
   }
   const id = Date.now().toString(36);
-  const run = { id, scenario, engine, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  // Run shape (stitch/regen/count) is stored on the record — not just the
+  // argv — so a fresh page can reattach after a refresh: GET /api/runs
+  // reveals the active run and the SSE log endpoint replays its log + asset
+  // events, letting the client rebuild progress and button state from the
+  // real stream instead of guessing.
+  const run = { id, scenario, engine, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -1086,6 +1212,206 @@ async function comfyStatus() {
   }
 }
 
+// ---------------------------------------------------------------- LLM status
+async function llmStatus() {
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) return { up: false, error: "LLM_BASE not set" };
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 4000);
+    let r;
+    try { r = await fetch(`${base}/v1/models`, { signal: ctl.signal }); }
+    finally { clearTimeout(t); }
+    if (!r.ok) return { up: false, error: `HTTP ${r.status}` };
+    return { up: true };
+  } catch (e) {
+    return { up: false, error: String(e?.message || e).slice(0, 120) };
+  }
+}
+
+// ---------------------------------------------------------------- dashboard
+// Home-page payload: project list + real per-project progress, aggregated
+// with a fixed number of queries (no N+1):
+//   scenarios (1) + asset coverage GROUP BY (1) + latest image DISTINCT ON (1)
+//   + project created dates (1).
+// When Postgres is down the scenario list falls back to prompts/*.json and
+// coverage falls back to a disk scan, so the Home page still renders — AI
+// services being offline never blocks project data either (health is a
+// separate endpoint). Error details stay server-side (logs), the client only
+// gets "dashboard unavailable".
+const folderProject = (folder) => (String(folder).endsWith("_wan") ? String(folder).slice(0, -4) : String(folder));
+const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null });
+
+// Disk coverage for one project dir (PG-down fallback + thumbnail existence).
+// Prefers the ltx dir, then the _wan dir; thumbnail = highest-beat keyframe
+// main, else the reference main.
+function diskCoverageFor(name, cfg) {
+  const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+  const cov = newCoverage();
+  for (const dir of [name, `${name}_wan`]) {
+    const full = path.join(OUTPUTS, dir);
+    if (!fs.existsSync(full)) continue;
+    let vm = null;
+    try { vm = versionMap(full, prefixFor(dir), seq); } catch { vm = null; }
+    if (!vm) continue;
+    if (vm.refMain) {
+      cov.ref = true;
+      cov.thumb ||= { dir, file: vm.refMain };
+    }
+    for (const [n, b] of Object.entries(vm.beats || {})) {
+      if (b.keyframeMain) {
+        cov.kf.add(Number(n));
+        cov.thumb = { dir, file: b.keyframeMain }; // beats iterate ascending — last wins = highest beat
+      }
+      if (b.clipMain) cov.clips.add(Number(n));
+    }
+    if (vm.finalMain) cov.final = true;
+    if (cov.thumb && cov.thumb.dir === dir && cov.kf.size) break; // ltx dir already has keyframes
+  }
+  return cov;
+}
+
+async function dashboardPayload() {
+  // 1) Scenario list (PG canonical; prompts/*.json fallback when PG is down).
+  let rows;
+  try {
+    rows = (await dbListScenarios()).map((r) => ({
+      name: r.name, configText: String(r.config), updated_at: Number(r.updated_at),
+    }));
+  } catch (e) {
+    console.warn("[dashboard] scenario store unreachable, falling back to prompts/*.json");
+    rows = [];
+    try {
+      fs.mkdirSync(PROMPTS, { recursive: true });
+      for (const f of fs.readdirSync(PROMPTS).filter((f) => f.endsWith(".json"))) {
+        const full = path.join(PROMPTS, f);
+        try {
+          rows.push({ name: f.replace(/\.json$/, ""), configText: fs.readFileSync(full, "utf8"), updated_at: Math.round(fs.statSync(full).mtimeMs) });
+        } catch { /* skip unreadable prompt files */ }
+      }
+    } catch { /* no prompts dir — empty list */ }
+  }
+  const cfgs = new Map();
+  for (const r of rows) {
+    try { cfgs.set(r.name, JSON.parse(r.configText)); }
+    catch { cfgs.set(r.name, null); }
+  }
+  const names = rows.map((r) => r.name);
+  const folders = [...new Set(names.flatMap((n) => [n, `${n}_wan`]))];
+
+  // 2) Coverage from the PG assets catalog (one GROUP BY), else disk scan.
+  const covs = new Map(); // name -> coverage
+  const get = (n) => {
+    let c = covs.get(n);
+    if (!c) { c = newCoverage(); covs.set(n, c); }
+    return c;
+  };
+  let thumbs = new Map();
+  if (pgUp && names.length) {
+    try {
+      const cov = await pgPool.query(
+        `SELECT scenario, kind, beat_index FROM assets
+          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe','clip','final')`,
+        [folders]);
+      for (const row of cov.rows) {
+        const c = get(folderProject(row.scenario));
+        if (row.kind === "reference") c.ref = true;
+        else if (row.kind === "keyframe" && row.beat_index != null) c.kf.add(Number(row.beat_index));
+        else if (row.kind === "clip" && row.beat_index != null) c.clips.add(Number(row.beat_index));
+        else if (row.kind === "final") c.final = true;
+      }
+      const th = await pgPool.query(
+        `SELECT DISTINCT ON (scenario) scenario, file FROM assets
+          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe')
+          ORDER BY scenario, mtime DESC`,
+        [folders]);
+      thumbs = new Map(th.rows.map((r) => [r.scenario, r.file]));
+    } catch (e) {
+      console.warn("[dashboard] asset aggregate failed, using disk scan:", e.message);
+    }
+  }
+  if (!pgUp) {
+    for (const n of names) covs.set(n, diskCoverageFor(n, cfgs.get(n)));
+  } else {
+    // PG was up: fill projects that have no catalog rows from disk (CLI runs
+    // / backfill gaps must never report zero progress), and resolve thumbs.
+    for (const n of names) {
+      const c = get(n);
+      if (!c.ref && !c.kf.size && !c.clips.size && !c.final) {
+        const d = diskCoverageFor(n, cfgs.get(n));
+        if (d.ref || d.kf.size || d.clips.size || d.final) covs.set(n, d);
+      }
+    }
+  }
+
+  // 3) Project created dates + integer ids (one query; nulls when unavailable).
+  let created = new Map();
+  let pids = new Map();
+  if (pgUp && names.length) {
+    try {
+      const r = await pgPool.query("SELECT name, project_id, created_at FROM projects WHERE name = ANY($1)", [names]);
+      created = new Map(r.rows.map((x) => [x.name, x.created_at ? new Date(x.created_at).getTime() : null]));
+      pids = new Map(r.rows.map((x) => [x.name, x.project_id != null ? Number(x.project_id) : null]));
+    } catch (e) { console.warn("[dashboard] projects lookup failed:", e.message); }
+  }
+
+  // 4) Currently generating (in-memory runs — ComfyUI queue is serial).
+  const runningByScenario = new Map();
+  for (const r of runs.values()) {
+    if (r.status === "running" && !runningByScenario.has(r.scenario)) {
+      runningByScenario.set(r.scenario, r);
+      // A _wan run is stored under the base scenario name; also match the
+      // suffixed folder name so both dashboard keys resolve.
+      runningByScenario.set(`${r.scenario}_wan`, r);
+    }
+  }
+  const generating = new Set(runningByScenario.keys());
+
+  const projects = rows.map((r) => {
+    const cfg = cfgs.get(r.name);
+    const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+    const beats = seq.length;
+    const c = covs.get(r.name) || newCoverage();
+    const total = 1 + 2 * beats; // reference + keyframe + clip per beat
+    const done = (c.ref ? 1 : 0) + c.kf.size + c.clips.size;
+    const progress = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    const status = c.final ? "completed" : (done > 0 ? "in_progress" : "draft");
+    // Thumbnail: PG catalog pick, else disk pick; must exist on disk.
+    let thumbFile = thumbs.get(r.name) ?? thumbs.get(`${r.name}_wan`) ?? c.thumb?.file ?? null;
+    let thumbDir = thumbs.has(r.name) ? r.name : (thumbs.has(`${r.name}_wan`) ? `${r.name}_wan` : (c.thumb?.dir ?? r.name));
+    if (thumbFile && !fs.existsSync(path.join(OUTPUTS, thumbDir, thumbFile))) {
+      thumbFile = c.thumb && fs.existsSync(path.join(OUTPUTS, c.thumb.dir, c.thumb.file)) ? c.thumb.file : null;
+      if (thumbFile) thumbDir = c.thumb.dir;
+    }
+    return {
+      name: r.name,
+      project_id: pids.get(r.name) ?? null,
+      description: typeof cfg?.description === "string" ? cfg.description : "",
+      status,
+      generating: generating.has(r.name) || generating.has(`${r.name}_wan`),
+      startedAt: runningByScenario.get(r.name)?.startedAt
+        ?? runningByScenario.get(`${r.name}_wan`)?.startedAt ?? null,
+      progress,
+      sceneCount: beats,
+      imageCount: c.kf.size,
+      videoCount: c.clips.size,
+      refDone: c.ref,
+      hasFinal: c.final,
+      thumbnailUrl: thumbFile ? `/outputs/${thumbDir}/${thumbFile}` : null,
+      createdAt: created.get(r.name) ?? null,
+      updatedAt: Number.isFinite(r.updated_at) ? r.updated_at : null,
+    };
+  }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
+  const statistics = {
+    total: projects.length,
+    active: projects.filter((p) => p.generating).length,
+    inProgress: projects.filter((p) => p.status === "in_progress").length,
+    completed: projects.filter((p) => p.status === "completed").length,
+  };
+  return { statistics, projects };
+}
+
 // ---------------------------------------------------------------- LLM craft
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "scenario";
 
@@ -1102,7 +1428,7 @@ const canonical = (v) => {
 
 /**
  * Ask the local LLM (llama-server, OpenAI-compatible) to craft a
- * character-sequence scenario JSON from a high-level topic + requirements.
+ * character-sequence scenario JSON from a description + master prompt.
  * Format reference is resolved without any file dependency: an existing
  * prompts/*.json or any scenario already in the store (SQLite or Postgres).
  * May be null on a fresh install — craftScenario() then relies on the system
@@ -1139,7 +1465,13 @@ async function loadCraftReference() {
   // falls back to the system schema/rules alone.
   return null;
 }
-async function craftScenario({ topic, requirements = "", name }) {
+async function craftScenario({ description = "", masterPrompt = "", topic = "", requirements = "", name }) {
+  // Legacy callers sent { topic, requirements }; current UI sends
+  // { description, masterPrompt }. Accept both — topic/requirements are NOT
+  // persisted anywhere, they only seed the LLM prompt.
+  const idea = String(description || topic || "").trim();
+  const details = String(masterPrompt || requirements || "").trim();
+  if (!idea) throw new Error("description required");
   const reference = await loadCraftReference();
   const system = [
     "You write ComfyUI video-generation scenario configs. Output ONLY a JSON object, no prose, no markdown fences.",
@@ -1152,8 +1484,8 @@ async function craftScenario({ topic, requirements = "", name }) {
     "duration = seconds per clip (2-5). Titles must be unique, short, snake_case.",
   ].join(" ");
   const user = reference
-    ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\nTopic: ${topic}\nRequirements: ${requirements || "(none)"}`
-    : `New scenario to craft:\nTopic: ${topic}\nRequirements: ${requirements || "(none)"}`;
+    ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\nDescription: ${idea}\nMaster prompt / visual direction: ${details || "(none)"}`
+    : `New scenario to craft:\nDescription: ${idea}\nMaster prompt / visual direction: ${details || "(none)"}`;
   const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1175,12 +1507,17 @@ async function craftScenario({ topic, requirements = "", name }) {
   if (!cfg.referencePrompt || !Array.isArray(cfg.sequence) || !cfg.sequence.length)
     throw new Error("crafted config missing referencePrompt/sequence");
   cfg.duration = Number(cfg.duration) || 3;
+  if (!cfg.description && idea) cfg.description = idea;
+  if (details && !cfg.referencePrompt) cfg.referencePrompt = details;
+  // Never persist legacy brief fields even if the LLM echoes them back.
+  delete cfg.topic;
+  delete cfg.requirements;
   cfg.sequence = cfg.sequence.map((b, i) => ({
     title: slug(b.title) || `beat${i + 1}`,
     image: String(b.image || ""),
     motion: String(b.motion || ""),
   }));
-  const scenarioName = slug(name || topic);
+  const scenarioName = slug(name || idea);
   return { name: scenarioName, config: cfg };
 }
 
@@ -1347,6 +1684,11 @@ const server = http.createServer(async (req, res) => {
       const user = authedUser(req);
       return user ? json(res, 200, { user }) : json(res, 401, { error: "unauthorized" });
     }
+    // Public read so the login screen + first paint already use the saved
+    // theme (writes stay behind auth below).
+    if (p === "/api/theme" && req.method === "GET") {
+      return json(res, 200, readThemeFile());
+    }
 
     // Everything below (API + generated outputs) requires a session.
     if ((p.startsWith("/api/") || p.startsWith("/outputs/")) && !authedUser(req))
@@ -1357,6 +1699,16 @@ const server = http.createServer(async (req, res) => {
       let rows;
       try { rows = await dbListScenarios(); }
       catch (e) { return json(res, 503, { error: "database unavailable" }); }
+      // Integer project ids for the sidebar (desc sort + #id chip). The
+      // scenarios store itself has no project_id column — it lives on the
+      // projects table. Null in SQLite mode / pre-migration rows.
+      let pidMap = new Map();
+      if (pgUp) {
+        try {
+          const pr = await pgPool.query("SELECT name, project_id FROM projects");
+          pidMap = new Map(pr.rows.map((x) => [x.name, Number(x.project_id)]));
+        } catch { /* ids stay null — sidebar falls back to mtime order */ }
+      }
       return json(res, 200, rows.map((r) => {
         const c = JSON.parse(r.config);
         return {
@@ -1366,6 +1718,7 @@ const server = http.createServer(async (req, res) => {
           // epoch-ms number (a string renders as NaN-undefined-NaN).
           mtimeMs: Number(r.updated_at),
           favorite: favs.includes(r.name),
+          project_id: pidMap.has(r.name) ? pidMap.get(r.name) : null,
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
     }
@@ -1377,9 +1730,19 @@ const server = http.createServer(async (req, res) => {
       fs.writeFileSync(FAVS, JSON.stringify({ names: favs }, null, 2));
       return json(res, 200, { ok: true, names: favs });
     }
+    if (p === "/api/theme" && (req.method === "PUT" || req.method === "POST")) {
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const mode = body.mode === "light" ? "light" : "dark";
+      const color = typeof body.color === "string" && /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : "";
+      const t = { mode, color };
+      writeThemeFile(t);
+      return json(res, 200, t);
+    }
     if (p.startsWith("/api/scenario/") && req.method === "GET" && p.split("/")[4] === "versions") {
       const parts = p.split("/");
-      const name = parts[3];
+      const name = pathName(parts[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       if (!pgUp) return json(res, 503, { error: "database unavailable" });
       if (parts.length >= 6 && parts[5]) {
@@ -1420,7 +1783,7 @@ const server = http.createServer(async (req, res) => {
     // to a whole-scenario route (an old client hitting a new path wiped a
     // scenario that way once).
     if (p.startsWith("/api/scenario/") && req.method === "GET" && p.split("/").length === 4) {
-      const name = p.split("/")[3];
+      const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       let raw;
       try { raw = await dbGetScenario(name); }
@@ -1429,9 +1792,11 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { name, config: JSON.parse(raw) });
     }
     if (p.startsWith("/api/scenario/") && req.method === "PUT" && p.split("/").length === 4) {
-      const name = p.split("/")[3];
+      const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const cfg = await readJson(req);
+      // Retired fields — never persist even if an old client/draft sends them.
+      if (cfg && typeof cfg === "object") { delete cfg.topic; delete cfg.requirements; }
       // No-change save = no-op: an identical config must not stack a duplicate version.
       let prevRaw;
       try { prevRaw = await dbGetScenario(name); }
@@ -1484,13 +1849,49 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true, version, project_id });
     }
+    // Rename a project (POST /api/scenario/:name/rename { newName }). Moves
+    // the prompts JSON + outputs dirs (swapping the embedded filename prefix
+    // and state.json mains), updates every name-keyed row (scenarios,
+    // scenario_versions, projects, assets incl. _wan variants + file paths)
+    // and favorites. Blocked while a run for the project is active — run
+    // records, SSE tails and the serial queue all key off the name.
+    if (p.startsWith("/api/scenario/") && req.method === "POST" && p.split("/").length === 5 && p.split("/")[4] === "rename") {
+      const oldName = pathName(p.split("/")[3]);
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const newName = String(body.newName || "").trim();
+      if (!isSafe(oldName) || !isSafe(newName)) return json(res, 400, { error: "bad name" });
+      if (oldName === newName) return json(res, 200, { ok: true, name: newName });
+      let oldRaw;
+      try { oldRaw = await dbGetScenario(oldName); }
+      catch (e) { return json(res, 503, { error: "database unavailable" }); }
+      if (oldRaw === null) return json(res, 404, { error: "no such scenario" });
+      let newRaw;
+      try { newRaw = await dbGetScenario(newName); }
+      catch (e) { return json(res, 503, { error: "database unavailable" }); }
+      if (newRaw !== null) return json(res, 409, { error: "a project with that name already exists" });
+      if ([...runs.values()].some((r) => r.status === "running" && r.scenario === oldName))
+        return json(res, 409, { error: "stop the active run before renaming" });
+      if (fs.existsSync(path.join(OUTPUTS, newName)) || fs.existsSync(path.join(OUTPUTS, `${newName}_wan`)))
+        return json(res, 409, { error: "outputs folder for that name already exists" });
+      try {
+        await dbRenameScenario(oldName, newName);
+        renameScenarioFiles(oldName, newName);
+        const favs = readFavs();
+        if (favs.includes(oldName))
+          fs.writeFileSync(FAVS, JSON.stringify({ names: favs.map((n) => (n === oldName ? newName : n)) }, null, 2));
+        if (USE_SQLITE) pgRenameScenarioMirror(oldName, newName).catch((e) => console.warn("[pg] rename mirror failed:", e.message));
+      } catch (e) { return json(res, 500, { error: String(e.message || e) }); }
+      return json(res, 200, { ok: true, name: newName });
+    }
     // Delete ONE saved version (prompt config), not the scenario. Deleting the
     // latest rolls the current config back to the new latest so "Latest" never
     // points at a deleted version. Generated outputs are untouched.
     // NOTE: must sit before the whole-scenario DELETE (same prefix).
     if (p.startsWith("/api/scenario/") && req.method === "DELETE" && p.split("/")[4] === "versions") {
       const parts = p.split("/");
-      const name = parts[3];
+      const name = pathName(parts[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const v = Number(parts[5]);
       if (!Number.isInteger(v)) return json(res, 400, { error: "bad version" });
@@ -1516,7 +1917,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, deleted: v, latest });
     }
     if (p.startsWith("/api/scenario/") && req.method === "DELETE" && p.split("/").length === 4) {
-      const name = p.split("/")[3];
+      const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       let raw;
       try { raw = await dbGetScenario(name); }
@@ -1527,6 +1928,8 @@ const server = http.createServer(async (req, res) => {
       if (fs.existsSync(f)) fs.unlinkSync(f);
       const outDir = path.join(OUTPUTS, name);
       if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true, force: true });
+      const outDirWan = path.join(OUTPUTS, `${name}_wan`);
+      if (fs.existsSync(outDirWan)) fs.rmSync(outDirWan, { recursive: true, force: true });
       pgDeleteScenarioMirror(name).catch((e) => console.warn("[pg] scenario unmirror failed:", e.message));
       return json(res, 200, { ok: true });
     }
@@ -1656,13 +2059,31 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === "/api/craft" && req.method === "POST") {
       const body = await readJson(req);
-      if (!body.topic) return json(res, 400, { error: "topic required" });
+      // Current UI sends { description, masterPrompt }; accept legacy
+      // { topic, requirements } too — both are LLM-only inputs, never stored.
+      if (!body.description && !body.topic) return json(res, 400, { error: "description required" });
       const crafted = await craftScenario(body);
       // Craft persists the project immediately (before any Save): the row
       // exists in projects from the click on, and Save Scenario later reuses
       // this same project_id for its project_assets rows.
       let project_id = null;
-      if (pgUp) {
+      // Targeted craft: the UI asked to re-craft the OPEN project (body.target
+      // names an existing scenario). Keep that SAME name — the next Save then
+      // stores a new version of the project (delta rows for changed scenes
+      // only) instead of minting a new project. The project row already
+      // exists, so nothing is inserted here.
+      const target = typeof body.target === "string" && isSafe(body.target) ? body.target : null;
+      let targeted = false;
+      if (target && pgUp) {
+        try {
+          if ((await dbGetScenario(target)) !== null) {
+            crafted.name = target;
+            targeted = true;
+            project_id = await pgProjectId(target);
+          }
+        } catch (e) { console.warn("[pg] craft target lookup failed:", e.message); }
+      }
+      if (pgUp && !targeted) {
         try {
           // Unique name: never clobber an existing scenario/project (the
           // editor would show it as a _2 draft otherwise, orphaning this row).
@@ -1678,11 +2099,10 @@ const server = http.createServer(async (req, res) => {
             target = `${crafted.name}_${i}`;
           }
           crafted.name = target;
-          const cfg = {
-            ...crafted.config,
-            ...(body.topic ? { topic: String(body.topic) } : {}),
-            ...(body.requirements ? { requirements: String(body.requirements) } : {}),
-          };
+          const cfg = { ...crafted.config };
+          // Drop any legacy brief fields that may have ridden along.
+          delete cfg.topic;
+          delete cfg.requirements;
           project_id = await pgEnsureProject(target, cfg);
         } catch (e) { console.warn("[pg] craft project save failed:", e.message); }
       }
@@ -1692,10 +2112,39 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const cfg = body.config;
       if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
-      const count = Math.min(8, Math.max(1, Number(body.count) || 1));
+      const count = Math.max(1, Number(body.count) || 1);
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
     }
     if (p === "/api/comfy" && req.method === "GET") return json(res, 200, await comfyStatus());
+    // Combined health for the Home page (one round trip). Each service is
+    // probed independently — an offline LLM/ComfyUI never blocks project data.
+    if (p === "/api/health" && req.method === "GET") {
+      const [dbUp, comfy, llm] = await Promise.all([
+        pgProbe().catch(() => false),
+        comfyStatus().catch(() => ({ up: false, error: "status check failed" })),
+        llmStatus().catch(() => ({ up: false, error: "status check failed" })),
+      ]);
+      const q = (comfy && comfy.queue) || {};
+      return json(res, 200, {
+        db: { up: !!dbUp },
+        comfy: {
+          up: !!comfy.up,
+          queueRunning: Array.isArray(q.queue_running) ? q.queue_running.length : null,
+          queuePending: Array.isArray(q.queue_pending) ? q.queue_pending.length : null,
+          error: comfy.error,
+        },
+        llm: { up: !!llm.up, error: llm.error },
+      });
+    }
+    // Aggregated Home-page dashboard (statistics + per-project progress).
+    if (p === "/api/dashboard" && req.method === "GET") {
+      try {
+        return json(res, 200, await dashboardPayload());
+      } catch (e) {
+        console.warn("[dashboard] failed:", e.message);
+        return json(res, 500, { error: "dashboard unavailable" });
+      }
+    }
     // Narrow project_assets rows for a project (one row per asset).
     // GET /api/project/:name/assets[?version=N][&mode=exact] — version
     // defaults to latest. Default mode is EFFECTIVE: because versions are

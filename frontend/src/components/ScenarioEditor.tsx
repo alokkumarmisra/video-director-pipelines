@@ -1,49 +1,64 @@
-import { useEffect, useState, type ReactNode } from "react";
-import type { Scenario } from "../types";
+import { useEffect, useState } from "react";
+import type { Beat, Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
-import { craftBeat, getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi } from "../api";
-import { IconCheck, IconPlus, IconX, IconLayers, IconSparkles, IconTrash, Spinner } from "./Icons";
+import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi, craftBeat } from "../api";
+import { IconCheck, IconEye, IconEyeOff, IconLayers, IconPanel, IconPlus, IconSparkles, IconTrash, Spinner } from "./Icons";
+
+const slug = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
 interface Props {
   name: string;
   config: Scenario;
   isDraft: boolean;
   onSave: (cfg: Scenario) => Promise<void>;
-  // Batch-generate reference images from the reference prompt (needs a saved
-  // scenario — generation reads prompts/<name>.json). Disabled while a run is
-  // active (the ComfyUI queue is serial).
-  onGenerateRef: (count: number) => void;
-  refBusy?: boolean;
-  // True while a reference-only regen run for THIS scenario is active.
-  // refBusy disables the button during any run (queue is serial);
-  // refGenerating spins it — other runs must not light up this button.
-  refGenerating?: boolean;
-  // Reference gallery rendered just below the Generate Reference button.
-  referenceSlot?: ReactNode;
+  // Unsaved field edits owned by the AI Craft + Generate Reference cards
+  // (absent key = no edit — cfg applies). Merged into the save payload and
+  // the dirty check here, since this editor owns Save. The parent drops the
+  // bag once the save lands (and bumps the craft sync epoch so those cards
+  // refill from the freshly saved config).
+  overrides: Partial<Scenario>;
+  onOverridesClear: () => void;
+  // Collapsed state lives in the parent (like the Projects panel) so the
+  // workspace grid can shrink the right column and let the middle expand.
+  // Closed renders only the slim right-docked reopen rail.
+  open: boolean;
+  onToggle: () => void;
 }
 
-const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-
-// Editable prompt JSON: reference prompt, duration, and the keyframe beats.
-// Nothing saves automatically — every explicit Save stores ALL fields
-// (topic, requirements, prompts, camera) as a new version in the database.
-export default function ScenarioEditor({ name, config, isDraft, onSave, onGenerateRef, refBusy, refGenerating, referenceSlot }: Props) {
+// Project save point: version picker + explicit Save. The brief fields
+// (description, duration, reference prompt) live in the
+// AI Craft + Generate Reference cards — their unsaved edits arrive via
+// overrides and are saved here with everything else. Keyframe beats (title,
+// keyframe image, motion & camera) live in the Shot List, which edits them
+// inline with the same fields. Nothing saves automatically — every explicit
+// Save stores ALL fields as a new version in the database.
+export default function ScenarioEditor({ name, config, isDraft, onSave, overrides, onOverridesClear, open, onToggle }: Props) {
   const [cfg, setCfg] = useState<Scenario>(config);
   const [pristine, setPristine] = useState<Scenario>(config);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Dirty = actually different from the last saved/loaded state (typing then
-  // reverting counts as clean). Save stays disabled while clean.
-  const dirty = JSON.stringify(cfg) !== JSON.stringify(pristine);
+  // Effective config = working copy + card overrides. Dirty = actually
+  // different from the last saved/loaded state (typing then reverting counts
+  // as clean). Save stays disabled while clean.
+  const merged: Scenario = { ...cfg, ...overrides };
+  const dirty = JSON.stringify(merged) !== JSON.stringify(pristine);
   const [error, setError] = useState("");
-  const [genBusy, setGenBusy] = useState(false);
-  const [genError, setGenError] = useState("");
-  const [genCount, setGenCount] = useState(1);
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [delBusy, setDelBusy] = useState(false);
-  const [refCount, setRefCount] = useState(3);
+  // Collapsing only hides the body JSX; edits stay in state.
+  // Per-scene show/hide (one toggle per scene section). Collapsing only
+  // hides that scene's fields; edits stay in state. Reset on scenario
+  // switch so a new project always opens expanded.
+  const [hiddenBeats, setHiddenBeats] = useState<Record<number, boolean>>({});
+  const toggleBeat = (i: number) =>
+    setHiddenBeats((prev) => ({ ...prev, [i]: !prev[i] }));
+  // LLM beat generator (same "Generate beat" tool as the Story Board, but
+  // applied to the unsaved working copy here — Save persists the result).
+  const [genCount, setGenCount] = useState(1);
+  const [genBusy, setGenBusy] = useState(false);
+  const [genError, setGenError] = useState("");
 
   const loadVersions = async () => {
     try {
@@ -59,7 +74,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
   }, [isDraft, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resync when a different workflow is picked from the dropdown (parent
-  // passes a new name/config). Internal edits (set/setBeat) don't change
+  // passes a new name/config). Internal edits (set) don't change
   // the prop identity, so typing is never wiped by this.
   useEffect(() => {
     setCfg(config);
@@ -67,54 +82,50 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
     setSaved(false);
     setError("");
     setViewVersion(null);
-  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    setCfg(config);
-    setPristine(config);
-  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const set = (patch: Partial<Scenario>) => {
-    setCfg({ ...cfg, ...patch });
-    setSaved(false);
-  };
-  const setBeat = (i: number, patch: Partial<Scenario["sequence"][number]>) => {
-    const sequence = cfg.sequence.map((b, j) => (j === i ? { ...b, ...patch } : b));
-    set({ sequence });
-  };
-  const addBeat = () =>
-    set({ sequence: [...cfg.sequence, { title: `beat${cfg.sequence.length + 1}`, image: "", motion: "" }] });
-  const removeBeat = (i: number) => set({ sequence: cfg.sequence.filter((_, j) => j !== i) });
-
-  // LLM proposes the next N beats from the scenario JSON (description + existing
-  // beats), each continuing from the previous one, and appends them —
-  // review/edit them here, then Save + run the pipeline.
-  const generateBeat = async () => {
-    setGenBusy(true);
+    setHiddenBeats({});
     setGenError("");
-    try {
-      const res = await craftBeat(cfg, genCount);
-      const beats = res.beats ?? (res.beat ? [res.beat] : []); // beat = old server shape
-      const used = new Set(cfg.sequence.map((b) => b.title));
-      const next = beats.map((b, k) => {
-        let title = slug(b.title) || `beat${cfg.sequence.length + k + 1}`;
-        if (used.has(title)) title = `${title}_next`;
-        used.add(title);
-        return { ...b, title };
-      });
-      set({ sequence: [...cfg.sequence, ...next] });
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setGenBusy(false);
-    }
-  };
+  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Explicit save: persists everything as a NEW version of the same project.
-  const doSave = async (next: Scenario = cfg) => {
+  // The parent swaps the config identity when a different scenario finishes
+  // loading, and when the Shot List persists beat edits for this scenario.
+  // Tell them apart by the non-beat fields: a full reset on scenario switch,
+  // sequence-only adoption for same-scenario beat saves (preserves
+  // in-progress edits to the fields that live in this editor).
+  const [lastSeen, setLastSeen] = useState(config);
+  if (config !== lastSeen) {
+    setLastSeen(config);
+    const rest = (c: Scenario) => {
+      const { sequence, ...fields } = c;
+      return JSON.stringify(fields);
+    };
+    if (rest(config) === rest(pristine)) {
+      // Sequence-only external change (a Shot List beat save): adopt it —
+      // unless the editor holds unsaved beat edits of its own, which win
+      // on the next explicit Save instead of being overwritten here.
+      const seq = JSON.stringify(config.sequence);
+      const localBeatsClean = JSON.stringify(cfg.sequence) === JSON.stringify(pristine.sequence);
+      if (localBeatsClean) {
+        setCfg((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
+        setPristine((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
+      }
+    } else {
+      setCfg(config);
+      setPristine(config);
+      setSaved(false);
+      setError("");
+      setViewVersion(null);
+    }
+  }
+
+  // Explicit save: persists everything as a NEW version of the same project,
+  // folding in unsaved card edits (the parent drops its override copy once
+  // the save lands).
+  const doSave = async (next: Scenario = merged) => {
     setSaving(true);
     setError("");
     try {
       await onSave(next);
+      setCfg(next);
       setSaved(true);
       setPristine(next);
       setViewVersion(null);
@@ -144,6 +155,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
       const r = await getScenario(name);
       setCfg(r.config);
       setPristine(r.config);
+      onOverridesClear();
       setViewVersion(null);
       setSaved(true);
       await loadVersions();
@@ -161,6 +173,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
       const r = v === null ? await getScenario(name) : await getVersion(name, v);
       setCfg(r.config);
       setPristine(r.config);
+      onOverridesClear();
       setViewVersion(v);
       setSaved(true);
     } catch (e) {
@@ -168,11 +181,89 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
     }
   };
 
+  // ---- Story beats: the same Shot title / Keyframe image / Motion &
+  // camera fields as the Story Board, edited here against the unsaved
+  // working copy — nothing persists until Save Scenario stores everything
+  // together (dirty tracking picks beat edits up automatically).
+  const beats: Beat[] = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+  const updateBeat = (i: number, patch: Partial<Beat>) => {
+    setCfg((prev) => {
+      const seq = Array.isArray(prev.sequence) ? [...prev.sequence] : [];
+      if (!seq[i]) return prev;
+      seq[i] = { ...seq[i], ...patch };
+      return { ...prev, sequence: seq };
+    });
+    setSaved(false);
+  };
+  const addBeat = () => {
+    setCfg((prev) => {
+      const seq = Array.isArray(prev.sequence) ? [...prev.sequence] : [];
+      seq.push({ title: `beat${seq.length + 1}`, image: "", motion: "" });
+      return { ...prev, sequence: seq };
+    });
+    setSaved(false);
+  };
+  const deleteBeat = (i: number) => {
+    const b = beats[i];
+    if (!b) return;
+    if (
+      !window.confirm(
+        `Delete Scene ${i + 1} (${b.title || "untitled"})? Its prompts are removed on the next Save (generated files are kept).`
+      )
+    )
+      return;
+    setCfg((prev) => ({ ...prev, sequence: (prev.sequence || []).filter((_, k) => k !== i) }));
+    setSaved(false);
+  };
+  // LLM proposes the next N beats from the working copy and appends them
+  // locally — review them below, then Save Scenario persists everything.
+  const generateBeats = async () => {
+    if (genBusy || saving) return;
+    setGenBusy(true);
+    setGenError("");
+    try {
+      const res = await craftBeat(merged, genCount);
+      const fresh = res.beats ?? (res.beat ? [res.beat] : []);
+      const used = new Set((merged.sequence || []).map((b) => b.title));
+      const next = fresh.map((b, k) => {
+        let title = slug(b.title) || `beat${beats.length + k + 1}`;
+        if (used.has(title)) title = `${title}_next`;
+        used.add(title);
+        return { ...b, title };
+      });
+      if (next.length === 0) {
+        setGenError("The LLM returned no beats — try again.");
+        return;
+      }
+      setCfg((prev) => ({ ...prev, sequence: [...(prev.sequence || []), ...next] }));
+      setSaved(false);
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        className="sidebar-show rail-right"
+        onClick={onToggle}
+        title="Show scenario editor"
+        aria-label="Show scenario editor"
+        aria-expanded={false}
+      >
+        <IconPanel size={15} />
+        <span className="sidebar-show-label">Scenario Editor</span>
+      </button>
+    );
+  }
+
   return (
-    <section className="card">
+    <section className="card" aria-label="Scenario Editor">
       <div className="card-head">
         <h2>
-          <span className="head-icon"><IconLayers size={15} /></span>
+          <span className="head-icon hi-editor"><IconLayers size={15} /></span>
           Scenario Editor
           {isDraft && <span className="pill warn">draft · unsaved</span>}
         </h2>
@@ -210,7 +301,6 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
         {viewVersion !== null && versions.length > 0 && versions[0] && viewVersion !== versions[0].version && (
           <span className="pill warn">viewing v{viewVersion}</span>
         )}
-        <span className="muted" style={{ fontSize: 12, fontFamily: "var(--mono)" }}>{name}</span>
         <button
           className="primary"
           onClick={() => doSave()}
@@ -220,6 +310,15 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
           {saving ? <Spinner size={13} /> : <IconCheck size={13} />}
           {saving ? "Saving…" : "Save Scenario"}
         </button>
+        <button
+          className="icon-btn"
+          onClick={onToggle}
+          title="Hide scenario editor"
+          aria-label="Hide scenario editor"
+          aria-expanded={true}
+        >
+          <IconPanel size={15} />
+        </button>
       </div>
       {cfg.description && <p className="card-desc">{cfg.description}</p>}
       {error && <p className="hint err-text">{error}</p>}
@@ -227,126 +326,110 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, onGenera
         <p className="hint">{versions[0] ? `Saved as v${versions[0].version} — stored in the database.` : "Saved."}</p>
       )}
 
-      {(cfg.topic !== undefined || cfg.requirements !== undefined) && (
-        <>
-          <label>Craft topic</label>
-          <input
-            value={cfg.topic || ""}
-            placeholder="high-level topic this scenario was crafted from"
-            onChange={(e) => set({ topic: e.target.value })}
-          />
-          <label>Craft requirements — style, mood, beats</label>
-          <textarea
-            rows={2}
-            value={cfg.requirements || ""}
-            placeholder="requirements this scenario was crafted from"
-            onChange={(e) => set({ requirements: e.target.value })}
-          />
-        </>
-      )}
+      <p className="hint">
+        Project fields (description, duration, reference prompt) live in the AI Craft + Generate Reference sections — edit them there; Save stores everything together.
+      </p>
+      <p className="hint">
+        Story beats below carry the same Shot title / Keyframe image / Motion &amp; camera as the Story Board — edit them here, then Save Scenario stores everything together. The Shot List mirrors the same prompts.
+      </p>
 
-      <label>Reference prompt — Flux t2i key visual</label>
-      <textarea
-        rows={3}
-        value={cfg.referencePrompt}
-        onChange={(e) => set({ referencePrompt: e.target.value })}
-      />
-      <div className="row" style={{ marginTop: 8 }}>
-        <button
-          className="ghost"
-          onClick={() => onGenerateRef(refCount)}
-          disabled={refBusy || saving || isDraft}
-          title={isDraft
-            ? "Save scenario first — generation reads the saved prompt"
-            : `Generate ${refCount} reference image(s) from the prompt above (each becomes a new version)`}
-        >
-          {refGenerating ? <Spinner size={13} /> : <IconSparkles size={13} />}
-          {refGenerating ? "Generating…" : "Generate Reference"}
-        </button>
-        <label className="gen-count" title="How many reference images to generate (1–8)">
-          ×
-          <input
-            type="number"
-            min={1}
-            max={8}
-            value={refCount}
-            disabled={refBusy}
-            onChange={(e) => setRefCount(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
-          />
-        </label>
-      </div>
-      {isDraft ? (
-        <p className="hint">Save the scenario first — reference generation runs from the saved prompt.</p>
-      ) : (
-        <p className="hint">Each image becomes a new reference version — pick the best one below.</p>
-      )}
-      {referenceSlot}
-      <label>Clip duration (s)</label>
-      <input
-        type="number"
-        min={1}
-        max={10}
-        value={cfg.duration}
-        style={{ maxWidth: 140 }}
-        onChange={(e) => set({ duration: Number(e.target.value) })}
-      />
-
-      {cfg.sequence.map((b, i) => (
-        <div className={`beat ${i % 2 ? "alt" : ""}`} key={i}>
-          <div className="beat-head">
-            <span className="beat-index">{i + 1}</span>
+      <div className="shotlist-detail" aria-label="Story beats">
+        <div className="shotlist-detail-title">
+          Story beats — {beats.length} scene{beats.length === 1 ? "" : "s"}
+        </div>
+        {beats.length === 0 && (
+          <p className="hint">No beats yet — add the first scene below.</p>
+        )}
+        {beats.map((b, i) => {
+          const hidden = !!hiddenBeats[i];
+          return (
+          <div key={i} className={`beat${i % 2 === 1 ? " alt" : ""}${hidden ? " is-collapsed" : ""}`}>
+            <div className="beat-head">
+              <span className="beat-index">{i + 1}</span>
+              <span className="beat-title">
+                Scene {i + 1} · {b.title || `beat${i + 1}`}
+              </span>
+              <span className="spacer" />
+              <button
+                className="icon-btn"
+                onClick={() => toggleBeat(i)}
+                title={hidden ? `Show Scene ${i + 1}` : `Hide Scene ${i + 1}`}
+                aria-label={hidden ? `Show Scene ${i + 1}` : `Hide Scene ${i + 1}`}
+                aria-expanded={!hidden}
+              >
+                {hidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+              </button>
+              <button
+                className="ghost shotlist-btn"
+                onClick={() => deleteBeat(i)}
+                disabled={saving}
+                title={`Delete Scene ${i + 1} (prompts only — generated files are kept)`}
+              >
+                <IconTrash size={12} />
+                Delete
+              </button>
+            </div>
+            {!hidden && (
+            <>
+            <label>Shot title</label>
             <input
-              className="beat-title"
               value={b.title}
               placeholder="title (file-safe)"
-              onChange={(e) => setBeat(i, { title: e.target.value })}
+              disabled={saving}
+              onChange={(e) => updateBeat(i, { title: e.target.value })}
             />
-            <button
-              className="icon-btn danger"
-              title="Remove beat"
-              onClick={() => removeBeat(i)}
-            >
-              <IconX size={13} />
-            </button>
+            <p className="beat-meta">{slug(b.title) || "untitled"}</p>
+            <label>Keyframe image — Flux</label>
+            <textarea
+              rows={2}
+              value={b.image}
+              placeholder="Static keyframe prompt for Flux…"
+              disabled={saving}
+              onChange={(e) => updateBeat(i, { image: e.target.value })}
+            />
+            <label>Motion &amp; camera — i2v</label>
+            <textarea
+              rows={2}
+              value={b.motion}
+              placeholder="Motion + camera direction for image-to-video…"
+              disabled={saving}
+              onChange={(e) => updateBeat(i, { motion: e.target.value })}
+            />
+            </>
+            )}
           </div>
-          <p className="beat-meta">{slug(b.title) || "untitled"}</p>
-          <label>Keyframe image — Flux</label>
-          <textarea
-            rows={2}
-            value={b.image}
-            onChange={(e) => setBeat(i, { image: e.target.value })}
-          />
-          <label>Motion &amp; camera — i2v</label>
-          <textarea
-            rows={2}
-            value={b.motion}
-            onChange={(e) => setBeat(i, { motion: e.target.value })}
-          />
+          );
+        })}
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="ghost" onClick={addBeat} disabled={saving || genBusy} title="Append a scene — fill in its prompts, then Save Scenario">
+            <IconPlus size={13} />
+            Add beat
+          </button>
+          <button
+            className="ghost"
+            onClick={() => void generateBeats()}
+            disabled={saving || genBusy}
+            title="LLM proposes the next beat(s) from the scenario + existing scenes (appends below — Save persists them)"
+          >
+            {genBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
+            {genBusy ? "Generating…" : "Generate beat"}
+          </button>
+          <label className="gen-count wide" title="How many next beats to generate (1 or more)">
+            ×
+            <input
+              type="number"
+              min={1}
+              value={genCount}
+              disabled={saving || genBusy}
+              onChange={(e) => setGenCount(Math.max(1, Number(e.target.value) || 1))}
+            />
+          </label>
         </div>
-      ))}
-      <div className="row" style={{ marginTop: 4 }}>
-        <button className="ghost" onClick={addBeat} disabled={genBusy}>
-          <IconPlus size={13} />
-          Add beat
-        </button>
-        <button className="ghost" onClick={generateBeat} disabled={genBusy} title="LLM proposes the next beat(s) from the scenario + existing beats">
-          {genBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
-          {genBusy ? "Generating…" : "Generate beat"}
-        </button>
-        <label className="gen-count" title="How many next beats to generate (1–8)">
-          ×
-          <input
-            type="number"
-            min={1}
-            max={8}
-            value={genCount}
-            disabled={genBusy}
-            onChange={(e) => setGenCount(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
-          />
-        </label>
+        {genError && <p className="hint err-text">{genError}</p>}
+        <p className="hint">
+          Generate beat asks the LLM for the next story beat(s) — they append below as unsaved edits; press Save Scenario to persist them.
+        </p>
       </div>
-      {genError && <p className="hint err-text">{genError}</p>}
-      <p className="hint">Generate beat asks the LLM for the next story beat(s) from the scenario JSON. Nothing saves until you press Save — every save stores a new version.</p>
     </section>
   );
 }
