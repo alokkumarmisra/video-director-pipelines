@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
+import GenerateReference from "./components/GenerateReference";
 import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
 import GenerationProgressBar, { emptyProgress, loadPace, formatDuration, type GenerationProgress } from "./components/GenerationProgressBar";
@@ -9,7 +10,7 @@ import OutputGallery from "./components/OutputGallery";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
 import Login from "./components/Login";
-import { IconCheck, IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { IconCheck, IconChevronDown, IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
@@ -169,6 +170,34 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const [runActive, setRunActive] = useState(false);
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
+  // Unsaved brief-field edits from the AI Craft + Generate Reference cards,
+  // keyed by Scenario field (absent key = no edit). Merged into the save
+  // payload by the Scenario Editor; cleared on save / project switch /
+  // version switch. `null` drops a key.
+  const [overrides, setOverrides] = useState<Partial<Scenario>>({});
+  const patchOverrides = (p: {
+    description?: string | null;
+    duration?: number | null;
+    referencePrompt?: string | null;
+  }) => setOverrides((o) => {
+    const next = { ...o };
+    for (const [k, v] of Object.entries(p)) {
+      if (v === undefined || v === null) delete next[k as keyof Scenario];
+      else (next as Record<string, unknown>)[k] = v;
+    }
+    return next;
+  });
+  // Staged project rename from AI Craft (null = unchanged) — applied on the
+  // next explicit Save via the rename API.
+  const [nameOv, setNameOv] = useState<string | null>(null);
+  // Bumps whenever overrides are cleared externally (save / switch / version
+  // change) so AI Craft refills its boxes from the saved snapshot.
+  const [craftEpoch, setCraftEpoch] = useState(0);
+  const dropEdits = useCallback(() => {
+    setOverrides({});
+    setNameOv(null);
+    setCraftEpoch((e) => e + 1);
+  }, []);
   const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null>(null);
   // Reattach target for RunPanel: a run that was already active on the server
   // when this page loaded (refresh mid-generation). Restored here — not in
@@ -390,6 +419,23 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
       localStorage.setItem("ss-sidebar", o ? "closed" : "open");
       return !o;
     });
+  // Right-column panels (AI Craft + Scenario Editor) collapse like the
+  // Projects panel, but dock to the RIGHT side. State lives here so the
+  // workspace grid can shrink the right column and let the middle expand.
+  // Same storage keys the panels used before ("closed" = hidden).
+  const [craftOpen, setCraftOpen] = useState<boolean>(() => localStorage.getItem("ss-sec-craft") !== "closed");
+  const toggleCraft = () =>
+    setCraftOpen((o) => {
+      localStorage.setItem("ss-sec-craft", o ? "closed" : "open");
+      return !o;
+    });
+  const [editorOpen, setEditorOpen] = useState<boolean>(() => localStorage.getItem("ss-sec-editor") !== "closed");
+  const toggleEditor = () =>
+    setEditorOpen((o) => {
+      localStorage.setItem("ss-sec-editor", o ? "closed" : "open");
+      return !o;
+    });
+  const rightCollapsed = !craftOpen && !editorOpen;
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -555,7 +601,27 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
 
   const handleSave = async (c: Scenario) => {
     const target = draft ? draft.name : (shownName || name);
+    // Staged rename: move the whole project first (history travels with it),
+    // then save the new content as the next version under the new name.
+    const newName = !draft && nameOv && nameOv.trim() !== target ? nameOv.trim() : null;
+    if (newName) {
+      if (runActive && runScenario === target)
+        throw new Error("Stop the active run before renaming.");
+      await renameScenario(target, newName);
+      await saveScenario(newName, c);
+      dropEdits();
+      await refreshScenarios();
+      const r = await getScenario(newName);
+      setCfg(r.config);
+      setShownName(newName);
+      setName(newName);
+      refresh();
+      return;
+    }
     await saveScenario(target, c);
+    // The save already folded the card overrides in — drop them so the cards
+    // fall back to the freshly saved config.
+    dropEdits();
     if (draft) {
       await refreshScenarios();
       setName(target);
@@ -565,16 +631,12 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     }
   };
 
-  // Craft renders below as an unsaved draft (topic + requirements included).
+  // Craft renders below as an unsaved draft.
   // The project row is already saved in the DB at craft time (with its
   // project_id); explicit "Save scenario" persists everything as v1 with
   // project_assets rows linked by that same project_id.
-  const handleCrafted = (n: string, c: Scenario, meta: { topic: string; requirements: string }, project_id?: number | null) => {
-    const full: Scenario = {
-      ...c,
-      ...(meta.topic ? { topic: meta.topic } : {}),
-      ...(meta.requirements ? { requirements: meta.requirements } : {}),
-    };
+  const handleCrafted = (n: string, c: Scenario, project_id?: number | null) => {
+    const full: Scenario = { ...c };
     // Targeted craft (craftTarget = the open saved scenario): keep the SAME
     // name so explicit Save stores a new *version* of that project (delta
     // rows for changed scenes only) instead of minting a new project.
@@ -587,6 +649,9 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     // Server already saved the project under `n` (unique there); if the
     // sidebar needed a _2 suffix, the Save below creates that project row —
     // either way project_assets always carry the right project_id.
+    // The fresh draft is a new baseline: drop pending card edits (the draft
+    // already carries the brief just crafted) and refill from it.
+    dropEdits();
     setDraft({ name: target, config: full, project_id: target === n ? project_id ?? null : null });
     setView("workspace");
   };
@@ -602,6 +667,13 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const switching = !draft && (!!cfgLoading || (!!name && name !== shownName));
   // Project whose content is actually on screen right now.
   const contentName = draft ? draft.name : shownName;
+  // Unsaved card edits belong to the project on screen — drop them on
+  // switch so the next project's saved values show (nothing is lost: the
+  // editor only enables Save while its own content is on screen).
+  useEffect(() => {
+    dropEdits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentName]);
 
   // Opening a project (Continue) syncs remote state immediately — the
   // workspace header shows server truth within ~a second even when the last
@@ -711,7 +783,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 </span>
               </>
             )}
-            <span className={`progress-toggle-caret${progressOpen ? " open" : ""}`} aria-hidden="true">▾</span>
+            <span className={`progress-toggle-caret${progressOpen ? " open" : ""}`} aria-hidden="true"><IconChevronDown size={12} /></span>
             {topProgress.status !== "idle" && (
               <span className="progress-toggle-track" aria-hidden="true">
                 <span
@@ -828,7 +900,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-      <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}`}>
+      <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}`}>
         {!sidebarOpen && view === "workspace" && (
           <button
             className="sidebar-show"
@@ -985,20 +1057,48 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             </>
           ) : (
           <>
-          {/* Output box on top, Shot List right below it, keyframes → clips
-              below the Shot List, then the generation (Run window). Each
-              outputs card hides/shows on its own toggle. */}
-          <OutputGallery
-            scenario={contentName ? outScenario(contentName, engine) : ""}
-            refreshKey={refreshKey}
-            section="output"
-            generatingScenario={runActive ? runScenario : null}
-            regenTarget={runActive ? regenTarget : null}
-            runQueue={runQueue}
-            onStitch={() => requestRun({ stitch: true })}
-            onRegen={handleRegen}
-            onUploaded={refresh}
-            onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
+          {/* Rendered Clip (run) window on top, Generate Reference just below
+              it, then the Shot List, then keyframes → clips. Each card
+              hides/shows on its own toggle. */}
+          <RunPanel
+            scenario={draft ? "" : contentName}
+            engine={engine}
+            onEngine={setEngine}
+            onDone={refresh}
+            onStatus={(s, sc, regen) => {
+              setRunActive(s === "running");
+              setRunScenario(s === "running" ? sc : null);
+              // The regen target comes from the run that actually started
+              // (reported by RunPanel) — never from a stale pendingRun, so a
+              // full Generate run is never mislabelled as a ref/beat regen.
+              setRegenTarget(s === "running" ? regen : null);
+            }}
+            pendingRun={pendingRun}
+            attachRun={attachRun}
+            serverRun={serverRun}
+            onProgress={setGenProgress}
+            comfyQueue={comfyQueue}
+          />
+          <GenerateReference
+            referencePrompt={overrides.referencePrompt ?? (draft ? draft.config : cfg)?.referencePrompt ?? ""}
+            onReferencePromptChange={(v) => patchOverrides({ referencePrompt: v })}
+            onGenerateRef={(count) =>
+              !draft && requestRun({ regen: { kind: "ref" }, count })}
+            refBusy={runActive}
+            refGenerating={refGenerating}
+            isDraft={!!draft}
+            referenceSlot={!draft && contentName ? (
+              <OutputGallery
+                scenario={outScenario(contentName, engine)}
+                refreshKey={refreshKey}
+                section="reference"
+                generatingScenario={runActive ? runScenario : null}
+                regenTarget={runActive ? regenTarget : null}
+                runQueue={runQueue}
+                onRegen={handleRegen}
+                onUploaded={refresh}
+              />
+            ) : null}
           />
           {editor && (
             <ShotList
@@ -1034,69 +1134,55 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
           />
-          <RunPanel
-            scenario={draft ? "" : contentName}
-            engine={engine}
-            onEngine={setEngine}
-            onDone={refresh}
-            onStatus={(s, sc, regen) => {
-              setRunActive(s === "running");
-              setRunScenario(s === "running" ? sc : null);
-              // The regen target comes from the run that actually started
-              // (reported by RunPanel) — never from a stale pendingRun, so a
-              // full Generate run is never mislabelled as a ref/beat regen.
-              setRegenTarget(s === "running" ? regen : null);
-            }}
-            pendingRun={pendingRun}
-            attachRun={attachRun}
-            serverRun={serverRun}
-            onProgress={setGenProgress}
-          />
           </>
           )}
         </div>
 
-        {/* AI Craft + Scenario Editor in the right column. */}
-        <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
+        {/* AI Craft + Scenario Editor in the right column. Either panel can
+            collapse to a slim rail docked at the RIGHT edge (mirroring the
+            Projects rail on the left); when both are hidden the right column
+            shrinks to rail width and the middle section expands. */}
+        <div className={`col right-col${rightCollapsed ? " rails-only" : ""}`} style={view !== "workspace" ? { display: "none" } : undefined}>
           <CraftPanel
+            open={craftOpen}
+            onToggle={toggleCraft}
             onCrafted={handleCrafted}
             craftTarget={!draft && name ? name : null}
-            scenarios={scenarios}
-            selected={draft ? "" : name}
-            onSelect={(n) => openProject(n)}
-            contextKey={draft ? `draft:${draft.name}` : (contentName ? `saved:${contentName}` : "new")}
-            contextTopic={(draft ? draft.config : cfg)?.topic ?? ""}
-            contextReqs={(draft ? draft.config : cfg)?.requirements ?? ""}
+            source={contentName ? {
+              name: contentName,
+              description: (draft ? draft.config : cfg)?.description ?? "",
+              duration: (draft ? draft.config : cfg)?.duration ?? null,
+              masterPrompt: (draft ? draft.config : cfg)?.referencePrompt ?? "",
+            } : {
+              name: "",
+              description: "",
+              duration: null,
+              masterPrompt: "",
+            }}
+            isDraft={!!draft}
+            syncEpoch={craftEpoch}
+            onPatch={patchOverrides}
+            onNameChange={setNameOv}
           />
-          {switching && !editor ? (
+          {(!editorOpen || switching) && !editor ? (
+            !editorOpen ? null : (
             <section className="card ws-loading" aria-label="Loading scenario editor">
               <Spinner size={16} /> Loading {name}…
             </section>
+            )
           ) : editor ? (
             // No key={editor.name}: remounting the whole editor on every
             // project click is what flushed inputs/scroll. It resyncs from
             // the new name/config props on its own.
             <ScenarioEditor
+              open={editorOpen}
+              onToggle={toggleEditor}
               name={editor.name}
               config={editor.config}
               isDraft={!!draft}
               onSave={handleSave}
-              refBusy={runActive}
-              refGenerating={refGenerating}
-              onGenerateRef={(count) =>
-                !draft && requestRun({ regen: { kind: "ref" }, count })}
-              referenceSlot={!draft && contentName ? (
-                <OutputGallery
-                  scenario={outScenario(contentName, engine)}
-                  refreshKey={refreshKey}
-                  section="reference"
-                  generatingScenario={runActive ? runScenario : null}
-                  regenTarget={runActive ? regenTarget : null}
-                  runQueue={runQueue}
-                  onRegen={handleRegen}
-                  onUploaded={refresh}
-                />
-              ) : null}
+              overrides={overrides}
+              onOverridesClear={dropEdits}
             />
           ) : (
             <section className="card">

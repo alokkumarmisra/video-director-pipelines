@@ -10,9 +10,6 @@ export interface Scenario {
   referencePrompt: string;
   duration: number;
   sequence: Beat[];
-  // Craft origin (saved automatically with a crafted scenario).
-  topic?: string;
-  requirements?: string;
 }
 
 export interface ScenarioInfo {

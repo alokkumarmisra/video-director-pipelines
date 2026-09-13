@@ -68,6 +68,19 @@ export const deleteScenario = (name: string) =>
     r.ok ? r.json() : r.json().then((d) => Promise.reject(new Error(d.error || `HTTP ${r.status}`)))
   );
 
+// Rename a project (prompts JSON + outputs dirs + every name-keyed DB row +
+// favorites move with it). Blocked server-side while a run is active.
+export const renameScenario = (name: string, newName: string) =>
+  fetch(`/api/scenario/${name}/rename`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ newName }),
+  }).then((r) =>
+    r.ok
+      ? r.json() as Promise<{ ok: boolean; name: string }>
+      : r.json().then((d) => Promise.reject(new Error(d.error || "rename failed")))
+  );
+
 export const setFavorite = (name: string, on: boolean) =>
   fetch("/api/favorites", {
     method: "POST",

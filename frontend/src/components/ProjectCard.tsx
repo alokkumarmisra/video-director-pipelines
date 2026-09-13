@@ -37,12 +37,18 @@ function Thumb({ project }: { project: DashboardProject }) {
 export default function ProjectCard({
   project,
   onOpen,
+  onEdit,
   onDuplicate,
+  onMakeClip,
+  onDownload,
   onDelete,
 }: {
   project: DashboardProject;
   onOpen: (name: string) => void;
+  onEdit: (name: string) => void;
   onDuplicate: (name: string) => void;
+  onMakeClip: (name: string) => void;
+  onDownload: (name: string) => void;
   onDelete: (name: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,6 +111,9 @@ export default function ProjectCard({
             <div className="menu" role="menu">
               {item("Open", () => onOpen(project.name))}
               {item("Continue", () => onOpen(project.name))}
+              {item("Edit", () => onEdit(project.name))}
+              {item("Make a clip", () => onMakeClip(project.name))}
+              {item("Download", () => onDownload(project.name))}
               {item("Duplicate", () => onDuplicate(project.name))}
               {item("Delete", () => onDelete(project.name), true)}
             </div>

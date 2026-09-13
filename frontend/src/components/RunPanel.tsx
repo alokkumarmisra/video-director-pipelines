@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
 import OutputGallery from "./OutputGallery";
 import GenerationProgressBar, { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
-import { IconPanel, IconPlay, IconScissors, IconStop, IconTerminal, Spinner } from "./Icons";
+import RenderMonitor from "./RenderMonitor";
+import { IconPanel, IconPlay, IconScissors, IconStop, IconClapper, Spinner } from "./Icons";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
 
@@ -32,12 +33,14 @@ interface Props {
   serverRun?: { id: string; scenario: string; startedAt: number } | null;
   // Live progress reports (real assets/timing — App renders the sticky global bar).
   onProgress?: (p: GenerationProgress) => void;
+  /** ComfyUI queue depth (running + pending) for the monitor's QUEUE readout. */
+  comfyQueue?: number;
 }
 
 // Start / stitch / stop a run + live log tail (SSE) + live asset gallery.
 // Progress + ETA are derived from the real asset stream (see `progress`
 // below) — never fake timers.
-export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress }: Props) {
+export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress, comfyQueue = 0 }: Props) {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>("idle");
   // Scenario this panel's run is generating (captured at start, so it stays
@@ -46,6 +49,9 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // App never has to guess from a stale pendingRun.
   const [runScenario, setRunScenario] = useState<string | null>(null);
   const [runRegen, setRunRegen] = useState<RegenSpec | null>(null);
+  // Engine the active run was started with (captured at start — the header
+  // engine switch must not rewrite the monitor's badge/URLs mid-run).
+  const [runEngine, setRunEngine] = useState<Engine | null>(null);
   // Which local button started the POST (null = triggered externally via
   // pendingRun, or idle). Shows the spinner on the clicked button during
   // the startRun round-trip, before status flips to "running".
@@ -110,6 +116,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       setRunId(id);
       setRunScenario(scenario);
       setRunRegen(regen);
+      setRunEngine(runEngine);
       setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
       // Keep the previous total until the fresh config lands — clearing it
       // here is what briefly hid every thumbnail slot right after Generate.
@@ -189,6 +196,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     // have refreshed while looking at a different project.
     setRunScenario(meta.scenario);
     setRunRegen(regen);
+    setRunEngine(engine);
     setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1 });
     // Same as begin(): keep the previous total so thumbnail slots stay
     // mounted while the reattached run's config loads.
@@ -383,11 +391,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   }[status];
 
   return (
-    <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="Run">
+    <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="Rendered Clip">
       <div className="card-head">
         <h2>
-          <span className="head-icon hi-run"><IconTerminal size={15} /></span>
-          Run
+          <span className="head-icon hi-output"><IconClapper size={15} /></span>
+          Rendered Clip
         </h2>
         <div className="run-head-actions" role="group" aria-label="Run controls">
           <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run")} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : "Start a full generation"}>
@@ -429,8 +437,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         <button
           className="icon-btn"
           onClick={toggleCollapsed}
-          title={collapsed ? "Show run panel" : "Hide run panel"}
-          aria-label={collapsed ? "Show run panel" : "Hide run panel"}
+          title={collapsed ? "Show rendered clip" : "Hide rendered clip"}
+          aria-label={collapsed ? "Show rendered clip" : "Hide rendered clip"}
           aria-expanded={!collapsed}
         >
           <IconPanel size={15} />
@@ -474,6 +482,25 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       )}
       {(status === "running" || status === "done" || status === "error") && (progress.total > 0 || status !== "running") && (
         <GenerationProgressBar progress={progress} />
+      )}
+
+      {/* Broadcast-style program monitor (viewport + stats + frame grids):
+          same live progress/assets/log as above, new presentation only. */}
+      {(scenario || runScenario) && (
+        <RenderMonitor
+          scenario={runScenario ?? scenario}
+          outDir={outScenario(runScenario ?? scenario, runEngine ?? engine)}
+          engine={runEngine ?? engine}
+          status={status}
+          progress={progress}
+          assets={assets}
+          log={log}
+          totalBeats={totalBeats}
+          runMeta={runMeta}
+          startedAt={startedAt}
+          now={now}
+          comfyQueue={comfyQueue}
+        />
       )}
 
       {!scenario && (

@@ -3,10 +3,14 @@ import {
   deleteScenario,
   getDashboard,
   getScenario,
+  listOutputs,
+  outputUrl,
   saveScenario,
+  startRun,
 } from "../api";
-import type { DashboardProject, DashboardResponse } from "../types";
+import type { DashboardProject, DashboardResponse, OutputsInfo } from "../types";
 import CreateProjectDialog from "./CreateProjectDialog";
+import EditProjectDialog from "./EditProjectDialog";
 import ProjectCard from "./ProjectCard";
 import { IconAlert, IconClapper, IconPlus, IconRefresh, IconSearch, Spinner } from "./Icons";
 
@@ -68,6 +72,8 @@ export default function HomePage({
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("updated");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editName, setEditName] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setState("loading");
@@ -134,6 +140,75 @@ export default function HomePage({
     },
     [load, onProjectsChanged]
   );
+
+  // Start a full generation run for the project (reference + keyframes +
+  // clips + final stitch) and open the workspace so progress is visible.
+  // The server (and the ComfyUI queue behind it) accepts only one active
+  // run — a second click while anything generates reports the error.
+  const handleMakeClip = useCallback(
+    async (name: string) => {
+      if (busyAction) return;
+      setBusyAction(`clip:${name}`);
+      try {
+        const d = await startRun(name, { engine: "ltx" });
+        if (d.error) throw new Error(d.error);
+        onProjectsChanged();
+        await load(true);
+        onOpen(name);
+      } catch (e) {
+        window.alert(`Make a clip failed: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [busyAction, load, onOpen, onProjectsChanged]
+  );
+
+  // Download the project's best finished file: the stitched final cut when
+  // present, else any clip, else a still image. Checks both the ltx dir and
+  // the _wan dir (Wan runs write to outputs/<name>_wan/).
+  const handleDownload = useCallback(async (name: string) => {
+    if (busyAction) return;
+    setBusyAction(`download:${name}`);
+    try {
+      const pick = (info: OutputsInfo | null): string | null => {
+        if (!info) return null;
+        if (info.mains?.final) return info.mains.final;
+        const finals = (info.versions?.final ?? []).map((v) => v.file);
+        if (finals.length) return finals[finals.length - 1];
+        const finalFiles = info.files.filter((f) => /\.mp4$/i.test(f) && /_final/i.test(f));
+        if (finalFiles.length) return finalFiles[finalFiles.length - 1];
+        const anyVideo = info.files.filter((f) => /\.mp4$/i.test(f));
+        if (anyVideo.length) return anyVideo[anyVideo.length - 1];
+        return info.files.filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f))[0] ?? null;
+      };
+      const ltx = await listOutputs(name).catch(() => null);
+      let dir = name;
+      let file = pick(ltx);
+      if (!file) {
+        const wan = await listOutputs(`${name}_wan`).catch(() => null);
+        const wanFile = pick(wan);
+        if (wanFile) {
+          dir = `${name}_wan`;
+          file = wanFile;
+        }
+      }
+      if (!file) {
+        window.alert(`Nothing to download yet for "${name}" — use Make a clip first.`);
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = outputUrl(dir, file);
+      a.download = file;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      window.alert(`Download failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusyAction(null);
+    }
+  }, [busyAction]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -256,7 +331,10 @@ export default function HomePage({
                 key={p.name}
                 project={p}
                 onOpen={onOpen}
+                onEdit={(n) => setEditName(n)}
                 onDuplicate={handleDuplicate}
+                onMakeClip={handleMakeClip}
+                onDownload={handleDownload}
                 onDelete={handleDelete}
               />
             ))}
@@ -276,6 +354,15 @@ export default function HomePage({
           onProjectsChanged();
           load();
           onOpen(n);
+        }}
+      />
+      <EditProjectDialog
+        name={editName}
+        onClose={() => setEditName(null)}
+        onSaved={() => {
+          setEditName(null);
+          onProjectsChanged();
+          load();
         }}
       />
     </div>

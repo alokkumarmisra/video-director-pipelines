@@ -160,9 +160,13 @@ export default function ShotList({
   const [genBusy, setGenBusy] = useState(false);
   const [genError, setGenError] = useState("");
   const [genCount, setGenCount] = useState(1);
-  // Beat mutations stay disabled mid-run for saved scenarios (queue is
-  // serial); drafts have no runs, so they stay editable.
-  const mutBusy = saving || genBusy || (!isDraft && !!runBusy);
+  // Beat edits stay available until a beat's own image/video starts
+  // generating: only the actively-generating beat locks (its prompts are
+  // already baked into the running ComfyUI job). Pending beats and beats
+  // whose files already finished stay editable, so scenes and camera
+  // motion can be changed any time before generation — drafts and saved
+  // projects alike, even while another beat generates.
+  const mutBusy = saving || genBusy;
 
   const outDir = name ? outScenario(name, engine) : "";
   const seq = useMemo(() => (config && Array.isArray(config.sequence) ? config.sequence : []), [config]);
@@ -323,16 +327,6 @@ export default function ShotList({
   const pad = (v: number) => String(v).padStart(2, "0");
   const ofLabel = totalShots > 0 ? `${pad(shotsDone)} OF ${pad(totalShots)}` : "—";
 
-  // ---- live run readout for THIS project ----
-  const liveHere =
-    progress.status === "running" && progress.scenario && (progress.scenario === name || progress.scenario === outDir);
-  const currentShot: number | null = (() => {
-    if (!liveHere) return null;
-    if (regenTarget?.index != null && regenTarget.kind !== "ref") return regenTarget.index;
-    if (progress.scene != null) return progress.scene;
-    return nextMissing?.index ?? null;
-  })();
-
   const visible = filter === "all" ? rows : rows.filter((r) => r.n === filter);
 
   // Selecting a scene tab reveals that scene's full prompts. All reveals
@@ -453,7 +447,10 @@ export default function ShotList({
   };
 
   // Inline edit form — same attributes as the old editor beat blocks.
-  const renderEditForm = (isNew: boolean, n: number | null) => (
+  // `locked` is true only while this beat's own image/clip is actively
+  // generating; every other state (pending, finished, another beat
+  // generating) keeps the form editable.
+  const renderEditForm = (isNew: boolean, n: number | null, locked = false) => (
     <>
       <label>Shot title</label>
       <input
@@ -482,11 +479,13 @@ export default function ShotList({
         <button
           className="primary"
           onClick={() => void updateShot()}
-          disabled={saving || mutBusy}
+          disabled={saving || locked}
           title={
-            isDraft
-              ? "Apply to the unsaved draft (Save Scenario persists it)"
-              : "Save prompts as a new scenario version"
+            locked
+              ? "This shot is generating right now — editing unlocks when it finishes"
+              : isDraft
+                ? "Apply to the unsaved draft (Save Scenario persists it)"
+                : "Save prompts as a new scenario version"
           }
         >
           {saving ? <Spinner size={13} /> : <IconCheck size={13} />}
@@ -501,8 +500,8 @@ export default function ShotList({
           <button
             className="ghost"
             onClick={() => void deleteShot(n)}
-            disabled={saving || mutBusy}
-            title={`Delete shot ${n}.1 (prompts only — generated files are kept)`}
+            disabled={saving || locked}
+            title={locked ? "This shot is generating right now" : `Delete shot ${n}.1 (prompts only — generated files are kept)`}
           >
             <IconTrash size={13} />
             Delete shot
@@ -588,38 +587,6 @@ export default function ShotList({
         </div>
       </div>
 
-      {/* Current processing status (live run only — never faked) */}
-      {liveHere && (
-        <div className="shotlist-live" role="status" aria-live="polite">
-          <div className="shotlist-live-top">
-            <span className="shotlist-live-title">
-              <Spinner size={12} />
-              {currentShot != null ? (
-                <>Generating Scene {currentShot} / Shot {currentShot}.1</>
-              ) : regenTarget?.kind === "ref" ? (
-                <>Generating reference…</>
-              ) : (
-                <>Generating…</>
-              )}
-            </span>
-            <span className="shotlist-live-pct">{Math.round(progress.pct)}%</span>
-          </div>
-          <div className="progress-bar" aria-hidden="true">
-            <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, progress.pct))}%` }} />
-          </div>
-          <div className="shotlist-progress-meta">
-            <span>
-              {progress.scene != null && progress.totalScenes != null
-                ? `Scene ${progress.scene} of ${progress.totalScenes}`
-                : progress.total > 0
-                  ? `${progress.completed} of ${progress.total} tasks`
-                  : "Starting…"}
-            </span>
-            {comfyQueue > 0 && <span>Queue: {comfyQueue} waiting</span>}
-          </div>
-        </div>
-      )}
-
       {/* Compact summary (real counts) */}
       <div className="shotlist-stats" aria-label="Project summary">
         <div className="shotlist-stat" title={`${totalShots} shots in this project`}>
@@ -702,6 +669,11 @@ export default function ShotList({
               const imgQueued = !imgRunning && targetQueued("keyframe", r.n);
               const clipRunning = targetRunning("clip", r.n);
               const clipQueued = !clipRunning && targetQueued("clip", r.n);
+              // Only this beat's own active generation locks its Edit —
+              // everything else (pending, finished, another beat's run)
+              // stays editable so scenes / camera motion can change any
+              // time before generation.
+              const beatLocked = imgRunning || clipRunning;
               return (
                 <div className="shotlist-row-wrap" key={r.n} role="rowgroup">
                   <div className="shotlist-row" role="row">
@@ -805,8 +777,8 @@ export default function ShotList({
                     <span className="shotlist-actions" role="cell">
                       <button
                         className="ghost shotlist-btn"
-                        disabled={mutBusy}
-                        title={mutBusy ? "A run is already in progress" : `Edit prompts for shot ${r.shot}`}
+                        disabled={localBusy || beatLocked}
+                        title={beatLocked ? `Scene ${r.n} is generating right now` : `Edit prompts for shot ${r.shot}`}
                         onClick={() => (editing === r.n ? cancelEdit() : startEdit(r.n))}
                       >
                         {editing === r.n ? "Close" : "Edit"}
@@ -870,7 +842,7 @@ export default function ShotList({
                           <div className="shotlist-detail-title">
                             Scene {r.n} · editing {r.beat.title || `beat${r.n}`}
                           </div>
-                          {renderEditForm(false, r.n)}
+                          {renderEditForm(false, r.n, beatLocked)}
                         </>
                       ) : (
                         <>
@@ -899,8 +871,8 @@ export default function ShotList({
                             <span className="spacer" />
                             <button
                               className="ghost shotlist-btn"
-                              disabled={mutBusy}
-                              title={mutBusy ? "A run is already in progress" : `Edit prompts for shot ${r.shot}`}
+                              disabled={localBusy || beatLocked}
+                              title={beatLocked ? `Scene ${r.n} is generating right now` : `Edit prompts for shot ${r.shot}`}
                               onClick={() => startEdit(r.n)}
                             >
                               Edit shot
@@ -943,7 +915,7 @@ export default function ShotList({
           className="ghost"
           onClick={addShot}
           disabled={mutBusy}
-          title={mutBusy ? "A run is already in progress" : "Append a shot — fill in its prompts, then Add shot"}
+          title="Append a shot — fill in its prompts, then Add shot"
         >
           <IconPlus size={13} />
           Add shot

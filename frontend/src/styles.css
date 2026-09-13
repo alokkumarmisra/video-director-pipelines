@@ -202,6 +202,18 @@ body {
 /* Project switch keeps the old content mounted until the new config lands
    (see App `shown`), so no global dimming — the incoming row alone spins. */
 .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(380px, 460px); }
+/* Right column collapsed (AI Craft + Scenario Editor both hidden): the right
+   column shrinks to rail width and the middle section expands. Mirrors the
+   Projects panel collapsing to the left. */
+.shell.no-right { grid-template-columns: 336px minmax(0, 1fr) auto; }
+.shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
+/* Right-column rails dock to the RIGHT edge of the window (the Projects rail
+   docks left). Rails-only column stays narrow so the middle keeps the space. */
+.col.right-col.rails-only { gap: 12px; }
+.sidebar-show.rail-right { align-self: end; }
+/* Two stacked right rails stick at different offsets so they never overlap
+   while scrolling (mirrors the single sticky Projects rail on the left). */
+.col.right-col.rails-only .sidebar-show.rail-right + .sidebar-show.rail-right { top: 240px; }
 
 /* ============================================================
    Cards
@@ -233,6 +245,9 @@ body {
 .head-icon.hi-craft { color: var(--craft); }
 .head-icon.hi-editor { color: var(--edit); }
 .head-icon.hi-shots { color: var(--err-2); }
+/* Generate Reference follows the picked theme color exactly (the --accent
+   token the swatch / primary buttons use — not the lighter --accent-2). */
+.head-icon.hi-ref { color: var(--accent); }
 .card-head .spacer { flex: 1; }
 /* Run controls centered in the header, between the "Run" title (left) and
    the LTX 2.5 / Wan engine switch (right). Compact so the header stays slim. */
@@ -719,6 +734,10 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   box-shadow: 0 0 0 3px var(--bg-raise) inset;
 }
 .beat-head { display: flex; gap: 8px; align-items: center; margin-bottom: 2px; }
+.beat-head .spacer { flex: 1; }
+/* Collapsed scene section — header only, no bottom gap where the fields were. */
+.beat.is-collapsed { padding-bottom: 10px; }
+.beat.is-collapsed .beat-head { margin-bottom: 0; }
 .beat-index {
   width: 22px; height: 22px; border-radius: 50%; flex: none;
   display: grid; place-items: center;
@@ -728,6 +747,10 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .beat-title {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--mono);
   font-size: 12.5px;
   font-weight: 600;
@@ -1159,7 +1182,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .progress-toggle-caret {
   font-size: 10px; color: var(--text-3);
   transition: transform 0.15s;
-  display: inline-block;
+  display: inline-flex; align-items: center;
 }
 .progress-toggle-caret.open { transform: rotate(180deg); }
 /* Toggleable Progress Status window: all Images / Videos / Overall bars
@@ -1748,6 +1771,8 @@ select:focus-visible, textarea:focus-visible {
 @media (max-width: 1280px) {
   .shell { grid-template-columns: 280px minmax(0, 1fr) minmax(340px, 400px); }
   .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(340px, 400px); }
+  .shell.no-right { grid-template-columns: 280px minmax(0, 1fr) auto; }
+  .shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
 }
 @media (max-width: 1180px) {
   /* Service pills stay in one horizontal row — allow the bar to wrap
@@ -1759,6 +1784,8 @@ select:focus-visible, textarea:focus-visible {
 @media (max-width: 1020px) {
   .shell { grid-template-columns: 1fr; }
   .shell.no-sidebar { grid-template-columns: 1fr; }
+  .shell.no-right { grid-template-columns: 1fr; }
+  .shell.no-sidebar.no-right { grid-template-columns: 1fr; }
   .sidebar-show { flex-direction: row; position: static; width: 100%; }
   .sidebar-show-label { writing-mode: horizontal-tb; }
   .sidebar { position: static; max-height: none; }
@@ -2107,3 +2134,202 @@ select:focus-visible, textarea:focus-visible {
   .shotlist-detail-grid { grid-template-columns: 1fr; }
   .shotlist-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ============================================================
+   RenderMonitor — broadcast-style program monitor
+   (PROGRAM viewport + pass/step/speed/ETA/total/queue stats +
+   REF / keyframe / clip / CUT frame grids + console).
+   Presentation only: every number is fed by RunPanel's live run
+   state (progress + asset stream + log), never fake timers.
+   ============================================================ */
+.rm { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.rm-screen {
+  background: #0a0c12;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+:root[data-theme="light"] .rm-screen { background: #10131b; }
+.rm-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+}
+.rm-program {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  color: #cbd5e1;
+}
+.rm-monitor-icon { color: #64748b; font-size: 12px; }
+.rm-live {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+  padding: 2px 9px; border-radius: 6px;
+  background: rgba(148, 163, 184, 0.14); color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.rm-live .dot { width: 6px; height: 6px; background: currentColor; }
+.rm-live.on { background: rgba(239, 68, 68, 0.9); border-color: transparent; color: #fff; }
+.rm-stage {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em;
+  padding: 2px 9px; border-radius: 6px; white-space: nowrap;
+  background: rgba(168, 85, 247, 0.18); color: #c4b5fd;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
+.rm-stage-video { background: rgba(59, 130, 246, 0.16); color: #93c5fd; border-color: rgba(59, 130, 246, 0.45); }
+.rm-stage-cut { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+.rm-timer {
+  font: 700 12px var(--mono); color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px; padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.rm-viewport {
+  position: relative;
+  min-height: 240px;
+  display: grid; place-items: center;
+  background: #000;
+  /* corner brackets (broadcast viewfinder) */
+}
+.rm-viewport::before, .rm-viewport::after {
+  content: ""; position: absolute; width: 18px; height: 18px; z-index: 3;
+  border: 1.5px solid rgba(255, 255, 255, 0.35); pointer-events: none;
+}
+.rm-viewport::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+.rm-viewport::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+.rm-media { width: 100%; max-height: 420px; display: block; background: #000; }
+.rm-media-img { width: 100%; max-height: 420px; }
+.rm-media-img img { max-height: 420px; object-fit: contain; background: #000; }
+.rm-rendering { text-align: center; padding: 56px 20px; }
+.rm-rendering-title { font-size: 17px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.01em; }
+.rm-rendering-sub { margin-top: 8px; font-size: 12px; color: #7d8aa0; max-width: 420px; }
+.rm-rendering-pill {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.65); border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 99px; padding: 3px 11px; white-space: nowrap;
+  max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis;
+}
+.rm-caption {
+  position: absolute; left: 12px; bottom: 12px; z-index: 2;
+  max-width: min(480px, calc(100% - 24px));
+  background: rgba(0, 0, 0, 0.62);
+  border-left: 2px solid var(--err);
+  border-radius: 0 8px 8px 0;
+  padding: 6px 12px;
+  text-align: left;
+}
+.rm-caption-main {
+  font-size: 12px; font-weight: 700; color: #f1f5f9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rm-caption-sub { font-size: 11px; color: #9aa7bd; }
+.rm-progress { padding: 8px 12px 0; background: #0a0c12; }
+.rm-progress-track {
+  height: 5px; border-radius: 99px; overflow: hidden;
+  background: #232b3a; border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.rm-progress-fill {
+  position: relative; overflow: hidden;
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+  transition: width 0.5s ease;
+}
+.rm-progress-fill.sweep::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+.rm-stats {
+  display: flex; align-items: center; gap: 16px;
+  padding: 8px 14px 10px;
+  background: #0a0c12;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.rm-stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.rm-stat-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #64748b; }
+.rm-stat-value { font: 700 12px var(--mono); color: #e2e8f0; white-space: nowrap; }
+.rm-stat-value.is-total { color: #f59e0b; }
+.rm-frames {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 12px 14px 14px;
+}
+.rm-frames-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.rm-frames-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; }
+.rm-engine button:disabled { opacity: 1; cursor: default; }
+.rm-engine button:not(.on):disabled { opacity: 0.55; }
+.rm-rendering-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; color: var(--err);
+  background: var(--err-soft); border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 99px; padding: 3px 11px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rm-rendering-badge .dot { width: 6px; height: 6px; }
+.rm-current {
+  font-size: 12px; font-weight: 700; color: var(--err);
+  margin: 0 0 10px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rm-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .rm-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.rm-col-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-3); margin-bottom: 6px; white-space: nowrap;
+}
+.rm-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.rm-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 26px; padding: 3px 7px;
+  font: 700 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+}
+.rm-chip.is-done {
+  color: #34d399; background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+.rm-chip.is-active {
+  color: #fff; background: rgba(239, 68, 68, 0.85);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+/* Pinned in the PROGRAM viewport (clicked chip) — accent outline so it
+   reads apart from the red in-flight highlight and green done state. */
+.rm-chip.is-selected {
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+/* Pending slots render as chips but aren't clickable — keep them neutral
+   on hover instead of picking up the global button accent glow. */
+button.rm-chip:disabled:hover { background: transparent; border-color: var(--line-2); box-shadow: none; filter: none; }
+:root[data-theme="light"] .rm-chip.is-done { color: #047857; }
+.rm-counts { margin-top: 10px; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.rm-empty-note { color: var(--text-3); font-size: 12px; }
+.rm-console-toggle {
+  margin-top: 10px; background: transparent; border: 0; color: var(--text-2);
+  font-size: 12.5px; font-weight: 600; padding: 4px 0;
+}
+.rm-console-toggle:hover { color: var(--text); background: transparent; border: 0; box-shadow: none; filter: none; }
+.rm-console-caret { display: inline-block; color: var(--text-3); margin-right: 4px; transition: transform 0.15s; }
+.rm-console-caret.open { transform: rotate(90deg); }
+.rm-console { margin-top: 6px; max-height: 220px; }

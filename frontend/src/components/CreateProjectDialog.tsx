@@ -17,8 +17,6 @@ export default function CreateProjectDialog({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [topic, setTopic] = useState("");
-  const [requirements, setRequirements] = useState("");
   const [referencePrompt, setReferencePrompt] = useState("");
   const [duration, setDuration] = useState(3);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +27,6 @@ export default function CreateProjectDialog({
     if (open) {
       setName("");
       setDescription("");
-      setTopic("");
-      setRequirements("");
       setReferencePrompt("");
       setDuration(3);
       setError(null);
@@ -50,17 +46,10 @@ export default function CreateProjectDialog({
 
   if (!open) return null;
 
-  const validName = (v: string) => /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(v) && !v.includes("..");
-
   const submit = async () => {
     const n = name.trim();
     if (!n) {
       setError("Project name is required.");
-      nameRef.current?.focus();
-      return;
-    }
-    if (!validName(n)) {
-      setError("Use letters, numbers, _ or - (no spaces or slashes).");
       nameRef.current?.focus();
       return;
     }
@@ -75,8 +64,6 @@ export default function CreateProjectDialog({
       referencePrompt: referencePrompt.trim(),
       duration: Math.min(10, Math.max(1, Number(duration) || 3)),
       sequence: [],
-      ...(topic.trim() ? { topic: topic.trim() } : {}),
-      ...(requirements.trim() ? { requirements: requirements.trim() } : {}),
     };
     try {
       await saveScenario(n, config);
@@ -113,7 +100,7 @@ export default function CreateProjectDialog({
             ref={nameRef}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="my_music_video"
+            placeholder="My music video 2025"
             disabled={busy}
             maxLength={60}
           />
@@ -126,38 +113,14 @@ export default function CreateProjectDialog({
             disabled={busy}
             maxLength={240}
           />
-          <div className="dialog-2col">
-            <div>
-              <label htmlFor="create-topic">Song / Topic</label>
-              <input
-                id="create-topic"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Song or theme"
-                disabled={busy}
-                maxLength={120}
-              />
-            </div>
-            <div>
-              <label htmlFor="create-duration">Clip length (sec)</label>
-              <input
-                id="create-duration"
-                type="number"
-                min={1}
-                max={10}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                disabled={busy}
-              />
-            </div>
-          </div>
-          <label htmlFor="create-reqs">Lyrics / Requirements</label>
-          <textarea
-            id="create-reqs"
-            value={requirements}
-            onChange={(e) => setRequirements(e.target.value)}
-            placeholder="Lyrics, mood, constraints…"
-            rows={2}
+          <label htmlFor="create-duration">Clip length (sec)</label>
+          <input
+            id="create-duration"
+            type="number"
+            min={1}
+            max={10}
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
             disabled={busy}
           />
           <label htmlFor="create-master">Master Prompt *</label>
