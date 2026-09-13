@@ -162,17 +162,45 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // Live-run view: no versioning UI (versions are created by the run itself).
   // Scene numbers come from the real asset beat index (never array position),
   // total from the scenario config via totalScenes (fallback: highest index).
+  // Every scene renders a thumbnail slot the moment Generate is clicked —
+  // finished assets show media, the in-flight asset shows a generating
+  // status, the rest show pending — so no scene ever appears missing.
   if (assets) {
     const live = assets;
     const final = live.find((a) => a.stage === "final")?.file;
     const ref = live.find((a) => a.stage === "reference")?.file;
     const keyframes = live.filter((a) => a.stage === "keyframe").sort(byIndex);
     const clips = live.filter((a) => a.stage === "clip").sort(byIndex);
+    const kfByIndex = new Map(keyframes.map((k) => [k.index ?? -1, k.file]));
     const clipByIndex = new Map(clips.map((c) => [c.index ?? -1, c.file]));
     const liveTotal =
       totalScenes != null && totalScenes > 0
         ? totalScenes
         : Math.max(0, ...keyframes.map((k) => k.index ?? 0), ...clips.map((c) => c.index ?? 0)) || null;
+    // All scene slots 1..liveTotal render immediately (even with zero assets
+    // landed yet). Without a known total, fall back to landed keyframes.
+    const liveNums: number[] =
+      liveTotal != null && liveTotal > 0
+        ? Array.from({ length: liveTotal }, (_, i) => i + 1)
+        : keyframes.map((k) => k.index ?? 0).filter((n) => n > 0);
+    // Which asset is currently in flight (first missing in pipeline order:
+    // reference → keyframes → clips), unless a regen run targets one asset.
+    const liveGenTarget: string | null = (() => {
+      if (regenTarget) {
+        if (regenTarget.kind === "ref") return "ref";
+        if (regenTarget.kind === "keyframe") return `kf:${regenTarget.index}`;
+        if (regenTarget.kind === "clip") return `clip:${regenTarget.index}`;
+        return null;
+      }
+      if (!ref) return "ref";
+      for (const n of liveNums) {
+        if (!kfByIndex.has(n)) return `kf:${n}`;
+      }
+      for (const n of liveNums) {
+        if (!clipByIndex.has(n)) return `clip:${n}`;
+      }
+      return null;
+    })();
     const mediaCount = keyframes.length + clips.length + (ref ? 1 : 0) + (final ? 1 : 0);
     const Tag = bare ? "div" : "section";
     return (
@@ -189,44 +217,74 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             </div>
           </>
         )}
-        {ref && (
-          <>
-            <div className="section-label">Reference</div>
+        <>
+          <div className="section-label">Reference</div>
+          {ref ? (
             <div className="img-frame">
               <SceneBadge label="REF" title="Reference visual" />
               <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(viewScenario, ref), kind: "image", alt: "reference" })} />
               <SmoothImage src={outputUrl(viewScenario, ref)} alt="reference" />
             </div>
-          </>
-        )}
-        {keyframes.length > 0 && (
+          ) : (
+            <div className="img-frame">
+              <SceneBadge label="REF" title="Reference visual" />
+              <div className="frame-missing">
+                {liveGenTarget === "ref"
+                  ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                  : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Reference · pending</span></span>}
+              </div>
+            </div>
+          )}
+        </>
+        {liveNums.length > 0 && (
           <>
             <div className="section-label">Keyframes → clips</div>
             <div className="grid grid-compact">
-              {keyframes.map((kf) => {
-                const n = kf.index ?? 0;
+              {liveNums.map((n) => {
+                const kf = kfByIndex.get(n);
                 const clip = clipByIndex.get(n);
+                const kfGen = liveGenTarget === `kf:${n}`;
+                const clipGen = liveGenTarget === `clip:${n}`;
                 return (
-                <div className="shot" key={kf.file}>
+                <div className="shot" key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                  <div className="shot-head" aria-hidden="true">Scene {n}</div>
                   <div className="img-frame">
-                    {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
-                    <ExpandButton title={`Fullscreen preview of ${pretty(kf.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf.file), kind: "image", alt: pretty(kf.file) })} />
-                    <SmoothImage src={outputUrl(viewScenario, kf.file)} alt={pretty(kf.file)} />
+                    <SceneBadge scene={n} total={liveTotal} title={`Scene ${n} of ${liveTotal} — keyframe image`} />
+                    {kf ? (
+                      <>
+                        <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
+                        <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
+                      </>
+                    ) : (
+                      <div className="frame-missing">
+                        {kfGen
+                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
+                      </div>
+                    )}
                   </div>
-                  {clip && (
-                    <div className="video-frame">
-                      {n > 0 && <SceneBadge scene={n} total={liveTotal} />}
-                      <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clip), kind: "video", alt: pretty(clip) })} />
-                      <video controls src={outputUrl(viewScenario, clip)} />
-                    </div>
-                  )}
+                  <div className="video-frame">
+                    <SceneBadge small label={liveTotal != null ? `V${n}/${liveTotal}` : `V${n}`} title={`Video ${n}${liveTotal != null ? ` of ${liveTotal}` : ""} — clip`} />
+                    {clip ? (
+                      <>
+                        <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clip), kind: "video", alt: pretty(clip) })} />
+                        <video controls src={outputUrl(viewScenario, clip)} />
+                      </>
+                    ) : (
+                      <div className="frame-missing">
+                        {clipGen
+                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">Video {n} · pending</span></span>}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 );
               })}
             </div>
           </>
         )}
-        {mediaCount === 0 && (
+        {mediaCount === 0 && liveNums.length === 0 && (
           <div className="empty">
             <span className="empty-icon">
               <IconImage size={20} />
@@ -393,7 +451,57 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     </div>
   );
 
-  const mediaCount = beatNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
+  // Every scene in story order: on-disk beats plus config-known scenes
+  // (totalScenes) with nothing generated yet. The Rendered Clip card lists
+  // each scene's previous image/video first, final cut last.
+  const sceneNums: number[] = [
+    ...new Set([
+      ...beatNums,
+      ...(totalScenes != null && totalScenes > 0
+        ? Array.from({ length: totalScenes }, (_, i) => i + 1)
+        : []),
+    ]),
+  ].sort((a, b) => a - b);
+
+  // Follow the newest stitch automatically: when a fresh final cut lands
+  // while the previous latest (or nothing) was showing, drop the pick so
+  // the new final clip shows on its own. An explicit older pick is kept.
+  const prevLatestFinal = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevLatestFinal.current !== null && latestFinal && latestFinal !== prevLatestFinal.current) {
+      const prev = prevLatestFinal.current;
+      setViewFinal((v) => (v === null || v === prev ? null : v));
+    }
+    prevLatestFinal.current = latestFinal;
+  });
+
+  // Current loaded media for the Rendered Clip card: the single latest
+  // finished keyframe image and clip video (highest scene number with a
+  // main file). While image 2 generates, image 1 still shows; while video
+  // 3 generates, video 2 still shows — never a spinner in place of the
+  // last good file.
+  let curKf: { n: number; file: string } | null = null;
+  let curClip: { n: number; file: string } | null = null;
+  for (const n of sceneNums) {
+    const bv = versions.beats[String(n)];
+    const kf = mains.beats[String(n)]?.keyframe || bv?.keyframe[bv.keyframe.length - 1]?.file || null;
+    if (kf) curKf = { n, file: kf };
+    const cl = mains.beats[String(n)]?.clip || bv?.clip[bv.clip.length - 1]?.file || null;
+    if (cl) curClip = { n, file: cl };
+  }
+  if (!curKf && !curClip && fallbackShots.length > 0) {
+    const last = fallbackShots[fallbackShots.length - 1];
+    const m = last.kf.match(/_seq(\d+)_/);
+    const fn = m ? Number(m[1]) : fallbackShots.length;
+    curKf = { n: fn, file: last.kf };
+    if (last.clip) curClip = { n: fn, file: last.clip };
+  }
+  // An image is in flight (reference or any keyframe); a video is in
+  // flight only when a clip run is active.
+  const imgGen = generating && (genTarget === "ref" || (genTarget?.startsWith("kf:") ?? false));
+  const clipGen = generating && (genTarget?.startsWith("clip:") ?? false);
+
+  const mediaCount = sceneNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
 
   const Tag = bare || section === "reference" ? "div" : "section";
   // Full card only (embeds have no header to host the toggle): hide/show,
@@ -420,7 +528,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             ) : (
               <>
                 <span className="head-icon hi-output"><IconClapper size={15} /></span>
-                Output
+                Rendered Clip
               </>
             )}
           </h2>
@@ -430,9 +538,9 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               <span className="dot pulse" /> switching…
             </span>
           )}
-          {isBeats && beatNums.length > 0 && (
-            <span className="muted" style={{ fontSize: 12 }} title={`${beatNums.length} scenes with keyframe versions`}>
-              {beatNums.length} scene{beatNums.length === 1 ? "" : "s"}
+          {isBeats && sceneNums.length > 0 && (
+            <span className="muted" style={{ fontSize: 12 }} title={`${sceneNums.length} scenes`}>
+              {sceneNums.length} scene{sceneNums.length === 1 ? "" : "s"}
             </span>
           )}
           {isBeats && generating && genTarget !== null && genTarget !== "ref" && (
@@ -472,47 +580,85 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       {error && <p className="hint err-text">{error}</p>}
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
-      {(section === "all" || section === "output") && shownFinal && (
+      {(section === "all" || section === "output") && (curKf || curClip || generating || shownFinal) && (
         <>
-          <div className="section-label">
-            Final cut
-            {finalVersions.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {finalVersions.length} versions</span>}
-            {generating && genTarget === null && (
-              <span className="gen-flag" title="Re-stitching the final cut from the selected main versions">
-                <span className="dot pulse" /> stitching
-              </span>
-            )}
-          </div>
-          <div className="video-frame">
-            <SceneBadge label="FINAL" title="Stitched final cut" />
-            {shownFinalV != null && (
-              <span className="ver-badge" title={`Final cut v${shownFinalV} (showing)`}>v{shownFinalV}</span>
-            )}
-            <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(viewScenario, shownFinal), kind: "video", alt: "final cut" })} />
-            <video
-              key={shownFinal}
-              controls
-              preload="metadata"
-              src={`${outputUrl(viewScenario, shownFinal)}?v=${encodeURIComponent(shownFinal)}`}
-            />
-          </div>
-          {finalVersions.length > 0 && (
-            <div className="versions">
-              {finalVersions.map((v) => (
-                <button
-                  key={v.file}
-                  className={`vchip ${shownFinal === v.file ? "on" : ""}`}
-                  title={shownFinal === v.file ? `${v.file} (showing)` : `Show ${v.file}`}
-                  onClick={() => setViewFinal(v.file)}
-                >
-                  {shownFinal === v.file && <IconCheck size={10} />}
-                  v{v.v}
-                </button>
-              ))}
-              {shownFinalV != null && latestFinal && shownFinal !== latestFinal && (
-                <span className="muted" style={{ fontSize: 11 }}>showing v{shownFinalV} · latest is v{finalVersions[finalVersions.length - 1]?.v}</span>
+          {(curKf || curClip || generating) && (
+            <>
+              <div className="section-label">Current image & video</div>
+              <div className="grid">
+                <div className="img-frame" title={curKf ? `Current image — scene ${curKf.n} keyframe` : "Current image"}>
+                  {curKf && <SceneBadge scene={curKf.n} total={sceneNums.length || null} title={`Scene ${curKf.n} — current keyframe image`} />}
+                  {curKf ? (
+                    <>
+                      <ExpandButton title={`Fullscreen preview of ${pretty(curKf.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, curKf.file), kind: "image", alt: pretty(curKf.file) })} />
+                      <SmoothImage src={outputUrl(viewScenario, curKf.file)} alt={pretty(curKf.file)} />
+                    </>
+                  ) : (
+                    <div className="frame-missing">
+                      {imgGen
+                        ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                        : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">pending</span></span>}
+                    </div>
+                  )}
+                </div>
+                <div className="video-frame" title={curClip ? `Current video — video ${curClip.n} clip` : "Current video"}>
+                  {curClip && <SceneBadge small label={sceneNums.length ? `V${curClip.n}/${sceneNums.length}` : `V${curClip.n}`} title={`Video ${curClip.n} — current clip`} />}
+                  {curClip ? (
+                    <video controls preload="metadata" src={outputUrl(viewScenario, curClip.file)} />
+                  ) : (
+                    <div className="frame-missing">
+                      {clipGen
+                        ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                        : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">pending</span></span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          {shownFinal && (
+            <>
+              <div className="section-label">
+                Final cut
+                {finalVersions.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {finalVersions.length} versions</span>}
+                {generating && genTarget === null && (
+                  <span className="gen-flag" title="Re-stitching the final cut from the selected main versions">
+                    <span className="dot pulse" /> stitching
+                  </span>
+                )}
+              </div>
+              <div className="video-frame">
+                <SceneBadge label="FINAL" title="Stitched final cut" />
+                {shownFinalV != null && (
+                  <span className="ver-badge" title={`Final cut v${shownFinalV} (showing)`}>v{shownFinalV}</span>
+                )}
+                <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(viewScenario, shownFinal), kind: "video", alt: "final cut" })} />
+                <video
+                  key={shownFinal}
+                  controls
+                  preload="metadata"
+                  src={`${outputUrl(viewScenario, shownFinal)}?v=${encodeURIComponent(shownFinal)}`}
+                />
+              </div>
+              {finalVersions.length > 0 && (
+                <div className="versions">
+                  {finalVersions.map((v) => (
+                    <button
+                      key={v.file}
+                      className={`vchip ${shownFinal === v.file ? "on" : ""}`}
+                      title={shownFinal === v.file ? `${v.file} (showing)` : `Show ${v.file}`}
+                      onClick={() => setViewFinal(v.file)}
+                    >
+                      {shownFinal === v.file && <IconCheck size={10} />}
+                      v{v.v}
+                    </button>
+                  ))}
+                  {shownFinalV != null && latestFinal && shownFinal !== latestFinal && (
+                    <span className="muted" style={{ fontSize: 11 }}>showing v{shownFinalV} · latest is v{finalVersions[finalVersions.length - 1]?.v}</span>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </>
       )}
@@ -585,33 +731,41 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           )}
         </>
       ) : null}
-      {(section === "all" || section === "beats") && (beatNums.length > 0 || fallbackShots.length > 0) && (
+      {(section === "all" || section === "beats") && (sceneNums.length > 0 || fallbackShots.length > 0) && (
         <>
           {/* The Keyframes card header already carries this title. */}
           {!isBeats && <div className="section-label">Keyframes → clips</div>}
           <div className="grid grid-compact">
-            {beatNums.map((n) => {
-              const bv = versions.beats[String(n)];
+            {(() => {
+            const total = sceneNums.length;
+            return sceneNums.map((n) => {
+              const bv = versions.beats[String(n)] ?? { keyframe: [], clip: [] };
               const kfMain = mains.beats[String(n)]?.keyframe || bv.keyframe[bv.keyframe.length - 1]?.file || null;
               const clipMain = mains.beats[String(n)]?.clip || bv.clip[bv.clip.length - 1]?.file || null;
               const kfV = kfMain ? bv.keyframe.find((v) => v.file === kfMain)?.v ?? null : null;
               const clipV = clipMain ? bv.clip.find((v) => v.file === clipMain)?.v ?? null : null;
-              const total = beatNums.length;
+              const kfGen = genTarget === `kf:${n}`;
+              const clipGen = genTarget === `clip:${n}`;
               return (
-                <div className="shot" key={n}>
+                <div className="shot" key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                  <div className="shot-head" aria-hidden="true">Scene {n}</div>
                   <div className="img-frame">
+                    <SceneBadge scene={n} total={total} title={`Scene ${n} of ${total} — keyframe image`} />
                     {kfMain
                       ? <>
-                        <SceneBadge scene={n} total={total} />
                         {kfV != null && (
                           <span className="ver-badge" title={`Scene ${n} keyframe v${kfV} (main)`}>v{kfV}</span>
                         )}
                         <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
                         <SmoothImage src={outputUrl(viewScenario, kfMain)} alt={pretty(kfMain)} />
                       </>
-                      : <div className="frame-missing">no keyframe</div>}
+                      : <div className="frame-missing">
+                          {kfGen
+                            ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                            : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
+                        </div>}
                   </div>
-                  {genTarget === `kf:${n}` && !bv.keyframe.length && (
+                  {kfGen && !bv.keyframe.length && (
                     <GenChip v={1} />
                   )}
                   <VersionRow
@@ -620,13 +774,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     kind="image"
                     onSelect={(f) => pickMain("keyframe", n, f)}
                     onRegen={() => onRegen?.("keyframe", n)}
-                    generating={genTarget === `kf:${n}`}
+                    generating={kfGen}
                     busy={switchingGallery}
                     queued={!generating && queuedRegen("keyframe", n)}
                   />
                   {clipMain ? (
                     <div className="shot-clip-frame">
-                      <SceneBadge scene={n} total={total} />
+                      <SceneBadge small label={`V${n}/${total}`} title={`Video ${n} of ${total} — clip`} />
                       {clipV != null && (
                         <span className="ver-badge" title={`Scene ${n} clip v${clipV} (main)`}>v{clipV}</span>
                       )}
@@ -634,10 +788,15 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     </div>
                   ) : (
                     <div className="video-frame">
-                      <div className="frame-missing">no clip</div>
+                      <SceneBadge small label={`V${n}/${total}`} title={`Video ${n} of ${total} — clip`} />
+                      <div className="frame-missing">
+                        {clipGen
+                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">Video {n} · pending</span></span>}
+                      </div>
                     </div>
                   )}
-                  {genTarget === `clip:${n}` && !bv.clip.length && (
+                  {clipGen && !bv.clip.length && (
                     <GenChip v={1} />
                   )}
                   <VersionRow
@@ -646,26 +805,28 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     kind="video"
                     onSelect={(f) => pickMain("clip", n, f)}
                     onRegen={() => onRegen?.("clip", n)}
-                    generating={genTarget === `clip:${n}`}
+                    generating={clipGen}
                     busy={switchingGallery}
                     queued={!generating && queuedRegen("clip", n)}
                   />
                 </div>
               );
-            })}
+            });
+            })()}
             {fallbackShots.map(({ kf, clip }, fi) => {
               const m = kf.match(/_seq(\d+)_/);
               const fn = m ? Number(m[1]) : fi + 1;
               return (
-              <div className="shot" key={kf}>
+              <div className="shot" key={kf} title={`Scene ${fn} — keyframe image + video clip`}>
+                <div className="shot-head" aria-hidden="true">Scene {fn}</div>
                 <div className="img-frame">
-                  <SceneBadge scene={fn} total={fallbackShots.length} />
+                  <SceneBadge scene={fn} total={fallbackShots.length} title={`Scene ${fn} of ${fallbackShots.length} — keyframe image`} />
                   <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
                   <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
                 </div>
                 {clip && (
                   <div className="shot-clip-frame">
-                    <SceneBadge scene={fn} total={fallbackShots.length} />
+                    <SceneBadge small label={`V${fn}/${fallbackShots.length}`} title={`Video ${fn} of ${fallbackShots.length} — clip`} />
                     <video controls preload="metadata" src={outputUrl(viewScenario, clip)} className="shot-clip-bare" />
                   </div>
                 )}
@@ -680,8 +841,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </>
       )}
       {((section === "all" && switchingGallery && mediaCount === 0) ||
-        (section === "output" && switchingGallery && !shownFinal) ||
-        (section === "beats" && switchingGallery && beatNums.length === 0 && fallbackShots.length === 0)) && (
+        (section === "output" && switchingGallery && !shownFinal && !curKf && !curClip) ||
+        (section === "beats" && switchingGallery && sceneNums.length === 0 && fallbackShots.length === 0)) && (
         <div className="empty" aria-label="Loading outputs">
           <span className="empty-icon">
             <Spinner size={20} />
@@ -690,7 +851,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </div>
       )}
       {((section === "all" && !switchingGallery && mediaCount === 0) ||
-        (section === "output" && !switchingGallery && !shownFinal)) && !generating && (
+        (section === "output" && !switchingGallery && !shownFinal && !curKf && !curClip)) && !generating && (
         <div className="empty">
           <span className="empty-icon">
             <IconImage size={20} />
@@ -717,7 +878,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           )}
         </div>
       )}
-      {section === "beats" && !switchingGallery && beatNums.length === 0 && fallbackShots.length === 0 && !generating && (
+      {section === "beats" && !switchingGallery && sceneNums.length === 0 && fallbackShots.length === 0 && !generating && (
         <div className="empty">
           <span className="empty-icon">
             <IconImage size={20} />
@@ -740,17 +901,19 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 // stage label (REF / FINAL) where no scene number applies. Pure frontend
 // overlay — never modifies the generated file. Offset left of the expand
 // button so the two never overlap.
-export function SceneBadge({ scene, total, label, title }: {
+export function SceneBadge({ scene, total, label, title, small }: {
   scene?: number;
   total?: number | null;
   label?: string;
   title?: string;
+  /** Smaller type for the video-count badges (V1/26, V2/26, …). */
+  small?: boolean;
 }) {
   const text =
     label ?? (scene != null && total != null ? `${scene}/${total}` : scene != null ? String(scene) : "");
   if (!text) return null;
   return (
-    <span className="scene-badge" title={title ?? `Scene ${scene} of ${total}`}>
+    <span className={`scene-badge${small ? " scene-badge-sm" : ""}`} title={title ?? `Scene ${scene} of ${total}`}>
       {text}
     </span>
   );

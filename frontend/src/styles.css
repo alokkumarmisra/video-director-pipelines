@@ -32,7 +32,7 @@
   --edit: #22d3ee;                        /* cyan-400 (Scenario Editor header icon) */
 
   /* component-level tokens */
-  --topbar-bg: rgba(3, 7, 18, 0.80);      /* gray-950/80 */
+  --topbar-bg: #030712;                         /* solid, opaque (dark) */
   --btn-hover-bg: #273244;
   --btn-hover-line: rgba(255, 255, 255, 0.22);
   --input-focus-bg: #0d1523;
@@ -99,7 +99,7 @@
   --shadow-2: 0 8px 24px rgba(23, 30, 51, 0.10), 0 1px 3px rgba(23, 30, 51, 0.07);
   --bar-track: #d3d0c7; /* warm gray-300 */
 
-  --topbar-bg: rgba(250, 248, 244, 0.80); /* warm white/80 */
+  --topbar-bg: #ffffff; /* solid white, opaque */
   --btn-hover-bg: #e6e2d8;
   --btn-hover-line: #d3cec2;
   --input-focus-bg: #faf8f4;
@@ -122,6 +122,10 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+/* Reserve the vertical scrollbar gutter at all times so the topbar menu
+   (brand, Progress Status, health pills) never shifts left/right when
+   navigating between pages with and without a scrollbar. */
+html { scrollbar-gutter: stable; }
 body {
   margin: 0;
   background: var(--bg);
@@ -151,9 +155,9 @@ body {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 14px;
   min-height: 56px; padding: 4px 20px;
+  /* Solid + opaque in both themes (no translucency / blur). Follows the
+     theme via --topbar-bg: dark in dark mode, white in light mode. */
   background: var(--topbar-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -169,13 +173,17 @@ body {
   font-size: 12px; color: var(--text-3); white-space: nowrap;
   border-left: 1px solid var(--line-2); padding-left: 12px; margin-left: 2px;
 }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-/* Stacked service-status pills (PostgreSQL / LM Studio / ComfyUI), kept
-   compact so the 3-row stack fits the menu-bar height. */
-.topbar-health { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Service-status pills (PostgreSQL / LM Studio / ComfyUI) in one horizontal
+   row on the right of the menu bar. */
+.topbar-health {
+  display: flex; flex-direction: row; align-items: center; gap: 6px;
+  flex-wrap: nowrap;
+}
 .topbar-health .pill {
   font-size: 10px; line-height: 1.3; font-weight: 600;
-  padding: 1px 8px; gap: 5px;
+  padding: 3px 9px; gap: 5px;
+  white-space: nowrap; flex: none;
 }
 .topbar-health .dot { width: 6px; height: 6px; }
 
@@ -226,6 +234,17 @@ body {
 .head-icon.hi-editor { color: var(--edit); }
 .head-icon.hi-shots { color: var(--err-2); }
 .card-head .spacer { flex: 1; }
+/* Run controls centered in the header, between the "Run" title (left) and
+   the LTX 2.5 / Wan engine switch (right). Compact so the header stays slim. */
+.run-head-actions {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.run-head-btn { padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .run-head-actions { order: 3; flex-basis: 100%; justify-content: flex-start; }
+}
 /* Collapsed section card (hide/show toggle in the header, same as the
    Projects panel): header only, no bottom gap where the body was. */
 .card.collapsed { padding-bottom: 12px; }
@@ -283,47 +302,54 @@ select {
   cursor: pointer;
 }
 
-/* buttons */
+/* buttons — default buttons are theme-tinted (accent-soft bg + accent
+   border/text) so they pick up the picked theme color instead of flat gray.
+   primary/danger/ghost/icon-btn keep their own styles below. */
 button {
   font: 600 13px/1.4 var(--font);
-  background: var(--surface-2);
-  border: 1px solid var(--line-2);
-  color: var(--text);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-2);
   border-radius: var(--radius-s);
   padding: 8px 14px;
   cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.05s, box-shadow 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.05s, box-shadow 0.12s, filter 0.12s;
 }
-button:hover { background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
+button:hover {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 14px -4px var(--accent-line);
+  filter: brightness(1.07);
+}
 button:active { transform: translateY(1px); }
-button:disabled { opacity: 0.45; cursor: default; transform: none; }
-button:disabled:hover { background: var(--surface-2); border-color: var(--line-2); }
+button:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; filter: none; }
+button:disabled:hover { background: var(--accent-soft); border-color: var(--accent-line); box-shadow: none; filter: none; }
 button.primary {
   background: var(--accent);
   border-color: transparent;
   color: #fff;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.35);
 }
-button.primary:hover { background: #059669; border-color: transparent; }
+button.primary:hover { background: var(--accent); border-color: transparent; filter: brightness(0.92); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.35); }
 :root[data-theme="light"] button.primary {
   background: var(--accent);
   border-color: transparent;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 3px rgba(5, 150, 105, 0.35);
 }
 :root[data-theme="light"] button.primary:hover {
-  background: #059669;
+  background: var(--accent);
   border-color: transparent;
+  filter: brightness(0.92);
 }
 button.danger { background: var(--err-soft); border-color: rgba(248, 113, 113, 0.4); color: var(--err); }
 button.danger:hover { background: rgba(248, 113, 113, 0.2); border-color: rgba(248, 113, 113, 0.55); }
 button.ghost { background: transparent; border-color: var(--line-2); color: var(--text-2); }
-button.ghost:hover { color: var(--text); background: var(--surface-2); }
+button.ghost:hover { color: var(--accent-2); background: var(--accent-soft); border-color: var(--accent-line); }
 button.icon-btn {
   padding: 6px; border-radius: var(--radius-s);
   background: transparent; border-color: transparent; color: var(--text-3);
 }
-button.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+button.icon-btn:hover { color: var(--accent-2); background: var(--accent-soft); }
 button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -357,7 +383,7 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   border: 1px solid var(--line);
   white-space: nowrap;
 }
-.pill.ok, .pill.done { background: var(--ok-soft); color: var(--ok); border-color: rgba(52, 211, 153, 0.3); }
+.pill.ok, .pill.done { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
 .pill.err, .pill.error { background: var(--err-soft); color: var(--err); border-color: rgba(248, 113, 113, 0.3); }
 .pill.running { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(251, 191, 36, 0.3); }
@@ -550,12 +576,12 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .scenario-row > .icon-btn { padding: 4px; flex: none; }
 /* ---- selected project: unmistakably different (emerald gradient) ---- */
 .sidebar-list > .scenario-row.selected {
-  background: linear-gradient(135deg, #10b981 0%, #059669 55%, #047857 100%);
-  border-color: #059669;
-  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.16) inset;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, color-mix(in srgb, var(--accent-2) 72%, black) 100%);
+  border-color: var(--accent-2);
+  box-shadow: 0 4px 18px var(--accent-line), 0 0 0 1px rgba(255, 255, 255, 0.16) inset;
 }
 .sidebar-list > .scenario-row.selected:hover {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 55%, #059669 100%);
+  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 55%, color-mix(in srgb, var(--accent-2) 72%, black) 100%);
   transform: translateY(-1px);
 }
 .sidebar-list > .scenario-row.selected::before {
@@ -746,7 +772,21 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 }
 .img-frame img { width: 100%; display: block; border-radius: 0; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.shot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* Scene group card — the keyframe image + video clip of one scene live in
+   a single bordered container (with a "Scene N" header) so the pair reads
+   as one group. */
+.shot {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-media);
+  padding: 8px;
+}
+.shot-head {
+  font: 700 11px var(--mono); color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  padding: 0 2px;
+}
 .shot video { margin-top: 0; }
 .shot .video-frame, .shot .img-frame { aspect-ratio: 16 / 9; }
 .shot .img-frame img { object-fit: cover; height: 100%; }
@@ -755,6 +795,11 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   display: grid; place-items: center;
   font-size: 11.5px; color: var(--text-3);
   background: var(--inset);
+}
+/* Pending placeholder content: media-type icon stacked above the label
+   (single grid child so the pair stays centered as one block). */
+.frame-missing-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 
 /* ============================================================
@@ -1020,6 +1065,10 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   white-space: nowrap;
   pointer-events: none;
 }
+/* Smaller variant for the video-count badges (V1/26, V2/26, …) —
+   pinned flush to the video container's top-right corner (unlike the
+   scene badges, which sit left of the expand button). */
+.scene-badge-sm { font-size: 9.5px; padding: 1px 6px; right: 6px; }
 .upload-side { position: relative; }
 /* bare clip wrapper: carries the scene + version badges over the video
    (badges never intercept video controls) */
@@ -1046,11 +1095,105 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
 .gen-progress {
   display: flex; flex-direction: column; gap: 6px;
 }
-/* Center slot in the main menu bar (between nav and right controls). */
+/* Center slot in the main menu bar (between nav and right controls).
+   Anchors the toggleable Progress Status window. */
 .topbar-center {
   flex: 1; min-width: 0;
   display: flex; justify-content: center;
   padding: 0 12px;
+  position: relative;
+}
+/* Progress Status toggle in the top menu bar — carries its own inline
+   progress bar pinned to its bottom edge. */
+.progress-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  position: relative; overflow: hidden;
+  padding-bottom: 10px;
+}
+.progress-toggle-track {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 5px; background: var(--bar-track);
+  border-radius: 0 0 7px 7px;
+  overflow: hidden; pointer-events: none;
+}
+.progress-toggle-fill {
+  display: block; height: 100%; border-radius: 0 99px 99px 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+  transition: width 0.5s ease;
+  position: relative; overflow: hidden;
+}
+.progress-toggle-fill.status-done { background: linear-gradient(90deg, var(--ok) 0%, var(--accent-2) 100%); }
+.progress-toggle-fill.status-error { background: linear-gradient(90deg, var(--err) 0%, #fca5a5 100%); }
+/* live sweep while running, same language as the other bars */
+.progress-toggle-fill.sweep::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-101%);
+  animation: barSweep 1.6s linear infinite;
+}
+.progress-toggle.is-running {
+  background: var(--accent-soft); color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+.progress-toggle-dot.status-running { background: var(--accent-2); }
+.progress-toggle-dot.status-done { background: var(--ok); }
+.progress-toggle-dot.status-error { background: var(--err); }
+.progress-toggle-dot.status-idle { background: var(--text-3); }
+.progress-toggle-pct {
+  font: 700 12px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+/* Remaining-time readout on the Progress Status toggle (live countdown,
+   tabular figures so it never shifts width while ticking). */
+.progress-toggle-eta {
+  font: 600 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-2); white-space: nowrap;
+}
+.progress-toggle.is-running .progress-toggle-eta { color: var(--accent-2); }
+/* Files processed / remaining on the Progress Status toggle. */
+.progress-toggle-files {
+  font: 600 11px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-2); white-space: nowrap;
+}
+.progress-toggle.is-running .progress-toggle-files { color: var(--text-2); }
+.progress-toggle-caret {
+  font-size: 10px; color: var(--text-3);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.progress-toggle-caret.open { transform: rotate(180deg); }
+/* Toggleable Progress Status window: all Images / Videos / Overall bars
+   live in here (topbar itself shows only the toggle). */
+.progress-window-overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: transparent;
+}
+.progress-window {
+  position: absolute; top: calc(100% + 10px); left: 50%;
+  transform: translateX(-50%);
+  z-index: 41;
+  width: min(420px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: smoothIn 0.16s ease;
+}
+.progress-window-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.progress-window-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-2);
+}
+.progress-window-close { padding: 4px 8px; font-size: 12px; }
+.progress-window-body { padding: 12px 14px 14px; }
+/* The bars keep full width inside the window (no longer squeezed inline). */
+.progress-window-body .gen-compact {
+  max-width: none;
 }
 /* Slim single-row progress for the topbar center. */
 .gen-compact {
@@ -1101,10 +1244,11 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   font: 600 9px var(--mono); color: var(--text-2); text-align: right;
   min-width: 48px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-/* Per-row fill identity: Images green, Videos blue, Overall red. */
-.progress-fill.fill-images { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%); }
+/* Per-row fill identity (pipeline pattern): Images cyan, Videos blue,
+   Overall emerald. Red is reserved for failed state only. */
+.progress-fill.fill-images { background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%); }
 .progress-fill.fill-videos { background: linear-gradient(90deg, var(--vid) 0%, var(--vid-2) 100%); }
-.progress-fill.fill-overall { background: linear-gradient(90deg, var(--err) 0%, var(--err-2) 100%); }
+.progress-fill.fill-overall { background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%); }
 /* Full Run-card variant: total Remaining on its own right-aligned line
    just below the progress bar. */
 .gen-progress-remaining {
@@ -1306,6 +1450,35 @@ button.icon-btn.danger:hover { color: var(--err); background: var(--err-soft); }
   color: var(--text-2);
 }
 .theme-toggle:hover { color: var(--text); background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
+
+/* topbar theme color picker — same footprint as the theme toggle; the
+   native color input stays invisible, the swatch shows the saved color. */
+.theme-color {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  cursor: pointer; margin: 0;
+}
+.theme-color:hover { background: var(--btn-hover-bg); border-color: var(--btn-hover-line); }
+.theme-color-swatch {
+  width: 18px; height: 18px; border-radius: 6px; flex: none;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.theme-color input[type="color"] {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+  padding: 0; border: 0; background: none;
+}
+.theme-color-reset {
+  position: relative; z-index: 1;
+  padding: 1px 5px; font-size: 10px; line-height: 1.4;
+  border-radius: 6px;
+}
 
 /* topbar user chip */
 .user-chip {
@@ -1576,6 +1749,13 @@ select:focus-visible, textarea:focus-visible {
   .shell { grid-template-columns: 280px minmax(0, 1fr) minmax(340px, 400px); }
   .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(340px, 400px); }
 }
+@media (max-width: 1180px) {
+  /* Service pills stay in one horizontal row — allow the bar to wrap
+     instead of overflowing on narrower widths. */
+  .topbar { flex-wrap: wrap; row-gap: 8px; }
+  .topbar-health { flex-wrap: wrap; row-gap: 4px; }
+  .topbar-right { flex-wrap: wrap; row-gap: 6px; }
+}
 @media (max-width: 1020px) {
   .shell { grid-template-columns: 1fr; }
   .shell.no-sidebar { grid-template-columns: 1fr; }
@@ -1704,40 +1884,85 @@ select:focus-visible, textarea:focus-visible {
   box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(16, 185, 129, 0.12);
 }
 
-/* rounded shot-list container */
+/* rounded shot-list container.
+   ONE shared column template — Shot | Media | Description | Status |
+   Duration | Action — used identically by the header row and every data
+   row, so headers always sit exactly above their content. The container
+   scrolls horizontally on narrow widths; columns never squeeze. */
 .shotlist-list {
   background: var(--inset);
   border: 1px solid var(--line);
   border-radius: var(--radius-m);
-  overflow: hidden;
-}
-.shotlist-rows { max-height: 560px; overflow-y: auto; }
-.shotlist-row {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 92px 70px 132px 108px;
-  gap: 10px; align-items: center;
-  padding: 10px 12px;
+  /* Single scroll container for the whole table (header + rows), so all
+     six columns always move together horizontally and vertically. */
+  overflow: auto;
+  max-height: 620px;
+  /* Compact grid sized to fit the Story Board card (~740px center column):
+     no min-width, description is the only flexible track. */
+  --shot-grid-columns: 40px 150px minmax(0, 1fr) 112px 58px 140px;
 }
 .shotlist-row-head {
+  display: grid;
+  grid-template-columns: var(--shot-grid-columns);
+  gap: 8px; align-items: center;
+  padding: 8px 12px;
+  position: sticky; top: 0; z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+/* Header cells never wrap — each stays on one line inside its column,
+   left-aligned above its content (Duration right-aligned). */
+.shotlist-head-cell {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
   text-transform: uppercase; color: var(--text-3);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  padding-top: 9px; padding-bottom: 9px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  /* Centered over its column content (Media over the thumbnail pair,
+     Description over the title, Status over the status lines, Duration
+     over the value, Action over the buttons). Shot stays left. */
+  text-align: center;
 }
-.shotlist-row-head .num, .shotlist-row .num { text-align: right; justify-content: flex-end; }
+.shotlist-head-cell:first-child { text-align: left; }
+/* Each shot wrapper IS the grid row: its first row holds the 6 data cells
+   (via display:contents on .shotlist-row) and the expanded editor spans
+   the full width below as grid-column 1 / -1 — alignment never shifts. */
+.shotlist-row-wrap {
+  display: grid;
+  grid-template-columns: var(--shot-grid-columns);
+  gap: 8px; align-items: start;
+  padding: 10px 12px;
+}
+.shotlist-row { display: contents; }
 .shotlist-row-wrap + .shotlist-row-wrap { border-top: 1px solid var(--line); }
 .shotlist-row-wrap:hover { background: rgba(255, 255, 255, 0.015); }
 :root[data-theme="light"] .shotlist-row-wrap:hover { background: rgba(60, 50, 30, 0.03); }
 .shotlist-shot {
-  font: 700 13px var(--mono); color: var(--text);
+  font: 700 12.5px var(--mono); color: var(--text);
   font-variant-numeric: tabular-nums;
+  padding-top: 15px;
+  white-space: nowrap;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
-.shotlist-desc { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.shotlist-thumbs { display: flex; gap: 6px; flex: none; }
+/* MEDIA column — IMAGE + VIDEO previews live here only, side by side,
+   capped at the 150px column width so they never overlap Description. */
+.shotlist-media {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  max-width: 150px; min-width: 0;
+  /* Group box — the scene's image + video thumbs share one bordered
+     container so the pair reads as a single group. */
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-media);
+  padding: 6px;
+}
+.shotlist-media-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.shotlist-media-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+  white-space: nowrap;
+}
 .shotlist-thumb {
   position: relative; flex: none;
-  width: 62px; height: 36px; border-radius: var(--radius-media); overflow: hidden;
+  width: 100%; height: 46px; border-radius: var(--radius-media); overflow: hidden;
   background: var(--surface-2);
   border: 1px solid var(--line);
   cursor: zoom-in;
@@ -1746,11 +1971,28 @@ select:focus-visible, textarea:focus-visible {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .shotlist-thumb:hover { border-color: var(--btn-hover-line); }
-.shotlist-thumb-empty { display: grid; place-items: center; color: var(--text-3); cursor: default; }
+.shotlist-thumb-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--text-3); cursor: default;
+}
+.shotlist-thumb-pending { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
 .shotlist-thumb-play {
   position: absolute; inset: 0; display: grid; place-items: center;
   color: #fff; background: none; pointer-events: none;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+}
+/* Generating status overlay on the thumbnail being produced right now —
+   bottom strip with a blinking spinner so the in-flight Scene/Video reads
+   as generating even before its file lands. */
+.shotlist-thumb.is-generating { border-color: var(--accent-line); }
+.shotlist-thumb-gen {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 1px 2px;
+  background: rgba(0, 0, 0, 0.68);
+  color: var(--accent-2);
+  font: 700 9px/1.6 var(--mono); white-space: nowrap;
+  pointer-events: none;
 }
 .shotlist-thumb-tag {
   position: absolute; top: 2px; right: 2px; z-index: 1;
@@ -1760,45 +2002,35 @@ select:focus-visible, textarea:focus-visible {
   color: #fff; font: 700 9.5px/1.6 var(--mono);
   pointer-events: none; white-space: nowrap;
 }
+/* DESCRIPTION column — the flexible area. Title on one line, prompt
+   clamped to 3 lines so long text never pushes other columns around. */
+.shotlist-desc {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0; padding-top: 1px;
+}
+.shotlist-desc-title {
+  font: 600 12px var(--mono); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .shotlist-desc-text {
-  flex: 1; min-width: 0;
+  min-width: 0;
   font-size: 12.5px; color: var(--text-2); line-height: 1.45;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.shotlist-details {
-  flex: none; background: transparent; border: 0; padding: 4px 2px;
-  font-size: 11.5px; font-weight: 600; color: var(--text-3);
-  display: inline-flex; align-items: center; gap: 4px;
-}
-.shotlist-details:hover { background: transparent; color: var(--accent-2); }
-.shotlist-details svg { transition: transform 0.15s; }
-.shotlist-details[aria-expanded="true"] svg { transform: rotate(180deg); }
-.shotlist-desc { flex-wrap: wrap; }
-.shotlist-details { flex-basis: 100%; justify-content: flex-start; }
 
-/* type badge — restrained, theme-matched */
-.shotlist-type {
-  display: inline-flex; align-items: center;
-  padding: 3px 9px; border-radius: 99px;
-  font-size: 11px; font-weight: 650; white-space: nowrap;
-  background: var(--surface-2); color: var(--text-2);
-  border: 1px solid var(--line);
-}
-.shotlist-type.lip {
-  background: var(--accent-soft); color: var(--accent-2);
-  border-color: var(--accent-line);
-}
 .shotlist-dur {
   font: 600 12px var(--mono); color: var(--text-2);
   font-variant-numeric: tabular-nums; white-space: nowrap;
+  text-align: center; padding-top: 3px;
 }
 
-/* pipeline status: Prompt → Image → Video */
-.shotlist-status { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.shotlist-st { display: flex; align-items: center; gap: 6px; font-size: 11px; min-width: 0; }
+/* STATUS column — image + video states stacked, compact typography,
+   existing status colors untouched. */
+.shotlist-status { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 2px; }
+.shotlist-st { display: flex; align-items: center; gap: 5px; font-size: 11px; min-width: 0; }
 .shotlist-st-tag {
-  flex: none; width: 38px;
+  flex: none; width: 34px;
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-3);
 }
@@ -1811,21 +2043,31 @@ select:focus-visible, textarea:focus-visible {
 .shotlist-st-run .shotlist-st-val { color: var(--accent-2); }
 .shotlist-st-err .shotlist-st-val { color: var(--err); }
 
-/* compact actions */
-.shotlist-actions { display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
+/* ACTION column — compact buttons, left-aligned under the Action header,
+   wrapping into two short rows instead of three full-width bars. */
+.shotlist-actions {
+  display: flex; flex-direction: row; gap: 5px;
+  align-items: flex-start; align-content: flex-start; justify-content: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
 .shotlist-btn {
-  padding: 5px 8px; font-size: 11.5px; font-weight: 600;
-  white-space: nowrap;
+  padding: 3px 9px; font-size: 11px; font-weight: 600;
+  white-space: nowrap; width: auto; flex: none; justify-content: center;
 }
 .shotlist-btn:disabled { opacity: 0.4; }
 
-/* expanded Details / Edit */
+/* expanded Details / Edit — full-width panel below the row
+   (grid-column 1 / -1), slightly lighter than the row, subtle border,
+   comfortable padding, no excessive shadow. */
 .shotlist-detail {
-  margin: 0 12px 12px 74px;
+  grid-column: 1 / -1;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-s);
-  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  animation: smoothIn 0.18s ease;
+  min-width: 0;
 }
 .shotlist-detail-title {
   font: 700 12px var(--mono); color: var(--text);
@@ -1852,21 +2094,16 @@ select:focus-visible, textarea:focus-visible {
 }
 
 @media (max-width: 1280px) {
-  .shotlist-row { grid-template-columns: 46px minmax(0, 1fr) 84px 64px 120px 100px; }
+  .shotlist-list { --shot-grid-columns: 36px 128px minmax(0, 1fr) 104px 54px 128px; }
+  .shotlist-row-head,
+  .shotlist-row-wrap { gap: 6px; }
+  .shotlist-thumb { height: 42px; }
 }
 @media (max-width: 1020px) {
-  .shotlist-rows { max-height: none; }
-  .shotlist-row {
-    grid-template-columns: 46px minmax(0, 1fr) 84px;
-    row-gap: 8px;
-  }
-  .shotlist-row-head { display: none; }
-  .shotlist-dur, .shotlist-status, .shotlist-actions {
-    grid-column: 2 / -1;
-  }
-  .shotlist-actions { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; }
-  .shotlist-actions .shotlist-btn { flex: none; }
-  .shotlist-detail { margin-left: 0; }
+  /* Desktop-first table: keep the identical 6-column grid at small widths
+     and scroll the table container horizontally — never squeeze, never
+     stack cells, never hide the header. */
+  .shotlist-list { max-height: none; }
   .shotlist-detail-grid { grid-template-columns: 1fr; }
   .shotlist-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

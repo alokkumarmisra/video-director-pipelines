@@ -85,18 +85,16 @@ export function formatDuration(ms: number | null): string {
   return `${p(h)}h:${p(m)}m:${p(s)}s`;
 }
 
-// Compact duration for time-elapsed display: 45s, 5m 20s, 2h 5m.
+// Elapsed time in the same fixed-width digital format as Remaining:
+// "02h:22m:32s". Zero-padded so the text never shifts width as it ticks.
 export function formatElapsed(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) {
-    const r = s % 60;
-    return r ? `${m}m ${r}s` : `${m}m`;
-  }
-  const h = Math.floor(m / 60);
-  const rm = m % 60;
-  return rm ? `${h}h ${rm}m` : `${h}h`;
+  if (!Number.isFinite(ms)) return "--h:--m:--s";
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${p(h)}h:${p(m)}m:${p(s)}s`;
 }
 
 // ---- Historical per-task pace (localStorage) ----
@@ -110,7 +108,7 @@ const PACE_CAP = 50; // recent runs weigh more; the mean stays adaptive
 // A real generation never finishes faster than this (resume-skips and the
 // ffmpeg stitch land in milliseconds). Anything quicker is not a pace
 // sample — counting it would collapse the averages toward zero and freeze
-// Time Remaining at 00:00:00 for the rest of the run.
+// Time Remaining at 00h:00m:00s for the rest of the run.
 export const MIN_TASK_MS = 2000;
 
 export function loadPace(): { img: number | null; vid: number | null } {

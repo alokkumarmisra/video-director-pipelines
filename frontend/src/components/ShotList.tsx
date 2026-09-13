@@ -26,7 +26,6 @@ import SmoothImage from "./SmoothImage";
 import { SceneBadge } from "./OutputGallery";
 import {
   IconCheck,
-  IconChevronDown,
   IconClapper,
   IconFilm,
   IconImage,
@@ -336,14 +335,6 @@ export default function ShotList({
 
   const visible = filter === "all" ? rows : rows.filter((r) => r.n === filter);
 
-  const toggleExpand = (n: number) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(n)) next.delete(n);
-      else next.add(n);
-      return next;
-    });
-
   // Selecting a scene tab reveals that scene's full prompts. All reveals
   // the full data for every scene. Details toggles rows individually.
   const selectScene = (n: number) => {
@@ -523,11 +514,10 @@ export default function ShotList({
 
   if (!name) {
     return (
-      <section className="card shotlist" aria-label="Shot list">
+      <section className="card shotlist" aria-label="Story Board">
         <div className="shotlist-head">
           <div>
-            <div className="shotlist-kicker">Shot List</div>
-            <h2 className="shotlist-title">Shot List</h2>
+            <h2 className="shotlist-title">Story Board</h2>
             <p className="shotlist-sub">— every scene, every beat</p>
           </div>
         </div>
@@ -543,7 +533,7 @@ export default function ShotList({
   }
 
   return (
-    <section className={`card shotlist${collapsed ? " collapsed" : ""}`} aria-label={`Shot list for ${name}`}>
+    <section className={`card shotlist${collapsed ? " collapsed" : ""}`} aria-label={`Story Board for ${name}`}>
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
       {/* Header */}
@@ -551,8 +541,7 @@ export default function ShotList({
         <div className="shotlist-head-left">
           <span className="head-icon hi-shots" aria-hidden="true"><IconPlay size={16} /></span>
           <div>
-            <div className="shotlist-kicker">Shot List</div>
-            <h2 className="shotlist-title">Shot List</h2>
+            <h2 className="shotlist-title">Story Board</h2>
             <p className="shotlist-sub">— every scene, every beat</p>
           </div>
         </div>
@@ -645,9 +634,9 @@ export default function ShotList({
           <span className="shotlist-stat-value">{lipsyncCount}</span>
           <span className="shotlist-stat-label">Lip-sync</span>
         </div>
-        <div className="shotlist-stat" title={`Total runtime at ${clipDur}s per clip`}>
-          <span className="shotlist-stat-value">{clipDur > 0 ? totalDur.toFixed(1) : "—"}</span>
-          <span className="shotlist-stat-label">{clipDur > 0 ? "s total" : "duration"}</span>
+        <div className="shotlist-stat" title={clipDur > 0 ? `Total runtime: ${totalDur.toFixed(1)}s (${(totalDur / 60).toFixed(2)} min) at ${clipDur}s per clip` : "Clip duration not set"}>
+          <span className="shotlist-stat-value">{clipDur > 0 ? `${totalDur.toFixed(1)}s` : "—"}</span>
+          <span className="shotlist-stat-label">{clipDur > 0 ? `${(totalDur / 60).toFixed(2)} min total` : "duration"}</span>
         </div>
       </div>
 
@@ -695,13 +684,13 @@ export default function ShotList({
         </div>
       ) : (
         <div className="shotlist-list" role="table" aria-label="Shots">
-          <div className="shotlist-row shotlist-row-head" role="row" aria-hidden="true">
-            <span>Shot</span>
-            <span>Description</span>
-            <span>Type</span>
-            <span className="num">Duration</span>
-            <span>Status</span>
-            <span className="num">Action</span>
+          <div className="shotlist-row-head" role="row" aria-hidden="true">
+            <span className="shotlist-head-cell">Shot</span>
+            <span className="shotlist-head-cell">Media</span>
+            <span className="shotlist-head-cell">Description</span>
+            <span className="shotlist-head-cell">Status</span>
+            <span className="shotlist-head-cell">Duration</span>
+            <span className="shotlist-head-cell">Action</span>
           </div>
           <div className="shotlist-rows">
             {visible.map((r) => {
@@ -719,14 +708,15 @@ export default function ShotList({
                     <span className="shotlist-shot" role="cell" title={`Scene ${r.n}, shot 1`}>
                       {r.shot}
                     </span>
-                    <span className="shotlist-desc" role="cell">
-                      <span className="shotlist-thumbs">
+                    <span className="shotlist-media" role="cell">
+                      <span className="shotlist-media-item">
+                        <span className="shotlist-media-label">Image</span>
                         {r.imageFile ? (
                           <span
-                            className="shotlist-thumb"
+                            className={`shotlist-thumb${imgRunning ? " is-generating" : ""}`}
                             role="button"
                             tabIndex={0}
-                            title={`Preview image ${r.shot}`}
+                            title={imgRunning ? `Scene ${r.n} keyframe generating…` : `Scene ${r.n} keyframe image — click to preview`}
                             onClick={() =>
                               setPreview({ src: outputUrl(outDir, r.imageFile!), kind: "image", alt: `shot ${r.shot} image` })
                             }
@@ -736,19 +726,34 @@ export default function ShotList({
                             }}
                           >
                             <SmoothImage src={outputUrl(outDir, r.imageFile)} alt="" />
-                            <span className="shotlist-thumb-tag">{r.shot}</span>
+                            <span className="shotlist-thumb-tag" title={`Scene ${r.n}`}>S{r.n}</span>
+                            {imgRunning && (
+                              <span className="shotlist-thumb-gen" title={`Scene ${r.n} generating…`}>
+                                <Spinner size={11} /> Generating
+                              </span>
+                            )}
                           </span>
                         ) : (
-                          <span className="shotlist-thumb shotlist-thumb-empty" title="No image yet">
-                            <IconImage size={14} />
+                          <span
+                            className={`shotlist-thumb shotlist-thumb-empty${r.imageStatus === "generating" ? " is-generating" : ""}`}
+                            title={r.imageStatus === "generating" ? `Scene ${r.n} keyframe generating…` : `Scene ${r.n} — no image yet`}
+                          >
+                            {r.imageStatus === "generating" ? <Spinner size={13} /> : <IconImage size={14} />}
+                            <span className="shotlist-thumb-pending">
+                              {r.imageStatus === "generating" ? "Generating" : "Pending"}
+                            </span>
+                            <span className="shotlist-thumb-tag" title={`Scene ${r.n}`}>S{r.n}</span>
                           </span>
                         )}
+                      </span>
+                      <span className="shotlist-media-item">
+                        <span className="shotlist-media-label">Video</span>
                         {r.clipFile ? (
                           <span
-                            className="shotlist-thumb"
+                            className={`shotlist-thumb${clipRunning ? " is-generating" : ""}`}
                             role="button"
                             tabIndex={0}
-                            title={`Preview video ${r.shot}`}
+                            title={clipRunning ? `Video ${r.n} generating…` : `Video ${r.n} clip — click to preview`}
                             onClick={() =>
                               setPreview({ src: outputUrl(outDir, r.clipFile!), kind: "video", alt: `shot ${r.shot} video` })
                             }
@@ -759,42 +764,45 @@ export default function ShotList({
                           >
                             <video src={outputUrl(outDir, r.clipFile)} preload="metadata" muted playsInline />
                             <span className="shotlist-thumb-play" aria-hidden="true">
-                              <IconPlay size={10} />
+                              {clipRunning ? <Spinner size={10} /> : <IconPlay size={10} />}
                             </span>
-                            <span className="shotlist-thumb-tag">{r.shot}</span>
+                            <span className="shotlist-thumb-tag" title={`Video ${r.n}`}>V{r.n}</span>
+                            {clipRunning && (
+                              <span className="shotlist-thumb-gen" title={`Video ${r.n} generating…`}>
+                                <Spinner size={11} /> Generating
+                              </span>
+                            )}
                           </span>
                         ) : (
-                          <span className="shotlist-thumb shotlist-thumb-empty" title="No video yet">
-                            <IconFilm size={14} />
+                          <span
+                            className={`shotlist-thumb shotlist-thumb-empty${r.videoStatus === "generating" ? " is-generating" : ""}`}
+                            title={r.videoStatus === "generating" ? `Video ${r.n} generating…` : `Video ${r.n} — no clip yet`}
+                          >
+                            {r.videoStatus === "generating" ? <Spinner size={13} /> : <IconFilm size={14} />}
+                            <span className="shotlist-thumb-pending">
+                              {r.videoStatus === "generating" ? "Generating" : "Pending"}
+                            </span>
+                            <span className="shotlist-thumb-tag" title={`Video ${r.n}`}>V{r.n}</span>
                           </span>
                         )}
+                      </span>
+                    </span>
+                    <span className="shotlist-desc" role="cell">
+                      <span className="shotlist-desc-title" title={r.beat.title}>
+                        {r.beat.title || <span className="muted">untitled</span>}
                       </span>
                       <span className="shotlist-desc-text" title={r.beat.image || r.beat.title}>
                         {r.beat.image || r.beat.title || <span className="muted">No prompt yet</span>}
                       </span>
-                      <button
-                        className="shotlist-details"
-                        onClick={() => toggleExpand(r.n)}
-                        aria-expanded={open}
-                        title={open ? "Hide full prompts" : "Show full prompts"}
-                      >
-                        Details / Edit
-                        <IconChevronDown size={12} />
-                      </button>
-                    </span>
-                    <span role="cell">
-                      <span className={`shotlist-type${r.type === "Lip-sync" ? " lip" : ""}`} title={`Shot type: ${r.type}`}>
-                        {r.type}
-                      </span>
-                    </span>
-                    <span className="shotlist-dur num" role="cell" title={`${clipDur}s per clip (project setting)`}>
-                      {clipDur > 0 ? `${clipDur.toFixed(1)} s` : "—"}
                     </span>
                     <span className="shotlist-status" role="cell">
                       <StatusLine label="Image" status={r.imageStatus} title={r.imageError ?? undefined} />
                       <StatusLine label="Video" status={r.videoStatus} title={r.videoError ?? undefined} />
                     </span>
-                    <span className="shotlist-actions num" role="cell">
+                    <span className="shotlist-dur" role="cell" title={`${clipDur}s per clip (project setting)`}>
+                      {clipDur > 0 ? `${clipDur.toFixed(1)} s` : "—"}
+                    </span>
+                    <span className="shotlist-actions" role="cell">
                       <button
                         className="ghost shotlist-btn"
                         disabled={mutBusy}

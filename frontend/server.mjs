@@ -36,6 +36,22 @@ const readFavs = () => {
   try { return JSON.parse(fs.readFileSync(FAVS, "utf8")).names; }
   catch { return []; }
 };
+// UI theme persisted in a file (data/theme.json) so the chosen mode + accent
+// color survive reloads, restarts and browsers — localStorage is only a cache.
+// Shape: { mode: "dark" | "light", color: "" | "#rrggbb" }.
+const THEME_FILE = path.join(ROOT, "data", "theme.json");
+const readThemeFile = () => {
+  try {
+    const t = JSON.parse(fs.readFileSync(THEME_FILE, "utf8"));
+    const mode = t.mode === "light" ? "light" : "dark";
+    const color = typeof t.color === "string" && /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : "";
+    return { mode, color };
+  } catch { return { mode: "dark", color: "" }; }
+};
+const writeThemeFile = (t) => {
+  fs.mkdirSync(path.dirname(THEME_FILE), { recursive: true });
+  fs.writeFileSync(THEME_FILE, JSON.stringify(t, null, 2));
+};
 // ---------------------------------------------------------------- scenarios store
 // Scenario configs live in Postgres (scenarios table) by default — SQLite is
 // NOT used unless explicitly enabled. Set USE_SQLITE=true in the root .env to
@@ -1552,6 +1568,11 @@ const server = http.createServer(async (req, res) => {
       const user = authedUser(req);
       return user ? json(res, 200, { user }) : json(res, 401, { error: "unauthorized" });
     }
+    // Public read so the login screen + first paint already use the saved
+    // theme (writes stay behind auth below).
+    if (p === "/api/theme" && req.method === "GET") {
+      return json(res, 200, readThemeFile());
+    }
 
     // Everything below (API + generated outputs) requires a session.
     if ((p.startsWith("/api/") || p.startsWith("/outputs/")) && !authedUser(req))
@@ -1592,6 +1613,16 @@ const server = http.createServer(async (req, res) => {
       favs = on ? (favs.includes(name) ? favs : [...favs, name]) : favs.filter((n) => n !== name);
       fs.writeFileSync(FAVS, JSON.stringify({ names: favs }, null, 2));
       return json(res, 200, { ok: true, names: favs });
+    }
+    if (p === "/api/theme" && (req.method === "PUT" || req.method === "POST")) {
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const mode = body.mode === "light" ? "light" : "dark";
+      const color = typeof body.color === "string" && /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : "";
+      const t = { mode, color };
+      writeThemeFile(t);
+      return json(res, 200, t);
     }
     if (p.startsWith("/api/scenario/") && req.method === "GET" && p.split("/")[4] === "versions") {
       const parts = p.split("/");

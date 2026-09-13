@@ -111,7 +111,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       setRunScenario(scenario);
       setRunRegen(regen);
       setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
-      setTotalBeats(null);
+      // Keep the previous total until the fresh config lands — clearing it
+      // here is what briefly hid every thumbnail slot right after Generate.
       setStartedAt(Date.now());
       lastAssetAt.current = Date.now();
       seenFiles.current = new Set();
@@ -189,7 +190,8 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     setRunScenario(meta.scenario);
     setRunRegen(regen);
     setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1 });
-    setTotalBeats(null);
+    // Same as begin(): keep the previous total so thumbnail slots stay
+    // mounted while the reattached run's config loads.
     setStartedAt(meta.startedAt ?? Date.now());
     lastAssetAt.current = meta.startedAt ?? Date.now();
     seenFiles.current = new Set();
@@ -308,7 +310,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       // The prev-chain advances through every event (so in-flight time stays
       // exact), but sub-threshold resume-skips are dropped from the averages
       // below — otherwise a re-run's instant skips collapse the pace toward
-      // zero and Time Remaining freezes at 00:00:00 for the whole run.
+      // zero and Time Remaining freezes at 00h:00m:00s for the whole run.
       const durs: { d: number; gen: "image" | "video" | null }[] = [];
       let prev = startedAt;
       for (const t of times) {
@@ -387,7 +389,34 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           <span className="head-icon hi-run"><IconTerminal size={15} /></span>
           Run
         </h2>
-        <span className="spacer" />
+        <div className="run-head-actions" role="group" aria-label="Run controls">
+          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run")} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : "Start a full generation"}>
+            {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
+            {starting === "run" ? "Starting…" : "Generate"}
+          </button>
+          <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch")} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : "Re-stitch final from selected mains only"}>
+            {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
+            {starting === "stitch" ? "Starting…" : "Stitch only"}
+          </button>
+          <button
+            className="danger run-head-btn"
+            disabled={status !== "running" || !runId || stopping}
+            title="Stop the active run"
+            onClick={async () => {
+              if (!runId || stopping) return;
+              setStopping(true);
+              setCancelled(true);
+              try {
+                await killRun(runId);
+              } catch {
+                setStopping(false);
+              }
+            }}
+          >
+            {stopping ? <Spinner size={12} /> : <IconStop size={12} />}
+            {stopping ? "Stopping…" : "Stop"}
+          </button>
+        </div>
         <span className="seg" title="i2v engine">
           <button className={engine === "ltx" ? "on" : ""} onClick={() => onEngine("ltx")}>
             LTX 2.5
@@ -447,33 +476,6 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         <GenerationProgressBar progress={progress} />
       )}
 
-      <div className="row">
-        <button className="primary" onClick={() => begin(false, null, 1, "run")} disabled={status === "running" || starting !== null || !scenario}>
-          {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
-          {starting === "run" ? "Starting…" : "Generate"}
-        </button>
-        <button onClick={() => begin(true, null, 1, "stitch")} disabled={status === "running" || starting !== null || !scenario}>
-          {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
-          {starting === "stitch" ? "Starting…" : "Stitch only"}
-        </button>
-        <button
-          className="danger"
-          disabled={status !== "running" || !runId || stopping}
-          onClick={async () => {
-            if (!runId || stopping) return;
-            setStopping(true);
-            setCancelled(true);
-            try {
-              await killRun(runId);
-            } catch {
-              setStopping(false);
-            }
-          }}
-        >
-          {stopping ? <Spinner size={12} /> : <IconStop size={12} />}
-          {stopping ? "Stopping…" : "Stop"}
-        </button>
-      </div>
       {!scenario && (
         <p className="hint">Select or save a scenario first, then start a run.</p>
       )}

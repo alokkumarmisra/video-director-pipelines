@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
-import GenerationProgressBar, { emptyProgress, loadPace, type GenerationProgress } from "./components/GenerationProgressBar";
+import GenerationProgressBar, { emptyProgress, loadPace, formatDuration, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
@@ -12,6 +12,20 @@ import Login from "./components/Login";
 import { IconCheck, IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
+
+const THEME_COLOR_KEY = "ss-theme-color";
+const DEFAULT_ACCENT = "#10b981";
+
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  if (!Number.isFinite(n)) return hex;
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // Queue dedupe: same stitch flag, same regen target (ref count matters —
 // batch sizes differ; keyframe/clip always run once).
@@ -38,11 +52,55 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(() =>
     localStorage.getItem("ss-theme") === "light" ? "light" : "dark"
   );
+  // Custom accent color (theme): any picked color is saved and reapplied as
+  // the app accent (--accent / --accent-2 / soft + line + glows). Empty =
+  // default emerald. localStorage is an instant cache; data/theme.json on the
+  // server is the source of truth (loaded on boot, written on every change).
+  const [themeColor, setThemeColor] = useState<string>(() =>
+    localStorage.getItem(THEME_COLOR_KEY) ?? ""
+  );
+  // True once the file-backed theme has been loaded — gates the write-back
+  // below so the initial mount never overwrites the file with cached values.
+  const [themeReady, setThemeReady] = useState(false);
+
+  // Load the saved file theme once (public GET — works before login too).
+  useEffect(() => {
+    getTheme()
+      .then((t) => {
+        if (t.mode === "light" || t.mode === "dark") setTheme(t.mode);
+        if (typeof t.color === "string") setThemeColor(t.color);
+      })
+      .catch(() => {})
+      .finally(() => setThemeReady(true));
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("ss-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!themeColor) {
+      for (const k of ["--accent", "--accent-2", "--accent-soft", "--accent-line", "--glow-1", "--glow-2", "--glow-3"])
+        root.style.removeProperty(k);
+      localStorage.removeItem(THEME_COLOR_KEY);
+    } else {
+      localStorage.setItem(THEME_COLOR_KEY, themeColor);
+      root.style.setProperty("--accent", themeColor);
+      root.style.setProperty("--accent-2", themeColor);
+      root.style.setProperty("--accent-soft", hexToRgba(themeColor, 0.10));
+      root.style.setProperty("--accent-line", hexToRgba(themeColor, 0.35));
+      root.style.setProperty("--glow-1", hexToRgba(themeColor, 0.14));
+      root.style.setProperty("--glow-2", hexToRgba(themeColor, 0.08));
+      root.style.setProperty("--glow-3", hexToRgba(themeColor, 0.05));
+    }
+    // Persist every change to data/theme.json (fire-and-forget; the file is
+    // re-read on every load / restart until changed again). Skipped until the
+    // initial file load has landed. May 401 before login — the next change
+    // after login retries the write.
+    if (themeReady) saveTheme({ mode: theme, color: themeColor }).catch(() => {});
+  }, [theme, themeColor, themeReady]);
 
   useEffect(() => {
     me()
@@ -75,15 +133,19 @@ export default function App() {
       onLogout={handleLogout}
       theme={theme}
       onToggleTheme={toggleTheme}
+      themeColor={themeColor}
+      onThemeColor={setThemeColor}
     />
   );
 }
 
-function Studio({ user, onLogout, theme, onToggleTheme }: {
+function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor }: {
   user: string;
   onLogout: () => void;
   theme: Theme;
   onToggleTheme: () => void;
+  themeColor: string;
+  onThemeColor: (c: string) => void;
 }) {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const [view, setView] = useState<"home" | "workspace">("home");
@@ -131,6 +193,18 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
   // in small type on the right of each row). Same dashboard payload as the
   // topbar progress — no extra endpoint.
   const [dashMap, setDashMap] = useState<Map<string, DashboardProject>>(new Map());
+
+  // Progress Status popup in the top menu bar — the Images / Videos /
+  // Overall bars live inside this toggleable window, not inline in the bar.
+  const [progressOpen, setProgressOpen] = useState(false);
+  useEffect(() => {
+    if (!progressOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProgressOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [progressOpen]);
 
   // Live countdown from a linear pace estimate: estimated total duration
   // minus elapsed time. The old formula (elapsed/done*remaining) froze
@@ -599,11 +673,85 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             Projects
           </button>
         </nav>
-        {/* Global generation status — permanently centered in the main menu
-            bar (Sanskriti AI · Home · Projects), visible on every page.
-            Shows live progress while generating, idle state otherwise. */}
+        {/* Global generation status — a toggleable "Progress Status" window
+            centered in the main menu bar (Sanskriti AI · Home · Projects).
+            The Images / Videos / Overall bars live inside the popup, not
+            inline in the bar; toggling shows the current progress. */}
         <div className="topbar-center">
-          <GenerationProgressBar progress={topProgress} compact />
+          <button
+            className={`topnav-btn progress-toggle ${progressOpen ? "on" : ""}${topProgress.status === "running" ? " is-running" : ""}`}
+            onClick={() => setProgressOpen((o) => !o)}
+            aria-expanded={progressOpen}
+            aria-haspopup="dialog"
+            title={topProgress.status === "running"
+              ? `Generating ${topProgress.scenario || "scenes"} — ${Math.round(topProgress.pct)}% — Remaining ${formatDuration(topProgress.etaMs)} — click to ${progressOpen ? "hide" : "show"} progress`
+              : `Progress Status — click to ${progressOpen ? "hide" : "show"} progress`}
+          >
+            <span
+              className={`dot progress-toggle-dot status-${topProgress.status}${topProgress.status === "running" ? " pulse" : ""}`}
+              aria-hidden="true"
+            />
+            <span>Progress Status</span>
+            {topProgress.status === "running" && (
+              <>
+                <span className="progress-toggle-pct">{Math.round(topProgress.pct)}%</span>
+                {topProgress.total > 0 && (
+                  <span
+                    className="progress-toggle-files"
+                    title={`${topProgress.completed} of ${topProgress.total} files processed, ${Math.max(0, topProgress.total - topProgress.completed)} remaining`}
+                  >
+                    {topProgress.completed}/{topProgress.total} files · {Math.max(0, topProgress.total - topProgress.completed)} left
+                  </span>
+                )}
+                <span
+                  className="progress-toggle-eta"
+                  title={`Remaining ${formatDuration(topProgress.etaMs)}`}
+                >
+                  ⏳ {formatDuration(topProgress.etaMs)}
+                </span>
+              </>
+            )}
+            <span className={`progress-toggle-caret${progressOpen ? " open" : ""}`} aria-hidden="true">▾</span>
+            {topProgress.status !== "idle" && (
+              <span className="progress-toggle-track" aria-hidden="true">
+                <span
+                  className={`progress-toggle-fill status-${topProgress.status}${topProgress.status === "running" ? " sweep" : ""}`}
+                  style={{ width: `${Math.min(100, Math.max(0, topProgress.pct))}%` }}
+                />
+              </span>
+            )}
+          </button>
+          {progressOpen && (
+            <>
+              <div
+                className="progress-window-overlay"
+                onClick={() => setProgressOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                className="progress-window"
+                role="dialog"
+                aria-modal="false"
+                aria-label="Progress Status"
+              >
+                <div className="progress-window-head">
+                  <span className="progress-window-title">Progress Status</span>
+                  <span className="spacer" />
+                  <button
+                    className="icon-btn progress-window-close"
+                    onClick={() => setProgressOpen(false)}
+                    title="Close progress status"
+                    aria-label="Close progress status"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="progress-window-body">
+                  <GenerationProgressBar progress={topProgress} compact />
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div className="topbar-right">
           <div className="topbar-health" role="status" aria-label="Service status">
@@ -630,6 +778,41 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
           >
             {theme === "dark" ? <IconSun size={15} /> : <IconMoon size={15} />}
           </button>
+          <label
+            className="theme-color"
+            title={themeColor ? `Theme color ${themeColor} — pick to change, double-click to reset` : "Pick a theme color"}
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              onThemeColor("");
+            }}
+          >
+            <span
+              className="theme-color-swatch"
+              aria-hidden="true"
+              style={{ background: themeColor || DEFAULT_ACCENT }}
+            />
+            <input
+              type="color"
+              value={themeColor || DEFAULT_ACCENT}
+              onChange={(e) => onThemeColor(e.target.value)}
+              aria-label="Pick a theme color"
+            />
+            {themeColor && (
+              <button
+                className="theme-color-reset"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onThemeColor("");
+                }}
+                title="Reset to default theme color"
+                aria-label="Reset to default theme color"
+                type="button"
+              >
+                ✕
+              </button>
+            )}
+          </label>
           <div className="user-chip" title={`Signed in as ${user}`}>
             <span className="user-avatar">{user.slice(0, 1).toUpperCase()}</span>
             <span className="user-name">{user}</span>
@@ -802,9 +985,9 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             </>
           ) : (
           <>
-          {/* Output box on top, keyframes → clips right below it, then the
-              generation (Run window). Each outputs card hides/shows on its
-              own toggle. */}
+          {/* Output box on top, Shot List right below it, keyframes → clips
+              below the Shot List, then the generation (Run window). Each
+              outputs card hides/shows on its own toggle. */}
           <OutputGallery
             scenario={contentName ? outScenario(contentName, engine) : ""}
             refreshKey={refreshKey}
@@ -817,35 +1000,6 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
             onUploaded={refresh}
             onEngineSwitch={() => setEngine(engine === "wan" ? "ltx" : "wan")}
           />
-          <OutputGallery
-            scenario={contentName ? outScenario(contentName, engine) : ""}
-            refreshKey={refreshKey}
-            section="beats"
-            generatingScenario={runActive ? runScenario : null}
-            regenTarget={runActive ? regenTarget : null}
-            runQueue={runQueue}
-            onRegen={handleRegen}
-            onUploaded={refresh}
-          />
-          <RunPanel
-            scenario={draft ? "" : contentName}
-            engine={engine}
-            onEngine={setEngine}
-            onDone={refresh}
-            onStatus={(s, sc, regen) => {
-              setRunActive(s === "running");
-              setRunScenario(s === "running" ? sc : null);
-              // The regen target comes from the run that actually started
-              // (reported by RunPanel) — never from a stale pendingRun, so a
-              // full Generate run is never mislabelled as a ref/beat regen.
-              setRegenTarget(s === "running" ? regen : null);
-            }}
-            pendingRun={pendingRun}
-            attachRun={attachRun}
-            serverRun={serverRun}
-            onProgress={setGenProgress}
-          />
-          {/* Scenario Editor lives in the right column, just below AI Craft. */}
           {editor && (
             <ShotList
               name={editor.name}
@@ -869,6 +1023,35 @@ function Studio({ user, onLogout, theme, onToggleTheme }: {
               runQueue={runQueue}
             />
           )}
+          <OutputGallery
+            scenario={contentName ? outScenario(contentName, engine) : ""}
+            refreshKey={refreshKey}
+            section="beats"
+            generatingScenario={runActive ? runScenario : null}
+            regenTarget={runActive ? regenTarget : null}
+            runQueue={runQueue}
+            onRegen={handleRegen}
+            onUploaded={refresh}
+            totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
+          />
+          <RunPanel
+            scenario={draft ? "" : contentName}
+            engine={engine}
+            onEngine={setEngine}
+            onDone={refresh}
+            onStatus={(s, sc, regen) => {
+              setRunActive(s === "running");
+              setRunScenario(s === "running" ? sc : null);
+              // The regen target comes from the run that actually started
+              // (reported by RunPanel) — never from a stale pendingRun, so a
+              // full Generate run is never mislabelled as a ref/beat regen.
+              setRegenTarget(s === "running" ? regen : null);
+            }}
+            pendingRun={pendingRun}
+            attachRun={attachRun}
+            serverRun={serverRun}
+            onProgress={setGenProgress}
+          />
           </>
           )}
         </div>

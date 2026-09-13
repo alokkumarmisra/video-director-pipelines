@@ -75,6 +75,21 @@ export const setFavorite = (name: string, on: boolean) =>
     body: JSON.stringify({ name, on }),
   }).then((r) => r.json() as Promise<{ ok: boolean; names: string[] }>);
 
+// UI theme persisted server-side in data/theme.json (source of truth —
+// survives reloads, restarts and browser changes; localStorage is only a
+// cache). Shape: { mode: "dark" | "light", color: "" | "#rrggbb" }.
+export interface ThemeFile {
+  mode: "dark" | "light";
+  color: string;
+}
+export const getTheme = () => get<ThemeFile>("/api/theme");
+export const saveTheme = (t: ThemeFile) =>
+  fetch("/api/theme", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(t),
+  }).then((r) => r.json() as Promise<ThemeFile>);
+
 export type Engine = "ltx" | "wan";
 
 export interface RegenSpec {
