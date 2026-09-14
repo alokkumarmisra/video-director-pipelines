@@ -22,19 +22,31 @@
 //   node scripts/character_sequence_wan.mjs [scenario] --regen ref
 //   node scripts/character_sequence_wan.mjs [scenario] --regen keyframe <beat>
 //   node scripts/character_sequence_wan.mjs [scenario] --regen clip <beat>
-// Outputs go to outputs/<scenario>_wan/ (never clobbers the LTX run of the same scenario).
+//   node scripts/character_sequence_wan.mjs [scenario] --vertical  # 9:16 Instagram Reel cut
+//     (combines with --stitch / --regen; writes outputs/<scenario>_wan_vertical/)
+// Outputs go to outputs/<scenario>_wan/ (never clobbers the LTX run of the same scenario);
+// --vertical writes outputs/<scenario>_wan_vertical/ instead.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildFluxGraph, buildFluxImg2ImgGraph, buildWanGraph,
 } from "../lib/comfy.mjs";
+import {
+  VERTICAL, VERTICAL_FLUX_WIDTH, VERTICAL_FLUX_HEIGHT,
+  VERTICAL_WAN_WIDTH, VERTICAL_WAN_HEIGHT,
+  normalizeFormat, outDirName, prefixForDir, verticalImagePrompt, verticalMotionPrompt,
+} from "../lib/variant.mjs";
 import { runSequence, stitchSequence } from "../lib/sequence.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 const scenario = args.find((a) => !a.startsWith("--")) || "anime_sequence";
+// --vertical: regenerate every asset at 9:16 into outputs/<scenario>_wan_vertical/
+// (Instagram Reel cut). Never touches the landscape outputs.
+const format = normalizeFormat(args.includes("--vertical") ? VERTICAL : "landscape");
+const vertical = format === VERTICAL;
 const regenIdx = args.indexOf("--regen");
 const regen = regenIdx >= 0
   ? { kind: args[regenIdx + 1], index: Number(args[regenIdx + 2]) || 0 }
@@ -47,28 +59,33 @@ if (!fs.existsSync(cfgPath)) {
   process.exit(1);
 }
 const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
-const outDir = path.resolve(here, `../outputs/${scenario}_wan`);
+const outDir = path.resolve(here, `../outputs/${outDirName(scenario, "wan", format)}`);
+const prefix = prefixForDir(outDirName(scenario, "wan", format));
 fs.mkdirSync(outDir, { recursive: true });
 
 /** duration (s) -> Wan frame count (4n+1 at fixed 16fps). 3s -> 49, 4s -> 65. */
 const wanFrames = (duration) => Math.floor((duration * 16) / 4) * 4 + 1;
 const length = cfg.length ?? wanFrames(cfg.duration ?? 3);
 
+const fluxSize = vertical ? { width: VERTICAL_FLUX_WIDTH, height: VERTICAL_FLUX_HEIGHT } : {};
+const frame = (prompt) => (vertical ? verticalImagePrompt(prompt) : prompt);
+const move = (motion) => (vertical ? verticalMotionPrompt(motion) : motion);
+
 const opts = {
   scenario,
   outDir,
-  prefix: `${scenario}_wan`,
-  tag: `[wanchar:${scenario}]`,
+  prefix,
+  tag: `[wanchar:${scenario}${vertical ? "/vertical" : ""}]`,
   cfg,
-  buildRef: (prompt) => buildFluxGraph({ prompt, prefix: `${scenario}/wan_ref` }),
+  buildRef: (prompt) => buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_ref` }),
   buildKeyframe: (prompt, i, refImage) => refImage
-    ? buildFluxImg2ImgGraph({ prompt, image: refImage, prefix: `${scenario}/wan_seq${i + 1}` })
-    : buildFluxGraph({ prompt, prefix: `${scenario}/wan_seq${i + 1}` }),
+    ? buildFluxImg2ImgGraph({ prompt: frame(prompt), image: refImage, ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}` })
+    : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}` }),
   buildClip: (motion, image, i) => buildWanGraph({
-    prompt: motion,
+    prompt: move(motion),
     image,
-    width: cfg.width ?? 512,
-    height: cfg.height ?? 512,
+    width: vertical ? VERTICAL_WAN_WIDTH : (cfg.width ?? 512),
+    height: vertical ? VERTICAL_WAN_HEIGHT : (cfg.height ?? 512),
     length,
     steps: cfg.steps ?? 8,
     negative: cfg.negative,

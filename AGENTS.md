@@ -38,6 +38,12 @@ Generic runners (a new scenario = one new `prompts/<scenario>.json`):
 - `character_sequence_wan.mjs [scenario]` — same shape but clips use **Wan 2.1 i2v**
   (`buildWanGraph`, video-only, no audio). Outputs to `outputs/<scenario>_wan/` so it never
   clobbers the LTX run.
+- Either runner takes **`--vertical`** for the 9:16 Instagram Reel cut: every asset is
+  regenerated vertical (Flux 360×640, LTX `9:16 (Portrait Widescreen)` at 0.125MP, Wan 240×416,
+  prompts gain a portrait-framing suffix) into `outputs/<scenario>[_wan]_vertical/`
+  (see `lib/variant.mjs` — the single source of truth for the mapping). The landscape
+  cut is never touched; the frontend's Reel card (`InstagramCut`) triggers it via
+  `POST /api/runs` with `{ format: "vertical" }`.
 - `make_music.mjs [scenario]` — music-only: LTX **t2v** at tiny 64×64 (video throwaway),
   extracts the generated AAC to `.wav`; optionally lays it onto an existing video with the
   video's audio ducked. JSON: `{ musicPrompt, duration, fps?, size?, video?, videoVolume?, musicVolume?, out? }`.

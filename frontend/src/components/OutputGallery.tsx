@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { listOutputs, outputUrl, selectMain, uploadRef, type AssetEvent, type RunRequest } from "../api";
+import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, type AssetEvent, type RunRequest, type VideoFormat } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
 import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
@@ -11,6 +11,9 @@ interface Props {
   assets?: AssetEvent[]; // live: assets finished so far in the current run
   bare?: boolean; // render without the outer card (for nesting in RunPanel)
   generatingScenario?: string | null; // output dir of the scenario currently being generated
+  // Cut the active run generates (null = unknown/landscape). A vertical Reel
+  // run must not light up "generating" chips on the landscape cards.
+  generatingFormat?: VideoFormat | null;
   // Which sections to render: everything, only Reference (embedded in the
   // Scenario Editor under Generate Reference), only the Output card (final
   // cut), or only the Keyframes → clips card. The workspace renders Output +
@@ -44,7 +47,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -210,7 +213,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         {final && (
           <>
             <div className="section-label">Final cut</div>
-            <div className="video-frame">
+            <div className="video-frame final-cut-frame">
               <SceneBadge label="FINAL" title="Stitched final cut" />
               <ExpandButton title="Fullscreen preview of final cut" onOpen={() => setPreview({ src: outputUrl(viewScenario, final), kind: "video", alt: "final cut" })} />
               <video controls src={outputUrl(viewScenario, final)} />
@@ -337,9 +340,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // switch keeps the chip on the right gallery. The version rows then show a
   // blinking "generating vN" chip on the asset actually in progress.
   // generatingScenario arrives as the base scenario name; Wan runs render
-  // into the suffixed dir, so both forms match.
+  // into the suffixed dir, so both forms match. The format must match too —
+  // a vertical Reel run never lights up the landscape cards.
   const generating = !!generatingScenario && !!viewScenario &&
-    (generatingScenario === viewScenario || `${generatingScenario}_wan` === viewScenario);
+    (generatingScenario === viewScenario || `${generatingScenario}_wan` === viewScenario ||
+      `${generatingScenario}_vertical` === viewScenario || `${generatingScenario}_wan_vertical` === viewScenario) &&
+    (generatingFormat ?? "landscape") === (isVerticalOut(viewScenario) ? "vertical" : "landscape");
   const genTarget = (() => {
     if (!generating) return null;
     if (regenTarget) {
@@ -585,7 +591,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           {(curKf || curClip || generating) && (
             <>
               <div className="section-label">Current image & video</div>
-              <div className="grid">
+              <div className="grid thumb-half">
                 <div className="img-frame" title={curKf ? `Current image — scene ${curKf.n} keyframe` : "Current image"}>
                   {curKf && <SceneBadge scene={curKf.n} total={sceneNums.length || null} title={`Scene ${curKf.n} — current keyframe image`} />}
                   {curKf ? (
@@ -627,7 +633,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   </span>
                 )}
               </div>
-              <div className="video-frame">
+              <div className="video-frame final-cut-frame">
                 <SceneBadge label="FINAL" title="Stitched final cut" />
                 {shownFinalV != null && (
                   <span className="ver-badge" title={`Final cut v${shownFinalV} (showing)`}>v{shownFinalV}</span>

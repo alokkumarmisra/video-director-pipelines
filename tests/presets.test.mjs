@@ -1,6 +1,6 @@
 // Predefined AI Video Preset system tests (spec §18).
 // Run: node --test tests/   (from the repo root; zero deps, Node >= 18)
-// Covers: preset discovery (41 registered .md files, structure, containment),
+// Covers: preset discovery (42 registered .md files, structure, containment),
 // selection (valid ids, unknown/missing -> default), loading (correct file,
 // invalid ids rejected, no arbitrary path reads, missing file -> clear
 // error), prompt combination order, plus static checks that the server
@@ -29,11 +29,11 @@ const {
 } = presets;
 
 describe("preset discovery", () => {
-  it("registers all 41 presets with unique ids and display metadata", () => {
+  it("registers all 42 presets with unique ids and display metadata", () => {
     const all = GetAvailablePresets();
-    assert.equal(all.length, 41);
+    assert.equal(all.length, 42);
     const ids = all.map((p) => p.id);
-    assert.equal(new Set(ids).size, 41);
+    assert.equal(new Set(ids).size, 42);
     for (const p of all) {
       assert.ok(p.id && p.name && p.category && p.description, JSON.stringify(p));
       assert.match(p.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);

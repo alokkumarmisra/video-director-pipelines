@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
@@ -7,6 +7,8 @@ import ShotList from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
 import GenerationProgressBar, { emptyProgress, loadPace, formatDuration, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
+import InstagramCut from "./components/InstagramCut";
+import VideoMetaPanel from "./components/VideoMetaPanel";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
 import Login from "./components/Login";
@@ -28,13 +30,14 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Queue dedupe: same stitch flag, same regen target (ref count matters —
-// batch sizes differ; keyframe/clip always run once).
+// Queue dedupe: same stitch flag, same regen target, same cut format (ref
+// count matters — batch sizes differ; keyframe/clip always run once).
 function sameRequest(a: RunRequest, b: RunRequest): boolean {
   return (
     !!a.stitch === !!b.stitch &&
     (a.regen?.kind ?? null) === (b.regen?.kind ?? null) &&
     (a.regen?.index ?? null) === (b.regen?.index ?? null) &&
+    (a.format ?? "landscape") === (b.format ?? "landscape") &&
     (a.regen?.kind === "ref" ? (a.count ?? 1) : 0) === (b.regen?.kind === "ref" ? (b.count ?? 1) : 0)
   );
 }
@@ -169,6 +172,10 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const [refreshKey, setRefreshKey] = useState(0);
   const [runActive, setRunActive] = useState(false);
   const [runScenario, setRunScenario] = useState<string | null>(null);
+  // Cut the active run generates ("landscape" = main video, "vertical" =
+  // 9:16 Instagram Reel). Reported by RunPanel from the run that actually
+  // started — gates every "generating" indicator to the matching cut.
+  const [runFormat, setRunFormat] = useState<VideoFormat>("landscape");
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
   // Unsaved brief-field edits from the AI Craft + Generate Reference cards,
   // keyed by Scenario field (absent key = no edit). Merged into the save
@@ -200,12 +207,12 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     setNameOv(null);
     setCraftEpoch((e) => e + 1);
   }, []);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat } | null>(null);
   // Reattach target for RunPanel: a run that was already active on the server
   // when this page loaded (refresh mid-generation). Restored here — not in
   // RunPanel — so the header bar, sidebar spinners and every generating
   // button flip to generating immediately, before the SSE tail replays.
-  const [attachRun, setAttachRun] = useState<{ id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number } | null>(null);
+  const [attachRun, setAttachRun] = useState<{ id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null>(null);
   // Serial run queue: Regen clicks that land while a run is active wait here
   // (the server rejects concurrent runs) and fire one-by-one as each run
   // ends. Only the actively targeted button is disabled — the rest stay
@@ -369,6 +376,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         const regen = active.regen ?? null;
         setRunActive(true);
         setRunScenario(active.scenario);
+        setRunFormat(active.format === "vertical" ? "vertical" : "landscape");
         setRegenTarget(regen ? { kind: regen.kind, index: regen.index } : null);
         setAttachRun({
           id: active.id,
@@ -377,6 +385,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           regen: regen ? { kind: regen.kind, index: regen.index } : null,
           count: active.count ?? 1,
           startedAt: active.startedAt,
+          format: active.format === "vertical" ? "vertical" : "landscape",
         });
         if (active.engine === "wan" || active.engine === "ltx") setEngine(active.engine);
       })
@@ -442,14 +451,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   // Fire now when idle; queue behind the active run otherwise (identical
-  // requests already queued are ignored). The engine is captured per request
-  // so a queued regen still runs under the engine it was asked for.
+  // requests already queued are ignored). The engine + format are captured
+  // per request so a queued regen still runs under the cut it was asked for.
   const requestRun = (spec: RunRequest) => {
     const item: RunRequest = {
       stitch: !!spec.stitch,
       regen: spec.regen ?? null,
       count: spec.count ?? 1,
       engine: spec.engine ?? engine,
+      format: spec.format ?? "landscape",
     };
     if (runActive) {
       setRunQueue((q) => (q.some((x) => sameRequest(x, item)) ? q : [...q, item]));
@@ -702,6 +712,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         regen: regen ? { kind: regen.kind, index: regen.index } : null,
         count: serverRun.count ?? 1,
         startedAt: serverRun.startedAt,
+        format: serverRun.format === "vertical" ? "vertical" : "landscape",
       };
     });
   }, [runActive, serverRun]);
@@ -1067,9 +1078,10 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             engine={engine}
             onEngine={setEngine}
             onDone={refresh}
-            onStatus={(s, sc, regen) => {
+            onStatus={(s, sc, regen, format) => {
               setRunActive(s === "running");
               setRunScenario(s === "running" ? sc : null);
+              setRunFormat(s === "running" ? (format ?? "landscape") : "landscape");
               // The regen target comes from the run that actually started
               // (reported by RunPanel) — never from a stale pendingRun, so a
               // full Generate run is never mislabelled as a ref/beat regen.
@@ -1095,6 +1107,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 refreshKey={refreshKey}
                 section="reference"
                 generatingScenario={runActive ? runScenario : null}
+                generatingFormat={runActive ? runFormat : null}
                 regenTarget={runActive ? regenTarget : null}
                 runQueue={runQueue}
                 onRegen={handleRegen}
@@ -1116,6 +1129,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               }}
               refreshKey={refreshKey}
               generatingScenario={runActive ? runScenario : null}
+              generatingFormat={runActive ? runFormat : null}
               regenTarget={runActive ? regenTarget : null}
               progress={topProgress}
               comfyQueue={comfyQueue}
@@ -1130,12 +1144,32 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             refreshKey={refreshKey}
             section="beats"
             generatingScenario={runActive ? runScenario : null}
+            generatingFormat={runActive ? runFormat : null}
             regenTarget={runActive ? regenTarget : null}
             runQueue={runQueue}
             onRegen={handleRegen}
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
           />
+          {!draft && contentName && (
+            <InstagramCut
+              scenario={contentName}
+              engine={engine}
+              refreshKey={refreshKey}
+              totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
+              runBusy={runActive}
+              verticalGenerating={runActive && runFormat === "vertical" && runScenario === contentName}
+              onCreate={() => requestRun({ format: "vertical" })}
+            />
+          )}
+          {/* Publishing copy (title / description / hashtags) drafted by the
+              local LLM from the open project's story — works for drafts too. */}
+          {editor && (
+            <VideoMetaPanel
+              name={editor.name}
+              config={editor.config}
+            />
+          )}
           </>
           )}
         </div>

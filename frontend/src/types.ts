@@ -38,6 +38,9 @@ export interface Run {
   startedAt: number;
   /** Engine the run was started with (present on runs started after Re-Design-V2). */
   engine?: string;
+  /** Cut the run generates: "landscape" (main video) or "vertical" (9:16
+      Instagram Reel — fresh vertical images + clips in a separate folder). */
+  format?: string;
   /** Run shape (present on runs started after Re-Design-V2) — lets a fresh
       page reattach to an active run after a refresh and rebuild progress +
       button state from the real SSE stream. Absent = full ltx run, count 1. */

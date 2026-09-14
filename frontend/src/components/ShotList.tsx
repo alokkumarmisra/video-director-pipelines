@@ -6,10 +6,12 @@ import {
   listVersions,
   outputUrl,
   outScenario,
+  isVerticalOut,
   saveScenario,
   type Engine,
   type RunRequest,
   type ScenarioVersionInfo,
+  type VideoFormat,
 } from "../api";
 import type {
   AssetKind,
@@ -84,6 +86,10 @@ interface Props {
   refreshKey: number;
   /** Output dir of the currently running generation (null when idle). */
   generatingScenario: string | null;
+  /** Cut the active run generates (null = unknown/landscape). Gates the
+      generating spinners so a vertical Reel run never lights up this
+      (landscape) board. */
+  generatingFormat?: VideoFormat | null;
   regenTarget: { kind: AssetKind; index?: number } | null;
   /** Live run progress (RunPanel) — persistent bar + current-shot readout. */
   progress: GenerationProgress;
@@ -122,6 +128,7 @@ export default function ShotList({
   config,
   refreshKey,
   generatingScenario,
+  generatingFormat,
   regenTarget,
   progress,
   comfyQueue,
@@ -266,9 +273,12 @@ export default function ShotList({
   };
 
   // generatingScenario arrives as the base scenario name; Wan renders into
-  // the suffixed outDir, so both forms match (ltx needs no suffix).
+  // the suffixed outDir, so both forms match (ltx needs no suffix). The
+  // format must match as well — a vertical Reel run renders into the
+  // _vertical dir and must not spin this landscape board.
   const generatingHere = !!generatingScenario && !!outDir &&
-    (generatingScenario === outDir || generatingScenario === name);
+    (generatingScenario === outDir || generatingScenario === name) &&
+    (generatingFormat ?? "landscape") === (isVerticalOut(outDir) ? "vertical" : "landscape");
 
   // Per-button run state: only the actively generating target is disabled —
   // everything else stays clickable and queues behind the running job.

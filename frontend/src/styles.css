@@ -2006,7 +2006,10 @@ select:focus-visible, textarea:focus-visible {
   box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(16, 185, 129, 0.12);
 }
 /* Pinned All button: distinct blue treatment so it stands apart from the
-   emerald scene tabs. Same size/shape, pinned outside the scroll strip. */
+   accent-tinted scene tabs. The blue comes from the theme-aware --vid tokens
+   (dark + light values above), never hard-coded — including the hover
+   border/glow, which the global button:hover would otherwise paint
+   accent-green on a blue button. */
 .shotlist-scene-all {
   flex: 0 0 auto;
   font-weight: 700;
@@ -2014,12 +2017,18 @@ select:focus-visible, textarea:focus-visible {
   background: var(--vid);
   border-color: var(--vid);
 }
-.shotlist-scene-all:hover { filter: brightness(1.08); }
+.shotlist-scene-all:hover {
+  background: var(--vid);
+  border-color: var(--vid-2);
+  color: #fff;
+  box-shadow: 0 0 14px -4px var(--vid);
+  filter: brightness(1.08);
+}
 .shotlist-scene-all.on {
   background: var(--vid);
-  border-color: #fff;
+  border-color: var(--vid-2);
   color: #fff;
-  box-shadow: 0 0 0 2px var(--vid) inset, 0 0 0 2px #fff, 0 0 12px rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 0 1px var(--vid-2) inset, 0 0 12px color-mix(in srgb, var(--vid) 45%, transparent);
 }
 
 /* rounded shot-list container.
@@ -2444,3 +2453,90 @@ button.rm-chip:disabled:hover { background: transparent; border-color: var(--lin
 .rm-console-caret { display: inline-block; color: var(--text-3); margin-right: 4px; transition: transform 0.15s; }
 .rm-console-caret.open { transform: rotate(90deg); }
 .rm-console { margin-top: 6px; max-height: 220px; }
+
+/* ============================================================
+   VideoMetaPanel — publishing copy (title / description / hashtags).
+   Reuses the global card/label/input/row/vchip language; only the
+   field+copy-button row and the tag wrap are new.
+   ============================================================ */
+.meta-field { display: flex; gap: 8px; align-items: flex-start; }
+.meta-field > input, .meta-field > textarea { flex: 1; min-width: 0; }
+.meta-copy { flex: none; white-space: nowrap; }
+.meta-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.meta-tags .vchip { cursor: pointer; }
+/* Platform tag exactly centered in the Video Info header box —
+   absolute at 50% so the wide left title never pushes it right. */
+.meta-card .card-head { position: relative; }
+.meta-card .platform-title {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  max-width: 45%;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent-2); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Thumbnails at 50% — Images / Videos + Final cut
+   Current image & video grids (.grid.thumb-half) and standalone
+   final-cut frames render at half width (height follows via the
+   responsive media / 16:9 aspect-ratio, so both halve together).
+   Keyframe → clip cells (.grid-compact) halve via the min cell size.
+   Story Board media column + thumbs halve to match.
+   ============================================================ */
+.grid.thumb-half { max-width: 50%; }
+.video-frame.final-cut-frame { max-width: 50%; }
+/* Height floors halve too, otherwise min-height forces taller than 50%. */
+.video-frame { min-height: 80px; }
+.shot-clip-bare { min-height: 60px; }
+/* Keyframes → clips cells: 167px → 83px (50%). */
+.grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(83px, 1fr));
+}
+/* Story Board IMAGE+VIDEO column: 150px → 75px, thumbs 46px → 23px. */
+.shotlist-list {
+  --shot-grid-columns: 40px 75px minmax(0, 1fr) 112px 58px 140px;
+}
+.shotlist-media { max-width: 75px; }
+.shotlist-thumb { height: 23px; }
+@media (max-width: 1280px) {
+  .shotlist-list { --shot-grid-columns: 36px 64px minmax(0, 1fr) 104px 54px 128px; }
+  .shotlist-thumb { height: 21px; }
+}
+
+/* ============================================================
+   Instagram Reel — image + clip stacked vertically (top to
+   bottom) on the left, final cut filling the remaining space
+   on the right. 1fr/2fr columns balance the stack height
+   against the taller final tile; heights are viewport-relative
+   so the whole block fits in the window; media fills with cover.
+   ============================================================ */
+.grid.reel-split { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; width: 100%; max-width: 620px; margin-inline: auto; }
+/* Reel card centers the 3-thumbnail block in the middle of the window:
+   flex column + window-relative height leaves free space that the
+   grid's auto margins absorb on all sides (both axes centered). */
+.reel-card { display: flex; flex-direction: column; }
+.reel-card:not(.collapsed) { min-height: calc(100vh - 140px); }
+.reel-card .grid.reel-split { margin: auto; }
+.reel-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.reel-side .img-frame,
+.reel-side .video-frame {
+  aspect-ratio: 9 / 16;
+  max-height: max(154px, calc((100vh - 252px) / 2));
+  min-height: 0;
+}
+.grid.reel-split .video-frame.reel-final {
+  aspect-ratio: 9 / 16;
+  max-height: max(320px, calc(100vh - 240px));
+  min-height: 0;
+}
+.reel-side .img-frame img,
+.reel-side .video-frame video,
+.grid.reel-split .video-frame.reel-final video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reel-side .img-frame .smooth-img { width: 100%; height: 100%; min-height: 0; }
+.reel-side .img-frame .smooth-img img { height: 100%; object-fit: cover; }
+.reel-side .frame-missing,
+.grid.reel-split .reel-final .frame-missing { min-height: 0; }

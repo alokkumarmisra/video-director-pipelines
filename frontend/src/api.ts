@@ -139,6 +139,10 @@ export const saveTheme = (t: ThemeFile) =>
 
 export type Engine = "ltx" | "wan";
 
+// Landscape = the main (YouTube-style 16:9) cut; vertical = the 9:16
+// Instagram Reel cut (fresh vertical images + clips in a separate folder).
+export type VideoFormat = "landscape" | "vertical";
+
 export interface RegenSpec {
   kind: "ref" | "keyframe" | "clip";
   index?: number;
@@ -146,15 +150,17 @@ export interface RegenSpec {
 
 // One run request: full run (neither set), stitch-only, or a single-asset
 // regen. Queued client-side and drained serially (the server — and the
-// ComfyUI queue behind it — accepts only one active run).
+// ComfyUI queue behind it — accepts only one active run). `format` selects
+// the landscape cut (default) or the vertical Instagram Reel cut.
 export interface RunRequest {
   stitch?: boolean;
   regen?: RegenSpec | null;
   count?: number;
   engine?: Engine;
+  format?: VideoFormat;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; regen?: RegenSpec | null; count?: number } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -162,14 +168,19 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       scenario,
       stitch: !!opts.stitch,
       engine: opts.engine || "ltx",
+      format: opts.format || "landscape",
       regen: opts.regen || null,
       count: opts.count ?? 1,
     }),
   }).then((r) => r.json() as Promise<{ id: string; error?: string }>);
 
-// Output dir for a scenario+engine (Wan runs write to outputs/<scenario>_wan/).
-export const outScenario = (scenario: string, engine: Engine) =>
-  engine === "wan" ? `${scenario}_wan` : scenario;
+// Output dir for a scenario+engine+format. Vertical Reel cuts live in
+// outputs/<scenario>[_wan]_vertical/ so they never touch the main cut.
+export const outScenario = (scenario: string, engine: Engine, format: VideoFormat = "landscape") =>
+  `${scenario}${engine === "wan" ? "_wan" : ""}${format === "vertical" ? "_vertical" : ""}`;
+
+// True when an output dir holds the vertical (9:16) cut.
+export const isVerticalOut = (dir: string) => String(dir || "").endsWith("_vertical");
 
 export const listRuns = () => get<Run[]>("/api/runs");
 export const killRun = (id: string) => fetch(`/api/runs/${id}`, { method: "DELETE" }).then((r) => r.json());
@@ -229,11 +240,11 @@ export const uploadKeyframe = (scenario: string, index: number, data: string) =>
   }).then((r) => (r.ok ? r.json() as Promise<OutputsInfo> : r.json().then((d) => Promise.reject(new Error(d.error || "upload failed")))));
 
 // Re-stitch the final cut from the currently selected main versions.
-export const stitchOnly = (scenario: string, engine: Engine = "ltx") =>
+export const stitchOnly = (scenario: string, engine: Engine = "ltx", format: VideoFormat = "landscape") =>
   fetch("/api/outputs/stitch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ scenario, engine }),
+    body: JSON.stringify({ scenario, engine, format }),
   }).then((r) => r.json() as Promise<{ id: string }>);
 
 // Ask the local LLM to extend a scenario with the next `count` beats in the story.
@@ -249,11 +260,34 @@ export const craftBeat = (config: Scenario, count = 1) =>
         : r.json().then((d) => Promise.reject(new Error(d.error || "craft beat failed")))
   );
 
+// Ask the local LLM for publishing metadata (title / description /
+// hashtags) for a scenario. Stateless — the server persists nothing; the
+// caller caches the result per project.
+export interface VideoMeta {
+  title: string;
+  description: string;
+  hashtags: string[];
+}
+export const craftVideoMeta = (config: Scenario) =>
+  fetch("/api/video-meta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ config }),
+  }).then((r) =>
+    r.ok
+      ? r.json() as Promise<VideoMeta>
+      : r.json().then((d) => Promise.reject(new Error(d.error || "video metadata failed")))
+  );
+
 export interface AssetEvent {
   kind: "image" | "video";
   file: string;
   stage: "reference" | "keyframe" | "clip" | "final";
   index?: number;
+  /** True for pre-refresh backlog replayed once on SSE connect (reattaching
+      after a refresh). Restores counts/gallery; carries no timing — the real
+      completion time is unknown, so the client must not stamp it "now". */
+  replay?: boolean;
 }
 
 // SSE tail of a run's log. Returns a close function.

@@ -103,7 +103,11 @@ export function formatElapsed(ms: number): string {
 // first second — before the current run has completed anything to measure.
 // Real measured data only (never fabricated); live in-run measurements
 // always take precedence and correct it as assets land.
-const PACE_KEY = "ss-pace-v1";
+// v2: v1 samples were poisoned by refresh-reattach bursts (pre-refresh
+// completions stamped "now" recorded one huge fake interval per refresh).
+// Reattach replays now carry replay:true and record no timing, so a fresh
+// key starts clean and self-heals from real measurements.
+const PACE_KEY = "ss-pace-v2";
 const PACE_CAP = 50; // recent runs weigh more; the mean stays adaptive
 // A real generation never finishes faster than this (resume-skips and the
 // ffmpeg stitch land in milliseconds). Anything quicker is not a pace

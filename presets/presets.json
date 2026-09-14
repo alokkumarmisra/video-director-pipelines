@@ -39,5 +39,6 @@
   { "id": "youtube", "name": "YouTube", "category": "Platform", "description": "Crisp creator-style visuals optimized for YouTube.", "filePath": "presets/platform/youtube.md" },
   { "id": "youtube-kids", "name": "YouTube Kids", "category": "Platform", "description": "Extra-safe, bright visuals made for YouTube Kids.", "filePath": "presets/platform/youtube-kids.md" },
   { "id": "youtube-shorts", "name": "YouTube Shorts", "category": "Platform", "description": "Punchy vertical-first visuals that hook in seconds.", "filePath": "presets/platform/youtube-shorts.md" },
+  { "id": "instagram-reel", "name": "Instagram Reel", "category": "Platform", "description": "Thumb-stopping 9:16 vertical visuals built for Instagram Reels.", "filePath": "presets/platform/instagram-reel.md" },
   { "id": "commercial", "name": "Commercial", "category": "Platform", "description": "Sleek persuasive visuals built to sell a product.", "filePath": "presets/platform/commercial.md" }
 ]

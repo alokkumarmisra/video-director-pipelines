@@ -11,6 +11,10 @@ import { DatabaseSync } from "node:sqlite";
 import { Pool } from "pg";
 import { versionMap, setMain, nextVersion } from "../lib/sequence_state.mjs";
 import {
+  normalizeFormat, outDirName, cfgNameForDir, prefixForDir, engineForDir,
+  projectForDir, allDirsFor,
+} from "../lib/variant.mjs";
+import {
   planDelta,
   resolveEffective,
   EFFECTIVE_ASSETS_SQL,
@@ -131,29 +135,36 @@ const dbDeleteScenario = async (name) => {
 const pgLike = (s) => String(s).replace(/[\\%_]/g, (c) => `\\${c}`);
 // Rename a project across the name-keyed catalog rows. project_assets needs
 // no change (keyed by project_id — only projects.name moves). Filenames
-// embed the scenario prefix, so swap the LEADING "<old>_" / "<old>_wan_"
-// only — never a blind substring replace (beat titles can contain anything).
+// embed the scenario prefix, so swap the LEADING "<old>_" / "<old>_wan_" /
+// "<old>_vertical_" / "<old>_wan_vertical_" only — never a blind substring
+// replace (beat titles can contain anything).
 async function pgRenameRows(oldName, newName) {
   const now = Date.now();
   await pgPool.query("UPDATE scenarios SET name = $2, updated_at_ms = $3 WHERE name = $1", [oldName, newName, now]);
   await pgPool.query("UPDATE scenario_versions SET name = $2 WHERE name = $1", [oldName, newName]);
   await pgPool.query("UPDATE projects SET name = $2, updated_at = now() WHERE name = $1", [oldName, newName]);
-  await pgPool.query(
-    `UPDATE assets SET
-       scenario = CASE WHEN scenario = $1 THEN $2 ELSE $2 || '_wan' END,
-       file = CASE
-         WHEN file LIKE $3 || '\\_%' ESCAPE '\\' THEN $4 || substr(file, length($3) + 2)
-         WHEN file LIKE $5 || '\\_%' ESCAPE '\\' THEN $6 || substr(file, length($5) + 2)
-         ELSE file END,
-       rel_path = CASE
-         WHEN rel_path LIKE $7 || '%' ESCAPE '\\' THEN $8 || substr(rel_path, length($7) + 1)
-         WHEN rel_path LIKE $9 || '%' ESCAPE '\\' THEN $10 || substr(rel_path, length($9) + 1)
-         ELSE rel_path END
-     WHERE scenario = $1 OR scenario = $1 || '_wan'`,
-    [oldName, newName,
-     pgLike(oldName), newName, pgLike(`${oldName}_wan`), `${newName}_wan`,
-     pgLike(`outputs/${oldName}/`), `outputs/${newName}/`,
-     pgLike(`outputs/${oldName}_wan/`), `outputs/${newName}_wan/`]);
+  // Assets rows live under all four output dirs (engines x formats). Rename
+  // each variant separately: scenario + leading filename prefix. rel_path is
+  // rebuilt from the new dir + new filename so it never points at a stale
+  // file (substr offsets use the RAW prefix length — the LIKE pattern is
+  // backslash-escaped, so length($3) would be wrong for names with _/%/\).
+  for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
+    const oldSc = oldName + suffix;
+    const newSc = newName + suffix;
+    const oldDir = `outputs/${oldSc}/`;
+    const newDir = `outputs/${newSc}/`;
+    await pgPool.query(
+      `UPDATE assets SET
+         scenario = $2,
+         file = CASE
+           WHEN file LIKE $3 ESCAPE '\\' THEN $2 || substr(file, char_length($1) + 2)
+           ELSE file END,
+         rel_path = $5 || CASE
+           WHEN file LIKE $3 ESCAPE '\\' THEN $2 || substr(file, char_length($1) + 2)
+           ELSE substr(rel_path, char_length($4) + 1) END
+       WHERE scenario = $1`,
+      [oldSc, newSc, pgLike(oldSc) + "\\_%", oldDir, newDir]);
+  }
 }
 async function dbRenameScenario(oldName, newName) {
   if (USE_SQLITE) {
@@ -172,14 +183,15 @@ async function pgRenameScenarioMirror(oldName, newName) {
 // (state.json, foreign files) passes through untouched.
 const swapPrefix = (file, oldPrefix, newPrefix) =>
   (typeof file === "string" && file.startsWith(oldPrefix)) ? newPrefix + file.slice(oldPrefix.length) : file;
-// Move prompts/<old>.json + outputs/<old>[/_wan] to the new name, swapping
-// the embedded filename prefix and state.json mains (generated files are
-// namespaced "<name>_" / "<name>_wan_"). Throws before touching anything
+// Move prompts/<old>.json + outputs/<old>[engines x formats] to the new name,
+// swapping the embedded filename prefix and state.json mains (generated files
+// are namespaced "<name>_" / "<name>_wan_" / "<name>_vertical_" /
+// "<name>_wan_vertical_"). Throws before touching anything
 // when a target dir already exists (checked by the caller too).
 function renameScenarioFiles(oldName, newName) {
   const pj = path.join(PROMPTS, oldName + ".json");
   if (fs.existsSync(pj)) fs.renameSync(pj, path.join(PROMPTS, newName + ".json"));
-  for (const suffix of ["", "_wan"]) {
+  for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
     const oldDir = path.join(OUTPUTS, oldName + suffix);
     if (!fs.existsSync(oldDir)) continue;
     const newDir = path.join(OUTPUTS, newName + suffix);
@@ -366,7 +378,7 @@ function assetRow(folder, file) {
   return {
     scenario: folder, kind: c.kind, file, rel_path: `outputs/${folder}/${file}`,
     bytes: st.size, beat_index: c.beat_index, beat_title: c.beat_title, version: c.version,
-    engine: folder.endsWith("_wan") ? "wan" : "ltx", mtimeISO: st.mtime.toISOString(),
+    engine: engineForDir(folder), mtimeISO: st.mtime.toISOString(),
   };
 }
 const ASSET_COLUMNS = `(scenario, kind, file, rel_path, bytes, beat_index, beat_title, version, engine, mtime)`;
@@ -486,7 +498,7 @@ async function pgSaveScenarioMirror(name, cfg) {
 }
 async function pgDeleteScenarioMirror(name) {
   if (!pgUp) return;
-  await pgPool.query("DELETE FROM assets WHERE scenario = $1 OR scenario = $2", [name, `${name}_wan`]);
+  await pgPool.query("DELETE FROM assets WHERE scenario = ANY($1)", [allDirsFor(name)]);
   await pgPool.query("DELETE FROM scenarios WHERE name = $1", [name]);
   await pgPool.query("DELETE FROM scenario_versions WHERE name = $1", [name]);
   // Delete the project by its integer project_id (cascades to project_assets).
@@ -596,7 +608,7 @@ function diskFacts(outputFolder, file) {
     return { bytes: st.size, mime: mimeFor(file), w: dims?.w ?? null, h: dims?.h ?? null };
   } catch { return { bytes: null, mime: null, w: null, h: null }; }
 }
-const engineForFolder = (folder) => (String(folder || "").endsWith("_wan") ? "wan" : "ltx");
+const engineForFolder = (folder) => engineForDir(folder);
 // Project info row + that version's asset rows (prompts + current main files).
 // SNAPSHOT path — used ONLY for version 1 and for backfilling projects that
 // have no project_assets rows yet. For v2+ use pgSaveVersionDelta() below,
@@ -847,7 +859,8 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
     const version = v.rows[0]?.v;
     if (!version) return; // never saved — rows are created on the next Save
     const engine = opts.engine || "ltx";
-    const outputFolder = opts.outputFolder || (engine === "wan" ? `${projectName}_wan` : projectName);
+    const format = normalizeFormat(opts.format);
+    const outputFolder = opts.outputFolder || outDirName(projectName, engine, format);
     const facts = diskFacts(outputFolder, asset.file);
     const filePath = `outputs/${outputFolder}/${asset.file}`;
     let target = null;
@@ -874,6 +887,21 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
       return;
     }
     const sceneId = target.scene ?? target.beat;
+    // Vertical (Instagram Reel) runs share the versioned rows with the
+    // landscape run — the UNIQUE key has no format dimension. Record the
+    // vertical file in metadata only and never overwrite the landscape
+    // file_path/status (the landscape cut stays canonical in project_assets;
+    // the per-folder `assets` catalog is what separates the two cuts).
+    if (format === "vertical") {
+      try {
+        await pgPool.query(
+          `UPDATE project_assets SET metadata = COALESCE(metadata, '{}'::jsonb) || $5::jsonb
+           WHERE project_id = $1 AND version = $2 AND asset_type = $3 AND beat_index = $4`,
+          [projectId, version, target.type, target.beat,
+            JSON.stringify({ ...target.meta, format: "vertical", vertical_file: asset.file })]);
+      } catch (e) { console.warn("[pg] vertical mark failed:", e.message); }
+      return;
+    }
     const upd = await pgPool.query(
       `UPDATE project_assets SET file_path = $1, status = 'COMPLETED', error_message = NULL,
          attempts = attempts + 1,
@@ -1123,6 +1151,8 @@ const readJson = (req) => new Promise((res, rej) => {
 // One run = one spawned `node scripts/character_sequence{,_wan}.mjs <scenario>`
 // (repeated `opts.count` times for batch reference generation).
 // engine: "ltx" (default) or "wan" — picks the i2v backend script.
+// format: "landscape" (default) or "vertical" — the vertical (9:16 Instagram
+//   Reel) cut regenerates every asset into outputs/<scenario>[_wan]_vertical/.
 // opts.stitch   -> --stitch (re-stitch final from selected mains only)
 // opts.regen    -> --regen <ref|keyframe|clip> [beat] (regenerate one asset, keeps old versions)
 // opts.count    -> repeat a `ref` regen this many times (each pass writes a new
@@ -1131,6 +1161,8 @@ const runs = new Map(); // id -> { scenario, status, log, startedAt, proc, subs:
 
 function startRun(scenario, opts = {}) {
   const { stitch = false, regen = null, engine = "ltx" } = opts;
+  // Accept both { format: "vertical" } and the legacy { vertical: true }.
+  const format = normalizeFormat(opts.format ?? (opts.vertical ? "vertical" : "landscape"));
   const count = regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(opts.count) || 1)) : 1;
   if ([...runs.values()].some((r) => r.status === "running"))
     throw new Error("another run is still active (ComfyUI queue is serial)");
@@ -1140,13 +1172,14 @@ function startRun(scenario, opts = {}) {
   if (regen) {
     argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
   }
+  if (format === "vertical") argv.push("--vertical");
   const id = Date.now().toString(36);
-  // Run shape (stitch/regen/count) is stored on the record — not just the
-  // argv — so a fresh page can reattach after a refresh: GET /api/runs
+  // Run shape (stitch/regen/count/format) is stored on the record — not just
+  // the argv — so a fresh page can reattach after a refresh: GET /api/runs
   // reveals the active run and the SSE log endpoint replays its log + asset
   // events, letting the client rebuild progress and button state from the
   // real stream instead of guessing.
-  const run = { id, scenario, engine, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  const run = { id, scenario, engine, format, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -1165,9 +1198,9 @@ function startRun(scenario, opts = {}) {
         for (const s of run.subs) s.write(`event: asset\ndata: ${JSON.stringify(asset)}\n\n`);
         // Save every finished generation to the Postgres catalog (assets
         // table + flip that one project_assets row to COMPLETED).
-        const dirName = run.engine === "wan" ? `${run.scenario}_wan` : run.scenario;
+        const dirName = outDirName(run.scenario, run.engine, run.format);
         pgUpsertAsset(dirName, asset.file)
-          .then(() => pgMarkAssetComplete(run.scenario, asset, { engine: run.engine, outputFolder: dirName }))
+          .then(() => pgMarkAssetComplete(projectForDir(dirName), asset, { engine: run.engine, format: run.format, outputFolder: dirName }))
           .catch((e) => console.warn("[pg] catalog failed:", e.message));
       }
     }
@@ -1178,9 +1211,9 @@ function startRun(scenario, opts = {}) {
     for (const s of run.subs) { s.write("event: close\ndata: " + JSON.stringify({ status: run.status }) + "\n\n"); s.end(); }
     run.subs.clear();
     // Reconcile the run's output dir with the DB (catches final.mp4 + anything missed).
-    const dirName = run.engine === "wan" ? `${run.scenario}_wan` : run.scenario;
+    const dirName = outDirName(run.scenario, run.engine, run.format);
     pgSyncFolder(dirName)
-      .then(() => pgRefreshProjectFiles(run.scenario, dirName))
+      .then(() => pgRefreshProjectFiles(projectForDir(dirName), dirName))
       .catch((e) => console.warn("[pg] sync failed:", e.message));
   };
   const launch = () => {
@@ -1245,16 +1278,16 @@ async function llmStatus() {
 // services being offline never blocks project data either (health is a
 // separate endpoint). Error details stay server-side (logs), the client only
 // gets "dashboard unavailable".
-const folderProject = (folder) => (String(folder).endsWith("_wan") ? String(folder).slice(0, -4) : String(folder));
+const folderProject = (folder) => projectForDir(folder);
 const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null });
 
 // Disk coverage for one project dir (PG-down fallback + thumbnail existence).
-// Prefers the ltx dir, then the _wan dir; thumbnail = highest-beat keyframe
-// main, else the reference main.
+// Prefers the landscape ltx dir, then _wan, then the vertical cuts;
+// thumbnail = highest-beat keyframe main, else the reference main.
 function diskCoverageFor(name, cfg) {
   const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
   const cov = newCoverage();
-  for (const dir of [name, `${name}_wan`]) {
+  for (const dir of allDirsFor(name)) {
     const full = path.join(OUTPUTS, dir);
     if (!fs.existsSync(full)) continue;
     let vm = null;
@@ -1303,7 +1336,7 @@ async function dashboardPayload() {
     catch { cfgs.set(r.name, null); }
   }
   const names = rows.map((r) => r.name);
-  const folders = [...new Set(names.flatMap((n) => [n, `${n}_wan`]))];
+  const folders = [...new Set(names.flatMap((n) => allDirsFor(n)))];
 
   // 2) Coverage from the PG assets catalog (one GROUP BY), else disk scan.
   const covs = new Map(); // name -> coverage
@@ -1366,9 +1399,9 @@ async function dashboardPayload() {
   for (const r of runs.values()) {
     if (r.status === "running" && !runningByScenario.has(r.scenario)) {
       runningByScenario.set(r.scenario, r);
-      // A _wan run is stored under the base scenario name; also match the
-      // suffixed folder name so both dashboard keys resolve.
-      runningByScenario.set(`${r.scenario}_wan`, r);
+      // Engine/format variants are stored under the base scenario name; also
+      // match every suffixed folder name so all dashboard keys resolve.
+      for (const dir of allDirsFor(r.scenario)) runningByScenario.set(dir, r);
     }
   }
   const generating = new Set(runningByScenario.keys());
@@ -1383,8 +1416,13 @@ async function dashboardPayload() {
     const progress = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
     const status = c.final ? "completed" : (done > 0 ? "in_progress" : "draft");
     // Thumbnail: PG catalog pick, else disk pick; must exist on disk.
-    let thumbFile = thumbs.get(r.name) ?? thumbs.get(`${r.name}_wan`) ?? c.thumb?.file ?? null;
-    let thumbDir = thumbs.has(r.name) ? r.name : (thumbs.has(`${r.name}_wan`) ? `${r.name}_wan` : (c.thumb?.dir ?? r.name));
+    // Landscape dirs win over the vertical cuts (main video is canonical).
+    const thumbDirs = [r.name, `${r.name}_wan`, `${r.name}_vertical`, `${r.name}_wan_vertical`];
+    let thumbFile = c.thumb?.file ?? null;
+    let thumbDir = c.thumb?.dir ?? r.name;
+    for (const dir of thumbDirs) {
+      if (thumbs.has(dir)) { thumbFile = thumbs.get(dir); thumbDir = dir; break; }
+    }
     if (thumbFile && !fs.existsSync(path.join(OUTPUTS, thumbDir, thumbFile))) {
       thumbFile = c.thumb && fs.existsSync(path.join(OUTPUTS, c.thumb.dir, c.thumb.file)) ? c.thumb.file : null;
       if (thumbFile) thumbDir = c.thumb.dir;
@@ -1394,9 +1432,8 @@ async function dashboardPayload() {
       project_id: pids.get(r.name) ?? null,
       description: typeof cfg?.description === "string" ? cfg.description : "",
       status,
-      generating: generating.has(r.name) || generating.has(`${r.name}_wan`),
-      startedAt: runningByScenario.get(r.name)?.startedAt
-        ?? runningByScenario.get(`${r.name}_wan`)?.startedAt ?? null,
+      generating: thumbDirs.some((dir) => generating.has(dir)),
+      startedAt: thumbDirs.map((dir) => runningByScenario.get(dir)?.startedAt).find((t) => t != null) ?? null,
       progress,
       sceneCount: beats,
       imageCount: c.kf.size,
@@ -1639,6 +1676,74 @@ async function craftNextBeats(cfg, count) {
   return beats;
 }
 
+/**
+ * Ask the local LLM for publishing metadata (title, description, hashtags)
+ * for a finished scenario. Context = the scenario JSON itself (description /
+ * character / referencePrompt + beat titles + prompts), so the copy matches
+ * the actual story and visuals. Output is NOT persisted anywhere — the UI
+ * keeps it per project in localStorage.
+ */
+async function craftVideoMeta(cfg) {
+  if (!cfg || !Array.isArray(cfg.sequence) || !cfg.sequence.length)
+    throw new Error("config with sequence required");
+  const beats = (cfg.sequence || []).map((b, i) => ({
+    n: i + 1,
+    title: b.title,
+    image: b.image,
+    motion: b.motion,
+  }));
+  const system = [
+    "You write publishing copy for a short AI-generated video (YouTube / Instagram).",
+    "Output ONLY a JSON object { title, description, hashtags } — no prose, no markdown fences.",
+    "Rules: title = one catchy, click-worthy line under 100 characters (no quotes, no hashtags inside);",
+    "description = 2-4 engaging sentences about THIS video's story and visuals, then one blank line, then a 'Watch' line naming the project;",
+    "hashtags = 8-12 relevant tags WITHOUT the # prefix, lowercase, no spaces (use camelCase or underscores), ordered most-specific first.",
+  ].join(" ");
+  const user = `Video project context:
+${JSON.stringify({
+    project: cfg.description || "",
+    character: cfg.character || "",
+    referenceVisual: cfg.referencePrompt || "",
+    beats,
+  }, null, 2)}
+
+Write the publishing metadata.`;
+  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "local",
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      temperature: 0.7,
+      max_tokens: 1500,
+      chat_template_kwargs: { enable_thinking: false },
+    }),
+  });
+  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const d = await r.json();
+  let text = d.choices?.[0]?.message?.content || "";
+  text = text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "").trim();
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("LLM returned no JSON object");
+  const meta = JSON.parse(m[0]);
+  if (!meta.title || !meta.description) throw new Error("crafted metadata missing title/description");
+  // Normalize hashtags: accept an array or a whitespace/comma-separated
+  // string; strip stray #/punctuation, force the # prefix at serve time.
+  const rawTags = Array.isArray(meta.hashtags)
+    ? meta.hashtags
+    : String(meta.hashtags || "").split(/[\s,]+/);
+  const tags = [];
+  for (const t of rawTags) {
+    const clean = String(t || "").replace(/^#+/, "").replace(/[^\w]/g, "").slice(0, 40);
+    if (clean && !tags.includes(clean) && tags.length < 15) tags.push(clean);
+  }
+  return {
+    title: String(meta.title).replace(/^["“”]+|["“”]+$/g, "").trim().slice(0, 140),
+    description: String(meta.description).trim().slice(0, 2000),
+    hashtags: tags,
+  };
+}
+
 // ---------------------------------------------------------------- static files
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".wav": "audio/wav", ".ico": "image/x-icon" };
 function serveStatic(req, res, urlPath) {
@@ -1659,9 +1764,10 @@ function serveOutput(res, scenario, file) {
 }
 
 // ---------------------------------------------------------------- outputs (versions + mains)
-// Output dir name -> scenario config name (Wan runs use outputs/<scenario>_wan/).
-const cfgNameFor = (dirName) => (dirName.endsWith("_wan") ? dirName.slice(0, -4) : dirName);
-const prefixFor = (dirName) => (dirName.endsWith("_wan") ? `${cfgNameFor(dirName)}_wan` : dirName);
+// Output dir name -> scenario config name (Wan runs use outputs/<scenario>_wan;
+// vertical Instagram Reel cuts use outputs/<scenario>[_wan]_vertical/).
+const cfgNameFor = (dirName) => cfgNameForDir(dirName);
+const prefixFor = (dirName) => prefixForDir(dirName);
 
 /**
  * List output files + versioned assets for a scenario output dir.
@@ -1903,9 +2009,9 @@ const server = http.createServer(async (req, res) => {
     // Rename a project (POST /api/scenario/:name/rename { newName }). Moves
     // the prompts JSON + outputs dirs (swapping the embedded filename prefix
     // and state.json mains), updates every name-keyed row (scenarios,
-    // scenario_versions, projects, assets incl. _wan variants + file paths)
-    // and favorites. Blocked while a run for the project is active — run
-    // records, SSE tails and the serial queue all key off the name.
+    // scenario_versions, projects, assets incl. _wan/_vertical variants + file
+    // paths) and favorites. Blocked while a run for the project is active —
+    // run records, SSE tails and the serial queue all key off the name.
     if (p.startsWith("/api/scenario/") && req.method === "POST" && p.split("/").length === 5 && p.split("/")[4] === "rename") {
       const oldName = pathName(p.split("/")[3]);
       let body;
@@ -1924,7 +2030,7 @@ const server = http.createServer(async (req, res) => {
       if (newRaw !== null) return json(res, 409, { error: "a project with that name already exists" });
       if ([...runs.values()].some((r) => r.status === "running" && r.scenario === oldName))
         return json(res, 409, { error: "stop the active run before renaming" });
-      if (fs.existsSync(path.join(OUTPUTS, newName)) || fs.existsSync(path.join(OUTPUTS, `${newName}_wan`)))
+      if (allDirsFor(newName).some((dir) => fs.existsSync(path.join(OUTPUTS, dir))))
         return json(res, 409, { error: "outputs folder for that name already exists" });
       try {
         await dbRenameScenario(oldName, newName);
@@ -1981,8 +2087,10 @@ const server = http.createServer(async (req, res) => {
       if (fs.existsSync(f)) fs.unlinkSync(f);
       const outDir = path.join(OUTPUTS, name);
       if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true, force: true });
-      const outDirWan = path.join(OUTPUTS, `${name}_wan`);
-      if (fs.existsSync(outDirWan)) fs.rmSync(outDirWan, { recursive: true, force: true });
+      for (const dir of allDirsFor(name).slice(1)) {
+        const full = path.join(OUTPUTS, dir);
+        if (fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true });
+      }
       pgDeleteScenarioMirror(name).catch((e) => console.warn("[pg] scenario unmirror failed:", e.message));
       return json(res, 200, { ok: true });
     }
@@ -1994,6 +2102,7 @@ const server = http.createServer(async (req, res) => {
         const run = startRun(body.scenario, {
           stitch: !!body.stitch,
           engine: body.engine || "ltx",
+          format: body.format ?? (body.vertical ? "vertical" : undefined),
           regen: body.regen || null,
           count: body.count,
         });
@@ -2009,7 +2118,11 @@ const server = http.createServer(async (req, res) => {
       if (!run) return json(res, 404, { error: "no run" });
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       res.write(`data: ${JSON.stringify({ line: run.log })}\n\n`);
-      for (const a of run.assets) res.write(`event: asset\ndata: ${JSON.stringify(a)}\n\n`);
+      // Backlog replay for clients (re)attaching mid-run: flagged replay so
+      // the client restores counts/gallery without stamping them "now" —
+      // their real completion times are unknown, and fake timestamps corrupt
+      // the Time Remaining ETA + the persisted pace after every refresh.
+      for (const a of run.assets) res.write(`event: asset\ndata: ${JSON.stringify({ ...a, replay: true })}\n\n`);
       run.subs.add(res);
       req.on("close", () => run.subs.delete(res));
       return;
@@ -2111,7 +2224,11 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
       if (!isSafe(body.scenario)) return json(res, 400, { error: "bad scenario" });
-      const run = startRun(body.scenario, { stitch: true, engine: body.engine || "ltx" });
+      const run = startRun(body.scenario, {
+        stitch: true,
+        engine: body.engine || "ltx",
+        format: body.format ?? (body.vertical ? "vertical" : undefined),
+      });
       return json(res, 200, { id: run.id });
     }
     if (p === "/api/craft" && req.method === "POST") {
@@ -2180,6 +2297,15 @@ const server = http.createServer(async (req, res) => {
       }
       const count = Math.max(1, Number(body.count) || 1);
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
+    }
+    // Publishing metadata (title / description / hashtags) for a scenario,
+    // drafted by the local LLM from the scenario JSON. Stateless — nothing
+    // is persisted; the UI caches it per project in localStorage.
+    if (p === "/api/video-meta" && req.method === "POST") {
+      const body = await readJson(req);
+      const cfg = body.config;
+      if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
+      return json(res, 200, await craftVideoMeta(cfg));
     }
     // Predefined video-type presets (system-owned presets/*.md defaults).
     // List carries metadata only; content is fetched per id when needed

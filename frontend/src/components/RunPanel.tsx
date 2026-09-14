@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec } from "../api";
+import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec, type VideoFormat } from "../api";
 import OutputGallery from "./OutputGallery";
-import GenerationProgressBar, { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
+import { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
 import RenderMonitor from "./RenderMonitor";
 import { IconPanel, IconPlay, IconScissors, IconStop, IconClapper, Spinner } from "./Icons";
 
@@ -12,20 +12,21 @@ interface Props {
   engine: Engine;
   onEngine: (e: Engine) => void;
   onDone: () => void;
-  // Status reports the regen spec of the run that is actually active
-  // (null for full runs) — so the gallery/editor can spin exactly the
-  // button that triggered it instead of every busy-looking button.
-  onStatus?: (s: RunStatus, scenario: string, regen: RegenSpec | null) => void;
+  // Status reports the regen spec + format of the run that is actually active
+  // (null regen for full runs, "landscape" default format) — so the gallery /
+  // editor can spin exactly the button that triggered it instead of every
+  // busy-looking button.
+  onStatus?: (s: RunStatus, scenario: string, regen: RegenSpec | null, format: VideoFormat) => void;
   // External run trigger (Stitch final / Regenerate from the output gallery /
   // Generate Reference from the scenario editor; count batches ref regens).
-  // Queued requests carry the engine they were asked for (it may have been
-  // switched since they were queued).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine } | null;
+  // Queued requests carry the engine + format they were asked for (they may
+  // have been switched since they were queued).
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat } | null;
   // Reattach target: a run that was already active on the server when this
   // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
   // server replays the full log + asset events — so progress, the header bar
   // and every generating button pick up the live run instead of idling.
-  attachRun?: { id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number } | null;
+  attachRun?: { id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null;
   // Run the server reports as active (from GET /api/runs, polled by App) —
   // independent of this panel's own run. While set and this panel is idle,
   // the backend rejects new runs, so the panel names the blocker and offers
@@ -52,6 +53,10 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // Engine the active run was started with (captured at start — the header
   // engine switch must not rewrite the monitor's badge/URLs mid-run).
   const [runEngine, setRunEngine] = useState<Engine | null>(null);
+  // Cut the active run generates ("landscape" = main video, "vertical" =
+  // 9:16 Instagram Reel). Captured at start like the engine — the Reel card
+  // owns its own trigger, so there is no format toggle here.
+  const [runFormat, setRunFormat] = useState<VideoFormat>("landscape");
   // Which local button started the POST (null = triggered externally via
   // pendingRun, or idle). Shows the spinner on the clicked button during
   // the startRun round-trip, before status flips to "running".
@@ -62,7 +67,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [stoppingServer, setStoppingServer] = useState(false);
   useEffect(() => { if (!serverRun) setStoppingServer(false); }, [serverRun]);
 
-  useEffect(() => { onStatus?.(status, runScenario ?? scenario, status === "running" ? runRegen : null); }, [status, onStatus, runScenario, runRegen, scenario]);
+  useEffect(() => { onStatus?.(status, runScenario ?? scenario, status === "running" ? runRegen : null, runFormat); }, [status, onStatus, runScenario, runRegen, runFormat, scenario]);
   useEffect(() => { if (status !== "running") setStopping(false); }, [status]);
   const [log, setLog] = useState("");
   const [assets, setAssets] = useState<AssetEvent[]>([]);
@@ -73,6 +78,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [totalBeats, setTotalBeats] = useState<number | null>(null);
   const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number }>({ stitch: false, regen: null, count: 1 });
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  // Anchor of the per-asset interval chain (see the ETA memo below). Fresh
+  // runs anchor at start; reattached runs anchor at reattach time — the real
+  // completion times of pre-refresh assets are unknown, so measuring from
+  // run start would fabricate one huge first interval and corrupt the ETA.
+  const [timeAnchor, setTimeAnchor] = useState<number | null>(null);
   const [endedAt, setEndedAt] = useState<number | null>(null);
   const [assetTimes, setAssetTimes] = useState<{ time: number; stage: AssetEvent["stage"] }[]>([]);
   const [cancelled, setCancelled] = useState(false);
@@ -92,6 +102,34 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const lastAssetAt = useRef<number>(0);
   const seenFiles = useRef<Set<string>>(new Set());
 
+  // Shared SSE asset handler for fresh + reattached tails. Replayed backlog
+  // events (replay: true — the server dumps pre-refresh assets once on SSE
+  // connect) restore counts/gallery but carry no timing: stamping them "now"
+  // would fabricate one huge interval (reattach − run start), corrupting the
+  // Time Remaining ETA and poisoning the persisted pace for future runs.
+  const handleAssetEvent = (a: AssetEvent) => {
+    const t = Date.now();
+    // First sighting only: record one pace sample (completion interval
+    // attributed to the asset that just finished) and keep assetTimes
+    // duplicate-free so ETA averages never double-count.
+    if (!seenFiles.current.has(a.file)) {
+      seenFiles.current.add(a.file);
+      if (!a.replay) {
+        // Only real generations seed the pace: reference/keyframe images
+        // and i2v clips. The fast ffmpeg stitch ("final") and any
+        // resume-skip are filtered by duration inside recordPaceDuration.
+        const image = a.stage === "reference" || a.stage === "keyframe";
+        if (image || a.stage === "clip") {
+          recordPaceDuration(image, t - lastAssetAt.current);
+        }
+        lastAssetAt.current = t;
+        setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
+      }
+    }
+    setNow(t);
+    setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
+  };
+
   useEffect(() => () => closeTail.current(), []);
   useEffect(() => {
     boxRef.current?.scrollTo(0, boxRef.current.scrollHeight);
@@ -106,21 +144,23 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     return () => clearInterval(t);
   }, [status, serverRun]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external", runEngine: Engine = engine) => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape") => {
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
-      const res = await startRun(scenario, { stitch, regen, engine: runEngine, count });
+      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
       setRunScenario(scenario);
       setRunRegen(regen);
       setRunEngine(runEngine);
+      setRunFormat(runFormat);
       setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
       // Keep the previous total until the fresh config lands — clearing it
       // here is what briefly hid every thumbnail slot right after Generate.
       setStartedAt(Date.now());
+      setTimeAnchor(Date.now());
       lastAssetAt.current = Date.now();
       seenFiles.current = new Set();
       setEndedAt(null);
@@ -139,26 +179,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         id,
         (line) => setLog((l) => l + line),
         (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
-        (a) => {
-          const t = Date.now();
-          // First sighting only: record one pace sample (completion interval
-          // attributed to the asset that just finished) and keep assetTimes
-          // duplicate-free so ETA averages never double-count.
-          if (!seenFiles.current.has(a.file)) {
-            seenFiles.current.add(a.file);
-            // Only real generations seed the pace: reference/keyframe images
-            // and i2v clips. The fast ffmpeg stitch ("final") and any
-            // resume-skip are filtered by duration inside recordPaceDuration.
-            const image = a.stage === "reference" || a.stage === "keyframe";
-            if (image || a.stage === "clip") {
-              recordPaceDuration(image, t - lastAssetAt.current);
-            }
-            lastAssetAt.current = t;
-            setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
-          }
-          setNow(t);
-          setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
-        }
+        handleAssetEvent
       );
     } catch (e) {
       setEndedAt(Date.now());
@@ -172,7 +193,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // Runs triggered from the output gallery (stitch / regenerate) or the
   // scenario editor (batch reference generation).
   useEffect(() => {
-    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine);
+    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine, pendingRun.format ?? "landscape");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 
@@ -197,11 +218,15 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     setRunScenario(meta.scenario);
     setRunRegen(regen);
     setRunEngine(engine);
+    setRunFormat(meta.format ?? "landscape");
     setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1 });
     // Same as begin(): keep the previous total so thumbnail slots stay
-    // mounted while the reattached run's config loads.
+    // mounted while the reattached run's config loads. Timing anchors at the
+    // reattach moment (pre-refresh completion times are unknown — the replay
+    // backlog carries no timing, see handleAssetEvent).
     setStartedAt(meta.startedAt ?? Date.now());
-    lastAssetAt.current = meta.startedAt ?? Date.now();
+    setTimeAnchor(Date.now());
+    lastAssetAt.current = Date.now();
     seenFiles.current = new Set();
     setEndedAt(null);
     setAssetTimes([]);
@@ -218,20 +243,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       meta.id,
       (line) => setLog((l) => l + line),
       (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
-      (a) => {
-        const t = Date.now();
-        if (!seenFiles.current.has(a.file)) {
-          seenFiles.current.add(a.file);
-          const image = a.stage === "reference" || a.stage === "keyframe";
-          if (image || a.stage === "clip") {
-            recordPaceDuration(image, t - lastAssetAt.current);
-          }
-          lastAssetAt.current = t;
-          setAssetTimes((prev) => [...prev, { time: t, stage: a.stage }]);
-        }
-        setNow(t);
-        setAssets((prev) => prev.some((x) => x.file === a.file) ? prev : [...prev, a]);
-      }
+      handleAssetEvent
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attachRun?.id]);
@@ -320,7 +332,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       // below — otherwise a re-run's instant skips collapse the pace toward
       // zero and Time Remaining freezes at 00h:00m:00s for the whole run.
       const durs: { d: number; gen: "image" | "video" | null }[] = [];
-      let prev = startedAt;
+      // Anchored at run start for fresh runs, at reattach time for reattached
+      // runs (pre-refresh completions carry no timestamps — measuring from
+      // run start would fabricate one huge first interval and blow up the
+      // ETA after every refresh).
+      let prev = timeAnchor ?? startedAt;
       for (const t of times) {
         const gen =
           t.stage === "clip" ? "video"
@@ -374,7 +390,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       startedAt,
       scenario: runScenario ?? scenario,
     };
-  }, [assets, assetTimes, totalBeats, runMeta, status, startedAt, endedAt, now, cancelled, runScenario, scenario]);
+  }, [assets, assetTimes, totalBeats, runMeta, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
 
   useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
 
@@ -383,7 +399,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     running: (
       <span className="pill running">
         <Spinner size={11} />
-        running{runScenario && runScenario !== scenario ? ` · ${runScenario}` : ""}
+        running{runFormat === "vertical" ? " · 9:16 reel" : ""}{runScenario && runScenario !== scenario ? ` · ${runScenario}` : ""}
       </span>
     ),
     done: <span className="pill done">done</span>,
@@ -480,16 +496,12 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           </button>
         </div>
       )}
-      {(status === "running" || status === "done" || status === "error") && (progress.total > 0 || status !== "running") && (
-        <GenerationProgressBar progress={progress} />
-      )}
-
       {/* Broadcast-style program monitor (viewport + stats + frame grids):
           same live progress/assets/log as above, new presentation only. */}
       {(scenario || runScenario) && (
         <RenderMonitor
           scenario={runScenario ?? scenario}
-          outDir={outScenario(runScenario ?? scenario, runEngine ?? engine)}
+          outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
           engine={runEngine ?? engine}
           status={status}
           progress={progress}
@@ -512,7 +524,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       </pre>
 
       {assets.length > 0 && (
-        <OutputGallery scenario={outScenario(scenario, engine)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} />
+        <OutputGallery scenario={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} />
       )}
       </>
       )}
