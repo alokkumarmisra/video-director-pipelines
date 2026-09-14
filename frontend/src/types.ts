@@ -10,6 +10,15 @@ export interface Scenario {
   referencePrompt: string;
   duration: number;
   sequence: Beat[];
+  // Predefined video-type preset id (presets/presets.json). Resolved to
+  // presets/*.md rules at craft/generation time — only the id is stored,
+  // never the .md content. Absent = default preset (cinematic).
+  presetId?: string;
+  // Per-project customization of the video-type rules. When non-empty, this
+  // text REPLACES the preset's .md content for this project only (craft +
+  // beat extension). Empty/absent = use the preset default. The system-owned
+  // presets/*.md files are never modified.
+  presetRules?: string;
 }
 
 export interface ScenarioInfo {

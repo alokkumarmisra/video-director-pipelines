@@ -119,6 +119,10 @@ Gotchas:
 `flux-t2i.json`: `75:74` prompt, `75:68`/`75:69` w/h, `75:62` steps (default 4 in builder, base ships 20), `75:73` seed,
 `75:65` VAEDecode (IMAGE — the bridge point), `9` SaveImage. Merged bridge:
 `398:351`.inputs.input = `["75:65", 0]`; delete nodes `395` and `9`.
+Keyframe ref anchor (`buildFluxImg2ImgGraph`): LoadImage (`ref:load`, uploaded main
+ref version) → ImageScale (`ref:scale`, bilinear to target w/h, center crop) →
+VAEEncode (`ref:vaeenc`, same `75:72` VAE); `75:64` latent_image rewired from
+`75:66` (deleted) to `ref:vaeenc`. Falls back to pure t2i when no ref exists yet.
 
 `image_to_video_wan.json` (Wan 2.1 i2v): `52` LoadImage; `6`/`7` positive/negative CLIPTextEncode;
 `50` WanImageToVideo (w/h min 16 step 16; `length`=frames, **4n+1**, step 4 — 33≈2s at fixed

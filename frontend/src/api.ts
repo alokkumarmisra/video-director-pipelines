@@ -81,6 +81,40 @@ export const renameScenario = (name: string, newName: string) =>
       : r.json().then((d) => Promise.reject(new Error(d.error || "rename failed")))
   );
 
+// Predefined video-type presets (system-owned presets/*.md) + per-project
+// rule customizations (Scenario.presetRules, stored with the project). The
+// server resolves ids to files; the client only ever sends/stores ids plus
+// an optional custom rules string that replaces the preset file for that
+// project only.
+export interface PresetInfo {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}
+export interface PresetDetail extends PresetInfo {
+  content: string;
+}
+export const DEFAULT_PRESET_ID = "cinematic";
+export const listPresets = () => get<PresetInfo[]>("/api/presets");
+// Shared in-flight cache — every Video Type dropdown on screen reuses one
+// request instead of each firing its own.
+let presetsCache: Promise<PresetInfo[]> | null = null;
+export const getPresetsCached = () => {
+  if (!presetsCache) {
+    presetsCache = listPresets().catch((e) => {
+      presetsCache = null;
+      throw e;
+    });
+  }
+  return presetsCache;
+};
+export const getPreset = (id: string) =>
+  get<PresetDetail>(`/api/presets/${encodeURIComponent(id)}`);
+// Clamp any stored/selected value to a known id (unknown -> default).
+export const presetOrDefault = (id: string | undefined | null, list: PresetInfo[]): string =>
+  (id && list.some((p) => p.id === id) ? id : DEFAULT_PRESET_ID);
+
 export const setFavorite = (name: string, on: boolean) =>
   fetch("/api/favorites", {
     method: "POST",

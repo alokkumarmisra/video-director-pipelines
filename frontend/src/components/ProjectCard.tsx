@@ -42,6 +42,7 @@ export default function ProjectCard({
   onMakeClip,
   onDownload,
   onDelete,
+  busyAction = null,
 }: {
   project: DashboardProject;
   onOpen: (name: string) => void;
@@ -50,6 +51,7 @@ export default function ProjectCard({
   onMakeClip: (name: string) => void;
   onDownload: (name: string) => void;
   onDelete: (name: string) => void;
+  busyAction?: string | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -70,11 +72,22 @@ export default function ProjectCard({
     };
   }, [menuOpen]);
 
-  const item = (label: string, fn: () => void, danger = false) => (
+  const busy = busyAction != null;
+  const clipBusy = busyAction === `clip:${project.name}`;
+  const dlBusy = busyAction === `download:${project.name}`;
+  const editDisabled = busy || project.generating;
+  // Make-a-clip stays enabled while generating: the handler then just opens
+  // the workspace so the live progress is visible ("View progress").
+  const clipDisabled = busy;
+  const delDisabled = busy || project.generating;
+  const clipLabel = clipBusy ? "Making…" : project.generating ? "View progress" : "Make a clip";
+  const dlLabel = dlBusy ? "Preparing…" : "Download";
+  const item = (label: string, fn: () => void, opts: { danger?: boolean; disabled?: boolean } = {}) => (
     <button
       key={label}
       role="menuitem"
-      className={`menu-item ${danger ? "danger" : ""}`}
+      className={`menu-item ${opts.danger ? "danger" : ""}`}
+      disabled={opts.disabled}
       onClick={() => {
         setMenuOpen(false);
         fn();
@@ -110,12 +123,13 @@ export default function ProjectCard({
           {menuOpen && (
             <div className="menu" role="menu">
               {item("Open", () => onOpen(project.name))}
-              {item("Continue", () => onOpen(project.name))}
-              {item("Edit", () => onEdit(project.name))}
-              {item("Make a clip", () => onMakeClip(project.name))}
-              {item("Download", () => onDownload(project.name))}
-              {item("Duplicate", () => onDuplicate(project.name))}
-              {item("Delete", () => onDelete(project.name), true)}
+              {item("Edit", () => onEdit(project.name), { disabled: editDisabled })}
+              {item(clipBusy ? "Making clip…" : clipLabel, () => onMakeClip(project.name), {
+                disabled: clipDisabled,
+              })}
+              {item(dlLabel, () => onDownload(project.name), { disabled: busy })}
+              {item("Duplicate", () => onDuplicate(project.name), { disabled: busy })}
+              {item("Delete", () => onDelete(project.name), { danger: true, disabled: delDisabled })}
             </div>
           )}
         </div>
@@ -165,6 +179,43 @@ export default function ProjectCard({
           <span title="Beats with a generated video clip">{project.videoCount} Videos</span>
         </div>
 
+        {/* Always-visible actions — the ⋯ menu above offers the same items,
+            but these buttons keep Edit / Make a clip / Download / Delete
+            discoverable without opening the menu. */}
+        <div className="proj-actions" role="toolbar" aria-label={`Actions for ${project.name}`}>
+          <button
+            className="ghost proj-act"
+            title={project.generating ? "Stop the run before editing" : `Edit ${project.name}`}
+            disabled={editDisabled}
+            onClick={() => onEdit(project.name)}
+          >
+            Edit
+          </button>
+          <button
+            className="ghost proj-act"
+            title={project.generating ? "Open the workspace to watch progress" : `Generate a clip for ${project.name}`}
+            disabled={clipDisabled}
+            onClick={() => onMakeClip(project.name)}
+          >
+            {clipLabel}
+          </button>
+          <button
+            className="ghost proj-act"
+            title={`Download the finished file for ${project.name}`}
+            disabled={busy}
+            onClick={() => onDownload(project.name)}
+          >
+            {dlLabel}
+          </button>
+          <button
+            className="ghost danger proj-act"
+            title={project.generating ? "Stop the run before deleting" : `Delete ${project.name}`}
+            disabled={delDisabled}
+            onClick={() => onDelete(project.name)}
+          >
+            Delete
+          </button>
+        </div>
         <div className="proj-foot">
           <span className="muted">Updated {fmtRelative(project.updatedAt)}</span>
           <button className="primary proj-continue" onClick={() => onOpen(project.name)}>

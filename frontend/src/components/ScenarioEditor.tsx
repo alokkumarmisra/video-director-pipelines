@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Beat, Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
 import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi, craftBeat } from "../api";
@@ -73,49 +73,49 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     if (!isDraft) void loadVersions();
   }, [isDraft, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Resync when a different workflow is picked from the dropdown (parent
-  // passes a new name/config). Internal edits (set) don't change
-  // the prop identity, so typing is never wiped by this.
+  // Resync when the parent passes a new name/config identity. Internal
+  // edits (setCfg) never change the prop identity, so typing is never wiped
+  // by this. The parent swaps the config identity when a different scenario
+  // finishes loading, when a fresh craft lands (new draft object), and when
+  // the Shot List persists beat edits for this scenario. Tell them apart by
+  // the non-beat fields: a full reset on scenario switch / fresh craft
+  // (this is what makes crafted beats appear here, not just in the Story
+  // Board), sequence-only adoption for same-scenario beat saves (preserves
+  // in-progress edits to the beats that live in this editor).
+  const prevProp = useRef<{ name: string; config: Scenario }>({ name, config });
   useEffect(() => {
-    setCfg(config);
-    setPristine(config);
-    setSaved(false);
-    setError("");
-    setViewVersion(null);
-    setHiddenBeats({});
-    setGenError("");
-  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // The parent swaps the config identity when a different scenario finishes
-  // loading, and when the Shot List persists beat edits for this scenario.
-  // Tell them apart by the non-beat fields: a full reset on scenario switch,
-  // sequence-only adoption for same-scenario beat saves (preserves
-  // in-progress edits to the fields that live in this editor).
-  const [lastSeen, setLastSeen] = useState(config);
-  if (config !== lastSeen) {
-    setLastSeen(config);
+    const prev = prevProp.current;
+    if (prev.name === name && prev.config === config) return;
+    const prevName = prev.name;
+    const prevConfig = prev.config;
+    prevProp.current = { name, config };
     const rest = (c: Scenario) => {
       const { sequence, ...fields } = c;
       return JSON.stringify(fields);
     };
-    if (rest(config) === rest(pristine)) {
-      // Sequence-only external change (a Shot List beat save): adopt it —
-      // unless the editor holds unsaved beat edits of its own, which win
-      // on the next explicit Save instead of being overwritten here.
-      const seq = JSON.stringify(config.sequence);
-      const localBeatsClean = JSON.stringify(cfg.sequence) === JSON.stringify(pristine.sequence);
-      if (localBeatsClean) {
-        setCfg((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
-        setPristine((prev) => (JSON.stringify(prev.sequence) === seq ? prev : { ...prev, sequence: config.sequence }));
-      }
-    } else {
+    if (name !== prevName || rest(config) !== rest(prevConfig)) {
+      // Project/draft switch, or a fresh craft (non-beat fields changed):
+      // adopt everything so the crafted beats bind here too.
       setCfg(config);
       setPristine(config);
       setSaved(false);
       setError("");
       setViewVersion(null);
+      setHiddenBeats({});
+      setGenError("");
+      return;
     }
-  }
+    // Sequence-only external change (a Shot List beat save): adopt it —
+    // unless the editor holds unsaved beat edits of its own, which win
+    // on the next explicit Save instead of being overwritten here.
+    const seq = JSON.stringify(config.sequence);
+    if (JSON.stringify(cfg.sequence) === JSON.stringify(pristine.sequence)) {
+      if (JSON.stringify(cfg.sequence) !== seq) {
+        setCfg((cur) => ({ ...cur, sequence: config.sequence }));
+        setPristine((cur) => ({ ...cur, sequence: config.sequence }));
+      }
+    }
+  }, [name, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Explicit save: persists everything as a NEW version of the same project,
   // folding in unsaved card edits (the parent drops its override copy once
@@ -327,7 +327,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       )}
 
       <p className="hint">
-        Project fields (description, duration, reference prompt) live in the AI Craft + Generate Reference sections — edit them there; Save stores everything together.
+        Project fields (description, duration, video type, reference prompt) live in the AI Craft + Generate Reference sections — edit them there; Save stores everything together.
       </p>
       <p className="hint">
         Story beats below carry the same Shot title / Keyframe image / Motion &amp; camera as the Story Board — edit them here, then Save Scenario stores everything together. The Shot List mirrors the same prompts.

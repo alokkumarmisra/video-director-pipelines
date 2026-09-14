@@ -123,15 +123,31 @@ export default function EditProjectDialog({
               if (!busy) submit();
             }}
           >
-            <label htmlFor="edit-name">Project Name *</label>
-            <input
-              id="edit-name"
-              ref={nameRef}
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              disabled={busy}
-              maxLength={60}
-            />
+            <div className="form-row">
+              <div className="form-row-main">
+                <label htmlFor="edit-name">Project Name *</label>
+                <input
+                  id="edit-name"
+                  ref={nameRef}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  disabled={busy}
+                  maxLength={60}
+                />
+              </div>
+              <div className="form-row-side">
+                <label htmlFor="edit-duration">Clip length (sec)</label>
+                <input
+                  id="edit-duration"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  disabled={busy}
+                />
+              </div>
+            </div>
             <label htmlFor="edit-desc">Description</label>
             <input
               id="edit-desc"
@@ -140,16 +156,6 @@ export default function EditProjectDialog({
               placeholder="What is this video about?"
               disabled={busy}
               maxLength={240}
-            />
-            <label htmlFor="edit-duration">Clip length (sec)</label>
-            <input
-              id="edit-duration"
-              type="number"
-              min={1}
-              max={10}
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              disabled={busy}
             />
             <label htmlFor="edit-master">Master Prompt *</label>
             <textarea

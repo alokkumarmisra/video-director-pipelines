@@ -16,6 +16,12 @@ import {
   EFFECTIVE_ASSETS_SQL,
   EXACT_VERSION_SQL,
 } from "../lib/project_versioning.mjs";
+import {
+  GetAvailablePresets,
+  GetPresetById,
+  GetPresetContent,
+  resolvePresetId,
+} from "../lib/presets.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -1465,13 +1471,30 @@ async function loadCraftReference() {
   // falls back to the system schema/rules alone.
   return null;
 }
-async function craftScenario({ description = "", masterPrompt = "", topic = "", requirements = "", name }) {
+async function craftScenario({ description = "", masterPrompt = "", topic = "", requirements = "", name, presetId, presetRules }) {
   // Legacy callers sent { topic, requirements }; current UI sends
   // { description, masterPrompt }. Accept both — topic/requirements are NOT
-  // persisted anywhere, they only seed the LLM prompt.
+  // persisted anywhere, they only seed the LLM prompt. presetId selects a
+  // predefined video-type preset (system-owned presets/*.md rules); unknown
+  // or missing ids fall back to the default (cinematic) — existing saved
+  // projects without one keep working unchanged. presetRules is an optional
+  // per-project override: when non-empty it REPLACES the preset's .md
+  // content for this project only (the .md files are never modified).
   const idea = String(description || topic || "").trim();
   const details = String(masterPrompt || requirements || "").trim();
   if (!idea) throw new Error("description required");
+  const preset = resolvePresetId(presetId);
+  // Missing preset file = fail loudly, never silently craft off-brief —
+  // unless the caller supplied custom rules, which stand on their own.
+  const customRules = String(presetRules ?? "").trim();
+  let presetMeta;
+  let presetContent;
+  if (customRules) {
+    presetMeta = GetPresetById(preset) ?? { id: preset, name: preset };
+    presetContent = customRules;
+  } else {
+    ({ meta: presetMeta, content: presetContent } = GetPresetContent(preset));
+  }
   const reference = await loadCraftReference();
   const system = [
     "You write ComfyUI video-generation scenario configs. Output ONLY a JSON object, no prose, no markdown fences.",
@@ -1483,9 +1506,17 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
     "each motion = 1-2 sentences of motion + camera direction for LTX image-to-video (no cuts, no new characters).",
     "duration = seconds per clip (2-5). Titles must be unique, short, snake_case.",
   ].join(" ");
+  // LM Studio user prompt = Description first, then Master prompt, then the
+  // preset rules appended last — concatenated in that order so the model
+  // reads the user's brief before the video-type rules.
+  const briefParts = [
+    `Description: ${idea}`,
+    `Master prompt / visual direction: ${details || "(none)"}`,
+    `Video-type rules (preset "${presetMeta.name}") — follow these for the referencePrompt and every image + motion prompt:\n${presetContent}`,
+  ];
   const user = reference
-    ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\nDescription: ${idea}\nMaster prompt / visual direction: ${details || "(none)"}`
-    : `New scenario to craft:\nDescription: ${idea}\nMaster prompt / visual direction: ${details || "(none)"}`;
+    ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\n${briefParts.join("\n\n")}`
+    : `New scenario to craft:\n${briefParts.join("\n\n")}`;
   const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1512,6 +1543,12 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   // Never persist legacy brief fields even if the LLM echoes them back.
   delete cfg.topic;
   delete cfg.requirements;
+  // The preset travels with the project (id only — resolved to presets/*.md
+  // at generation time, unless the project carries its own presetRules
+  // override), so Save persists it via the normal config path.
+  cfg.presetId = preset;
+  if (customRules) cfg.presetRules = customRules;
+  else delete cfg.presetRules;
   cfg.sequence = cfg.sequence.map((b, i) => ({
     title: slug(b.title) || `beat${i + 1}`,
     image: String(b.image || ""),
@@ -1527,7 +1564,7 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
  * + existing beats), so the new beat continues chronologically from the last
  * existing beat and keeps the same character and visual style.
  */
-async function craftNextBeat(cfg) {
+async function craftNextBeat(cfg, presetContent = "") {
   const existing = (cfg.sequence || []).map((b, i) => ({
     n: i + 1,
     title: b.title,
@@ -1541,6 +1578,9 @@ async function craftNextBeat(cfg) {
     "image = static keyframe prompt for Flux t2i (reuse the character block VERBATIM, keep the same visual style, new moment/pose/setting detail);",
     "motion = 1-2 sentences of motion + camera direction for LTX image-to-video (no cuts, no new characters).",
     "Output ONLY a JSON object { title, image, motion } — no prose, no markdown fences.",
+    // Same priority as craftScenario: the project's preset keeps the visual
+    // language; the new beat only supplies the next story moment.
+    ...(presetContent ? [`Visual language: the new beat MUST follow these preset rules:\n${presetContent}`] : []),
   ].join(" ");
   const user = `Scenario context:
 ${JSON.stringify({
@@ -1578,10 +1618,21 @@ Write the next beat (beat ${existing.length + 1}).`;
 
 /** Generate `count` consecutive beats; each call continues from the previous one. */
 async function craftNextBeats(cfg, count) {
+  // Preset continuity: beats inherit the project's visual language
+  // (cfg.presetId, defaulting to cinematic for older saved projects).
+  // A per-project cfg.presetRules override wins over the preset file.
+  const customRules = String(cfg?.presetRules ?? "").trim();
+  let presetContent;
+  if (customRules) {
+    presetContent = customRules;
+  } else {
+    const preset = resolvePresetId(cfg.presetId);
+    ({ content: presetContent } = GetPresetContent(preset));
+  }
   const beats = [];
   const cur = { ...cfg, sequence: [...(cfg.sequence || [])] };
   for (let i = 0; i < count; i++) {
-    const b = await craftNextBeat(cur);
+    const b = await craftNextBeat(cur, presetContent);
     beats.push(b);
     cur.sequence.push(b);
   }
@@ -1919,6 +1970,8 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith("/api/scenario/") && req.method === "DELETE" && p.split("/").length === 4) {
       const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      if ([...runs.values()].some((r) => r.status === "running" && r.scenario === name))
+        return json(res, 409, { error: "stop the active run before deleting" });
       let raw;
       try { raw = await dbGetScenario(name); }
       catch (e) { return json(res, 503, { error: "database unavailable" }); }
@@ -1937,13 +1990,17 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       if (typeof body.scenario !== "string" || !isSafe(body.scenario))
         return json(res, 400, { error: "bad scenario" });
-      const run = startRun(body.scenario, {
-        stitch: !!body.stitch,
-        engine: body.engine || "ltx",
-        regen: body.regen || null,
-        count: body.count,
-      });
-      return json(res, 200, { id: run.id });
+      try {
+        const run = startRun(body.scenario, {
+          stitch: !!body.stitch,
+          engine: body.engine || "ltx",
+          regen: body.regen || null,
+          count: body.count,
+        });
+        return json(res, 200, { id: run.id });
+      } catch (e) {
+        return json(res, 409, { error: String(e.message || e) });
+      }
     }
     if (p === "/api/runs" && req.method === "GET")
       return json(res, 200, [...runs.values()].map(({ proc, subs, ...r }) => r).reverse());
@@ -2112,8 +2169,44 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const cfg = body.config;
       if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
+      // Explicit preset override wins; otherwise the saved config's presetId
+      // applies (craftNextBeats sanitizes both via resolvePresetId).
+      // A presetRules string overrides the preset file for this call only;
+      // an empty string clears the project override back to the preset file.
+      if (typeof body.presetId === "string") cfg.presetId = body.presetId;
+      if (typeof body.presetRules === "string") {
+        if (body.presetRules.trim()) cfg.presetRules = body.presetRules.trim();
+        else delete cfg.presetRules;
+      }
       const count = Math.max(1, Number(body.count) || 1);
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
+    }
+    // Predefined video-type presets (system-owned presets/*.md defaults).
+    // List carries metadata only; content is fetched per id when needed
+    // (craft prompt injection, View/edit-rules panel). Per-project edits are
+    // stored on the project as `presetRules` and never touch presets/*.md.
+    if (p === "/api/presets" && req.method === "GET") {
+      try {
+        return json(res, 200, GetAvailablePresets());
+      } catch (e) {
+        console.error("[presets] list failed:", e.message);
+        return json(res, 500, { error: "presets unavailable" });
+      }
+    }
+    if (p.startsWith("/api/presets/") && req.method === "GET" && p.split("/").length === 4) {
+      const id = pathName(p.split("/")[3]);
+      try {
+        const { meta, content } = GetPresetContent(id);
+        return json(res, 200, {
+          id: meta.id, name: meta.name, category: meta.category,
+          description: meta.description, content,
+        });
+      } catch (e) {
+        // Unknown id OR missing file: 400 with a clear message, never a
+        // stack trace — and never an arbitrary filesystem read (ids are
+        // registry-validated inside GetPresetContent).
+        return json(res, 400, { error: String(e.message || "Invalid preset selected.") });
+      }
     }
     if (p === "/api/comfy" && req.method === "GET") return json(res, 200, await comfyStatus());
     // Combined health for the Home page (one round trip). Each service is

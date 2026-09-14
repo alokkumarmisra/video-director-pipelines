@@ -1,4 +1,5 @@
-// CHARACTER SEQUENCE: 1 reference visual -> N keyframe story beats (same subject)
+// CHARACTER SEQUENCE: 1 reference visual -> N keyframe story beats (same subject,
+// each keyframe Flux img2img-anchored on the reference image)
 // -> each keyframe uploaded + fed to LTX i2v -> stitched final.
 // Generic: any prompts/<scenario>.json with the anime_sequence shape.
 //
@@ -20,7 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  buildFluxGraph, buildLtxGraph,
+  buildFluxGraph, buildFluxImg2ImgGraph, buildLtxGraph,
 } from "../lib/comfy.mjs";
 import { runSequence, stitchSequence } from "../lib/sequence.mjs";
 
@@ -50,7 +51,9 @@ const opts = {
   tag: `[char:${scenario}]`,
   cfg,
   buildRef: (prompt) => buildFluxGraph({ prompt, prefix: `${scenario}/ref` }),
-  buildKeyframe: (prompt, i) => buildFluxGraph({ prompt, prefix: `${scenario}/seq${i + 1}` }),
+  buildKeyframe: (prompt, i, refImage) => refImage
+    ? buildFluxImg2ImgGraph({ prompt, image: refImage, prefix: `${scenario}/seq${i + 1}` })
+    : buildFluxGraph({ prompt, prefix: `${scenario}/seq${i + 1}` }),
   buildClip: (motion, image, i) => buildLtxGraph({
     prompt: motion,
     image,

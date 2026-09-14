@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   craftBeat,
   listOutputs,
@@ -105,8 +105,7 @@ interface Props {
   onChanged?: (cfg: Scenario) => void;
 }
 
-/** Max scene tabs shown; the trailing All tab reveals every scene. */
-const MAX_SCENE_TABS = 6;
+/** Scene tabs live in a horizontal scroll strip; the trailing All tab reveals every scene. */
 
 const emptyOutputs: OutputsInfo = {
   files: [],
@@ -141,6 +140,26 @@ export default function ShotList({
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const [loadError, setLoadError] = useState("");
+  // Horizontal scene-tab strip: arrow buttons shift the list one tab at a
+  // time (left arrow sits before scene 1, right arrow just before All).
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [nav, setNav] = useState({ left: false, right: false });
+  const updateNav = () => {
+    const el = stripRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setNav({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft < max - 1,
+    });
+  };
+  const stepStrip = (dir: 1 | -1) => {
+    const el = stripRef.current;
+    if (!el) return;
+    const tab = el.querySelector<HTMLElement>(".shotlist-scene");
+    const step = (tab ? tab.offsetWidth : 64) + 6; // one tab + gap
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
   // Hide/show toggle (same as the Projects panel — persisted). Collapsing
   // only hides the body JSX; polling and live progress keep running.
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-shots") === "closed");
@@ -180,6 +199,18 @@ export default function ShotList({
   useEffect(() => {
     if (filter !== "all" && (filter < 1 || filter > seq.length)) setFilter("all");
   }, [filter, seq.length]);
+  // Arrow enable/disable follows the strip's scroll position + content size.
+  useEffect(() => {
+    updateNav();
+    const el = stripRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateNav, { passive: true });
+    window.addEventListener("resize", updateNav);
+    return () => {
+      el.removeEventListener("scroll", updateNav);
+      window.removeEventListener("resize", updateNav);
+    };
+  }, [seq.length]);
 
   // Drafts have no server state yet (nothing saved to list) — beats edit
   // the draft locally until Save Scenario.
@@ -607,29 +638,50 @@ export default function ShotList({
         </div>
       </div>
 
-      {/* Scene filter tabs: first 6 scenes + All (All shows every scene) */}
+      {/* Scene filter tabs: number-only tabs in a scroll strip with step
+          arrows ([<] left of scene 1, [>] just before All) + pinned All */}
       {totalShots > 0 && (
-        <div className="shotlist-scenes" role="tablist" aria-label="Filter by scene">
-          {rows.slice(0, MAX_SCENE_TABS).map((r) => {
-            const done = !!(r.imageFile && r.clipFile);
-            return (
-              <button
-                key={r.n}
-                role="tab"
-                aria-selected={filter === r.n}
-                className={`shotlist-scene${filter === r.n ? " on" : ""}`}
-                onClick={() => (filter === r.n ? selectAll() : selectScene(r.n))}
-                title={`Scene ${r.n} — shot ${r.shot}${done ? " (complete)" : ""}`}
-              >
-                <span className={`dot${done ? " ok" : ""}`} aria-hidden="true" />
-                Scene {r.n}
-              </button>
-            );
-          })}
+        <div className="shotlist-scenes-wrap">
+          <button
+            className="shotlist-nav"
+            onClick={() => stepStrip(-1)}
+            disabled={!nav.left}
+            title="Scroll scenes one step to the right"
+            aria-label="Scroll scenes one step to the right"
+          >
+            &lt;
+          </button>
+          <div className="shotlist-scenes-scroll" ref={stripRef} role="tablist" aria-label="Filter by scene">
+            {rows.map((r) => {
+              const done = !!(r.imageFile && r.clipFile);
+              return (
+                <button
+                  key={r.n}
+                  role="tab"
+                  aria-selected={filter === r.n}
+                  className={`shotlist-scene${filter === r.n ? " on" : ""}`}
+                  onClick={() => (filter === r.n ? selectAll() : selectScene(r.n))}
+                  title={`Scene ${r.n} — shot ${r.shot}${done ? " (complete)" : ""}`}
+                >
+                  <span className={`dot${done ? " ok" : ""}`} aria-hidden="true" />
+                  {r.n}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            className="shotlist-nav"
+            onClick={() => stepStrip(1)}
+            disabled={!nav.right}
+            title="Scroll scenes one step to the left"
+            aria-label="Scroll scenes one step to the left"
+          >
+            &gt;
+          </button>
           <button
             role="tab"
             aria-selected={filter === "all"}
-            className={`shotlist-scene${filter === "all" ? " on" : ""}`}
+            className={`shotlist-scene shotlist-scene-all${filter === "all" ? " on" : ""}`}
             onClick={selectAll}
             title={`Show all ${totalShots} scenes`}
           >

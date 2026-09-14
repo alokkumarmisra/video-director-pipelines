@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { saveScenario } from "../api";
+import { saveScenario, DEFAULT_PRESET_ID } from "../api";
 import type { Scenario } from "../types";
 import { IconX, Spinner } from "./Icons";
+import PresetSelect from "./PresetSelect";
 
 // Creates a project through the EXISTING scenario save API (PUT
 // /api/scenario/:name) with the existing scenario model — an empty beat list
@@ -19,6 +20,8 @@ export default function CreateProjectDialog({
   const [description, setDescription] = useState("");
   const [referencePrompt, setReferencePrompt] = useState("");
   const [duration, setDuration] = useState(3);
+  const [presetId, setPresetId] = useState(DEFAULT_PRESET_ID);
+  const [presetRules, setPresetRules] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -29,6 +32,8 @@ export default function CreateProjectDialog({
       setDescription("");
       setReferencePrompt("");
       setDuration(3);
+      setPresetId(DEFAULT_PRESET_ID);
+      setPresetRules("");
       setError(null);
       setBusy(false);
       setTimeout(() => nameRef.current?.focus(), 30);
@@ -63,6 +68,8 @@ export default function CreateProjectDialog({
       ...(description.trim() ? { description: description.trim() } : {}),
       referencePrompt: referencePrompt.trim(),
       duration: Math.min(10, Math.max(1, Number(duration) || 3)),
+      presetId,
+      ...(presetRules.trim() ? { presetRules } : {}),
       sequence: [],
     };
     try {
@@ -94,16 +101,32 @@ export default function CreateProjectDialog({
             if (!busy) submit();
           }}
         >
-          <label htmlFor="create-name">Project Name *</label>
-          <input
-            id="create-name"
-            ref={nameRef}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="My music video 2025"
-            disabled={busy}
-            maxLength={60}
-          />
+          <div className="form-row">
+            <div className="form-row-main">
+              <label htmlFor="create-name">Project Name *</label>
+              <input
+                id="create-name"
+                ref={nameRef}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My music video 2025"
+                disabled={busy}
+                maxLength={60}
+              />
+            </div>
+            <div className="form-row-side">
+              <label htmlFor="create-duration">Clip length (sec)</label>
+              <input
+                id="create-duration"
+                type="number"
+                min={1}
+                max={10}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                disabled={busy}
+              />
+            </div>
+          </div>
           <label htmlFor="create-desc">Description</label>
           <input
             id="create-desc"
@@ -113,14 +136,12 @@ export default function CreateProjectDialog({
             disabled={busy}
             maxLength={240}
           />
-          <label htmlFor="create-duration">Clip length (sec)</label>
-          <input
-            id="create-duration"
-            type="number"
-            min={1}
-            max={10}
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
+          <PresetSelect
+            id="create-preset"
+            value={presetId}
+            onChange={setPresetId}
+            customRules={presetRules}
+            onCustomRulesChange={(v) => setPresetRules(v ?? "")}
             disabled={busy}
           />
           <label htmlFor="create-master">Master Prompt *</label>

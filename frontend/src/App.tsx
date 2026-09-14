@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest } from "./api";
 import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
@@ -178,6 +178,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const patchOverrides = (p: {
     description?: string | null;
     duration?: number | null;
+    presetId?: string | null;
+    presetRules?: string | null;
     referencePrompt?: string | null;
   }) => setOverrides((o) => {
     const next = { ...o };
@@ -1152,11 +1154,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               name: contentName,
               description: (draft ? draft.config : cfg)?.description ?? "",
               duration: (draft ? draft.config : cfg)?.duration ?? null,
+              presetId: (draft ? draft.config : cfg)?.presetId ?? DEFAULT_PRESET_ID,
+              presetRules: overrides.presetRules ?? (draft ? draft.config : cfg)?.presetRules ?? "",
               masterPrompt: (draft ? draft.config : cfg)?.referencePrompt ?? "",
             } : {
               name: "",
               description: "",
               duration: null,
+              presetId: DEFAULT_PRESET_ID,
+              presetRules: "",
               masterPrompt: "",
             }}
             isDraft={!!draft}

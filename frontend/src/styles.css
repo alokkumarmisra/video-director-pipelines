@@ -1680,6 +1680,12 @@ select:focus-visible, textarea:focus-visible {
 .menu-item:hover { background: var(--surface-2); color: var(--text); }
 .menu-item.danger { color: var(--err); }
 .menu-item.danger:hover { background: var(--err-soft); }
+.menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.menu-item:disabled:hover { background: transparent; color: var(--text-2); }
+.menu-item.danger:disabled:hover { background: transparent; color: var(--err); }
 
 .proj-body {
   display: flex; flex-direction: column; gap: 8px;
@@ -1717,6 +1723,18 @@ select:focus-visible, textarea:focus-visible {
   margin-top: 2px; font-size: 12px;
 }
 .proj-continue { padding: 7px 16px; font-size: 12.5px; }
+/* Always-visible per-project actions (Edit / Make a clip / Download /
+   Delete) — same handlers as the ⋯ menu, but discoverable at a glance. */
+.proj-actions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.proj-act {
+  flex: 1 1 0; justify-content: center;
+  padding: 6px 8px; font-size: 12px; font-weight: 600;
+  white-space: nowrap;
+}
+.proj-act.ghost.danger { color: var(--err); }
+.proj-act.ghost.danger:hover:not(:disabled) { background: var(--err-soft); }
 
 /* dialog */
 .overlay {
@@ -1743,6 +1761,48 @@ select:focus-visible, textarea:focus-visible {
   display: flex; justify-content: flex-end; gap: 8px;
   margin-top: 16px;
 }
+
+/* Side-by-side Project Name + Clip length row: the name takes the free
+   space, clip length is fixed at 20%. Labels keep their normal stacking
+   inside each column so both fields stay aligned. */
+.form-row { display: flex; gap: 12px; align-items: flex-start; }
+.form-row-main { flex: 1 1 auto; min-width: 0; }
+.form-row-side { flex: 0 0 20%; min-width: 0; }
+
+/* Video Type preset selector (presets are application-owned; per-project
+   rule customizations are stored on the project, never in presets/). */
+.preset-select .preset-rules-btn { margin-top: 8px; padding: 5px 12px; font-size: 12px; }
+.preset-rules {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--inset);
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+}
+.preset-rules pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-2);
+  user-select: text;
+}
+.preset-rules-edit {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-1);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  resize: vertical;
+}
+.preset-rules-actions { margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+.preset-save-btn { padding: 6px 12px; font-size: 12px; }
+.preset-custom-badge { margin-left: 6px; font-size: 11px; }
 
 /* skeleton loading */
 .skeleton { pointer-events: none; }
@@ -1893,7 +1953,41 @@ select:focus-visible, textarea:focus-visible {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* scene filter tabs */
+/* scene filter tabs: horizontal scroll strip (all scenes) + pinned All */
+.shotlist-scenes-wrap {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+/* Step arrows: [<] left of scene 1, [>] just before All — shift the strip
+   one tab per click. */
+.shotlist-nav {
+  flex: 0 0 auto;
+  width: 28px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  font-size: 15px; font-weight: 700; line-height: 1;
+  border-radius: var(--radius-s);
+}
+.shotlist-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.shotlist-scenes-scroll {
+  display: flex; gap: 6px; flex-wrap: nowrap;
+  overflow-x: auto; overflow-y: hidden;
+  flex: 1 1 auto; min-width: 0;
+  /* No visible scrollbar — the [<] / [>] step arrows are the only way to shift */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.shotlist-scenes-scroll::-webkit-scrollbar { display: none; height: 0; }
+/* Number-only tabs: compact centered pills */
+.shotlist-scenes-scroll .shotlist-scene {
+  min-width: 44px;
+  justify-content: center;
+}
+/* legacy class kept for compatibility */
 .shotlist-scenes {
   display: flex; gap: 6px; flex-wrap: wrap;
   margin-bottom: 12px;
@@ -1901,6 +1995,7 @@ select:focus-visible, textarea:focus-visible {
 .shotlist-scene {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 6px 12px; font-size: 12.5px;
+  flex: 0 0 auto; white-space: nowrap;
 }
 .shotlist-scene .dot { background: var(--text-3); }
 .shotlist-scene .dot.ok { background: var(--ok); }
@@ -1909,6 +2004,22 @@ select:focus-visible, textarea:focus-visible {
   border-color: var(--accent-line);
   color: var(--accent-2);
   box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(16, 185, 129, 0.12);
+}
+/* Pinned All button: distinct blue treatment so it stands apart from the
+   emerald scene tabs. Same size/shape, pinned outside the scroll strip. */
+.shotlist-scene-all {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: #fff;
+  background: var(--vid);
+  border-color: var(--vid);
+}
+.shotlist-scene-all:hover { filter: brightness(1.08); }
+.shotlist-scene-all.on {
+  background: var(--vid);
+  border-color: #fff;
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--vid) inset, 0 0 0 2px #fff, 0 0 12px rgba(59, 130, 246, 0.45);
 }
 
 /* rounded shot-list container.

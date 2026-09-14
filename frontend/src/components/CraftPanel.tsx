@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import type { Scenario } from "../types";
+import { DEFAULT_PRESET_ID } from "../api";
 import { IconPanel, IconSparkles, Spinner } from "./Icons";
+import PresetSelect from "./PresetSelect";
 
 // Saved snapshot of every Create New Project field for the open project.
 // The panel mirrors the create form control-for-control (text inputs,
-// number input, textareas) so the whole brief is visible AND editable here.
+// number input, preset dropdown + rules customization, textareas) so the
+// whole brief is visible AND editable here.
 export interface CraftSource {
   name: string;
   description: string;
   duration: number | null;
+  presetId: string;
+  presetRules: string;
   masterPrompt: string;
 }
 
@@ -31,6 +36,8 @@ interface Props {
   onPatch: (p: {
     description?: string | null;
     duration?: number | null;
+    presetId?: string | null;
+    presetRules?: string | null;
     referencePrompt?: string | null;
   }) => void;
   // Project rename (saved projects only) — staged in the parent, applied on
@@ -52,6 +59,8 @@ export default function CraftPanel({
   const [name, setName] = useState(source.name);
   const [description, setDescription] = useState(source.description);
   const [durationStr, setDurationStr] = useState(source.duration != null ? String(source.duration) : "");
+  const [presetId, setPresetId] = useState(source.presetId || DEFAULT_PRESET_ID);
+  const [presetRules, setPresetRules] = useState(source.presetRules || "");
   const [master, setMaster] = useState(source.masterPrompt);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +74,8 @@ export default function CraftPanel({
     setName(source.name);
     setDescription(source.description);
     setDurationStr(source.duration != null ? String(source.duration) : "");
+    setPresetId(source.presetId || DEFAULT_PRESET_ID);
+    setPresetRules(source.presetRules || "");
     setMaster(source.masterPrompt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncEpoch]);
@@ -82,6 +93,8 @@ export default function CraftPanel({
         body: JSON.stringify({
           description,
           masterPrompt: master,
+          presetId,
+          ...(presetRules.trim() ? { presetRules } : {}),
           ...(craftTarget ? { target: craftTarget } : {}),
         }),
       });
@@ -145,22 +158,39 @@ export default function CraftPanel({
         </button>
       </div>
 
-      <label htmlFor="craft-name">Project Name *</label>
-      <input
-        id="craft-name"
-        value={name}
-        placeholder="My music video 2025"
-        maxLength={60}
-        disabled={busy || isDraft}
-        title={isDraft ? "Save the project first to rename it" : "Rename the project — applied on Save"}
-        onChange={(e) => {
-          setName(e.target.value);
-          onNameChange(e.target.value);
-        }}
-      />
-      {isDraft && (
-        <p className="hint">Save the project first — renaming unlocks after the first save.</p>
-      )}
+      <div className="form-row">
+        <div className="form-row-main">
+          <label htmlFor="craft-name">Project Name *</label>
+          <input
+            id="craft-name"
+            value={name}
+            placeholder="My music video 2025"
+            maxLength={60}
+            disabled={busy || isDraft}
+            title={isDraft ? "Save the project first to rename it" : "Rename the project — applied on Save"}
+            onChange={(e) => {
+              setName(e.target.value);
+              onNameChange(e.target.value);
+            }}
+          />
+          {isDraft && (
+            <p className="hint">Save the project first — renaming unlocks after the first save.</p>
+          )}
+        </div>
+        <div className="form-row-side">
+          <label htmlFor="craft-duration">Clip length (sec)</label>
+          <input
+            id="craft-duration"
+            type="number"
+            min={1}
+            max={10}
+            value={durationStr}
+            placeholder="3"
+            disabled={busy}
+            onChange={(e) => setDuration(e.target.value)}
+          />
+        </div>
+      </div>
       <label htmlFor="craft-desc">Description</label>
       <input
         id="craft-desc"
@@ -173,16 +203,19 @@ export default function CraftPanel({
           onPatch({ description: e.target.value });
         }}
       />
-      <label htmlFor="craft-duration">Clip length (sec)</label>
-      <input
-        id="craft-duration"
-        type="number"
-        min={1}
-        max={10}
-        value={durationStr}
-        placeholder="3"
+      <PresetSelect
+        id="craft-preset"
+        value={presetId}
+        onChange={(v) => {
+          setPresetId(v);
+          onPatch({ presetId: v });
+        }}
+        customRules={presetRules}
+        onCustomRulesChange={(v) => {
+          setPresetRules(v ?? "");
+          onPatch({ presetRules: v });
+        }}
         disabled={busy}
-        onChange={(e) => setDuration(e.target.value)}
       />
       <label htmlFor="craft-master">Master Prompt *</label>
       <textarea

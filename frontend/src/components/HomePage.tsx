@@ -128,17 +128,26 @@ export default function HomePage({
 
   const handleDelete = useCallback(
     async (name: string) => {
+      const proj = data?.projects.find((p) => p.name === name);
+      if (proj?.generating) {
+        window.alert(`"${name}" is still generating — stop the run before deleting.`);
+        return;
+      }
       if (!window.confirm(`Delete project "${name}"?\nIts generated outputs will be removed too. This cannot be undone.`))
         return;
+      if (busyAction) return;
+      setBusyAction(`delete:${name}`);
       try {
         await deleteScenario(name);
         onProjectsChanged();
-        await load();
+        await load(true);
       } catch (e) {
         window.alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setBusyAction(null);
       }
     },
-    [load, onProjectsChanged]
+    [busyAction, data, load, onProjectsChanged]
   );
 
   // Start a full generation run for the project (reference + keyframes +
@@ -148,10 +157,17 @@ export default function HomePage({
   const handleMakeClip = useCallback(
     async (name: string) => {
       if (busyAction) return;
+      const proj = data?.projects.find((p) => p.name === name);
+      if (proj?.generating) {
+        // Already running — just open the workspace so progress is visible.
+        onOpen(name);
+        return;
+      }
       setBusyAction(`clip:${name}`);
       try {
         const d = await startRun(name, { engine: "ltx" });
         if (d.error) throw new Error(d.error);
+        if (!d.id) throw new Error("server did not start a run");
         onProjectsChanged();
         await load(true);
         onOpen(name);
@@ -161,7 +177,7 @@ export default function HomePage({
         setBusyAction(null);
       }
     },
-    [busyAction, load, onOpen, onProjectsChanged]
+    [busyAction, data, load, onOpen, onProjectsChanged]
   );
 
   // Download the project's best finished file: the stitched final cut when
@@ -197,12 +213,23 @@ export default function HomePage({
         window.alert(`Nothing to download yet for "${name}" — use Make a clip first.`);
         return;
       }
-      const a = document.createElement("a");
-      a.href = outputUrl(dir, file);
-      a.download = file;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      // Fetch as a blob (same-origin, carries the session cookie) so the
+      // file actually saves instead of navigating, and auth failures
+      // surface as an error instead of a downloaded login page.
+      const resp = await fetch(outputUrl(dir, file));
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
     } catch (e) {
       window.alert(`Download failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -330,8 +357,12 @@ export default function HomePage({
               <ProjectCard
                 key={p.name}
                 project={p}
+                busyAction={busyAction}
                 onOpen={onOpen}
-                onEdit={(n) => setEditName(n)}
+                onEdit={(n) => {
+                  if (busyAction) return;
+                  setEditName(n);
+                }}
                 onDuplicate={handleDuplicate}
                 onMakeClip={handleMakeClip}
                 onDownload={handleDownload}

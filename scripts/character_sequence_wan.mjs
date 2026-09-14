@@ -1,5 +1,6 @@
 // CHARACTER SEQUENCE (WAN): 1 reference visual -> N keyframe story beats (same
-// subject) -> each keyframe uploaded + fed to Wan 2.1 i2v -> stitched final.
+// subject, each keyframe Flux img2img-anchored on the reference image)
+// -> each keyframe uploaded + fed to Wan 2.1 i2v -> stitched final.
 // Same scenario JSON shape as character_sequence.mjs; clips are built with
 // buildWanGraph (wan2.1-i2v-14b GGUF + AccVid LoRA) instead of LTX.
 //
@@ -26,7 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  buildFluxGraph, buildWanGraph,
+  buildFluxGraph, buildFluxImg2ImgGraph, buildWanGraph,
 } from "../lib/comfy.mjs";
 import { runSequence, stitchSequence } from "../lib/sequence.mjs";
 
@@ -60,7 +61,9 @@ const opts = {
   tag: `[wanchar:${scenario}]`,
   cfg,
   buildRef: (prompt) => buildFluxGraph({ prompt, prefix: `${scenario}/wan_ref` }),
-  buildKeyframe: (prompt, i) => buildFluxGraph({ prompt, prefix: `${scenario}/wan_seq${i + 1}` }),
+  buildKeyframe: (prompt, i, refImage) => refImage
+    ? buildFluxImg2ImgGraph({ prompt, image: refImage, prefix: `${scenario}/wan_seq${i + 1}` })
+    : buildFluxGraph({ prompt, prefix: `${scenario}/wan_seq${i + 1}` }),
   buildClip: (motion, image, i) => buildWanGraph({
     prompt: motion,
     image,
