@@ -63,9 +63,25 @@ describe("sequence wiring", () => {
 
   it("genKeyframe uploads the ref main and passes it to buildKeyframe", () => {
     const src = read("lib/sequence.mjs");
-    assert.match(src, /resolveMain\(outDir, prefix, "ref", 0, "\.png"/);
-    assert.match(src, /uploadToInput\(path\.join\(outDir, refFile\)/);
+    assert.match(src, /resolveRefForRun\(outDir, prefix\)/);
+    assert.match(src, /uploadToInput\(ref\.fullPath/);
     assert.match(src, /buildKeyframe\(seq\[i\]\.image, i, refInput\)/);
+  });
+
+  it("switching the main ref regenerates stale keyframes + clips", () => {
+    const src = read("lib/sequence.mjs");
+    assert.match(src, /getKeyframeRefFrom/);
+    assert.match(src, /setKeyframeRefFrom/);
+    assert.match(src, /ref main is now/);
+  });
+
+  it("a freshly generated version becomes main (regen v4 beats picked v1/v2/v3)", () => {
+    const src = read("lib/sequence.mjs");
+    // Each generator records the just-written file and prefers it over the
+    // previously selected main; skips (no new file) keep the old selection.
+    const hits = src.match(/newFile \?\? path\.basename\(resolveMain\(/g) || [];
+    assert.equal(hits.length, 3, "genRef + genKeyframe + genClip must select the fresh file");
+    assert.match(src, /newFile = path\.basename\(dest\)/);
   });
 
   it("both runners build img2img keyframes when a ref input exists", () => {

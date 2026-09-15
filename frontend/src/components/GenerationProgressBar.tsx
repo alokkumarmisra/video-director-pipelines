@@ -26,6 +26,21 @@ export interface GenerationProgress {
   startedAt: number | null;
   /** Scenario (output dir) being generated. */
   scenario: string;
+  /**
+   * In-flight asset estimate (null when idle / unknown). ComfyUI only reports
+   * completion via /history polling, so intra-asset progress is ESTIMATED:
+   * elapsed-since-last-asset vs the expected duration (live in-run average,
+   * else historical pace). activePct is 0-99, never 100 (100 = landed).
+   */
+  activeKind: "image" | "video" | null;
+  /** 1-based beat for keyframe/clip, 0 = reference, null when unknown. */
+  activeScene: number | null;
+  /** Estimated 0-99, null while no pace exists yet (shows indeterminate). */
+  activePct: number | null;
+  /** ms spent on the in-flight asset so far (null when unknown). */
+  activeElapsedMs: number | null;
+  /** Expected ms for the in-flight asset (null when unknown). */
+  activeExpectedMs: number | null;
 }
 
 export const emptyProgress: GenerationProgress = {
@@ -46,6 +61,11 @@ export const emptyProgress: GenerationProgress = {
   elapsedMs: 0,
   startedAt: null,
   scenario: "",
+  activeKind: null,
+  activeScene: null,
+  activePct: null,
+  activeElapsedMs: null,
+  activeExpectedMs: null,
 };
 
 // Clock time the run started at: "14:32" (with seconds when < 1 min precision
@@ -85,6 +105,16 @@ export function formatDuration(ms: number | null): string {
   return `${p(h)}h:${p(m)}m:${p(s)}s`;
 }
 
+// Compact live elapsed for a generating tile badge: "12s" / "3m 05s".
+// Real measured time (never estimated) — shown while no pace exists yet
+// for a ~% estimate. Null when unknown.
+export function formatLiveElapsed(ms: number | null): string | null {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return null;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  return `${m}m ${String(s % 60).padStart(2, "0")}s`;
+}
 // Elapsed time in the same fixed-width digital format as Remaining:
 // "02h:22m:32s". Zero-padded so the text never shifts width as it ticks.
 export function formatElapsed(ms: number): string {

@@ -196,9 +196,14 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     setSaved(false);
   };
   const addBeat = () => {
+    // Master Prompt prefill: a manually added scene starts with the stored
+    // master in the keyframe box (blank master = empty boxes, as before) —
+    // the user then extends it with the scene specifics before Save.
+    // Motion is never prefilled.
+    const master = String(merged.referencePrompt ?? "").trim();
     setCfg((prev) => {
       const seq = Array.isArray(prev.sequence) ? [...prev.sequence] : [];
-      seq.push({ title: `beat${seq.length + 1}`, image: "", motion: "" });
+      seq.push({ title: `beat${seq.length + 1}`, image: master, motion: "" });
       return { ...prev, sequence: seq };
     });
     setSaved(false);
@@ -401,12 +406,12 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
           );
         })}
         <div className="row" style={{ marginTop: 8 }}>
-          <button className="ghost" onClick={addBeat} disabled={saving || genBusy} title="Append a scene — fill in its prompts, then Save Scenario">
+          <button className="btn-green" onClick={addBeat} disabled={saving || genBusy} title="Append a scene — fill in its prompts, then Save Scenario">
             <IconPlus size={13} />
             Add beat
           </button>
           <button
-            className="ghost"
+            className="btn-purple"
             onClick={() => void generateBeats()}
             disabled={saving || genBusy}
             title="LLM proposes the next beat(s) from the scenario + existing scenes (appends below — Save persists them)"

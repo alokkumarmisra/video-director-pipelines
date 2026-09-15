@@ -1,11 +1,52 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec, type VideoFormat } from "../api";
 import OutputGallery from "./OutputGallery";
 import { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
-import RenderMonitor from "./RenderMonitor";
+import RenderMonitor, { type RmPin } from "./RenderMonitor";
 import { IconPanel, IconPlay, IconScissors, IconStop, IconClapper, Spinner } from "./Icons";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
+
+// One collapsible zone inside the Rendered Clip card (Program / Render /
+// Terminal), each with its own persisted hide/show toggle.
+// Hiding unmounts the body (listings refetch on show) — except with
+// keepMounted (Terminal: the log keeps streaming + autoscrolling while hidden).
+function RunPart({ storageKey, title, label, keepMounted, children }: {
+  storageKey: string;
+  title: string;
+  label: string;
+  keepMounted?: boolean;
+  children: ReactNode;
+}) {
+  const [hidden, setHidden] = useState(() => localStorage.getItem(storageKey) === "closed");
+  const toggle = () =>
+    setHidden((h) => {
+      localStorage.setItem(storageKey, h ? "open" : "closed");
+      return !h;
+    });
+  return (
+    <section className="rm-part" aria-label={label}>
+      <div className="rm-part-head">
+        <span className="rm-part-title">{title}</span>
+        <span className="spacer" />
+        <button
+          className="icon-btn"
+          onClick={toggle}
+          title={hidden ? `Show ${label}` : `Hide ${label}`}
+          aria-label={hidden ? `Show ${label}` : `Hide ${label}`}
+          aria-expanded={!hidden}
+        >
+          <IconPanel size={15} />
+        </button>
+      </div>
+      {keepMounted ? (
+        <div className="rm-part-body" style={hidden ? { display: "none" } : undefined}>{children}</div>
+      ) : (
+        !hidden && <div className="rm-part-body">{children}</div>
+      )}
+    </section>
+  );
+}
 
 interface Props {
   scenario: string;
@@ -87,6 +128,9 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   const [assetTimes, setAssetTimes] = useState<{ time: number; stage: AssetEvent["stage"] }[]>([]);
   const [cancelled, setCancelled] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Shared PROGRAM pin across the split Program/Render monitor instances —
+  // Render chips drive the Program viewport like before the split.
+  const [pin, setPin] = useState<RmPin | null>(null);
   // Hide/show toggle (same as the Projects panel — persisted). Collapsing
   // only hides the body JSX; the component stays mounted so a running
   // generation keeps its live log, progress and SSE tail.
@@ -322,6 +366,13 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     // one; live measurements take over as assets land.
     let imagesEtaMs: number | null = null;
     let videosEtaMs: number | null = null;
+    // In-flight asset estimate: elapsed vs expected duration (same pace
+    // sources as the ETA above). Estimated — ComfyUI only signals completion.
+    let activeKind: "image" | "video" | null = null;
+    let activeScene: number | null = null;
+    let activePct: number | null = null;
+    let activeElapsedMs: number | null = null;
+    let activeExpectedMs: number | null = null;
     if (status === "running" && startedAt != null && total > completed) {
       const times = assetTimes;
       // Completion intervals attributed to the asset that just finished.
@@ -354,20 +405,75 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       const avgImg = img.length ? avg(img) : (pace.img ?? overall);
       const avgVid = vid.length ? avg(vid) : (pace.vid ?? overall);
       const usable = (v: number) => Number.isFinite(v) && v >= 0;
+      const usablePos = (v: number) => Number.isFinite(v) && v > 0;
       const remImg = Math.max(0, imagesTotal - imagesDone);
       const remVid = Math.max(0, videosTotal - videosDone);
       // Pipeline is sequential with at most one asset in flight; images
       // render before clips, so in-flight time belongs to images while any
       // image is still pending, otherwise to videos.
       const sinceLast = Math.max(0, now - prev);
-      if (imagesTotal + videosTotal > 0 && (remImg + remVid) > 0 && usable(avgImg) && usable(avgVid)) {
+      // Which single asset is in flight (first missing in pipeline order),
+      // so the keyframe/clip tiles can show an estimated % on exactly that
+      // tile. Regen runs target one asset; full runs head for the first
+      // missing reference → keyframe → clip. Determined independently of
+      // pace so the tile always knows it is in flight (elapsed ticks even
+      // when no pace exists yet for a % estimate).
+      if (!stitch) {
+        if (regen?.kind === "keyframe") { activeKind = "image"; activeScene = regen.index ?? null; }
+        else if (regen?.kind === "clip") { activeKind = "video"; activeScene = regen.index ?? null; }
+        else if (regen?.kind === "ref") { activeKind = "image"; activeScene = 0; }
+        else if (N != null) {
+          if (!refDone) { activeKind = "image"; activeScene = 0; }
+          else {
+            let kfMissing: number | null = null;
+            for (let i = 1; i <= N; i++) {
+              if (!kfIdx.has(i)) { kfMissing = i; break; }
+            }
+            if (kfMissing != null) { activeKind = "image"; activeScene = kfMissing; }
+            else {
+              for (let i = 1; i <= N; i++) {
+                if (!clipIdx.has(i)) { activeKind = "video"; activeScene = i; break; }
+              }
+            }
+          }
+        }
+      }
+      // ETA per category needs only its OWN average (a single-asset regen
+      // must not wait for the other category's pace that may never exist).
+      // Fallback chain per category: live average → historical pace →
+      // overall average across both kinds.
+      const expImg = usablePos(avgImg) ? avgImg : usablePos(overall) ? overall : NaN;
+      const expVid = usablePos(avgVid) ? avgVid : usablePos(overall) ? overall : NaN;
+      if (imagesTotal + videosTotal > 0 && (remImg + remVid) > 0 && (usable(expImg) || usable(expVid))) {
         const imgActive = remImg > 0;
-        imagesEtaMs = Math.max(0, Math.round(remImg * avgImg - (imgActive ? sinceLast : 0)));
-        videosEtaMs = Math.max(0, Math.round(remVid * avgVid - (imgActive ? 0 : sinceLast)));
-        etaMs = imagesEtaMs + videosEtaMs;
+        if (usable(expImg) && remImg >= 0) {
+          imagesEtaMs = Math.max(0, Math.round(remImg * (expImg as number) - (imgActive ? sinceLast : 0)));
+        }
+        if (usable(expVid) && remVid >= 0) {
+          videosEtaMs = Math.max(0, Math.round(remVid * (expVid as number) - (imgActive ? 0 : sinceLast)));
+        }
+        if (imagesEtaMs != null || videosEtaMs != null) {
+          etaMs = (imagesEtaMs ?? 0) + (videosEtaMs ?? 0);
+        }
       } else if (completed > 0) {
         const avgAll = elapsedMs / completed;
         etaMs = Math.max(0, Math.round(avgAll * total - elapsedMs));
+      }
+      // In-flight % estimate: elapsed vs the active category's expected
+      // duration (with the same fallback chain). Capped at 99 — 100 is
+      // reserved for "landed". Without any pace the tile still gets the
+      // live elapsed time (activeElapsedMs) so it can tick seconds.
+      if (activeKind) {
+        const expected = activeKind === "image" ? expImg : expVid;
+        activeElapsedMs = sinceLast;
+        if (usablePos(expected as number)) {
+          activeExpectedMs = Math.round(expected as number);
+          activePct = Math.min(99, Math.max(sinceLast > 1500 ? 1 : 0,
+            Math.floor((sinceLast / (expected as number)) * 100)));
+        } else {
+          activeExpectedMs = null;
+          activePct = null;
+        }
       }
     }
 
@@ -389,6 +495,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       elapsedMs,
       startedAt,
       scenario: runScenario ?? scenario,
+      activeKind,
+      activeScene,
+      activePct,
+      activeElapsedMs,
+      activeExpectedMs,
     };
   }, [assets, assetTimes, totalBeats, runMeta, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
 
@@ -496,36 +607,63 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           </button>
         </div>
       )}
-      {/* Broadcast-style program monitor (viewport + stats + frame grids):
-          same live progress/assets/log as above, new presentation only. */}
-      {(scenario || runScenario) && (
-        <RenderMonitor
-          scenario={runScenario ?? scenario}
-          outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
-          engine={runEngine ?? engine}
-          status={status}
-          progress={progress}
-          assets={assets}
-          log={log}
-          totalBeats={totalBeats}
-          runMeta={runMeta}
-          startedAt={startedAt}
-          now={now}
-          comfyQueue={comfyQueue}
-        />
-      )}
-
-      {!scenario && (
+      {/* Rendered Clip body, split in three collapsible parts — Program
+          (viewport + stats), Render (frame grids + generated media) and
+          Terminal (run log). Reference lives in Generate Reference. */}
+      {(scenario || runScenario) ? (
+        <>
+          <RunPart storageKey="ss-sec-run-program" title="Program" label="Program monitor">
+            <RenderMonitor
+              scenario={runScenario ?? scenario}
+              outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
+              engine={runEngine ?? engine}
+              status={status}
+              progress={progress}
+              assets={assets}
+              log={log}
+              totalBeats={totalBeats}
+              runMeta={runMeta}
+              startedAt={startedAt}
+              now={now}
+              comfyQueue={comfyQueue}
+              showFrames={false}
+              pin={pin}
+              onPin={setPin}
+            />
+          </RunPart>
+          <RunPart storageKey="ss-sec-run-render" title="Render" label="Render status and outputs">
+            <RenderMonitor
+              scenario={runScenario ?? scenario}
+              outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
+              engine={runEngine ?? engine}
+              status={status}
+              progress={progress}
+              assets={assets}
+              log={log}
+              totalBeats={totalBeats}
+              runMeta={runMeta}
+              startedAt={startedAt}
+              now={now}
+              comfyQueue={comfyQueue}
+              showScreen={false}
+              pin={pin}
+              onPin={setPin}
+            />
+            {assets.length > 0 && (
+              <OutputGallery scenario={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} progress={progress} />
+            )}
+          </RunPart>
+        </>
+      ) : (
         <p className="hint">Select or save a scenario first, then start a run.</p>
       )}
 
-      <pre ref={boxRef} className="log">
-        {log || <span className="log-empty">— log will stream here once a run starts —</span>}
-      </pre>
+      <RunPart storageKey="ss-sec-run-terminal" title="Terminal" label="Run log terminal" keepMounted>
+        <pre ref={boxRef} className="log">
+          {log || <span className="log-empty">— log will stream here once a run starts —</span>}
+        </pre>
+      </RunPart>
 
-      {assets.length > 0 && (
-        <OutputGallery scenario={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} />
-      )}
       </>
       )}
     </section>

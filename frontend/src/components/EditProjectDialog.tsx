@@ -68,10 +68,8 @@ export default function EditProjectDialog({
       nameRef.current?.focus();
       return;
     }
-    if (!referencePrompt.trim()) {
-      setError("Master prompt is required — it defines the main visual.");
-      return;
-    }
+    // Master Prompt is optional — blank means only the AI prompt is sent
+    // for image and video generation.
     setBusy(true);
     setError(null);
     const config: Scenario = {
@@ -157,7 +155,7 @@ export default function EditProjectDialog({
               disabled={busy}
               maxLength={240}
             />
-            <label htmlFor="edit-master">Master Prompt *</label>
+            <label htmlFor="edit-master">Master Prompt * (Applied in All Scene)</label>
             <textarea
               id="edit-master"
               value={referencePrompt}

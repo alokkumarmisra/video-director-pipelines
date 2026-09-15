@@ -72,7 +72,6 @@ export default function GenerateReference({
       />
       <div className="row" style={{ marginTop: 8 }}>
         <button
-          className="ghost"
           onClick={() => onGenerateRef(refCount)}
           disabled={refBusy || isDraft}
           title={isDraft

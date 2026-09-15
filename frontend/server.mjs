@@ -26,6 +26,7 @@ import {
   GetPresetContent,
   resolvePresetId,
 } from "../lib/presets.mjs";
+import { applyMasterToBeats } from "../lib/master_prompt.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -1508,7 +1509,30 @@ async function loadCraftReference() {
   // falls back to the system schema/rules alone.
   return null;
 }
-async function craftScenario({ description = "", masterPrompt = "", topic = "", requirements = "", name, presetId, presetRules }) {
+/**
+ * Load a stored project's brief for the "View Prompt" popup / craft calls:
+ * database first (canonical store), prompts/*.json fallback (CLI export).
+ * Returns { config, from } with from = "database" | "json", or null.
+ */
+async function loadStoredBrief(name) {
+  if (!isSafe(name)) return null;
+  try {
+    const raw = await dbGetScenario(name);
+    if (raw) return { config: JSON.parse(raw), from: "database" };
+  } catch { /* fall through to the JSON export */ }
+  try {
+    const f = path.join(PROMPTS, name + ".json");
+    if (fs.existsSync(f)) return { config: JSON.parse(fs.readFileSync(f, "utf8")), from: "json" };
+  } catch { /* no stored brief */ }
+  return null;
+}
+/**
+ * Resolve the craft brief (Description + Master prompt + video-type rules +
+ * reference example) into the EXACT LLM messages a craft would send. Shared
+ * by craftScenario() and the POST /api/craft-preview endpoint, so the
+ * "View Prompt" popup shows byte-for-byte what the LLM receives.
+ */
+async function buildCraftPreview({ description = "", masterPrompt = "", topic = "", requirements = "", presetId, presetRules, rulesDisabled, target }) {
   // Legacy callers sent { topic, requirements }; current UI sends
   // { description, masterPrompt }. Accept both — topic/requirements are NOT
   // persisted anywhere, they only seed the LLM prompt. presetId selects a
@@ -1517,16 +1541,41 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   // projects without one keep working unchanged. presetRules is an optional
   // per-project override: when non-empty it REPLACES the preset's .md
   // content for this project only (the .md files are never modified).
-  const idea = String(description || topic || "").trim();
-  const details = String(masterPrompt || requirements || "").trim();
+  // rulesDisabled (AI Craft "Disable rules") skips the video-type rules
+  // entirely: the LLM prompt carries only Description + Master prompt, and
+  // the crafted config stores no preset.
+  // target (open project): empty request fields fall back to the STORED
+  // project brief — database first, prompts/*.json fallback. Typed box
+  // edits always win; the popup therefore shows persisted data, not just
+  // whatever happens to be in the boxes.
+  let stored = null;
+  let storedFrom = null;
+  if (typeof target === "string" && target) {
+    const hit = await loadStoredBrief(target);
+    if (hit && hit.config && typeof hit.config === "object") {
+      stored = hit.config;
+      storedFrom = hit.from;
+    }
+  }
+  const pick = (val, fallback) => {
+    const s = String(val ?? "").trim();
+    return s ? s : String(fallback ?? "").trim();
+  };
+  const idea = pick(description || topic, stored && (stored.description || stored.topic));
+  const details = pick(masterPrompt || requirements, stored && stored.referencePrompt);
   if (!idea) throw new Error("description required");
-  const preset = resolvePresetId(presetId);
+  const noRules = !!rulesDisabled;
+  const preset = noRules ? null : resolvePresetId(pick(presetId, stored && stored.presetId) || undefined);
   // Missing preset file = fail loudly, never silently craft off-brief —
   // unless the caller supplied custom rules, which stand on their own.
-  const customRules = String(presetRules ?? "").trim();
+  // (Rule-free crafts skip preset resolution altogether.)
+  const customRules = noRules ? "" : pick(presetRules, stored && stored.presetRules);
   let presetMeta;
   let presetContent;
-  if (customRules) {
+  if (noRules) {
+    presetMeta = null;
+    presetContent = "";
+  } else if (customRules) {
     presetMeta = GetPresetById(preset) ?? { id: preset, name: preset };
     presetContent = customRules;
   } else {
@@ -1545,15 +1594,25 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   ].join(" ");
   // LM Studio user prompt = Description first, then Master prompt, then the
   // preset rules appended last — concatenated in that order so the model
-  // reads the user's brief before the video-type rules.
+  // reads the user's brief before the video-type rules. Rule-free crafts
+  // (rulesDisabled) send only the brief — no rules block at all.
   const briefParts = [
     `Description: ${idea}`,
     `Master prompt / visual direction: ${details || "(none)"}`,
-    `Video-type rules (preset "${presetMeta.name}") — follow these for the referencePrompt and every image + motion prompt:\n${presetContent}`,
+    ...(presetContent ? [`Video-type rules (preset "${presetMeta.name}") — follow these for the referencePrompt and every image + motion prompt:\n${presetContent}`] : []),
   ];
   const user = reference
     ? `Reference example (match its style and level of detail, NOT its subject):\n${JSON.stringify(reference, null, 2)}\n\nNew scenario to craft:\n${briefParts.join("\n\n")}`
     : `New scenario to craft:\n${briefParts.join("\n\n")}`;
+  return { idea, details, noRules, preset, customRules, presetMeta, presetContent, system, user, briefFrom: storedFrom };
+}
+async function craftScenario({ description = "", masterPrompt = "", topic = "", requirements = "", name, presetId, presetRules, rulesDisabled, userPrompt, target }) {
+  // userPrompt (from the "View Prompt" popup) replaces the auto-built user
+  // message verbatim — the brief is still resolved for validation + preset
+  // persistence, but the LLM receives exactly what was previewed/edited.
+  const brief = await buildCraftPreview({ description, masterPrompt, topic, requirements, presetId, presetRules, rulesDisabled, target });
+  const { idea, details, noRules, preset, customRules, system } = brief;
+  const user = String(userPrompt ?? "").trim() ? String(userPrompt).trim() : brief.user;
   const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1582,15 +1641,25 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   delete cfg.requirements;
   // The preset travels with the project (id only — resolved to presets/*.md
   // at generation time, unless the project carries its own presetRules
-  // override), so Save persists it via the normal config path.
-  cfg.presetId = preset;
-  if (customRules) cfg.presetRules = customRules;
-  else delete cfg.presetRules;
+  // override), so Save persists it via the normal config path. Rule-free
+  // crafts store no preset at all.
+  if (noRules) {
+    delete cfg.presetId;
+    delete cfg.presetRules;
+  } else {
+    cfg.presetId = preset;
+    if (customRules) cfg.presetRules = customRules;
+    else delete cfg.presetRules;
+  }
   cfg.sequence = cfg.sequence.map((b, i) => ({
     title: slug(b.title) || `beat${i + 1}`,
     image: String(b.image || ""),
     motion: String(b.motion || ""),
   }));
+  // Master Prompt fan-out: whatever was written in Master Prompt is appended
+  // to every crafted scene's keyframe image prompt (blank = untouched, so
+  // only the AI prompt is sent for generation; motion is never touched).
+  cfg.sequence = applyMasterToBeats(cfg.sequence, details);
   const scenarioName = slug(name || idea);
   return { name: scenarioName, config: cfg };
 }
@@ -1673,7 +1742,10 @@ async function craftNextBeats(cfg, count) {
     beats.push(b);
     cur.sequence.push(b);
   }
-  return beats;
+  // Master Prompt fan-out: the stored master (referencePrompt) is appended
+  // to every new beat's keyframe image prompt (blank = untouched, AI prompt
+  // only; motion is never touched).
+  return applyMasterToBeats(beats, cfg.referencePrompt);
 }
 
 /**
@@ -1695,7 +1767,7 @@ async function craftVideoMeta(cfg) {
   const system = [
     "You write publishing copy for a short AI-generated video (YouTube / Instagram).",
     "Output ONLY a JSON object { title, description, hashtags } — no prose, no markdown fences.",
-    "Rules: title = one catchy, click-worthy line under 100 characters (no quotes, no hashtags inside);",
+    "Rules: title = one catchy, click-worthy YouTube-style line under 100 characters: plain Title Case words separated by single spaces (no quotes, no hashtags, no underscores, no snake_case, no hyphens joining words);",
     "description = 2-4 engaging sentences about THIS video's story and visuals, then one blank line, then a 'Watch' line naming the project;",
     "hashtags = 8-12 relevant tags WITHOUT the # prefix, lowercase, no spaces (use camelCase or underscores), ordered most-specific first.",
   ].join(" ");
@@ -1738,10 +1810,19 @@ Write the publishing metadata.`;
     if (clean && !tags.includes(clean) && tags.length < 15) tags.push(clean);
   }
   return {
-    title: String(meta.title).replace(/^["“”]+|["“”]+$/g, "").trim().slice(0, 140),
+    title: toYouTubeTitle(meta.title).slice(0, 140),
     description: String(meta.description).trim().slice(0, 2000),
     hashtags: tags,
   };
+}
+
+// ---------------------------------------------------------------------------
+function toYouTubeTitle(s) {
+  let t = String(s || "").replace(/^["“”']+|["“”']+$/g, "").trim();
+  t = t.replace(/#\S+/g, " "); // never keep hashtags inside the title
+  t = t.replace(/[_]+/g, " ").replace(/[-–—]+/g, " ").replace(/\s+/g, " ").trim();
+  t = t.split(" ").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return t;
 }
 
 // ---------------------------------------------------------------- static files
@@ -1788,7 +1869,7 @@ async function outputsPayload(name) {
   const files = [...new Set([...(listed || []), ...onDisk])]
     .filter((f) => fs.existsSync(path.join(dir, f)));
   const versions = { ref: [], beats: {}, final: [] };
-  const mains = { ref: null, beats: {}, final: null };
+  const mains = { ref: null, beats: {}, final: null, pinned: { ref: false, beats: {} } };
   // Config for version mapping: prompts JSON first, store copy as fallback
   // (a scenario can live in the store while its JSON is missing/renamed).
   let cfg = null;
@@ -1805,9 +1886,11 @@ async function outputsPayload(name) {
   if (files.length && cfg?.referencePrompt && Array.isArray(cfg?.sequence) && cfg.sequence.length) {
     const vm = versionMap(dir, prefixFor(name), cfg.sequence);
     mains.ref = vm.refMain;
+    mains.pinned.ref = !!vm.refPinned;
     for (const [n, b] of Object.entries(vm.beats)) {
       versions.beats[n] = { keyframe: b.keyframe, clip: b.clip };
       mains.beats[n] = { keyframe: b.keyframeMain, clip: b.clipMain };
+      mains.pinned.beats[n] = { keyframe: !!b.keyframePinned, clip: !!b.clipPinned };
     }
     versions.ref = vm.ref;
     versions.final = vm.final ?? [];
@@ -1870,7 +1953,10 @@ const server = http.createServer(async (req, res) => {
         const c = JSON.parse(r.config);
         return {
           name: r.name,
-          isSequence: !!(c.sequence && c.referencePrompt),
+          // A character-sequence project = has a sequence array. The Master
+          // Prompt is optional (blank = AI prompt only), so it must not
+          // gate listing — otherwise master-less projects vanish.
+          isSequence: Array.isArray(c.sequence),
           // node-pg returns BIGINT as string — coerce so the UI gets a real
           // epoch-ms number (a string renders as NaN-undefined-NaN).
           mtimeMs: Number(r.updated_at),
@@ -2146,7 +2232,9 @@ const server = http.createServer(async (req, res) => {
       if (!isSafe(scenario) || typeof file !== "string") return json(res, 400, { error: "bad body" });
       const dir = path.join(OUTPUTS, scenario);
       if (!fs.existsSync(dir)) return json(res, 404, { error: "no outputs" });
-      setMain(dir, prefixFor(scenario), kind, kind === "ref" ? 0 : index, null, file);
+      // A manual pick pins the main: it keeps winning on reloads until a
+      // regen records a fresh auto main.
+      setMain(dir, prefixFor(scenario), kind, kind === "ref" ? 0 : index, null, file, { pinned: true });
       return json(res, 200, await outputsPayload(scenario));
     }
     if (p === "/api/upload/ref" && req.method === "POST") {
@@ -2167,7 +2255,8 @@ const server = http.createServer(async (req, res) => {
       const v = nextVersion(outDir, prefix, "ref", 0, ".png");
       const file = v === 1 ? `${prefix}_ref.png` : `${prefix}_ref_v${v}.png`;
       fs.writeFileSync(path.join(outDir, file), buf);
-      setMain(outDir, prefix, "ref", 0, null, file);
+      // An upload is a deliberate choice — pin it as main.
+      setMain(outDir, prefix, "ref", 0, null, file, { pinned: true });
       pgUpsertAsset(scenario, file)
         .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
         .catch((e) => console.warn("[pg] catalog failed:", e.message));
@@ -2212,7 +2301,8 @@ const server = http.createServer(async (req, res) => {
       const v = nextVersion(outDir, prefix, "seq", n, ".png", title);
       const file = v === 1 ? `${prefix}_seq${n}_${title}.png` : `${prefix}_seq${n}_${title}_v${v}.png`;
       fs.writeFileSync(path.join(outDir, file), buf);
-      setMain(outDir, prefix, "seq", n, title, file);
+      // An upload is a deliberate choice — pin it as main.
+      setMain(outDir, prefix, "seq", n, title, file, { pinned: true });
       pgUpsertAsset(scenario, file)
         .then(() => pgMarkAssetComplete(cfgNameFor(scenario),
           { file, stage: "keyframe", index: n },
@@ -2231,11 +2321,38 @@ const server = http.createServer(async (req, res) => {
       });
       return json(res, 200, { id: run.id });
     }
+    // Preview of the exact LLM messages a craft would send (AI Craft
+    // "View Prompt" popup). No LLM call, nothing persisted — the UI lets the
+    // user review/edit the user message, then POSTs it back as `userPrompt`.
+    if (p === "/api/craft-preview" && req.method === "POST") {
+      const body = await readJson(req);
+      // description may be omitted when target names a stored project — the
+      // brief then falls back to the database / prompts JSON copy.
+      if (!body.description && !body.topic && !body.target)
+        return json(res, 400, { error: "description required" });
+      try {
+        const brief = await buildCraftPreview(body);
+        return json(res, 200, {
+          system: brief.system,
+          user: brief.user,
+          presetName: brief.presetMeta ? brief.presetMeta.name : null,
+          rulesApplied: !brief.noRules,
+          // Where the brief was read from: "database" | "json" | "request".
+          source: brief.briefFrom || "request",
+          project: typeof body.target === "string" && body.target ? body.target : null,
+        });
+      } catch (e) {
+        return json(res, 400, { error: String(e.message || "preview failed") });
+      }
+    }
     if (p === "/api/craft" && req.method === "POST") {
       const body = await readJson(req);
       // Current UI sends { description, masterPrompt }; accept legacy
       // { topic, requirements } too — both are LLM-only inputs, never stored.
-      if (!body.description && !body.topic) return json(res, 400, { error: "description required" });
+      // description may be omitted when target names a stored project (the
+      // brief falls back to the database / prompts JSON copy, same as preview).
+      if (!body.description && !body.topic && !body.target)
+        return json(res, 400, { error: "description required" });
       const crafted = await craftScenario(body);
       // Craft persists the project immediately (before any Save): the row
       // exists in projects from the click on, and Save Scenario later reuses
@@ -2297,6 +2414,17 @@ const server = http.createServer(async (req, res) => {
       }
       const count = Math.max(1, Number(body.count) || 1);
       return json(res, 200, { beats: await craftNextBeats(cfg, count) });
+    }
+    // Append the Master Prompt to every scene's keyframe image prompt
+    // (same rules as craft-time fan-out: blank = no-op, never double-appends,
+    // motion never touched).
+    // Stateless — the caller (AI Craft "Apply to All Scene") persists the
+    // returned sequence via the normal draft/save path.
+    if (p === "/api/apply-master" && req.method === "POST") {
+      const body = await readJson(req);
+      const cfg = body.config;
+      if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
+      return json(res, 200, { sequence: applyMasterToBeats(cfg.sequence, body.master ?? "") });
     }
     // Publishing metadata (title / description / hashtags) for a scenario,
     // drafted by the local LLM from the scenario JSON. Stateless — nothing

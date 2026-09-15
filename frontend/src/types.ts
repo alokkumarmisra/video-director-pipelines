@@ -85,6 +85,12 @@ export interface MainsInfo {
   beats: Record<string, { keyframe: string | null; clip: string | null }>;
   // Latest final-cut file (the one the gallery plays). Optional for compat.
   final?: string | null;
+  // Whether each main is a user pin (manual pick / upload — survives reload)
+  // or the auto latest (selected on regen and reload). Absent = auto.
+  pinned?: {
+    ref: boolean;
+    beats: Record<string, { keyframe: boolean; clip: boolean }>;
+  } | null;
 }
 
 export interface OutputsInfo {

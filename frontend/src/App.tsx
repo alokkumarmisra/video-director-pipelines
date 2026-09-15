@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat } from "./api";
-import type { Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
+import type { Beat, Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
 import ShotList from "./components/ShotList";
@@ -482,6 +482,42 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
 
   const handleRegen = (kind: AssetKind, index: number | null) =>
     requestRun({ regen: { kind, index: index ?? undefined } });
+
+  // "Apply to All Scene": append the Master Prompt box text to every scene's
+  // keyframe image prompt below (same append rules as craft-time fan-out —
+  // blank or already-carried = untouched; motion is never touched). Drafts update locally and persist
+  // on the next explicit Save; saved projects persist immediately as a new
+  // version, like Story Board beat edits.
+  const applyMasterToScenes = async (master: string): Promise<{ applied: number; saved: boolean }> => {
+    if (!editor) return { applied: 0, saved: false };
+    const m = String(master ?? "").trim();
+    if (!m) return { applied: 0, saved: false };
+    const before = Array.isArray(editor.config.sequence) ? editor.config.sequence : [];
+    if (before.length === 0) return { applied: 0, saved: false };
+    const r = await fetch("/api/apply-master", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: editor.config, master: m }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "apply failed");
+    const next: Beat[] = Array.isArray(d.sequence) ? d.sequence : [];
+    let applied = 0;
+    next.forEach((b, i) => {
+      if (JSON.stringify(b ?? null) !== JSON.stringify(before[i] ?? null)) applied++;
+    });
+    if (applied === 0) return { applied: 0, saved: false };
+    if (draft) {
+      setDraft({ ...draft, config: { ...draft.config, sequence: next } });
+      return { applied, saved: false };
+    }
+    await saveScenario(editor.name, { ...editor.config, sequence: next });
+    const sc = await getScenario(editor.name);
+    setCfg(sc.config);
+    refreshScenarios().catch(() => {});
+    refresh();
+    return { applied, saved: true };
+  };
 
   // Home -> workspace navigation. The workspace itself is unchanged —
   // opening a project just selects it and switches the view.
@@ -1103,7 +1139,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             isDraft={!!draft}
             referenceSlot={!draft && contentName ? (
               <OutputGallery
-                scenario={outScenario(contentName, engine)}
+                // While a run is active, follow the run's own output dir
+                // (engine + Reel cut included) — the same listing the
+                // Rendered Clip reference used to show — so generating
+                // chips, versions and uploads track the live run.
+                scenario={runActive && runScenario ? outScenario(runScenario, engine, runFormat) : outScenario(contentName, engine)}
                 refreshKey={refreshKey}
                 section="reference"
                 generatingScenario={runActive ? runScenario : null}
@@ -1150,6 +1190,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             onRegen={handleRegen}
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
+            progress={topProgress}
           />
           {!draft && contentName && (
             <InstagramCut
@@ -1203,6 +1244,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             syncEpoch={craftEpoch}
             onPatch={patchOverrides}
             onNameChange={setNameOv}
+            sceneCount={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : 0}
+            onApplyMaster={applyMasterToScenes}
           />
           {(!editorOpen || switching) && !editor ? (
             !editorOpen ? null : (

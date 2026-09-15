@@ -23,6 +23,7 @@ import type {
   VersionsInfo,
 } from "../types";
 import type { GenerationProgress } from "./GenerationProgressBar";
+import { formatLiveElapsed } from "./GenerationProgressBar";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
 import { SceneBadge } from "./OutputGallery";
@@ -288,6 +289,21 @@ export default function ShotList({
   const targetQueued = (kind: "keyframe" | "clip", n: number) =>
     runQueue.some((q) => !q.stitch && q.regen?.kind === kind && (q.regen?.index ?? n) === n);
 
+  // Estimated % for the single in-flight asset (RunPanel: elapsed vs pace).
+  // Null = in flight but no pace yet (indeterminate shimmer) or idle.
+  const pctFor = (kind: "image" | "video", n: number): number | null => {
+    if (progress.status !== "running" || !generatingHere) return null;
+    if (progress.activeKind !== kind || progress.activeScene !== n) return null;
+    return progress.activePct;
+  };
+  // Live elapsed for the in-flight asset (real measured time) — shown as
+  // "12s" while no pace exists yet for a ~% estimate.
+  const elapsedFor = (kind: "image" | "video", n: number): string | null => {
+    if (progress.status !== "running" || !generatingHere) return null;
+    if (progress.activeKind !== kind || progress.activeScene !== n) return null;
+    return formatLiveElapsed(progress.activeElapsedMs);
+  };
+
   // First asset in pipeline order without a file — where a full run is headed.
   const nextMissing = useMemo((): { kind: "keyframe" | "clip"; index: number } | null => {
     for (let i = 1; i <= seq.length; i++) {
@@ -456,7 +472,11 @@ export default function ShotList({
     setEditing(null);
   };
   const addShot = () => {
-    setDraftBeat({ title: `beat${seq.length + 1}`, image: "", motion: "" });
+    // Master Prompt prefill: a manually added shot starts with the stored
+    // master in the keyframe box (blank master = empty boxes, as before).
+    // Motion is never prefilled.
+    const master = String(config?.referencePrompt ?? "").trim();
+    setDraftBeat({ title: `beat${seq.length + 1}`, image: master, motion: "" });
     setSaveError("");
     setEditing("new");
     setFilter("all");
@@ -558,7 +578,7 @@ export default function ShotList({
         <div className="shotlist-head">
           <div>
             <h2 className="shotlist-title">Story Board</h2>
-            <p className="shotlist-sub">— every scene, every beat</p>
+
           </div>
         </div>
         <div className="empty">
@@ -582,7 +602,7 @@ export default function ShotList({
           <span className="head-icon hi-shots" aria-hidden="true"><IconPlay size={16} /></span>
           <div>
             <h2 className="shotlist-title">Story Board</h2>
-            <p className="shotlist-sub">— every scene, every beat</p>
+
           </div>
         </div>
         <div className="shotlist-head-right">
@@ -736,6 +756,24 @@ export default function ShotList({
               // stays editable so scenes / camera motion can change any
               // time before generation.
               const beatLocked = imgRunning || clipRunning;
+              const imgPct = pctFor("image", r.n);
+              const clipPct = pctFor("video", r.n);
+              const imgElapsed = elapsedFor("image", r.n);
+              const clipElapsed = elapsedFor("video", r.n);
+              // Tile readout: estimated ~% when pace exists, else live
+              // elapsed seconds (real), else plain "Generating".
+              const imgReadout = imgPct != null ? `~${Math.round(imgPct)}%` : (imgElapsed ?? "Generating");
+              const clipReadout = clipPct != null ? `~${Math.round(clipPct)}%` : (clipElapsed ?? "Generating");
+              const imgGenLabel = imgPct != null
+                ? `Scene ${r.n} keyframe generating… ~${Math.round(imgPct)}% (estimated)`
+                : imgElapsed != null
+                  ? `Scene ${r.n} keyframe generating… ${imgElapsed} elapsed`
+                  : `Scene ${r.n} keyframe generating…`;
+              const clipGenLabel = clipPct != null
+                ? `Video ${r.n} generating… ~${Math.round(clipPct)}% (estimated)`
+                : clipElapsed != null
+                  ? `Video ${r.n} generating… ${clipElapsed} elapsed`
+                  : `Video ${r.n} generating…`;
               return (
                 <div className="shotlist-row-wrap" key={r.n} role="rowgroup">
                   <div className="shotlist-row" role="row">
@@ -750,7 +788,7 @@ export default function ShotList({
                             className={`shotlist-thumb${imgRunning ? " is-generating" : ""}`}
                             role="button"
                             tabIndex={0}
-                            title={imgRunning ? `Scene ${r.n} keyframe generating…` : `Scene ${r.n} keyframe image — click to preview`}
+                            title={imgRunning ? imgGenLabel : `Scene ${r.n} keyframe image — click to preview`}
                             onClick={() =>
                               setPreview({ src: outputUrl(outDir, r.imageFile!), kind: "image", alt: `shot ${r.shot} image` })
                             }
@@ -761,21 +799,41 @@ export default function ShotList({
                           >
                             <SmoothImage src={outputUrl(outDir, r.imageFile)} alt="" />
                             <span className="shotlist-thumb-tag" title={`Scene ${r.n}`}>S{r.n}</span>
+                            {imgRunning && (imgPct != null || imgElapsed != null) && (
+                              <span className="gen-pct" title={imgGenLabel}>{imgReadout}</span>
+                            )}
+                            {imgRunning && imgPct != null && (
+                              <span className="gen-bar" aria-hidden="true">
+                                <span style={{ width: `${Math.min(99, Math.max(0, Math.round(imgPct)))}%` }} />
+                              </span>
+                            )}
                             {imgRunning && (
-                              <span className="shotlist-thumb-gen" title={`Scene ${r.n} generating…`}>
-                                <Spinner size={11} /> Generating
+                              <span className="shotlist-thumb-gen" title={imgGenLabel}>
+                                <Spinner size={11} /> <span className="gen-dots">Generating</span>{(imgPct != null || imgElapsed != null) && <span> {imgReadout}</span>}
                               </span>
                             )}
                           </span>
                         ) : (
                           <span
                             className={`shotlist-thumb shotlist-thumb-empty${r.imageStatus === "generating" ? " is-generating" : ""}`}
-                            title={r.imageStatus === "generating" ? `Scene ${r.n} keyframe generating…` : `Scene ${r.n} — no image yet`}
+                            title={r.imageStatus === "generating" ? imgGenLabel : `Scene ${r.n} — no image yet`}
                           >
                             {r.imageStatus === "generating" ? <Spinner size={13} /> : <IconImage size={14} />}
                             <span className="shotlist-thumb-pending">
-                              {r.imageStatus === "generating" ? "Generating" : "Pending"}
+                              {r.imageStatus === "generating"
+                                ? (<><span className="gen-dots">Generating</span>{(imgPct != null || imgElapsed != null) && <span> {imgReadout}</span>}</>)
+                                : "Pending"}
                             </span>
+                            {r.imageStatus === "generating" && (imgPct != null || imgElapsed != null) && (
+                              <>
+                                <span className="gen-pct" title={imgGenLabel}>{imgReadout}</span>
+                                {imgPct != null && (
+                                <span className="gen-bar" aria-hidden="true">
+                                  <span style={{ width: `${Math.min(99, Math.max(0, Math.round(imgPct)))}%` }} />
+                                </span>
+                                )}
+                              </>
+                            )}
                             <span className="shotlist-thumb-tag" title={`Scene ${r.n}`}>S{r.n}</span>
                           </span>
                         )}
@@ -787,7 +845,7 @@ export default function ShotList({
                             className={`shotlist-thumb${clipRunning ? " is-generating" : ""}`}
                             role="button"
                             tabIndex={0}
-                            title={clipRunning ? `Video ${r.n} generating…` : `Video ${r.n} clip — click to preview`}
+                            title={clipRunning ? clipGenLabel : `Video ${r.n} clip — click to preview`}
                             onClick={() =>
                               setPreview({ src: outputUrl(outDir, r.clipFile!), kind: "video", alt: `shot ${r.shot} video` })
                             }
@@ -797,25 +855,60 @@ export default function ShotList({
                             }}
                           >
                             <video src={outputUrl(outDir, r.clipFile)} preload="metadata" muted playsInline />
+                            {clipRunning && <span className="gen-scanline" aria-hidden="true" />}
                             <span className="shotlist-thumb-play" aria-hidden="true">
                               {clipRunning ? <Spinner size={10} /> : <IconPlay size={10} />}
                             </span>
                             <span className="shotlist-thumb-tag" title={`Video ${r.n}`}>V{r.n}</span>
+                            {clipRunning && (clipPct != null || clipElapsed != null) && (
+                              <span className="gen-pct" title={clipGenLabel}>{clipReadout}</span>
+                            )}
+                            {clipRunning && clipPct != null && (
+                              <span className="gen-bar" aria-hidden="true">
+                                <span style={{ width: `${Math.min(99, Math.max(0, Math.round(clipPct)))}%` }} />
+                              </span>
+                            )}
                             {clipRunning && (
-                              <span className="shotlist-thumb-gen" title={`Video ${r.n} generating…`}>
-                                <Spinner size={11} /> Generating
+                              <span className="shotlist-thumb-gen" title={clipGenLabel}>
+                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                                <span className="gen-dots">Generating</span>{(clipPct != null || clipElapsed != null) && <span> {clipReadout}</span>}
                               </span>
                             )}
                           </span>
                         ) : (
                           <span
                             className={`shotlist-thumb shotlist-thumb-empty${r.videoStatus === "generating" ? " is-generating" : ""}`}
-                            title={r.videoStatus === "generating" ? `Video ${r.n} generating…` : `Video ${r.n} — no clip yet`}
+                            title={r.videoStatus === "generating" ? clipGenLabel : `Video ${r.n} — no clip yet`}
                           >
-                            {r.videoStatus === "generating" ? <Spinner size={13} /> : <IconFilm size={14} />}
-                            <span className="shotlist-thumb-pending">
-                              {r.videoStatus === "generating" ? "Generating" : "Pending"}
-                            </span>
+                            {r.videoStatus === "generating" ? (
+                              <>
+                                {r.imageFile && (
+                                  <span className="video-gen-preview" aria-hidden="true">
+                                    <img src={outputUrl(outDir, r.imageFile)} alt="" />
+                                  </span>
+                                )}
+                                <span className="gen-scanline" aria-hidden="true" />
+                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                                <span className="shotlist-thumb-pending">
+                                  <span className="gen-dots">Generating</span>{(clipPct != null || clipElapsed != null) && <span> {clipReadout}</span>}
+                                </span>
+                                {(clipPct != null || clipElapsed != null) && (
+                                  <>
+                                    <span className="gen-pct" title={clipGenLabel}>{clipReadout}</span>
+                                    {clipPct != null && (
+                                    <span className="gen-bar" aria-hidden="true">
+                                      <span style={{ width: `${Math.min(99, Math.max(0, Math.round(clipPct)))}%` }} />
+                                    </span>
+                                    )}
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <IconFilm size={14} />
+                                <span className="shotlist-thumb-pending">Pending</span>
+                              </>
+                            )}
                             <span className="shotlist-thumb-tag" title={`Video ${r.n}`}>V{r.n}</span>
                           </span>
                         )}
@@ -830,8 +923,8 @@ export default function ShotList({
                       </span>
                     </span>
                     <span className="shotlist-status" role="cell">
-                      <StatusLine label="Image" status={r.imageStatus} title={r.imageError ?? undefined} />
-                      <StatusLine label="Video" status={r.videoStatus} title={r.videoError ?? undefined} />
+                      <StatusLine label="Image" status={r.imageStatus} title={r.imageError ?? imgGenLabel} pctText={r.imageStatus === "generating" && (imgPct != null || imgElapsed != null) ? imgReadout : null} />
+                      <StatusLine label="Video" status={r.videoStatus} title={r.videoError ?? clipGenLabel} pctText={r.videoStatus === "generating" && (clipPct != null || clipElapsed != null) ? clipReadout : null} />
                     </span>
                     <span className="shotlist-dur" role="cell" title={`${clipDur}s per clip (project setting)`}>
                       {clipDur > 0 ? `${clipDur.toFixed(1)} s` : "—"}
@@ -1043,7 +1136,7 @@ export default function ShotList({
   );
 }
 
-function StatusLine({ label, status, title }: { label: "Image" | "Video"; status: ShotStatus; title?: string }) {
+function StatusLine({ label, status, title, pctText }: { label: "Image" | "Video"; status: ShotStatus; title?: string; pctText?: string | null }) {
   if (status === "generated")
     return (
       <span className="shotlist-st shotlist-st-ok" title={title ?? `${label} generated`}>
@@ -1056,7 +1149,7 @@ function StatusLine({ label, status, title }: { label: "Image" | "Video"; status
       <span className="shotlist-st shotlist-st-run" title={title ?? `${label} generating…`}>
         <span className="shotlist-st-tag">{label}</span>
         <span className="shotlist-st-val">
-          <span className="dot pulse" aria-hidden="true" /> Generating
+          <span className="dot pulse" aria-hidden="true" /> <span className="gen-dots">Generating</span>{pctText ? <span> {pctText}</span> : null}
         </span>
       </span>
     );

@@ -33,6 +33,15 @@ async function copyText(t: string): Promise<boolean> {
   }
 }
 
+// YouTube-friendly title: beat ids / project names arrive as snake_case
+// (e.g. "c_is_for_cat_introduction") and the LLM sometimes echoes that style.
+// Normalize to plain Title Case words so the textbox never shows underscores.
+function toYouTubeTitle(s: string): string {
+  let t = String(s || "").replace(/^["“”']+|["“”']+$/g, "").trim();
+  t = t.replace(/#\S+/g, " ");
+  t = t.replace(/[_]+/g, " ").replace(/[-–—]+/g, " ").replace(/\s+/g, " ").trim();
+  return t.split(" ").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 // Publishing copy for the finished video: an LLM-drafted Title, Description
 // and hashtags from the scenario JSON (description / character / beats).
 // Stateless server-side — the result is cached per project in localStorage
@@ -68,7 +77,7 @@ export default function VideoMetaPanel({ name, config }: Props) {
       const raw = localStorage.getItem(`ss-video-meta:${name}`);
       if (raw) {
         const c = JSON.parse(raw);
-        setTitle(typeof c.title === "string" ? c.title : "");
+        setTitle(typeof c.title === "string" ? toYouTubeTitle(c.title) : "");
         setDescription(typeof c.description === "string" ? c.description : "");
         setHashtags(Array.isArray(c.hashtags) ? c.hashtags.filter((t: unknown) => typeof t === "string") : []);
         setError("");
@@ -107,7 +116,7 @@ export default function VideoMetaPanel({ name, config }: Props) {
     const tick = window.setInterval(() => setSeconds((Date.now() - t0) / 1000), 500);
     try {
       const meta = await craftVideoMeta(config);
-      setTitle(meta.title || "");
+      setTitle(toYouTubeTitle(meta.title || ""));
       setDescription(meta.description || "");
       setHashtags(Array.isArray(meta.hashtags) ? meta.hashtags : []);
     } catch (e) {

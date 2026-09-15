@@ -26,6 +26,8 @@ export default function PresetSelect({
   disabled,
   customRules,
   onCustomRulesChange,
+  rulesEnabled,
+  onRulesEnabledChange,
 }: {
   id: string;
   value: string;
@@ -33,6 +35,11 @@ export default function PresetSelect({
   disabled?: boolean;
   customRules?: string | null;
   onCustomRulesChange?: (rules: string | null) => void;
+  // Optional rules on/off switch (AI Craft). True/absent = rules apply as
+  // before; false = the caller crafts without any video-type rules. When the
+  // toggle handler is absent no button renders and behavior is unchanged.
+  rulesEnabled?: boolean;
+  onRulesEnabledChange?: (enabled: boolean) => void;
 }) {
   const [presets, setPresets] = useState<PresetInfo[] | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -70,6 +77,17 @@ export default function PresetSelect({
   const current = list.find((p) => p.id === value) ?? null;
   const groups = PRESET_GROUP_ORDER.filter((g) => list.some((p) => p.category === g));
   for (const p of list) if (!groups.includes(p.category)) groups.push(p.category);
+
+  // Rules switch: present only when the parent wires the toggle (AI Craft).
+  // Off = no video-type rules are concatenated into the craft prompt.
+  const rulesOn = rulesEnabled !== false;
+  const showToggle = typeof onRulesEnabledChange === "function";
+  // Closing the panel while rules are off keeps a stale editor from
+  // reappearing on re-enable.
+  useEffect(() => {
+    if (!rulesOn) setShowRules(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rulesOn]);
 
   const customized = !!((customRules ?? "").trim());
   // Effective rules shown/saved = customization when present, else default.
@@ -120,9 +138,11 @@ export default function PresetSelect({
       <select
         id={id}
         value={value}
-        disabled={disabled || !presets}
+        disabled={disabled || !presets || !rulesOn}
         onChange={(e) => onChange(e.target.value)}
-        title="Predefined visual style for this project, customizable per project below"
+        title={rulesOn
+          ? "Predefined visual style for this project, customizable per project below"
+          : "Video type is ignored while rules are disabled"}
       >
         {groups.map((g) => (
           <optgroup key={g} label={g}>
@@ -150,17 +170,36 @@ export default function PresetSelect({
           </p>
         )
       )}
-      <button
-        type="button"
-        className="ghost preset-rules-btn"
-        onClick={() => void toggleRules()}
-        disabled={disabled}
-        aria-expanded={showRules}
-        title="View and customize this project's visual rules (preset default + your edits)"
-      >
-        {showRules ? "Hide rules" : customized ? "View / edit rules (customized)" : "View / edit rules"}
-      </button>
-      {showRules && (
+      <div className="row" style={{ marginTop: 8 }}>
+        <button
+          type="button"
+          className="ghost preset-rules-btn"
+          onClick={() => void toggleRules()}
+          disabled={disabled || !rulesOn}
+          aria-expanded={showRules}
+          title="View and customize this project's visual rules (preset default + your edits)"
+        >
+          {showRules ? "Hide rules" : customized ? "View / edit rules (customized)" : "View / edit rules"}
+        </button>
+        {showToggle && (
+          <button
+            type="button"
+            className="ghost preset-rules-btn"
+            onClick={() => onRulesEnabledChange?.(!rulesOn)}
+            disabled={disabled}
+            aria-pressed={!rulesOn}
+            title={rulesOn
+              ? "Skip the video-type rules for the next craft — only Description + Master prompt are sent"
+              : "Include the video-type rules with the master prompt again"}
+          >
+            {rulesOn ? "Disable rules" : "Enable rules"}
+          </button>
+        )}
+      </div>
+      {!rulesOn && showToggle && (
+        <p className="hint">Rules disabled — Craft scenario uses only Description + Master prompt.</p>
+      )}
+      {showRules && rulesOn && (
         <div className="preset-rules" aria-label="Preset rules (editable per project)">
           {rulesBusy ? (
             <p className="hint">Loading rules…</p>

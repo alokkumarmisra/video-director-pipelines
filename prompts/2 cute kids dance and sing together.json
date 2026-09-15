@@ -1,0 +1,28 @@
+{
+  "duration": 5,
+  "presetId": "3d-animation",
+  "sequence": [
+    {
+      "image": "Take the Reference Images  and create the Two cute kids with joyful smiles swinging on a colorful see-saw. Their outfits are bright and their expressions lively, the background is a colorful garden with simple shapes.",
+      "title": "kids_in_swinging_dance",
+      "motion": "The camera gently moves in to capture the synchronized dance of the kids as they swing together, creating playful motion lines that emphasize their joyous movements."
+    },
+    {
+      "image": "Two cute kids spinning around each other while singing. Their faces are animated with laughter and delight, their outlines have thick clean lines, and the background features a bright garden with simple shapes.",
+      "title": "kids_spin_and_sing",
+      "motion": "The camera zooms in as the kids spin faster, capturing their expressive movements and synchronized dance."
+    },
+    {
+      "image": "Two cute kids flying upwards together on a colorful trampoline. Their joyful faces are animated with excitement, thick clean outlines, and vibrant colors. The garden behind them is simple yet full of life.",
+      "title": "kids_flying_together",
+      "motion": "The camera follows the kids as they leap up on the trampoline, creating playful motion lines that highlight their energetic dance."
+    },
+    {
+      "image": "Two cute kids landing in each other's arms with big grins while singing. Their clothes are bright and vibrant, their smiles wide, and thick clean outlines. The background is a simple yet colorful garden.",
+      "title": "kids_in_hugging_and_singing",
+      "motion": "The camera swoops down to capture the kids as they land together, creating heartwarming motion lines that highlight their connection."
+    }
+  ],
+  "description": "2 cute kids dance and sing together.",
+  "referencePrompt": "High-quality colorful 3D preschool animation, cute rounded character design, soft smooth shapes, expressive friendly faces, vibrant but pleasant colors, cinematic composition, soft global illumination, beautiful warm lighting, polished children's TV animation quality, playful atmosphere, clean background, detailed environment, soft shadows, appealing educational visuals, joyful expressions, wholesome family-friendly style."
+}

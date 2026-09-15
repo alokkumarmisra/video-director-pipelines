@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, type AssetEvent, type RunRequest, type VideoFormat } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
+import type { GenerationProgress } from "./GenerationProgressBar";
+import { formatLiveElapsed } from "./GenerationProgressBar";
 import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
@@ -34,6 +36,9 @@ interface Props {
   // Called by the "view other engine's outputs" button (shown when this
   // engine dir is empty but the sibling engine dir has renders).
   onEngineSwitch?: () => void;
+  /** Live run progress — the in-flight keyframe/clip tile shows its
+      estimated ~% (RunPanel). Absent = indeterminate shimmer only. */
+  progress?: GenerationProgress | null;
 }
 
 type RefMode = "generate" | "upload";
@@ -47,7 +52,7 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -233,7 +238,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               <SceneBadge label="REF" title="Reference visual" />
               <div className="frame-missing">
                 {liveGenTarget === "ref"
-                  ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                  ? <span className="gen-flag"><span className="dot pulse" /> <span className="gen-dots">Generating</span></span>
                   : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Reference · pending</span></span>}
               </div>
             </div>
@@ -248,35 +253,58 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 const clip = clipByIndex.get(n);
                 const kfGen = liveGenTarget === `kf:${n}`;
                 const clipGen = liveGenTarget === `clip:${n}`;
+                // Live readout for the in-flight tile (~% when pace exists,
+                // else ticking seconds, else plain "generating").
+                const liveReadout = (kind: "image" | "video"): string => {
+                  if (progress?.status === "running" && progress.activeKind === kind && progress.activeScene === n) {
+                    if (progress.activePct != null) return `~${Math.round(progress.activePct)}%`;
+                    const el = formatLiveElapsed(progress.activeElapsedMs);
+                    if (el) return el;
+                  }
+                  return "generating";
+                };
+                const kfReadout = kfGen ? liveReadout("image") : "generating";
+                const clipReadout = clipGen ? liveReadout("video") : "generating";
                 return (
-                <div className="shot" key={n} title={`Scene ${n} — keyframe image + video clip`}>
-                  <div className="shot-head" aria-hidden="true">Scene {n}</div>
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                  <div className="shot-head" aria-hidden="true">
+                    Scene {n}{liveTotal != null ? `/${liveTotal}` : ""}
+                  </div>
                   <div className="img-frame">
-                    <SceneBadge scene={n} total={liveTotal} title={`Scene ${n} of ${liveTotal} — keyframe image`} />
                     {kf ? (
                       <>
                         <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
                         <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
                       </>
                     ) : (
-                      <div className="frame-missing">
+                      <div className={`frame-missing${kfGen ? " is-generating" : ""}`}>
                         {kfGen
-                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          ? <span className="gen-flag"><span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span><span className="gen-dots">Generating</span>{kfReadout !== "generating" && <span> {kfReadout}</span>}</span>
                           : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
                       </div>
                     )}
                   </div>
                   <div className="video-frame">
-                    <SceneBadge small label={liveTotal != null ? `V${n}/${liveTotal}` : `V${n}`} title={`Video ${n}${liveTotal != null ? ` of ${liveTotal}` : ""} — clip`} />
                     {clip ? (
                       <>
                         <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clip), kind: "video", alt: pretty(clip) })} />
                         <video controls src={outputUrl(viewScenario, clip)} />
                       </>
                     ) : (
-                      <div className="frame-missing">
+                      <div className={`frame-missing${clipGen ? " is-generating" : ""}`}>
                         {clipGen
-                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          ? <>
+                              {kf && (
+                                <span className="video-gen-preview" aria-hidden="true">
+                                  <img src={outputUrl(viewScenario, kf)} alt="" />
+                                </span>
+                              )}
+                              <span className="gen-scanline" aria-hidden="true" />
+                              <span className="gen-flag">
+                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                                <span className="gen-dots">Generating</span>{clipReadout !== "generating" && <span> {clipReadout}</span>}
+                              </span>
+                            </>
                           : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">Video {n} · pending</span></span>}
                       </div>
                     )}
@@ -426,7 +454,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         <div className={`ref-card${mains.ref === v.file ? " on" : ""}`} key={v.file}>
           <div
             className="img-frame"
-            title={mains.ref === v.file ? `${v.file} (main)` : `Set ${v.file} as main`}
+            title={mains.ref === v.file ? `${v.file} (main — ${mains.pinned?.ref ? "your pick" : "latest"})` : `Set ${v.file} as main (your pick)`}
           >
             <span className="ver-badge">v{v.v}</span>
             <SceneBadge label="REF" title="Reference visual" />
@@ -445,7 +473,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <div className="img-frame">
             <span className="ver-badge">v{refNextV}</span>
             <div className="frame-missing">
-              <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+              <span className="gen-flag"><span className="dot pulse" /> <span className="gen-dots">Generating</span></span>
             </div>
           </div>
         </div>
@@ -506,6 +534,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // flight only when a clip run is active.
   const imgGen = generating && (genTarget === "ref" || (genTarget?.startsWith("kf:") ?? false));
   const clipGen = generating && (genTarget?.startsWith("clip:") ?? false);
+  // Live readout for the in-flight clip on the Current-video tile:
+  // estimated ~% when pace exists, else ticking seconds (real), else null.
+  const curClipReadout = clipGen && progress?.status === "running" && progress.activeKind === "video"
+    ? (progress.activePct != null
+        ? `~${Math.round(progress.activePct)}%`
+        : (formatLiveElapsed(progress.activeElapsedMs) ?? "generating"))
+    : null;
 
   const mediaCount = sceneNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
 
@@ -519,6 +554,14 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const toggleCollapsed = () =>
     setCollapsed((c) => {
       localStorage.setItem(isBeats ? "ss-sec-beats" : "ss-sec-outputs", c ? "open" : "closed");
+      return !c;
+    });
+  // Embedded Reference gallery (Generate Reference section) gets its own
+  // hide/show toggle — same persisted icon pattern as the cards.
+  const [refCollapsed, setRefCollapsed] = useState(() => localStorage.getItem("ss-sec-refgallery") === "closed");
+  const toggleRefCollapsed = () =>
+    setRefCollapsed((c) => {
+      localStorage.setItem("ss-sec-refgallery", c ? "open" : "closed");
       return !c;
     });
   return (
@@ -602,7 +645,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   ) : (
                     <div className="frame-missing">
                       {imgGen
-                        ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                        ? <span className="gen-flag"><span className="dot pulse" /> <span className="gen-dots">Generating</span></span>
                         : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">pending</span></span>}
                     </div>
                   )}
@@ -610,11 +653,28 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 <div className="video-frame" title={curClip ? `Current video — video ${curClip.n} clip` : "Current video"}>
                   {curClip && <SceneBadge small label={sceneNums.length ? `V${curClip.n}/${sceneNums.length}` : `V${curClip.n}`} title={`Video ${curClip.n} — current clip`} />}
                   {curClip ? (
-                    <video controls preload="metadata" src={outputUrl(viewScenario, curClip.file)} />
+                    <>
+                      <video controls preload="metadata" src={outputUrl(viewScenario, curClip.file)} />
+                      {clipGen && <span className="gen-scanline" aria-hidden="true" />}
+                      {clipGen && curClipReadout && curClipReadout !== "generating" && (
+                        <span className="gen-pct" title={`Generating video… ${curClipReadout}${curClipReadout.startsWith("~") ? " (estimated)" : " elapsed"}`}>{curClipReadout}</span>
+                      )}
+                    </>
                   ) : (
-                    <div className="frame-missing">
+                    <div className={`frame-missing${clipGen ? " is-generating" : ""}`}>
                       {clipGen
-                        ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                        ? <>
+                            {curKf && (
+                              <span className="video-gen-preview" aria-hidden="true">
+                                <img src={outputUrl(viewScenario, curKf.file)} alt="" />
+                              </span>
+                            )}
+                            <span className="gen-scanline" aria-hidden="true" />
+                            <span className="gen-flag">
+                              <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                              <span className="gen-dots">Generating</span>{curClipReadout && curClipReadout !== "generating" && <span> {curClipReadout}</span>}
+                            </span>
+                          </>
                         : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">pending</span></span>}
                     </div>
                   )}
@@ -670,10 +730,31 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       )}
       {viewScenario && (section === "all" || section === "reference") ? (
         <>
-          <div className="section-label">
-            Reference
-            {versions.ref.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {versions.ref.length} versions</span>}
-          </div>
+          {section === "reference" ? (
+            <div className="ref-embed-head">
+              <span className="section-label">
+                Reference
+                {versions.ref.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {versions.ref.length} versions</span>}
+              </span>
+              <span className="spacer" />
+              <button
+                className="icon-btn"
+                onClick={toggleRefCollapsed}
+                title={refCollapsed ? "Show reference images" : "Hide reference images"}
+                aria-label={refCollapsed ? "Show reference images" : "Hide reference images"}
+                aria-expanded={!refCollapsed}
+              >
+                <IconPanel size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="section-label">
+              Reference
+              {versions.ref.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {versions.ref.length} versions</span>}
+            </div>
+          )}
+          {!(section === "reference" && refCollapsed) && (
+          <>
           <div className="seg ref-mode">
             <button className={refMode === "generate" ? "on" : ""} onClick={() => setRefMode("generate")} title="Generate the reference with Flux from the reference prompt">
               Generate
@@ -735,6 +816,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               {refCards}
             </>
           )}
+          </>
+          )}
         </>
       ) : null}
       {(section === "all" || section === "beats") && (sceneNums.length > 0 || fallbackShots.length > 0) && (
@@ -744,6 +827,16 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           <div className="grid grid-compact">
             {(() => {
             const total = sceneNums.length;
+            const pctFor = (kind: "image" | "video", beat: number): number | null => {
+              if (!generating || progress?.status !== "running") return null;
+              if (progress.activeKind !== kind || progress.activeScene !== beat) return null;
+              return progress.activePct;
+            };
+            const elapsedFor = (kind: "image" | "video", beat: number): string | null => {
+              if (!generating || progress?.status !== "running") return null;
+              if (progress.activeKind !== kind || progress.activeScene !== beat) return null;
+              return formatLiveElapsed(progress.activeElapsedMs);
+            };
             return sceneNums.map((n) => {
               const bv = versions.beats[String(n)] ?? { keyframe: [], clip: [] };
               const kfMain = mains.beats[String(n)]?.keyframe || bv.keyframe[bv.keyframe.length - 1]?.file || null;
@@ -752,11 +845,20 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const clipV = clipMain ? bv.clip.find((v) => v.file === clipMain)?.v ?? null : null;
               const kfGen = genTarget === `kf:${n}`;
               const clipGen = genTarget === `clip:${n}`;
+              const kfPct = kfGen ? pctFor("image", n) : null;
+              const clipPct = clipGen ? pctFor("video", n) : null;
+              const kfElapsed = kfGen ? elapsedFor("image", n) : null;
+              const clipElapsed = clipGen ? elapsedFor("video", n) : null;
+              const kfReadout = kfPct != null ? `~${Math.round(kfPct)}%` : (kfElapsed ?? "generating");
+              const clipReadout = clipPct != null ? `~${Math.round(clipPct)}%` : (clipElapsed ?? "generating");
+              const kfLabel = kfPct != null ? `Generating scene ${n} keyframe… ~${Math.round(kfPct)}% (estimated)` : kfElapsed != null ? `Generating scene ${n} keyframe… ${kfElapsed} elapsed` : `Generating scene ${n} keyframe…`;
+              const clipLabel = clipPct != null ? `Generating video ${n}… ~${Math.round(clipPct)}% (estimated)` : clipElapsed != null ? `Generating video ${n}… ${clipElapsed} elapsed` : `Generating video ${n}…`;
               return (
-                <div className="shot" key={n} title={`Scene ${n} — keyframe image + video clip`}>
-                  <div className="shot-head" aria-hidden="true">Scene {n}</div>
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                  <div className="shot-head" aria-hidden="true">
+                    Scene {n}/{total}
+                  </div>
                   <div className="img-frame">
-                    <SceneBadge scene={n} total={total} title={`Scene ${n} of ${total} — keyframe image`} />
                     {kfMain
                       ? <>
                         {kfV != null && (
@@ -765,55 +867,94 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                         <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
                         <SmoothImage src={outputUrl(viewScenario, kfMain)} alt={pretty(kfMain)} />
                       </>
-                      : <div className="frame-missing">
+                      : <div className={`frame-missing${kfGen ? " is-generating" : ""}`}>
                           {kfGen
-                            ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                            ? <span className="gen-flag" title={kfLabel}>
+                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                                <span className="gen-dots">Generating</span>{(kfPct != null || kfElapsed != null) && <span> {kfReadout}</span>}
+                              </span>
                             : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
                         </div>}
                   </div>
                   {kfGen && !bv.keyframe.length && (
-                    <GenChip v={1} />
+                    <GenChip v={1} pct={kfPct} elapsed={kfElapsed} />
                   )}
                   <VersionRow
                     versions={bv.keyframe}
                     main={mains.beats[String(n)]?.keyframe}
+                    mainPinned={mains.pinned?.beats?.[String(n)]?.keyframe}
                     kind="image"
                     onSelect={(f) => pickMain("keyframe", n, f)}
                     onRegen={() => onRegen?.("keyframe", n)}
                     generating={kfGen}
                     busy={switchingGallery}
                     queued={!generating && queuedRegen("keyframe", n)}
+                    pct={kfPct}
+                    elapsed={kfElapsed}
                   />
                   {clipMain ? (
                     <div className="shot-clip-frame">
-                      <SceneBadge small label={`V${n}/${total}`} title={`Video ${n} of ${total} — clip`} />
                       {clipV != null && (
                         <span className="ver-badge" title={`Scene ${n} clip v${clipV} (main)`}>v{clipV}</span>
                       )}
                       <video controls preload="metadata" src={outputUrl(viewScenario, clipMain)} className="shot-clip-bare" />
+                      {clipGen && <span className="gen-scanline" aria-hidden="true" />}
+                      {clipGen && (clipPct != null || clipElapsed != null) && (
+                        <>
+                          <span className="gen-pct" title={clipLabel}>{clipReadout}</span>
+                          {clipPct != null && (
+                          <span className="gen-bar" aria-hidden="true">
+                            <span style={{ width: `${Math.min(99, Math.max(0, Math.round(clipPct)))}%` }} />
+                          </span>
+                          )}
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="video-frame">
-                      <SceneBadge small label={`V${n}/${total}`} title={`Video ${n} of ${total} — clip`} />
-                      <div className="frame-missing">
+                      <div className={`frame-missing${clipGen ? " is-generating" : ""}`}>
                         {clipGen
-                          ? <span className="gen-flag"><span className="dot pulse" /> generating…</span>
+                          ? <>
+                              {kfMain && (
+                                <span className="video-gen-preview" aria-hidden="true">
+                                  <img src={outputUrl(viewScenario, kfMain)} alt="" />
+                                </span>
+                              )}
+                              <span className="gen-scanline" aria-hidden="true" />
+                              <span className="gen-flag" title={clipLabel}>
+                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
+                                <span className="gen-dots">Generating</span>{(clipPct != null || clipElapsed != null) && <span> {clipReadout}</span>}
+                              </span>
+                              {(clipPct != null || clipElapsed != null) && (
+                                <>
+                                  <span className="gen-pct" title={clipLabel}>{clipReadout}</span>
+                                  {clipPct != null && (
+                                  <span className="gen-bar" aria-hidden="true">
+                                    <span style={{ width: `${Math.min(99, Math.max(0, Math.round(clipPct)))}%` }} />
+                                  </span>
+                                  )}
+                                </>
+                              )}
+                            </>
                           : <span className="frame-missing-inner"><IconFilm size={16} /><span className="muted">Video {n} · pending</span></span>}
                       </div>
                     </div>
                   )}
                   {clipGen && !bv.clip.length && (
-                    <GenChip v={1} />
+                    <GenChip v={1} pct={clipPct} elapsed={clipElapsed} />
                   )}
                   <VersionRow
                     versions={bv.clip}
                     main={mains.beats[String(n)]?.clip}
+                    mainPinned={mains.pinned?.beats?.[String(n)]?.clip}
                     kind="video"
                     onSelect={(f) => pickMain("clip", n, f)}
                     onRegen={() => onRegen?.("clip", n)}
                     generating={clipGen}
                     busy={switchingGallery}
                     queued={!generating && queuedRegen("clip", n)}
+                    pct={clipPct}
+                    elapsed={clipElapsed}
                   />
                 </div>
               );
@@ -824,15 +965,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const fn = m ? Number(m[1]) : fi + 1;
               return (
               <div className="shot" key={kf} title={`Scene ${fn} — keyframe image + video clip`}>
-                <div className="shot-head" aria-hidden="true">Scene {fn}</div>
+                <div className="shot-head" aria-hidden="true">Scene {fn}/{fallbackShots.length}</div>
                 <div className="img-frame">
-                  <SceneBadge scene={fn} total={fallbackShots.length} title={`Scene ${fn} of ${fallbackShots.length} — keyframe image`} />
                   <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
                   <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
                 </div>
                 {clip && (
                   <div className="shot-clip-frame">
-                    <SceneBadge small label={`V${fn}/${fallbackShots.length}`} title={`Video ${fn} of ${fallbackShots.length} — clip`} />
                     <video controls preload="metadata" src={outputUrl(viewScenario, clip)} className="shot-clip-bare" />
                   </div>
                 )}
@@ -841,8 +980,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             })}
           </div>
           <p className="hint">
-            Pick a version to make it <b>main</b> — the final cut stitches the main version of every beat.
-            Regenerate keeps old versions; regen the clip afterwards to generate video from the main keyframe.
+            Pick a version to make it <b>your pick</b> — the final cut stitches the main version of every beat.
+            Regenerate keeps old versions and selects the newest; a reload also selects the newest unless you picked one.
+            Regen the clip afterwards to generate video from the main keyframe.
+            Every keyframe is anchored on the reference selected as main — switching the main ref regenerates stale images on the next run.
           </p>
         </>
       )}
@@ -918,8 +1059,11 @@ export function SceneBadge({ scene, total, label, title, small }: {
   const text =
     label ?? (scene != null && total != null ? `${scene}/${total}` : scene != null ? String(scene) : "");
   if (!text) return null;
+  // Numeric badges (n/total, Vn/total) render half-size on the generating
+  // tint; stage labels (REF / FINAL) keep the full-size dark style.
+  const numeric = /^V?\d/.test(text);
   return (
-    <span className={`scene-badge${small ? " scene-badge-sm" : ""}`} title={title ?? `Scene ${scene} of ${total}`}>
+    <span className={`scene-badge${small ? " scene-badge-sm" : ""}${numeric ? " scene-badge-num" : ""}`} title={title ?? `Scene ${scene} of ${total}`}>
       {text}
     </span>
   );
@@ -940,28 +1084,36 @@ function ExpandButton({ title, onOpen }: { title: string; onOpen: () => void }) 
 }
 
 // Blinking "generating vN" chip (blinking dot) — shown while a run is
-// producing this version; previous versions are kept.
-function GenChip({ v }: { v: number }) {
+// producing this version; previous versions are kept. pct is the estimated
+// ~% for the in-flight asset, elapsed the live seconds while no pace exists
+// yet (null = indeterminate).
+function GenChip({ v, pct, elapsed }: { v: number; pct?: number | null; elapsed?: string | null }) {
+  const extra = pct != null ? `~${Math.round(pct)}%` : elapsed;
   return (
     <div className="versions">
-      <span className="vchip gen" title={`Generating v${v} — previous versions are kept`}>
+      <span className="vchip gen" title={pct != null ? `Generating v${v} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${v} — previous versions are kept`}>
         <span className="dot pulse" />
-        v{v} generating
+        v{v} <span className="gen-dots">generating</span>{extra ? ` ${extra}` : ""}
       </span>
     </div>
   );
 }
 
 // Version chips (v1, v2, …) + regenerate button for one versioned asset.
-function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy, queued }: {
+function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, generating, busy, queued, pct, elapsed }: {
   versions: AssetVersion[];
   main: string | null;
+  // True when the main is the user's explicit pick (survives reloads);
+  // otherwise the main is simply the latest version.
+  mainPinned?: boolean;
   kind: "image" | "video";
   onSelect: (file: string) => void;
   onRegen?: () => void;
   generating?: boolean; // a run is producing the next version right now
   busy?: boolean; // gallery is mid-switch — regen would hit the wrong dir
   queued?: boolean; // a regen is queued behind the active run
+  pct?: number | null; // estimated ~% for the in-flight version (null = indeterminate)
+  elapsed?: string | null; // live seconds while no pace exists yet
 }) {
   if (versions.length === 0) return null;
   const nextV = versions[versions.length - 1].v + 1;
@@ -971,7 +1123,7 @@ function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy,
         <button
           key={v.file}
           className={`vchip ${main === v.file ? "on" : ""}`}
-          title={main === v.file ? `${v.file} (main — used in stitch)` : `Set ${v.file} as main`}
+          title={main === v.file ? `${v.file} (main — ${mainPinned ? "your pick" : "latest"}${kind === "image" ? ", used for the clip" : ", used in stitch"})` : `Set ${v.file} as main (your pick)`}
           onClick={() => onSelect(v.file)}
         >
           {main === v.file && <IconCheck size={10} />}
@@ -979,9 +1131,9 @@ function VersionRow({ versions, main, kind, onSelect, onRegen, generating, busy,
         </button>
       ))}
       {generating && (
-        <span className="vchip gen" title={`Generating v${nextV} — previous versions are kept`}>
+        <span className="vchip gen" title={pct != null ? `Generating v${nextV} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${nextV} — previous versions are kept`}>
           <span className="dot pulse" />
-          v{nextV} generating
+          v{nextV} <span className="gen-dots">generating</span>{pct != null ? ` ~${Math.round(pct)}%` : (elapsed ? ` ${elapsed}` : "")}
         </span>
       )}
       {onRegen && (

@@ -20,7 +20,18 @@ interface Props {
   startedAt: number | null;
   now: number;
   comfyQueue: number;
+  /** Render the PROGRAM screen block (viewport + progress + stats). Default true. */
+  showScreen?: boolean;
+  /** Render the frame-status grids block. Default true. */
+  showFrames?: boolean;
+  /** Controlled pin (shared across split instances so chips drive the viewport). */
+  pin?: RmPin | null;
+  onPin?: (p: RmPin | null) => void;
 }
+
+/** Pinned preview slot: clicking a REF / keyframe / clip / CUT number loads
+    that render into the PROGRAM viewport. */
+export interface RmPin { kind: "ref" | "kf" | "clip" | "cut"; n: number | null }
 
 // mm:ss short digital timer (00:09) — the monitor's compact counterpart to
 // the full HHh:MMm:SSs durations used elsewhere.
@@ -43,6 +54,7 @@ type Stage = "image" | "video" | "cut";
 export default function RenderMonitor({
   scenario, outDir, engine, status, progress,
   assets, log, totalBeats, runMeta, startedAt, now, comfyQueue,
+  showScreen, showFrames, pin, onPin,
 }: Props) {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const running = status === "running";
@@ -51,10 +63,15 @@ export default function RenderMonitor({
   // render into the PROGRAM viewport. Index-based, so a regen landing on the
   // pinned slot updates what's shown. Clicking the pinned chip again (or
   // switching projects) returns to the automatic latest-for-stage feed.
-  const [sel, setSel] = useState<{ kind: "ref" | "kf" | "clip" | "cut"; n: number | null } | null>(null);
+  // Controlled via pin/onPin when the monitor is split across parts (so the
+  // Render chips still drive the Program viewport); internal otherwise.
+  const [innerSel, setInnerSel] = useState<RmPin | null>(null);
+  const sel = onPin ? (pin ?? null) : innerSel;
   const toggleSel = (kind: "ref" | "kf" | "clip" | "cut", n: number | null, file: string | null) => {
     if (!file) return;
-    setSel((prev) => (prev && prev.kind === kind && prev.n === n ? null : { kind, n }));
+    const next = sel && sel.kind === kind && sel.n === n ? null : { kind, n };
+    if (onPin) onPin(next);
+    else setInnerSel(next);
   };
 
   // On-disk fallback: the live `assets` stream only covers the current run,
@@ -119,7 +136,7 @@ export default function RenderMonitor({
   const steady = loadedFor === outDir;
   const viewDir = steady ? outDir : (loadedFor || outDir);
   // A pinned chip belongs to its own project — drop it on switch.
-  useEffect(() => { setSel(null); }, [outDir]);
+  useEffect(() => { if (onPin) onPin(null); else setInnerSel(null); }, [outDir, onPin]);
 
   const liveRef = assets.find((a) => a.stage === "reference")?.file ?? null;
   const refFile = liveRef ?? (steady ? diskRef : null);
@@ -284,10 +301,6 @@ export default function RenderMonitor({
   const elapsedMs = startedAt != null ? Math.max(0, (running ? now : progress.elapsedMs > 0 ? startedAt + progress.elapsedMs : now) - startedAt) : progress.elapsedMs;
   const logLines = log ? log.split("\n").length : 0;
 
-  // Idle caption names the file on screen (final cut / latest clip /
-  // keyframe); while running it names the pinned file when one is pinned,
-  // otherwise the frame in flight.
-  const captionFile = running ? (selFile ?? targetFile) : (preview?.file ?? targetFile ?? null);
   // A scene's keyframe number stays highlighted while its clip renders too
   // (same frame, video phase) — not just during the image phase.
   const kfActive = (n: number) =>
@@ -302,6 +315,7 @@ export default function RenderMonitor({
   return (
     <div className="rm" aria-label="Render monitor">
       {/* PROGRAM viewport */}
+      {showScreen !== false && (
       <div className="rm-screen">
         <div className="rm-topbar">
           <span className="rm-program">
@@ -343,15 +357,6 @@ export default function RenderMonitor({
               <Spinner size={11} /> Rendering{targetLabel ? ` · ${targetLabel}` : ""}…
             </div>
           )}
-          {(targetLabel || scenario) && (
-            <div className="rm-caption">
-              <div className="rm-caption-main">
-                {scenario || "—"}{targetLabel ? ` · ${targetLabel}` : ""}
-                {captionFile ? ` · ${captionFile.replace(/\.(png|mp4)$/, "")}` : running ? " · generating…" : ""}
-              </div>
-              <div className="rm-caption-sub">{workflowLabel}</div>
-            </div>
-          )}
         </div>
 
         <div className="rm-progress" aria-hidden="true">
@@ -372,8 +377,10 @@ export default function RenderMonitor({
           <span className="rm-stat"><span className="rm-stat-label">QUEUE</span><span className="rm-stat-value">{comfyQueue}</span></span>
         </div>
       </div>
+      )}
 
       {/* Frame grids */}
+      {showFrames !== false && (
       <div className="rm-frames">
         <div className="rm-frames-head">
           <span className="rm-frames-title"><span aria-hidden="true">⟩_</span> Render</span>
@@ -396,24 +403,24 @@ export default function RenderMonitor({
           </div>
         )}
 
-        <div className="rm-grid" aria-label="Frame status">
-          <div className="rm-col">
-            <div className="rm-col-label">REF</div>
-            <div className="rm-chips">
-              <button
-                type="button"
-                className={`${chipClass(!!refFile, target === "ref")}${sel?.kind === "ref" && selFile ? " is-selected" : ""}`}
-                title={refFile ? `${refFile} — click to show in PROGRAM` : (target === "ref" ? "Reference generating…" : "Reference pending")}
-                disabled={!refFile}
-                onClick={() => toggleSel("ref", null, refFile)}
-              >
-                {target === "ref" && !refFile ? <Spinner size={10} /> : null}REF
-              </button>
-            </div>
-          </div>
+        <div className="rm-grid rm-grid-split" aria-label="Frame status">
           <div className="rm-col rm-col-wide">
+            <div className="rm-above" aria-label="Reference">
+              <span className="rm-col-label">REF</span>
+              <span className="rm-chips">
+                <button
+                  type="button"
+                  className={`${chipClass(!!refFile, target === "ref")}${sel?.kind === "ref" && selFile ? " is-selected" : ""}`}
+                  title={refFile ? `${refFile} — click to show in PROGRAM` : (target === "ref" ? "Reference generating…" : "Reference pending")}
+                  disabled={!refFile}
+                  onClick={() => toggleSel("ref", null, refFile)}
+                >
+                  {target === "ref" && !refFile ? <Spinner size={10} /> : null}REF
+                </button>
+              </span>
+            </div>
             <div className="rm-col-label">KEYFRAMES · IMAGE</div>
-            <div className="rm-chips">
+            <div className="rm-chips rm-chips-tabular">
               {nums.length === 0 && <span className="rm-empty-note">—</span>}
               {nums.map((n) => (
                 <button
@@ -431,8 +438,22 @@ export default function RenderMonitor({
             </div>
           </div>
           <div className="rm-col rm-col-wide">
+            <div className="rm-above rm-above-right" aria-label="Final">
+              <span className="rm-col-label">FINAL</span>
+              <span className="rm-chips">
+                <button
+                  type="button"
+                  className={`${chipClass(hasFinal, target === "cut")}${sel?.kind === "cut" && selFile ? " is-selected" : ""}`}
+                  title={finalFile ? `${finalFile} — click to show in PROGRAM` : target === "cut" ? "Stitching…" : "Final cut pending"}
+                  disabled={!finalFile}
+                  onClick={() => toggleSel("cut", null, finalFile)}
+                >
+                  CUT
+                </button>
+              </span>
+            </div>
             <div className="rm-col-label">CLIPS · VIDEO</div>
-            <div className="rm-chips">
+            <div className="rm-chips rm-chips-tabular">
               {nums.length === 0 && <span className="rm-empty-note">—</span>}
               {nums.map((n) => (
                 <button
@@ -446,20 +467,6 @@ export default function RenderMonitor({
                   {n}
                 </button>
               ))}
-            </div>
-          </div>
-          <div className="rm-col">
-            <div className="rm-col-label">FINAL</div>
-            <div className="rm-chips">
-              <button
-                type="button"
-                className={`${chipClass(hasFinal, target === "cut")}${sel?.kind === "cut" && selFile ? " is-selected" : ""}`}
-                title={finalFile ? `${finalFile} — click to show in PROGRAM` : target === "cut" ? "Stitching…" : "Final cut pending"}
-                disabled={!finalFile}
-                onClick={() => toggleSel("cut", null, finalFile)}
-              >
-                CUT
-              </button>
             </div>
           </div>
         </div>
@@ -483,6 +490,7 @@ export default function RenderMonitor({
           <pre className="log rm-console">{log || "— log will stream here once a run starts —"}</pre>
         )}
       </div>
+      )}
     </div>
   );
 }
