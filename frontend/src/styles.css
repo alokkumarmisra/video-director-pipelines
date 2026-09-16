@@ -186,6 +186,29 @@ body {
   white-space: nowrap; flex: none;
 }
 .topbar-health .dot { width: 6px; height: 6px; }
+/* Icon-only service pills (PostgreSQL / LM Studio / ComfyUI): each service
+   keeps its own identity color on the icon; the status dot shows
+   up (pulsing) / down / checking. Full status stays in the tooltip. */
+.topbar-health .pill.svc { padding: 4px 8px; }
+.pill.svc.svc-db { color: #38bdf8; }
+.pill.svc.svc-llm { color: var(--craft); }
+.pill.svc.svc-comfy { color: var(--accent-2); }
+:root[data-theme="light"] .pill.svc.svc-db { color: #0284c7; }
+/* Status unknown yet — dim the icon until the first health poll lands. */
+.topbar-health .pill.svc:not(.ok):not(.err) { color: var(--text-3); }
+.svc .dot.st-ok { background: var(--ok); color: var(--ok); }
+.svc .dot.st-err { background: var(--err); color: var(--err); }
+.svc .dot.st-wait { background: var(--text-3); color: var(--text-3); }
+/* Two-letter service code (PG / LM / CF) — inherits the service color. */
+.svc-code {
+  font: 700 10.5px var(--mono);
+  letter-spacing: 0.04em;
+}
+/* ComfyUI queue depth badge (kept glanceable now the text is gone). */
+.svc-count {
+  font: 700 10px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
 
 .shell {
   flex: 1;
@@ -197,6 +220,9 @@ body {
   margin: 0 auto;
   padding: 20px;
   align-items: start;
+  /* Showing/hiding the Projects / right rails reflows the columns —
+     ease the width shift instead of jumping. */
+  transition: grid-template-columns 0.3s ease;
 }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* Project switch keeps the old content mounted until the new config lands
@@ -224,6 +250,9 @@ body {
   border-radius: var(--radius-l);
   padding: 16px;
   box-shadow: var(--shadow-1);
+  /* Collapsing a section animates body height (see .collapse below) —
+     ease the padding shift along with it instead of jumping. */
+  transition: padding-bottom 0.3s ease;
 }
 .card + .card { margin-top: 0; }
 .card-head {
@@ -276,6 +305,47 @@ body {
 .workflow-head .workflow-dt { font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .card-desc {
   margin: -6px 0 14px; font-size: 12.5px; color: var(--text-3); line-height: 1.5;
+}
+
+/* ============================================================
+   Collapse — smooth hide/show for every toggle app-wide.
+   Content stays mounted and animates height (grid-rows) + fade, so
+   toggling a section never flicks the layout. Closed = zero-height +
+   visibility-hidden (out of the tab order and AT tree until shown).
+   ============================================================ */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition: grid-template-rows 0.32s ease, opacity 0.28s ease, visibility 0s linear 0s;
+}
+.collapse > .collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+.collapse.closed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows 0.32s ease, opacity 0.22s ease, visibility 0s linear 0.32s;
+}
+/* Mount transitions for popups / menus / rails that swap in place of a
+   hidden panel (no height to animate — fade + rise reads as smooth). */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.sidebar, .sidebar-show { animation: riseIn 0.25s ease; }
+.progress-window, .menu { animation: popIn 0.16s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .collapse, .collapse.closed { transition: none; }
+  .sidebar, .sidebar-show, .progress-window, .menu { animation: none; }
 }
 
 /* ============================================================
@@ -754,6 +824,9 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   padding: 12px 14px 14px;
   margin: 10px 0;
   position: relative;
+  /* Hiding a scene's fields animates via .collapse — ease the padding
+     shift along with it instead of jumping. */
+  transition: padding-bottom 0.3s ease;
 }
 .gen-count {
   display: inline-flex; align-items: center; gap: 4px;
@@ -807,6 +880,44 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   font-weight: 600;
 }
 .beat-meta { font-size: 11px; color: var(--text-3); margin: 0 0 6px 30px; }
+/* Per-scene version box: small strip at the bottom of each scene card.
+   Delta-based — only versions that touched this scene get a pill
+   (e.g. 10 scenes, v2 edited scene 3 only → scene 3 shows v1 v2,
+   every other scene shows v1). Latest pill is selected (editable);
+   clicking an older pill previews that scene's stored prompts read-only. */
+.beat-versions {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--inset);
+}
+.beat-versions-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.beat-versions-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.v-pill {
+  min-width: 34px; padding: 3px 9px; border-radius: 999px;
+  font: 700 11px/1.6 var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text-3); background: transparent;
+  border: 1px solid var(--line); cursor: pointer;
+}
+.v-pill:hover { border-color: var(--accent-line); color: var(--text); }
+.v-pill.on {
+  color: var(--accent-2); background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.v-pill.latest:not(.on) { border-style: dashed; }
+.beat-versions-view { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.beat-versions-view label { margin-top: 8px; }
+.beat-versions-text {
+  margin: 2px 0 6px; padding: 7px 9px;
+  font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  color: var(--text-2); background: var(--bg-raise);
+  border: 1px solid var(--line); border-radius: var(--radius-s);
+}
+.hint.inline { display: inline-flex; align-items: center; margin: 0; }
 
 /* ============================================================
    Log
@@ -908,6 +1019,23 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
     background-position: 100% 0;
     box-shadow: 0 0 12px -2px rgba(127, 29, 29, 0.9);
   }
+}
+/* Cross-navigation between Keyframes → clips and the Scenario Editor:
+   Edit icon pinned to the bottom-right of every scene card, and a flash
+   highlight on the navigation target so it is easy to spot after scrolling. */
+.shot, .beat { scroll-margin-top: 90px; scroll-margin-bottom: 24px; }
+.shot-foot { display: flex; justify-content: flex-end; margin-top: 2px; }
+.shot-goto { padding: 5px; }
+/* Trailing action (Edit-scene button) pinned to the right end of the last
+   versions row in each Keyframes → clips scene card. */
+.versions-action { margin-left: auto; display: inline-flex; align-items: center; }
+.beat.flash, .shot.flash {
+  border-color: var(--accent-2);
+  animation: sceneFlash 1.6s ease;
+}
+@keyframes sceneFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  30% { box-shadow: 0 0 0 3px var(--accent-line), 0 0 18px -2px var(--accent-line); }
 }
 .shot.generating .video-frame, .shot.generating .shot-clip-frame {
   border: 1px solid rgba(248, 113, 113, 0.35);
@@ -1883,11 +2011,12 @@ select:focus-visible, textarea:focus-visible {
 }
 
 /* Side-by-side Project Name + Clip length row: the name takes the free
-   space, clip length is fixed at 20%. Labels keep their normal stacking
-   inside each column so both fields stay aligned. */
-.form-row { display: flex; gap: 12px; align-items: flex-start; }
+   space, clip length is a fixed box that always fits the number input.
+   Never wraps — both fields stay on one row. */
+.form-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: nowrap; }
 .form-row-main { flex: 1 1 auto; min-width: 0; }
-.form-row-side { flex: 0 0 20%; min-width: 0; }
+.form-row-side { flex: 0 0 96px; min-width: 0; }
+.form-row input { min-width: 0; }
 
 /* Video Type preset selector (presets are application-owned; per-project
    rule customizations are stored on the project, never in presets/). */
@@ -2216,6 +2345,9 @@ select:focus-visible, textarea:focus-visible {
   padding: 10px 12px;
 }
 .shotlist-row { display: contents; }
+/* The expandable detail is wrapped in .collapse (animated) — the wrapper
+   takes the full-width grid slot the detail used to occupy. */
+.shotlist-row-wrap > .collapse { grid-column: 1 / -1; }
 .shotlist-row-wrap + .shotlist-row-wrap { border-top: 1px solid var(--line); }
 .shotlist-row-wrap:hover { background: rgba(255, 255, 255, 0.015); }
 :root[data-theme="light"] .shotlist-row-wrap:hover { background: rgba(60, 50, 30, 0.03); }
@@ -2411,6 +2543,7 @@ select:focus-visible, textarea:focus-visible {
   to { top: 110%; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .beat.flash, .shot.flash,
   .shot.generating,
   .shot.generating .shot-head,
   .shot.generating .shot-head::after,

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Beat, Scenario } from "../types";
 import type { ScenarioVersionInfo } from "../api";
 import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi, craftBeat } from "../api";
-import { IconCheck, IconEye, IconEyeOff, IconLayers, IconPanel, IconPlus, IconSparkles, IconTrash, Spinner } from "./Icons";
+import { IconCheck, IconEye, IconEyeOff, IconFilm, IconLayers, IconPanel, IconPlus, IconSparkles, IconTrash, Spinner } from "./Icons";
+import Collapse from "./Collapse";
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
@@ -24,6 +25,9 @@ interface Props {
   // Closed renders only the slim right-docked reopen rail.
   open: boolean;
   onToggle: () => void;
+  /** Jump to Scene n in Keyframes → clips (App scrolls + flashes the
+      matching gallery card). Absent = no goto icon on the scene headers. */
+  onGotoClipScene?: (n: number) => void;
 }
 
 // Project save point: version picker + explicit Save. The brief fields
@@ -33,7 +37,7 @@ interface Props {
 // keyframe image, motion & camera) live in the Shot List, which edits them
 // inline with the same fields. Nothing saves automatically — every explicit
 // Save stores ALL fields as a new version in the database.
-export default function ScenarioEditor({ name, config, isDraft, onSave, overrides, onOverridesClear, open, onToggle }: Props) {
+export default function ScenarioEditor({ name, config, isDraft, onSave, overrides, onOverridesClear, open, onToggle, onGotoClipScene }: Props) {
   const [cfg, setCfg] = useState<Scenario>(config);
   const [pristine, setPristine] = useState<Scenario>(config);
   const [saved, setSaved] = useState(false);
@@ -47,6 +51,13 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [delBusy, setDelBusy] = useState(false);
+  // Per-scene version history: which saved version each scene's pill shows.
+  // beatView[i] = null/undefined -> latest (editable); = V -> viewing the
+  // snapshot of scene i+1 stored at scenario version V (read-only preview).
+  // vCfgCache holds fetched version configs so each old version is loaded once.
+  const [beatView, setBeatView] = useState<Record<number, number | null>>({});
+  const [vCfgCache, setVCfgCache] = useState<Record<number, Scenario>>({});
+  const [beatViewBusy, setBeatViewBusy] = useState<Record<number, boolean>>({});
   // Collapsing only hides the body JSX; edits stay in state.
   // Per-scene show/hide (one toggle per scene section). Collapsing only
   // hides that scene's fields; edits stay in state. Reset on scenario
@@ -70,6 +81,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
   useEffect(() => {
     setVersions([]);
     setViewVersion(null);
+    setBeatView({});
+    setVCfgCache({});
+    setBeatViewBusy({});
     if (!isDraft) void loadVersions();
   }, [isDraft, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -101,6 +115,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setSaved(false);
       setError("");
       setViewVersion(null);
+      setBeatView({});
+      setVCfgCache({});
+      setBeatViewBusy({});
       setHiddenBeats({});
       setGenError("");
       return;
@@ -129,6 +146,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setSaved(true);
       setPristine(next);
       setViewVersion(null);
+      setBeatView({});
+      // Keep the config cache (old snapshots stay valid); a fresh save only
+      // adds a new version — the pills rebuild from the reloaded list below.
       if (!isDraft) await loadVersions();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -157,6 +177,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setPristine(r.config);
       onOverridesClear();
       setViewVersion(null);
+      setBeatView({});
+      setVCfgCache({});
+      setBeatViewBusy({});
       setSaved(true);
       await loadVersions();
     } catch (e) {
@@ -175,9 +198,55 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setPristine(r.config);
       onOverridesClear();
       setViewVersion(v);
+      setBeatView({});
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // ---- Per-scene version history -------------------------------------------
+  // project_assets + scenario_versions share one version counter (one
+  // transaction per Save): v1 snapshots every scene, v2+ stores ONLY the
+  // changed scenes as new rows. A scene's history is therefore the subset of
+  // global versions whose delta lists that scene — e.g. 10 scenes with only
+  // scene 3 edited in v2 gives scene 3 = [v1, v2], every other scene = [v1].
+  // The pills below each scene render exactly that list (latest selected);
+  // clicking an older pill previews that scene's stored prompts read-only.
+  const beatHistory = (beat1: number): number[] => {
+    if (!versions.length) return [];
+    const asc = [...versions].sort((a, b) => a.version - b.version);
+    const out: number[] = [];
+    for (const v of asc) {
+      if (!v.changes || !Array.isArray(v.changes.beats)) {
+        // No delta info (legacy row) — assume the scene was present.
+        out.push(v.version);
+        continue;
+      }
+      if (v.changes.beats.includes(beat1)) out.push(v.version);
+    }
+    return out;
+  };
+  // Switch scene i (0-based) to view version V (null = back to latest/editable).
+  const viewBeatVersion = async (i: number, v: number | null) => {
+    if (v === null) {
+      setBeatView((prev) => ({ ...prev, [i]: null }));
+      return;
+    }
+    if (vCfgCache[v]) {
+      setBeatView((prev) => ({ ...prev, [i]: v }));
+      return;
+    }
+    setBeatViewBusy((prev) => ({ ...prev, [i]: true }));
+    setError("");
+    try {
+      const r = await getVersion(name, v);
+      setVCfgCache((prev) => ({ ...prev, [v]: r.config }));
+      setBeatView((prev) => ({ ...prev, [i]: v }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBeatViewBusy((prev) => ({ ...prev, [i]: false }));
     }
   };
 
@@ -347,8 +416,18 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
         )}
         {beats.map((b, i) => {
           const hidden = !!hiddenBeats[i];
+          // Saved history for this scene (delta-based: only versions that
+          // touched this scene). Latest = selected by default (editable).
+          const hist = !isDraft && viewVersion === null ? beatHistory(i + 1) : [];
+          const latestV = hist.length ? hist[hist.length - 1] : null;
+          const selV = beatView[i] ?? latestV;
+          const viewingOld = selV != null && latestV != null && selV !== latestV;
+          const oldBeat: Beat | null = viewingOld && selV != null
+            ? (Array.isArray(vCfgCache[selV]?.sequence) ? (vCfgCache[selV].sequence as Beat[])[i] ?? null : null)
+            : null;
+          const busyOld = !!beatViewBusy[i];
           return (
-          <div key={i} className={`beat${i % 2 === 1 ? " alt" : ""}${hidden ? " is-collapsed" : ""}`}>
+          <div key={i} id={`beat-${i + 1}`} className={`beat${i % 2 === 1 ? " alt" : ""}${hidden ? " is-collapsed" : ""}`}>
             <div className="beat-head">
               <span className="beat-index">{i + 1}</span>
               <span className="beat-title">
@@ -364,6 +443,16 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               >
                 {hidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
               </button>
+              {onGotoClipScene && (
+                <button
+                  className="icon-btn"
+                  onClick={() => onGotoClipScene(i + 1)}
+                  title={`View Scene ${i + 1} in Keyframes → clips`}
+                  aria-label={`View Scene ${i + 1} in Keyframes → clips`}
+                >
+                  <IconFilm size={13} />
+                </button>
+              )}
               <button
                 className="ghost shotlist-btn"
                 onClick={() => deleteBeat(i)}
@@ -374,8 +463,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                 Delete
               </button>
             </div>
-            {!hidden && (
-            <>
+            <Collapse open={!hidden}>
             <label>Shot title</label>
             <input
               value={b.title}
@@ -400,7 +488,50 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               disabled={saving}
               onChange={(e) => updateBeat(i, { motion: e.target.value })}
             />
-            </>
+            </Collapse>
+            {hist.length > 0 && (
+              <div className="beat-versions" aria-label={`Scene ${i + 1} versions`}>
+                <span className="beat-versions-label" title="Each Save stores only changed scenes as new rows — this scene's versions">Versions</span>
+                <div className="beat-versions-pills">
+                  {hist.map((v) => {
+                    const on = selV === v;
+                    const isLatest = v === latestV;
+                    return (
+                      <button
+                        key={v}
+                        className={`v-pill${on ? " on" : ""}${isLatest ? " latest" : ""}`}
+                        disabled={busyOld}
+                        onClick={() => void viewBeatVersion(i, isLatest ? null : v)}
+                        title={isLatest ? `Scene ${i + 1} latest (v${v}) — editable` : `View Scene ${i + 1} at v${v} (read-only)`}
+                        aria-pressed={on}
+                        aria-label={`Scene ${i + 1} version ${v}${isLatest ? " (latest)" : ""}`}
+                      >
+                        {busyOld && !on ? `v${v}` : `v${v}`}
+                      </button>
+                    );
+                  })}
+                  {busyOld && <span className="hint inline"><Spinner size={11} /></span>}
+                </div>
+                {viewingOld && (
+                  <div className="beat-versions-view">
+                    <p className="hint">
+                      Viewing Scene {i + 1} at v{selV} (read-only) — latest is v{latestV}. Click v{latestV} above to return.
+                    </p>
+                    {oldBeat ? (
+                      <>
+                        <label>Shot title — v{selV}</label>
+                        <p className="beat-versions-text">{oldBeat.title || "—"}</p>
+                        <label>Keyframe image — v{selV}</label>
+                        <p className="beat-versions-text">{oldBeat.image || "—"}</p>
+                        <label>Motion &amp; camera — v{selV}</label>
+                        <p className="beat-versions-text">{oldBeat.motion || "—"}</p>
+                      </>
+                    ) : (
+                      <p className="hint">Scene {i + 1} did not exist at v{selV} (added later).</p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           );

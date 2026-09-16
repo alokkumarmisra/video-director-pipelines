@@ -1,4 +1,4 @@
-import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, DashboardResponse, HealthResponse } from "./types";
+import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, ProjectReference, DashboardResponse, HealthResponse } from "./types";
 
 const get = async <T,>(url: string) => (await fetch(url)).json() as Promise<T>;
 
@@ -18,7 +18,13 @@ export const login = (username: string, password: string) =>
   }).then((r) => (r.ok ? r.json() as Promise<AuthUser> : r.json().then((d) => Promise.reject(new Error(d.error || "login failed")))));
 export const logout = () => fetch("/api/logout", { method: "POST" }).then((r) => r.json());
 
-export const listScenarios = () => get<ScenarioInfo[]>("/api/scenarios");
+export const listScenarios = () =>
+  fetch("/api/scenarios").then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !Array.isArray(d))
+      throw new Error(d?.error || `project list failed (HTTP ${r.status})`);
+    return d as ScenarioInfo[];
+  });
 
 // 06-Sep-2025
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -32,7 +38,16 @@ export const fmtDateTime = (ms: number) => {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
-export const getScenario = (name: string) => get<{ name: string; config: Scenario }>(`/api/scenario/${name}`);
+export const getScenario = (name: string) =>
+  fetch(`/api/scenario/${encodeURIComponent(name)}`).then(async (r) => {
+    // The backend always replies JSON — but never treat an HTTP error as
+    // data: callers used to read `.config` off a 401/404/503 body and render
+    // an empty workspace with no error shown.
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d || typeof d !== "object" || !("config" in d))
+      throw new Error(d?.error || `load failed (HTTP ${r.status})`);
+    return d as { name: string; config: Scenario };
+  });
 
 // Saved versions of a scenario (every explicit Save = a new version in the DB).
 // The server attaches a delta summary per version: v1 lists all scenes (full
@@ -62,7 +77,13 @@ export const saveScenario = (name: string, config: Scenario) =>
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
-  }).then((r) => r.json() as Promise<{ ok: boolean; version: number | null; project_id: number | null; unchanged?: boolean }>);
+  }).then(async (r) => {
+    // Never treat an HTTP error as success — callers (Create/Edit dialogs)
+    // must show the failure instead of closing as if the data was saved.
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `save failed (HTTP ${r.status})`);
+    return d as { ok: boolean; version: number | null; project_id: number | null; unchanged?: boolean; updated?: boolean };
+  });
 export const deleteScenario = (name: string) =>
   fetch(`/api/scenario/${name}`, { method: "DELETE" }).then((r) =>
     r.ok ? r.json() : r.json().then((d) => Promise.reject(new Error(d.error || `HTTP ${r.status}`)))
@@ -172,12 +193,25 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       regen: opts.regen || null,
       count: opts.count ?? 1,
     }),
-  }).then((r) => r.json() as Promise<{ id: string; error?: string }>);
+  }).then((r) => r.json() as Promise<{ id: string; folder?: string; error?: string }>);
 
-// Output dir for a scenario+engine+format. Vertical Reel cuts live in
-// outputs/<scenario>[_wan]_vertical/ so they never touch the main cut.
-export const outScenario = (scenario: string, engine: Engine, format: VideoFormat = "landscape") =>
-  `${scenario}${engine === "wan" ? "_wan" : ""}${format === "vertical" ? "_vertical" : ""}`;
+// Output dir for a storage folder + engine + format. Takes the IMMUTABLE
+// folder (project.folder_name), never the display name — pass folder names
+// here so renames can't orphan media. Vertical Reel cuts live in
+// outputs/<folder>[_wan]_vertical/ so they never touch the main cut.
+export const outScenario = (folder: string, engine: Engine, format: VideoFormat = "landscape") =>
+  `${folder}${engine === "wan" ? "_wan" : ""}${format === "vertical" ? "_vertical" : ""}`;
+
+// Client-side copy of the server's storage slug (single source of truth is
+// lib/variant.mjs — keep byte-identical). Fallback only: the server is
+// authoritative and returns the real folder_name everywhere it matters.
+export const slugFolder = (s: string) =>
+  String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 100) || "project";
+
+// Storage folder for a project reference that may carry folder_name
+// (dashboard projects, scenario list entries) — falls back to the slug.
+export const folderOf = (p: { name: string; folder_name?: string | null } | null | undefined, fallbackName = "") =>
+  p?.folder_name || (p ? slugFolder(p.name) : slugFolder(fallbackName));
 
 // True when an output dir holds the vertical (9:16) cut.
 export const isVerticalOut = (dir: string) => String(dir || "").endsWith("_vertical");
@@ -245,7 +279,7 @@ export const stitchOnly = (scenario: string, engine: Engine = "ltx", format: Vid
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ scenario, engine, format }),
-  }).then((r) => r.json() as Promise<{ id: string }>);
+  }).then((r) => r.json() as Promise<{ id: string; folder?: string }>);
 
 // Ask the local LLM to extend a scenario with the next `count` beats in the story.
 export const craftBeat = (config: Scenario, count = 1) =>
@@ -278,6 +312,30 @@ export const craftVideoMeta = (config: Scenario) =>
       ? r.json() as Promise<VideoMeta>
       : r.json().then((d) => Promise.reject(new Error(d.error || "video metadata failed")))
   );
+
+// Ask the local LLM for a single Master Prompt from a Description + the
+// chosen Video Type (presetId / presetRules). Stateless — the Create New
+// Project dialog fills its Master Prompt box.
+export const craftMasterPrompt = (
+  description: string,
+  opts: { presetId?: string; presetRules?: string } = {}
+) =>
+  fetch("/api/master-prompt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      description,
+      ...(opts.presetId ? { presetId: opts.presetId } : {}),
+      ...(opts.presetRules?.trim() ? { presetRules: opts.presetRules } : {}),
+    }),
+  }).then(async (r) => {
+    // The backend always replies JSON — but guard against a stale server or
+    // proxy HTML page so the dialog shows the real cause, not a parse error.
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `master prompt failed (HTTP ${r.status})`);
+    if (!d?.masterPrompt) throw new Error("LM Studio returned an empty master prompt.");
+    return d as { masterPrompt: string };
+  });
 
 export interface AssetEvent {
   kind: "image" | "video";
@@ -314,8 +372,16 @@ export function tailRun(
 
 export const outputUrl = (scenario: string, file: string) => `/outputs/${scenario}/${file}`;
 
+// Reference visuals for a project (project_references — one row per
+// generation/upload, is_main = UI-selected main). Optional dir narrows to
+// one output dir; without it every cut is returned.
+export const listReferences = (name: string, dir?: string) =>
+  get<ProjectReference[]>(
+    `/api/project/${name}/references${dir ? `?dir=${dir}` : ""}`
+  );
 // Narrow project_assets rows for a project (one row per asset:
-// REFERENCE beat 0, KEYFRAME/VIDEO per beat). Version defaults to latest.
+// KEYFRAME/VIDEO per beat, FINAL per stitch — references live in
+// project_references, see listReferences). Version defaults to latest.
 // Versions are DELTA-based (v2 may store only the changed beat), so this
 // returns the EFFECTIVE state by default — the latest applicable row per
 // (beat, asset type) with version <= requested — and the UI keeps showing

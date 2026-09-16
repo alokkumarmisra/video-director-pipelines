@@ -12,7 +12,7 @@ import { Pool } from "pg";
 import { versionMap, setMain, nextVersion } from "../lib/sequence_state.mjs";
 import {
   normalizeFormat, outDirName, cfgNameForDir, prefixForDir, engineForDir,
-  projectForDir, allDirsFor,
+  allDirsFor, folderSlug, fileSlug,
 } from "../lib/variant.mjs";
 import {
   planDelta,
@@ -118,15 +118,29 @@ const dbGetScenario = async (name) => {
 };
 const dbSaveScenario = async (name, cfg) => {
   if (USE_SQLITE) {
+    // folder_name rides inside the config JSON (SQLite has no projects
+    // table); the PUT route stamps the immutable value before calling here.
+    if (cfg && typeof cfg === "object" && !cfg.folder_name) {
+      cfg = { ...cfg, folder_name: folderName(name) };
+    }
     db.prepare(`INSERT INTO scenarios (name, config, updated_at) VALUES (?, ?, ?)
                ON CONFLICT(name) DO UPDATE SET config = excluded.config, updated_at = excluded.updated_at`)
       .run(name, JSON.stringify(cfg), Date.now());
     return;
   }
+  // PostgreSQL: folder claiming happens in the PUT route (unique + frozen);
+  // here we only persist the scenario row. The projects.folder_name backfill
+  // below covers rows that predate the folder column.
   await pgPool.query(
     `INSERT INTO scenarios (name, config, updated_at_ms) VALUES ($1, $2::jsonb, $3)
      ON CONFLICT (name) DO UPDATE SET config = EXCLUDED.config, updated_at_ms = EXCLUDED.updated_at_ms`,
     [name, JSON.stringify(cfg), Date.now()]);
+  if (pgUp && cfg && typeof cfg === "object" && cfg.folder_name) {
+    await pgPool.query(
+      `UPDATE projects SET folder_name = $2 WHERE name = $1 AND (folder_name IS NULL OR folder_name = '')`,
+      [name, cfg.folder_name]
+    );
+  }
 };
 const dbDeleteScenario = async (name) => {
   if (USE_SQLITE) { db.prepare("DELETE FROM scenarios WHERE name = ?").run(name); return; }
@@ -134,38 +148,15 @@ const dbDeleteScenario = async (name) => {
 };
 // Escape LIKE wildcards in user-chosen names (spaces, %, _ … are all legal).
 const pgLike = (s) => String(s).replace(/[\\%_]/g, (c) => `\\${c}`);
-// Rename a project across the name-keyed catalog rows. project_assets needs
-// no change (keyed by project_id — only projects.name moves). Filenames
-// embed the scenario prefix, so swap the LEADING "<old>_" / "<old>_wan_" /
-// "<old>_vertical_" / "<old>_wan_vertical_" only — never a blind substring
-// replace (beat titles can contain anything).
+// Display-name rename across the name-keyed catalog rows. Storage
+// (outputs dirs, filenames, assets/project_assets paths, folder_name) is
+// IMMUTABLE and intentionally untouched here — that is what keeps images,
+// thumbnails and videos resolving after a project is renamed or edited.
 async function pgRenameRows(oldName, newName) {
   const now = Date.now();
   await pgPool.query("UPDATE scenarios SET name = $2, updated_at_ms = $3 WHERE name = $1", [oldName, newName, now]);
   await pgPool.query("UPDATE scenario_versions SET name = $2 WHERE name = $1", [oldName, newName]);
   await pgPool.query("UPDATE projects SET name = $2, updated_at = now() WHERE name = $1", [oldName, newName]);
-  // Assets rows live under all four output dirs (engines x formats). Rename
-  // each variant separately: scenario + leading filename prefix. rel_path is
-  // rebuilt from the new dir + new filename so it never points at a stale
-  // file (substr offsets use the RAW prefix length — the LIKE pattern is
-  // backslash-escaped, so length($3) would be wrong for names with _/%/\).
-  for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
-    const oldSc = oldName + suffix;
-    const newSc = newName + suffix;
-    const oldDir = `outputs/${oldSc}/`;
-    const newDir = `outputs/${newSc}/`;
-    await pgPool.query(
-      `UPDATE assets SET
-         scenario = $2,
-         file = CASE
-           WHEN file LIKE $3 ESCAPE '\\' THEN $2 || substr(file, char_length($1) + 2)
-           ELSE file END,
-         rel_path = $5 || CASE
-           WHEN file LIKE $3 ESCAPE '\\' THEN $2 || substr(file, char_length($1) + 2)
-           ELSE substr(rel_path, char_length($4) + 1) END
-       WHERE scenario = $1`,
-      [oldSc, newSc, pgLike(oldSc) + "\\_%", oldDir, newDir]);
-  }
 }
 async function dbRenameScenario(oldName, newName) {
   if (USE_SQLITE) {
@@ -184,56 +175,284 @@ async function pgRenameScenarioMirror(oldName, newName) {
 // (state.json, foreign files) passes through untouched.
 const swapPrefix = (file, oldPrefix, newPrefix) =>
   (typeof file === "string" && file.startsWith(oldPrefix)) ? newPrefix + file.slice(oldPrefix.length) : file;
-// Move prompts/<old>.json + outputs/<old>[engines x formats] to the new name,
-// swapping the embedded filename prefix and state.json mains (generated files
-// are namespaced "<name>_" / "<name>_wan_" / "<name>_vertical_" /
-// "<name>_wan_vertical_"). Throws before touching anything
-// when a target dir already exists (checked by the caller too).
-function renameScenarioFiles(oldName, newName) {
-  const pj = path.join(PROMPTS, oldName + ".json");
-  if (fs.existsSync(pj)) fs.renameSync(pj, path.join(PROMPTS, newName + ".json"));
+// Move outputs/<oldBase>[engines x formats] to outputs/<newBase>, swapping
+// the embedded leading filename prefix and state.json mains (generated files
+// are namespaced "<base>_" / "<base>_wan_" / ...). Variants whose target dir
+// already exists are MERGED file-by-file (collisions keep the target file);
+// missing source variants are skipped. Returns moved [oldDir, newDir] pairs.
+// Shared by legacy storage migration (display-name dirs -> folder dirs).
+// (Prompts JSON is keyed by display name and is NOT moved here.)
+function moveOutputDirs(oldBase, newBase) {
+  const moved = [];
   for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
-    const oldDir = path.join(OUTPUTS, oldName + suffix);
+    const oldDir = path.join(OUTPUTS, oldBase + suffix);
     if (!fs.existsSync(oldDir)) continue;
-    const newDir = path.join(OUTPUTS, newName + suffix);
-    if (fs.existsSync(newDir)) throw new Error(`outputs folder ${newName + suffix} already exists`);
-    const from = oldName + suffix + "_";
-    const to = newName + suffix + "_";
+    const newDir = path.join(OUTPUTS, newBase + suffix);
+    const from = oldBase + suffix + "_";
+    const to = newBase + suffix + "_";
+    if (fs.existsSync(newDir)) {
+      // Merge: relocate non-colliding files, then drop the empty shell.
+      for (const f of fs.readdirSync(oldDir)) {
+        const swapped = swapPrefix(f, from, to);
+        if (swapped !== f && fs.existsSync(path.join(newDir, swapped))) continue; // keep target
+        const dest = swapped !== f ? path.join(newDir, swapped) : path.join(newDir, f);
+        try { fs.renameSync(path.join(oldDir, f), dest); } catch { /* keep going */ }
+      }
+      // Fold the old state.json mains into the surviving one when it lacks them.
+      mergeStateMains(newDir, oldDir, from, to);
+      try {
+        if (!fs.readdirSync(oldDir).filter((f) => f !== "state.json").length) {
+          if (fs.existsSync(path.join(oldDir, "state.json"))) {
+            try { fs.unlinkSync(path.join(oldDir, "state.json")); } catch { /* keep */ }
+          }
+          fs.rmdirSync(oldDir);
+        }
+      } catch { /* leftover shell stays — harmless */ }
+      moved.push([oldBase + suffix, newBase + suffix]);
+      continue;
+    }
     for (const f of fs.readdirSync(oldDir)) {
       const swapped = swapPrefix(f, from, to);
       if (swapped !== f) fs.renameSync(path.join(oldDir, f), path.join(oldDir, swapped));
     }
     // state.json mains reference filenames — swap the same prefix. A corrupt
     // file is left alone (versionMap falls back to latest-on-disk).
-    const sf = path.join(oldDir, "state.json");
-    if (fs.existsSync(sf)) {
-      try {
-        const st = JSON.parse(fs.readFileSync(sf, "utf8"));
-        if (st && typeof st === "object") {
-          if (st.ref) st.ref = swapPrefix(st.ref, from, to);
-          if (st.final) st.final = swapPrefix(st.final, from, to);
-          if (st.beats && typeof st.beats === "object") {
-            for (const k of Object.keys(st.beats)) {
-              const b = st.beats[k];
-              if (b && typeof b === "object") {
-                if (b.keyframe) b.keyframe = swapPrefix(b.keyframe, from, to);
-                if (b.clip) b.clip = swapPrefix(b.clip, from, to);
-              }
-            }
-          }
-          fs.writeFileSync(sf, JSON.stringify(st, null, 2));
-        }
-      } catch { /* keep old mains */ }
-    }
+    rewriteStatePrefixes(oldDir, from, to);
     fs.renameSync(oldDir, newDir);
+    moved.push([oldBase + suffix, newBase + suffix]);
   }
+  return moved;
+}
+// Rewrite state.json mains with a filename mapping (old file -> new file).
+// Used by storage migration after slug renames; unknown values pass through.
+function rewriteStateFiles(dir, renameMap) {
+  const sf = path.join(dir, "state.json");
+  if (!fs.existsSync(sf)) return;
+  try {
+    const st = JSON.parse(fs.readFileSync(sf, "utf8"));
+    if (!st || typeof st !== "object") return;
+    const swap = (v) => (typeof v === "string" && renameMap.has(v) ? renameMap.get(v) : v);
+    if (st.ref) st.ref = swap(st.ref);
+    if (st.final) st.final = swap(st.final);
+    if (st.beats && typeof st.beats === "object") {
+      for (const k of Object.keys(st.beats)) {
+        const b = st.beats[k];
+        if (b && typeof b === "object") {
+          if (b.keyframe) b.keyframe = swap(b.keyframe);
+          if (b.clip) b.clip = swap(b.clip);
+        }
+      }
+    }
+    fs.writeFileSync(sf, JSON.stringify(st, null, 2));
+  } catch { /* keep old mains */ }
+}
+function rewriteStatePrefixes(dir, from, to) {
+  const sf = path.join(dir, "state.json");
+  if (!fs.existsSync(sf)) return;
+  try {
+    const st = JSON.parse(fs.readFileSync(sf, "utf8"));
+    if (st && typeof st === "object") {
+      if (st.ref) st.ref = swapPrefix(st.ref, from, to);
+      if (st.final) st.final = swapPrefix(st.final, from, to);
+      if (st.beats && typeof st.beats === "object") {
+        for (const k of Object.keys(st.beats)) {
+          const b = st.beats[k];
+          if (b && typeof b === "object") {
+            if (b.keyframe) b.keyframe = swapPrefix(b.keyframe, from, to);
+            if (b.clip) b.clip = swapPrefix(b.clip, from, to);
+          }
+        }
+      }
+      fs.writeFileSync(sf, JSON.stringify(st, null, 2));
+    }
+  } catch { /* keep old mains */ }
+}
+// Fold an absorbed state.json's mains into the surviving dir's state when the
+// survivor has no main recorded for that asset (pins from the surviving file
+// always win — they are the newer deliberate choice).
+function mergeStateMains(surviveDir, absorbedDir, from, to) {
+  const a = path.join(absorbedDir, "state.json");
+  const s = path.join(surviveDir, "state.json");
+  if (!fs.existsSync(a)) return;
+  try {
+    const oldSt = JSON.parse(fs.readFileSync(a, "utf8"));
+    let newSt = {};
+    try { if (fs.existsSync(s)) newSt = JSON.parse(fs.readFileSync(s, "utf8")) || {}; } catch { newSt = {}; }
+    const pick = (v) => (typeof v === "string" ? swapPrefix(v, from, to) : v);
+    if (!newSt.ref && oldSt && oldSt.ref) newSt.ref = pick(oldSt.ref);
+    if (!newSt.final && oldSt && oldSt.final) newSt.final = pick(oldSt.final);
+    const beats = (oldSt && oldSt.beats && typeof oldSt.beats === "object") ? oldSt.beats : {};
+    newSt.beats = { ...(newSt.beats || {}) };
+    for (const k of Object.keys(beats)) {
+      const b = beats[k] || {};
+      const cur = newSt.beats[k] || {};
+      newSt.beats[k] = {
+        ...cur,
+        ...(!cur.keyframe && b.keyframe ? { keyframe: pick(b.keyframe) } : {}),
+        ...(!cur.clip && b.clip ? { clip: pick(b.clip) } : {}),
+      };
+    }
+    fs.writeFileSync(s, JSON.stringify(newSt, null, 2));
+  } catch { /* survivor keeps its state */ }
+}
+// Legacy rename entry point (prompts JSON only — outputs dirs are immutable
+// storage now and move exclusively via moveOutputDirs during migration).
+function renameScenarioFiles(oldName, newName) {
+  const pj = path.join(PROMPTS, oldName + ".json");
+  if (fs.existsSync(pj)) fs.renameSync(pj, path.join(PROMPTS, newName + ".json"));
+}
+// Slugify legacy filenames inside one output dir using the CURRENT config
+// beat titles: "<prefix>_{seq,clip}<n>_<raw title>[(_vN)].<ext>" ->
+// "<prefix>_{seq,clip}<n>_<slug title>[(_vN)].<ext>". Returns the old->new
+// filename map (for state.json + DB path rewrites). Collisions are skipped.
+function slugifyDirFilenames(dir, prefix, seq) {
+  const renamed = new Map();
+  if (!fs.existsSync(dir) || !Array.isArray(seq)) return renamed;
+  const kinds = [["seq", ".png"], ["clip", ".mp4"]];
+  seq.forEach((s, i) => {
+    const n = i + 1;
+    const raw = String(s?.title ?? "");
+    const slug = fileSlug(raw);
+    if (!raw || raw === slug) return;
+    for (const [kind, ext] of kinds) {
+      const rawBase = `${prefix}_${kind}${n}_${raw}`;
+      const slugBase = `${prefix}_${kind}${n}_${slug}`;
+      let files = [];
+      try {
+        files = fs.readdirSync(dir).filter((f) =>
+          f === rawBase + ext || (f.startsWith(rawBase + "_v") && f.endsWith(ext)));
+      } catch { files = []; }
+      for (const f of files) {
+        const rest = f.slice(rawBase.length, -ext.length); // "" | "_vN"
+        if (rest && !/^_v\d+$/.test(rest)) continue;
+        const dest = slugBase + rest + ext;
+        if (fs.existsSync(path.join(dir, dest))) continue; // never clobber
+        try {
+          fs.renameSync(path.join(dir, f), path.join(dir, dest));
+          renamed.set(f, dest);
+        } catch { /* keep going */ }
+      }
+    }
+  });
+  return renamed;
+}
+// One-time legacy migration for a project: claim its immutable folder,
+// relocate display-name output dirs to folder dirs (prefix swap), slugify
+// legacy spaced filenames, and rewrite state.json + DB paths from the exact
+// rename map. Safe no-op when already canonical. Returns the folder.
+async function migrateProjectStorage(displayName) {
+  const stored = pgUp ? await getFolderNameFromRow(displayName) : null;
+  const folder = stored || (pgUp ? await ensureUniqueFolder(displayName, displayName) : folderName(displayName));
+  if (pgUp && !stored) {
+    try {
+      await pgPool.query(
+        "UPDATE projects SET folder_name = $2 WHERE name = $1 AND (folder_name IS NULL OR folder_name = '')",
+        [displayName, folder]);
+    } catch { /* row may not exist yet — claimed on next save */ }
+  }
+  // Slug pass over canonical dirs (fixes spaced beat-title filenames even
+  // when the folder already matches the name).
+  const renameMap = new Map(); // "dir/file" -> new file
+  try {
+    const raw = await dbGetScenario(displayName);
+    const cfg = raw ? JSON.parse(raw) : null;
+    const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+    for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
+      const dir = path.join(OUTPUTS, folder + suffix);
+      if (!fs.existsSync(dir)) continue;
+      const prefix = prefixForDir(folder + suffix);
+      for (const [oldF, newF] of slugifyDirFilenames(dir, prefix, seq)) {
+        renameMap.set(`${folder + suffix}/${oldF}`, `${folder + suffix}/${newF}`);
+      }
+    }
+  } catch { /* config unreadable — skip slug pass */ }
+  // Relocate legacy display-name dirs (different base only).
+  let moved = [];
+  if (folder !== displayName) {
+    try { moved = moveOutputDirs(displayName, folder); }
+    catch (e) { console.warn(`[migrate] dir move failed for ${displayName}:`, e.message); moved = []; }
+    // Slug pass over freshly moved dirs (old prefix, raw titles).
+    try {
+      const raw = await dbGetScenario(displayName);
+      const cfg = raw ? JSON.parse(raw) : null;
+      const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+      for (const [, newBase] of moved) {
+        const dir = path.join(OUTPUTS, newBase);
+        const prefix = prefixForDir(newBase);
+        for (const [oldF, newF] of slugifyDirFilenames(dir, prefix, seq)) {
+          renameMap.set(`${newBase}/${oldF}`, `${newBase}/${newF}`);
+        }
+      }
+    } catch { /* skip */ }
+  }
+  // Rewrite state.json mains from the exact rename map.
+  if (renameMap.size) {
+    const byDir = new Map();
+    for (const [from, to] of renameMap) {
+      const slash = from.indexOf("/");
+      const dir = from.slice(0, slash), oldF = from.slice(slash + 1), newF = to.slice(to.indexOf("/") + 1);
+      if (!byDir.has(dir)) byDir.set(dir, new Map());
+      byDir.get(dir).set(oldF, newF);
+    }
+    for (const [dir, map] of byDir) rewriteStateFiles(path.join(OUTPUTS, dir), map);
+  }
+  if (pgUp && (moved.length || renameMap.size)) {
+    // project_assets: exact-match path rewrites + frozen folder stamp.
+    try {
+      const pid = await pgProjectId(displayName);
+      if (pid != null) {
+        await pgPool.query("UPDATE project_assets SET folder_name = $2 WHERE project_id = $1", [pid, folder]);
+        for (const [from, to] of renameMap) {
+          const oldP = `outputs/${from}`, newP = `outputs/${to}`;
+          await pgPool.query(
+            "UPDATE project_assets SET file_path = $3 WHERE project_id = $1 AND file_path = $2",
+            [pid, oldP, newP]);
+          const oldF = from.slice(from.indexOf("/") + 1), newF = to.slice(to.indexOf("/") + 1);
+          await pgPool.query(
+            `UPDATE project_assets SET metadata = jsonb_set(metadata, '{file}', to_jsonb($3::text))
+             WHERE project_id = $1 AND metadata->>'file' = $2`,
+            [pid, oldF, newF]);
+        }
+        for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
+          try { await pgRefreshProjectFiles(displayName, folder + suffix); } catch { /* no dir */ }
+        }
+      }
+    } catch (e) { console.warn(`[migrate] project_assets fixup failed for ${displayName}:`, e.message); }
+    // project_references: moved dirs change output_dir; renames change
+    // file_path + metadata.file (exact matches from the rename map).
+    try {
+      const pid = await pgProjectId(displayName);
+      if (pid != null) {
+        for (const [oldBase, newBase] of moved) {
+          await pgPool.query(
+            "UPDATE project_references SET output_dir = $3 WHERE project_id = $1 AND output_dir = $2",
+            [pid, oldBase, newBase]);
+        }
+        for (const [from, to] of renameMap) {
+          const oldP = `outputs/${from}`, newP = `outputs/${to}`;
+          await pgPool.query(
+            "UPDATE project_references SET file_path = $3 WHERE project_id = $1 AND file_path = $2",
+            [pid, oldP, newP]);
+          const oldF = from.slice(from.indexOf("/") + 1), newF = to.slice(to.indexOf("/") + 1);
+          await pgPool.query(
+            `UPDATE project_references SET metadata = jsonb_set(metadata, '{file}', to_jsonb($3::text))
+             WHERE project_id = $1 AND metadata->>'file' = $2`,
+            [pid, oldF, newF]);
+        }
+      }
+    } catch (e) { console.warn(`[migrate] references fixup failed for ${displayName}:`, e.message); }
+  }
+  return folder;
 }
 
 // ---------------------------------------------------------------- pg catalog
-// Every generated image/video is indexed in Postgres `video_generator`
-// (binaries stay in outputs/ — the DB is the catalog). The gallery file list
-// is served from here, so logging in reads your generations from the DB.
-// If Postgres is down the server keeps working from disk (pgUp === false).
+// Every finished generation is tracked in Postgres `video_generator`
+// (binaries stay in outputs/ — the DB is the catalog):
+//   project_assets     — keyframe / clip / final rows per version
+//   project_references — reference visuals, one row per generation/upload
+// The gallery file list and dashboard coverage are derived from disk
+// (outputs/ dirs are the source of truth for files). If Postgres is down
+// the server keeps working from disk (pgUp === false).
 const pgPool = new Pool({
   host: process.env.PG_HOST || "localhost",
   port: Number(process.env.PG_PORT || 5432),
@@ -249,23 +468,6 @@ CREATE TABLE IF NOT EXISTS scenarios (
   config JSONB NOT NULL,
   updated_at_ms BIGINT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS assets (
-  id BIGSERIAL PRIMARY KEY,
-  scenario TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('reference','keyframe','clip','final','other')),
-  file TEXT NOT NULL,
-  rel_path TEXT NOT NULL,
-  bytes BIGINT NOT NULL,
-  beat_index INT,
-  beat_title TEXT,
-  version INT,
-  engine TEXT NOT NULL DEFAULT 'ltx' CHECK (engine IN ('ltx','wan')),
-  mtime TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (scenario, file)
-);
-CREATE INDEX IF NOT EXISTS assets_scenario_idx ON assets (scenario);
-CREATE INDEX IF NOT EXISTS assets_kind_idx ON assets (kind);
 CREATE TABLE IF NOT EXISTS scenario_versions (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -278,15 +480,18 @@ CREATE INDEX IF NOT EXISTS scenario_versions_name_idx ON scenario_versions (name
 CREATE TABLE IF NOT EXISTS projects (
   project_id SERIAL UNIQUE,
   name TEXT PRIMARY KEY,
+  folder_name TEXT,
   description TEXT,
   duration INT,
   beats INT NOT NULL DEFAULT 0,
+  master_prompt TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS project_assets (
   id BIGSERIAL NOT NULL,
   project_id INTEGER NOT NULL,
+  folder_name TEXT,
   version INTEGER NOT NULL DEFAULT 1,
   scene_id INTEGER,
   beat_index INTEGER NOT NULL DEFAULT 0,
@@ -331,11 +536,43 @@ CREATE OR REPLACE FUNCTION public.update_project_assets_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$;
 DROP TRIGGER IF EXISTS trg_project_assets_updated_at ON public.project_assets;
 CREATE TRIGGER trg_project_assets_updated_at BEFORE UPDATE ON public.project_assets
-FOR EACH ROW EXECUTE FUNCTION public.update_project_assets_updated_at();`;
+FOR EACH ROW EXECUTE FUNCTION public.update_project_assets_updated_at();
+-- Reference visuals live in their own table (a project has MANY master
+-- prompts / reference images over time — one row per generation or upload).
+-- project_assets no longer stores asset_type='REFERENCE' rows. is_main marks
+-- the record selected as main on the UI (one per project + output dir);
+-- pinned marks a deliberate user pick (manual select / upload) that keeps
+-- winning over later auto generations.
+CREATE TABLE IF NOT EXISTS project_references (
+  id BIGSERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES public.projects(project_id) ON DELETE CASCADE,
+  output_dir TEXT NOT NULL,
+  version INTEGER,
+  prompt TEXT,
+  negative_prompt TEXT,
+  file_path TEXT,
+  model TEXT,
+  workflow TEXT,
+  seed BIGINT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'generated' CHECK (source IN ('generated', 'upload')),
+  is_main BOOLEAN NOT NULL DEFAULT FALSE,
+  pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  metadata JSONB,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS project_references_one_main
+  ON public.project_references(project_id, output_dir) WHERE is_main;
+CREATE INDEX IF NOT EXISTS idx_project_references_project ON public.project_references(project_id);`;
 // NOTE: project_assets uses the narrow canonical DDL above (one row per
-// asset: REFERENCE / KEYFRAME / VIDEO (+ IMAGE for ad-hoc stills), with a
+// asset: KEYFRAME / VIDEO / FINAL (+ IMAGE for ad-hoc stills), with a
 // single status/prompt/file_path per row; scene_id is the INTEGER scene
-// number (0 = reference, N = beat N). A TEXT scene_id from the previous
+// number (N = beat N). Reference visuals are NOT stored here anymore — they
+// live in project_references (one row per generation/upload, is_main marks
+// the UI-selected main). A TEXT scene_id from the previous
 // revision is auto-migrated in pgInit(); the old wide table still needs a
 // one-time DROP TABLE public.project_assets; to be recreated.
 async function pgProbe() {
@@ -352,92 +589,9 @@ function finalCutVersion(file) {
   const m = String(file || "").match(/_final(?:_v(\d+))?\.mp4$/);
   return m ? (m[1] ? Number(m[1]) : 1) : null;
 }
-// filename -> { kind, beat_index, beat_title, version }
-function classifyAsset(file) {
-  let m = file.match(/_seq(\d+)_(.+)\.png$/);
-  if (m) return splitBeat("keyframe", Number(m[1]), m[2]);
-  m = file.match(/_clip(\d+)_(.+)\.mp4$/);
-  if (m) return splitBeat("clip", Number(m[1]), m[2]);
-  m = file.match(/_ref(?:_v(\d+))?\.png$/);
-  if (m) return { kind: "reference", beat_index: null, beat_title: null, version: m[1] ? Number(m[1]) : 1 };
-  m = file.match(/_final(?:_v(\d+))?\.mp4$/);
-  if (m) return { kind: "final", beat_index: null, beat_title: null, version: m[1] ? Number(m[1]) : 1 };
-  return { kind: "other", beat_index: null, beat_title: null, version: null };
-  function splitBeat(kind, idx, rest) {
-    let version = 1;
-    const vm = rest.match(/^(.*)_v(\d+)$/);
-    if (vm) { rest = vm[1]; version = Number(vm[2]); }
-    return { kind, beat_index: idx, beat_title: rest, version };
-  }
-}
-function assetRow(folder, file) {
-  const full = path.join(OUTPUTS, folder, file);
-  let st;
-  try { st = fs.statSync(full); } catch { return null; }
-  if (!st.isFile()) return null;
-  const c = classifyAsset(file);
-  return {
-    scenario: folder, kind: c.kind, file, rel_path: `outputs/${folder}/${file}`,
-    bytes: st.size, beat_index: c.beat_index, beat_title: c.beat_title, version: c.version,
-    engine: engineForDir(folder), mtimeISO: st.mtime.toISOString(),
-  };
-}
-const ASSET_COLUMNS = `(scenario, kind, file, rel_path, bytes, beat_index, beat_title, version, engine, mtime)`;
-const ASSET_CONFLICT = `ON CONFLICT (scenario, file) DO UPDATE SET bytes = EXCLUDED.bytes, beat_index = EXCLUDED.beat_index,
-  beat_title = EXCLUDED.beat_title, version = EXCLUDED.version, engine = EXCLUDED.engine, mtime = EXCLUDED.mtime`;
-const ASSET_UPSERT = `INSERT INTO assets ${ASSET_COLUMNS}
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz)
-${ASSET_CONFLICT}`;
-const rowParams = (r) => [r.scenario, r.kind, r.file, r.rel_path, r.bytes, r.beat_index, r.beat_title, r.version, r.engine, r.mtimeISO];
-async function pgInsertAssetRows(rows) {
-  for (let i = 0; i < rows.length; i += 200) {
-    const batch = rows.slice(i, i + 200);
-    const vals = batch.map((_, bi) => {
-      const o = bi * 10;
-      return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}::timestamptz)`;
-    }).join(", ");
-    const params = batch.flatMap(rowParams);
-    await pgPool.query(`INSERT INTO assets ${ASSET_COLUMNS} VALUES ${vals} ${ASSET_CONFLICT}`, params);
-  }
-}
-// Index one fresh file (called on every finished generation + ref upload).
-async function pgUpsertAsset(folder, file) {
-  if (!pgUp) return;
-  const row = assetRow(folder, file);
-  if (!row) return;
-  await pgPool.query(ASSET_UPSERT, rowParams(row));
-}
-// Reconcile a whole output dir (called when a run exits).
-async function pgSyncFolder(folder) {
-  if (!pgUp) return;
-  const dir = path.join(OUTPUTS, folder);
-  if (!fs.existsSync(dir)) return;
-  const rows = fs.readdirSync(dir)
-    .filter((f) => /\.(png|mp4)$/i.test(f))
-    .map((f) => assetRow(folder, f))
-    .filter(Boolean);
-  await pgInsertAssetRows(rows);
-}
-// Full backfill on boot (files created while the server was down).
+// Full backfill on boot (scenarios / versions / projects for files created
+// while the server was down). File lists always come from disk.
 async function syncAllToPg() {
-  const rows = [];
-  // outputs/ may have been wiped — a missing dir means zero assets, not a crash.
-  if (fs.existsSync(OUTPUTS)) {
-    for (const folder of fs.readdirSync(OUTPUTS)) {
-      const dir = path.join(OUTPUTS, folder);
-      let files = [];
-      try {
-        if (!fs.statSync(dir).isDirectory()) continue;
-        files = fs.readdirSync(dir);
-      } catch { continue; } // folder removed mid-scan — skip it
-      for (const file of files) {
-        if (!/\.(png|mp4)$/i.test(file)) continue;
-        const r = assetRow(folder, file);
-        if (r) rows.push(r);
-      }
-    }
-  }
-  await pgInsertAssetRows(rows);
   if (!USE_SQLITE) {
     // Fresh Postgres: import any prompts/*.json once (mirrors the legacy
     // SQLite boot import) so existing CLI scenarios show up in the UI.
@@ -485,10 +639,16 @@ async function syncAllToPg() {
         if (has.rowCount) continue;
       }
       const cfg = JSON.parse(raw);
-      await pgSaveProject(name, cfg, Number(version), mainsFor(name, cfg), name);
+      // Backfill against the canonical folder (migrates legacy raw dirs
+      // first so mains resolve from real files, not empty dirs).
+      const folder = await migrateProjectStorage(name);
+      await pgSaveProject(name, cfg, Number(version), mainsFor(folder, cfg), folder);
+      // Reference mains (all four dirs) into project_references — skipped
+      // when the project already has reference rows.
+      await pgBackfillReferences(name, folder, cfg);
     } catch (e) { console.warn(`[pg] project backfill failed for ${name}:`, e.message); }
   }
-  console.log(`[pg] catalog synced (${rows.length} assets)`);
+  console.log(`[pg] projects backfilled`);
 }
 async function pgSaveScenarioMirror(name, cfg) {
   if (!pgUp) return;
@@ -499,7 +659,6 @@ async function pgSaveScenarioMirror(name, cfg) {
 }
 async function pgDeleteScenarioMirror(name) {
   if (!pgUp) return;
-  await pgPool.query("DELETE FROM assets WHERE scenario = ANY($1)", [allDirsFor(name)]);
   await pgPool.query("DELETE FROM scenarios WHERE name = $1", [name]);
   await pgPool.query("DELETE FROM scenario_versions WHERE name = $1", [name]);
   // Delete the project by its integer project_id (cascades to project_assets).
@@ -518,17 +677,25 @@ async function pgProjectId(name) {
 // scenario saves to projects" means: the project exists from the moment it
 // is crafted, before any version/asset rows. Save Scenario later reuses the
 // same project_id for its project_assets rows (see pgSaveProject).
+// folder_name is set ONCE on INSERT and never updated on subsequent saves.
 async function pgEnsureProject(name, cfg) {
   const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+  // folder_name is minted ONCE (unique) and then frozen — re-saves and
+  // renames never change it, so output dirs and DB paths stay stable.
+  let fn = await getFolderNameFromRow(name);
+  if (!fn) fn = await ensureUniqueFolder(name, name);
   const proj = await pgPool.query(
-    `INSERT INTO projects (name, description, duration, beats, updated_at)
-     VALUES ($1, $2, $3, $4, now())
-     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
-       duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+    `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, now())
+     ON CONFLICT (name) DO UPDATE SET
+        folder_name = COALESCE(NULLIF(projects.folder_name, ''), EXCLUDED.folder_name),
+       description = EXCLUDED.description, duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+       master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
        updated_at = now()
      RETURNING project_id`,
-    [name, cfg.description ?? null,
-     Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length]);
+    [name, fn, cfg.description ?? null,
+     Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
+     cfg.referencePrompt ?? null]);
   const projectId = proj.rows[0]?.project_id;
   if (projectId == null) throw new Error(`pgEnsureProject: no project_id for ${name}`);
   return projectId;
@@ -559,12 +726,13 @@ function mainsFor(dirName, cfg) {
 }
 // ---------------------------------------------------------------- project_assets mapping
 // Canonical table: public.project_assets (narrow DDL — one row per asset).
-//   asset_type='REFERENCE', beat_index=0 -> Flux reference visual
 //   asset_type='KEYFRAME',  beat_index=N -> beat N Flux keyframe (b.image)
 //   asset_type='VIDEO',     beat_index=N -> beat N i2v clip (b.motion)
 //   asset_type='FINAL',     beat_index=V -> stitch V of the final cut
 //     (v1 = <prefix>_final.mp4, vN = <prefix>_final_vN.mp4; one NEW row per
 //     stitch, scene_id 0, workflow 'ffmpeg-concat')
+// Reference visuals are NOT rows here — they live in project_references
+// (one row per generation/upload, is_main = UI-selected main).
 // ('IMAGE' is valid for ad-hoc stills; this pipeline writes KEYFRAME.)
 // Each row has its own prompt/status/file_path/model/workflow/attempts/
 // metadata/started_at/completed_at. Size/dims live inside metadata JSONB.
@@ -615,18 +783,21 @@ const engineForFolder = (folder) => engineForDir(folder);
 // have no project_assets rows yet. For v2+ use pgSaveVersionDelta() below,
 // which inserts ONLY the changed scenes (delta-based versioning).
 // Narrow schema: ONE ROW PER ASSET —
-//   asset_type='REFERENCE', beat_index=0        -> Flux reference visual
 //   asset_type='KEYFRAME',  beat_index=N        -> beat N Flux keyframe (b.image)
 //   asset_type='VIDEO',     beat_index=N        -> beat N i2v clip (b.motion)
 // ('IMAGE' stays valid for ad-hoc single stills; this pipeline writes
-// KEYFRAME for beat images.) Each row carries its own prompt/status/
+// KEYFRAME for beat images. Reference visuals live in project_references.)
+// Each row carries its own prompt/status/
 // file_path/model/workflow/attempts/metadata/timing. Size/dims live inside
 // metadata (no width/height columns in the narrow DDL).
 // Existing COMPLETED rows are never downgraded back to PENDING.
 async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
+  // Asset rows carry the STORED immutable folder (a rename must not rewrite
+  // history paths). outputFolder defaults to it when the caller passes none.
+  const folderSlug = (await getFolderNameFromRow(name)) || folderName(name);
   const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
   const projectId = await pgEnsureProject(name, cfg);
-  const folder = outputFolder ?? name;
+  const folder = outputFolder ?? folderSlug;
   const engine = engineForFolder(folder);
   const videoModel = engine === "wan" ? WAN_MODEL : LTX_MODEL;
   const videoWorkflow = engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW;
@@ -639,34 +810,27 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
   const sceneId = (beat) => beat;
   const relPath = (file) => (file ? `outputs/${folder}/${file}` : null);
   const UPSERT = `INSERT INTO project_assets (
-      project_id, version, scene_id, beat_index, beat_title,
-      asset_type, status, prompt, negative_prompt, file_path,
-      model, workflow, attempts, max_retries, metadata, started_at, completed_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 3, $14::jsonb,
-      $15::timestamptz, $16::timestamptz
-    )
-    ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
-      scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
-      prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
-      file_path = COALESCE(EXCLUDED.file_path, project_assets.file_path),
-      model = EXCLUDED.model, workflow = EXCLUDED.workflow,
-      attempts = GREATEST(project_assets.attempts, EXCLUDED.attempts),
-      metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata),
-      status = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN 'COMPLETED' ELSE project_assets.status END,
-      started_at = CASE WHEN EXCLUDED.file_path IS NOT NULL AND project_assets.started_at IS NULL THEN now() ELSE project_assets.started_at END,
-      completed_at = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN now() ELSE project_assets.completed_at END`;
+    project_id, folder_name, version, scene_id, beat_index, beat_title,
+    asset_type, status, prompt, negative_prompt, file_path,
+    model, workflow, attempts, max_retries, metadata, started_at, completed_at
+  ) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
+    $16::timestamptz, $17::timestamptz
+  )
+  ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+    folder_name = EXCLUDED.folder_name,
+    scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+    prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
+    file_path = COALESCE(EXCLUDED.file_path, project_assets.file_path),
+    model = EXCLUDED.model, workflow = EXCLUDED.workflow,
+    attempts = GREATEST(project_assets.attempts, EXCLUDED.attempts),
+    metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata),
+    status = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN 'COMPLETED' ELSE project_assets.status END,
+    started_at = CASE WHEN EXCLUDED.file_path IS NOT NULL AND project_assets.started_at IS NULL THEN now() ELSE project_assets.started_at END,
+    completed_at = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN now() ELSE project_assets.completed_at END`;
   const nowISO = new Date().toISOString();
-  // Reference visual.
-  {
-    const refFile = mains.ref ?? null;
-    const rf = diskFacts(folder, refFile);
-    await pgPool.query(UPSERT, [projectId, version, sceneId(0), 0, null,
-      "REFERENCE", done(refFile), cfg.referencePrompt ?? null, negative,
-      relPath(refFile), REF_MODEL, REF_WORKFLOW, refFile ? 1 : 0,
-      refFile ? JSON.stringify({ engine, file: refFile, version, ...rf }) : null,
-      refFile ? nowISO : null, refFile ? nowISO : null]);
-  }
+  // No REFERENCE row here — reference visuals live in project_references
+  // (one row per generation/upload, recorded on completion).
   for (let i = 0; i < seq.length; i++) {
     const b = seq[i] || {};
     const n = i + 1;
@@ -675,12 +839,20 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     const cl = bm.clipMain ?? null;
     const kfFacts = diskFacts(folder, kf);
     const clFacts = diskFacts(folder, cl);
-    await pgPool.query(UPSERT, [projectId, version, sceneId(n), n, b.title ?? null,
+    await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
       "KEYFRAME", done(kf), b.image ?? null, negative,
       relPath(kf), IMG_MODEL, IMG_WORKFLOW, kf ? 1 : 0,
       kf ? JSON.stringify({ engine, file: kf, beat: n, ...kfFacts }) : null,
       kf ? nowISO : null, kf ? nowISO : null]);
-    await pgPool.query(UPSERT, [projectId, version, sceneId(n), n, b.title ?? null,
+    const img = cfg.image; // optional still from AI Craft
+    if (img) {
+      await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, null,
+        "IMAGE", done(img), cfg.imagePrompt ?? null, null, relPath(img),
+        IMG_MODEL, IMG_WORKFLOW, img ? 1 : 0,
+        img ? JSON.stringify({ engine, file: img }) : null,
+        nowISO, nowISO]);
+    }
+    await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
       "VIDEO", done(cl), b.motion ?? null, negative,
       relPath(cl), videoModel, videoWorkflow, cl ? 1 : 0,
       cl ? JSON.stringify({ engine, file: cl, beat: n, fps: videoFps, duration: videoDur, ...clFacts }) : null,
@@ -690,7 +862,7 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
   if (mains.final) {
     const finalV = mains.finalV ?? finalCutVersion(mains.final) ?? 1;
     const ff = diskFacts(folder, mains.final);
-    await pgPool.query(UPSERT, [projectId, version, 0, finalV, null,
+    await pgPool.query(UPSERT, [projectId, folderSlug, version, 0, finalV, null,
       "FINAL", "COMPLETED", null, negative,
       relPath(mains.final), null, "ffmpeg-concat", 1,
       JSON.stringify({ engine, file: mains.final, final_version: finalV, ...ff }),
@@ -721,48 +893,61 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
       [name, JSON.stringify(cfg)]);
     const version = vRow.rows[0].version;
     const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+    // Immutable storage folder for every row/version written below — the
+    // stored one when the project exists, else a freshly minted unique one.
+    // Never recomputed from the (possibly renamed) display name per row.
+    let folder;
+    try {
+      const fRow = await client.query("SELECT folder_name FROM projects WHERE name = $1", [name]);
+      folder = fRow.rows[0]?.folder_name || null;
+    } catch { folder = null; }
+    folder ||= await ensureUniqueFolder(name, name);
     const proj = await client.query(
-      `INSERT INTO projects (name, description, duration, beats, updated_at)
-       VALUES ($1, $2, $3, $4, now())
+      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now())
        ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
          duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+         master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
          updated_at = now()
        RETURNING project_id`,
-      [name, cfg.description ?? null,
-        Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length]);
+      [name, folder, cfg.description ?? null,
+        Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
+        cfg.referencePrompt ?? null]);
     const projectId = proj.rows[0]?.project_id;
     if (projectId == null) throw new Error(`pgSaveVersionDelta: no project_id for ${name}`);
     const previousVersion = Number(version) - 1;
     const plan = planDelta(prevCfg, cfg);
     const negative = cfg.negative ?? null;
     const INSERT = `INSERT INTO project_assets (
-        project_id, version, scene_id, beat_index, beat_title,
-        asset_type, status, prompt, negative_prompt, file_path,
-        model, workflow, attempts, max_retries, metadata
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, NULL, $9, $10, 0, 3, $11::jsonb
-      )
-      ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
-        scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
-        prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
-        model = EXCLUDED.model, workflow = EXCLUDED.workflow,
-        metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata)`;
+      project_id, folder_name, version, scene_id, beat_index, beat_title,
+      asset_type, status, prompt, negative_prompt, file_path,
+      model, workflow, attempts, max_retries, metadata
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+    )
+    ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+      folder_name = EXCLUDED.folder_name,
+      scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
+      model = EXCLUDED.model, workflow = EXCLUDED.workflow,
+      metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata)`;
     const insertedIds = [];
     const changedScenes = [];
     const changedAssetTypes = [];
     if (Number(version) === 1) {
       // v1 = full snapshot: every scene gets its row (with current main
-      // files, as pgSaveProject does). Delegate row-by-row on this client.
-      const mains = mainsFor(name, cfg);
-      const folder = name;
+      // files, as pgSaveProject does). Reference visuals are NOT snapshotted
+      // here — they live in project_references (one row per generation).
+      // `folder` is the transaction-resolved immutable storage folder above.
+      const mains = mainsFor(folder, cfg);
       const engine = engineForFolder(folder);
-      const full = async (sceneId, beat, title, type, prompt, model, workflow, file, meta) => {
-        const r = await client.query(
-          `${INSERT} RETURNING id`,
-          [projectId, version, sceneId, beat, title ?? null, type, prompt ?? null,
-            negative, model, workflow,
-            file ? JSON.stringify({ engine, file, version, ...meta }) : null]);
-        insertedIds.push(r.rows[0].id);
+    const full = async (sceneId, beat, title, type, prompt, model, workflow, file, meta) => {
+      const r = await client.query(
+        `${INSERT} RETURNING id`,
+        [projectId, folder, version, sceneId, beat, title ?? null, type, prompt ?? null,
+          negative, model, workflow,
+          file ? JSON.stringify({ engine, file, version, ...meta }) : null]);
+      insertedIds.push(r.rows[0].id);
         changedScenes.push(sceneId);
         changedAssetTypes.push(type);
         if (file) {
@@ -774,8 +959,6 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
             [`outputs/${folder}/${file}`, nowISO, r.rows[0].id]);
         }
       };
-      await full(0, 0, null, "REFERENCE", cfg.referencePrompt ?? null, REF_MODEL, REF_WORKFLOW,
-        mains.ref ?? null, diskFacts(folder, mains.ref ?? null));
       for (let i = 0; i < seq.length; i++) {
         const b = seq[i] || {};
         const n = i + 1;
@@ -797,17 +980,10 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
       }
     } else {
       // v2+ = delta only: insert PENDING rows for changed scenes, nothing else.
-      const folder = name;
+      // Reference prompt changes do NOT create rows here — the next generated
+      // or uploaded reference is recorded in project_references instead.
+      // `folder` is the transaction-resolved immutable storage folder above.
       const engine = engineForFolder(folder);
-      if (plan.ref) {
-        const r = await client.query(
-          `${INSERT} RETURNING id`,
-          [projectId, version, 0, 0, null, "REFERENCE", cfg.referencePrompt ?? null,
-            negative, REF_MODEL, REF_WORKFLOW, JSON.stringify({ engine })]);
-        insertedIds.push(r.rows[0].id);
-        changedScenes.push(0);
-        changedAssetTypes.push("REFERENCE");
-      }
       for (const [beatStr, types] of Object.entries(plan.beats)) {
         const n = Number(beatStr);
         const b = seq[n - 1] || {};
@@ -815,10 +991,10 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
           const prompt = type === "KEYFRAME" ? (b.image ?? null) : (b.motion ?? null);
           const model = type === "KEYFRAME" ? IMG_MODEL : (engine === "wan" ? WAN_MODEL : LTX_MODEL);
           const workflow = type === "KEYFRAME" ? IMG_WORKFLOW : (engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW);
-          const r = await client.query(
-            `${INSERT} RETURNING id`,
-            [projectId, version, n, n, b.title ?? null, type, prompt,
-              negative, model, workflow, JSON.stringify({ engine, beat: n })]);
+    const r = await client.query(
+      `${INSERT} RETURNING id`,
+      [projectId, folder, version, n, n, b.title ?? null, type, prompt,
+        negative, model, workflow, JSON.stringify({ engine, beat: n })]);
           insertedIds.push(r.rows[0].id);
           changedScenes.push(n);
           changedAssetTypes.push(type);
@@ -838,6 +1014,259 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
     client.release();
   }
 }
+// ---------------------------------------------------------------- in-place save
+// Save Scenario updates the CURRENT project in place: the scenarios row, the
+// prompts JSON, the projects row and the LATEST scenario_versions config are
+// overwritten, and only the changed scenes' project_assets rows AT THAT SAME
+// version are upserted (prompt columns refreshed, file linkage reset to
+// PENDING so the next run regenerates them). No new version row and no new
+// project row are ever created here — v1 (full snapshot via
+// pgSaveVersionDelta) is the only version-creating save. History readers
+// (EFFECTIVE_ASSETS_SQL, per-scene pills) keep working: they simply resolve
+// against a version count that no longer grows on save.
+async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg) {
+  const client = await pgPool.connect();
+  try {
+    await client.query("BEGIN");
+    const version = Number(latestVersion);
+    // Overwrite the latest prompt config (never a new row).
+    await client.query(
+      "UPDATE scenario_versions SET config = $2::jsonb WHERE name = $1 AND version = $3",
+      [name, JSON.stringify(cfg), version]);
+    // Immutable storage folder (same rule as the delta path).
+    let folder;
+    try {
+      const fRow = await client.query("SELECT folder_name FROM projects WHERE name = $1", [name]);
+      folder = fRow.rows[0]?.folder_name || null;
+    } catch { folder = null; }
+    folder ||= await ensureUniqueFolder(name, name);
+    const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+    const proj = await client.query(
+      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now())
+       ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
+         duration = EXCLUDED.duration, beats = EXCLUDED.beats,
+         master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
+         updated_at = now()
+       RETURNING project_id`,
+      [name, folder, cfg.description ?? null,
+        Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
+        cfg.referencePrompt ?? null]);
+    const projectId = proj.rows[0]?.project_id;
+    if (projectId == null) throw new Error(`pgSaveVersionInPlace: no project_id for ${name}`);
+    // Refresh ONLY changed scenes at the same version (delta plan, same
+    // per-type granularity as the old versioned path). Unchanged scenes are
+    // untouched; removed beats produce no rows; added beats are inserted.
+    // Reference prompt changes create no rows (project_references owns them).
+    const plan = planDelta(prevCfg, cfg);
+    const engine = engineForFolder(folder);
+    const negative = cfg.negative ?? null;
+    const UPSERT = `INSERT INTO project_assets (
+      project_id, folder_name, version, scene_id, beat_index, beat_title,
+      asset_type, status, prompt, negative_prompt, file_path,
+      model, workflow, attempts, max_retries, metadata
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+    )
+    ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+      folder_name = EXCLUDED.folder_name,
+      scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
+      model = EXCLUDED.model, workflow = EXCLUDED.workflow,
+      status = 'PENDING', file_path = NULL, error_message = NULL,
+      started_at = NULL, completed_at = NULL,
+      metadata = EXCLUDED.metadata`;
+    const changedScenes = [];
+    const changedAssetTypes = [];
+    for (const [beatStr, types] of Object.entries(plan.beats)) {
+      const n = Number(beatStr);
+      const b = seq[n - 1] || {};
+      for (const type of types) {
+        const prompt = type === "KEYFRAME" ? (b.image ?? null) : (b.motion ?? null);
+        const model = type === "KEYFRAME" ? IMG_MODEL : (engine === "wan" ? WAN_MODEL : LTX_MODEL);
+        const workflow = type === "KEYFRAME" ? IMG_WORKFLOW : (engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW);
+        await client.query(UPSERT,
+          [projectId, folder, version, n, n, b.title ?? null, type, prompt,
+            negative, model, workflow, JSON.stringify({ engine, beat: n })]);
+        changedScenes.push(n);
+        changedAssetTypes.push(type);
+      }
+    }
+    await client.query("COMMIT");
+    console.log(`[save] ${JSON.stringify({
+      project: name, projectId, version, updated: true,
+      changedScenes, changedAssetTypes,
+    })}`);
+    return { version, projectId, changedScenes, changedAssetTypes, updated: true };
+  } catch (e) {
+    try { await client.query("ROLLBACK"); } catch { /* already closed */ }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+// ---------------------------------------------------------------- project_references
+// Reference visuals (master-prompt images) live here — one row per
+// generation or upload, since a project accumulates MANY master prompts and
+// reference images over time. project_assets carries no REFERENCE rows.
+// is_main marks the record selected as main on the UI (one per project +
+// output dir, enforced by a partial unique index); pinned marks a deliberate
+// user pick (manual select / upload) that keeps winning over later auto
+// generations (mirrors the state.json pin semantics the pipeline reads).
+// Parse "V2" out of "<prefix>_ref_v2.png" (v1 = no suffix), else 1.
+const refVersionOf = (file) => {
+  const m = String(file || "").match(/_v(\d+)\.png$/i);
+  return m ? Number(m[1]) : 1;
+};
+// Reference rows for one project dir, oldest first: [{ id, file, v, prompt,
+// source, is_main, pinned, model, created_at }].
+async function pgReferenceList(projectId, dir) {
+  const r = await pgPool.query(
+    `SELECT id, prompt, file_path, metadata, source, is_main, pinned, model,
+            version, created_at
+     FROM project_references WHERE project_id = $1 AND output_dir = $2
+     ORDER BY created_at ASC, id ASC`,
+    [projectId, dir]);
+  return r.rows.map((x) => ({
+    id: Number(x.id),
+    file: x.metadata?.file ?? String(x.file_path || "").split("/").pop() ?? null,
+    v: refVersionOf(x.metadata?.file ?? x.file_path),
+    prompt: x.prompt ?? null,
+    source: x.source,
+    is_main: !!x.is_main,
+    pinned: !!x.pinned,
+    model: x.model ?? null,
+    version: x.version ?? null,
+    created_at: x.created_at ? new Date(x.created_at).toISOString() : null,
+  })).filter((x) => x.file);
+}
+// Record a finished reference generation (or upload) as a NEW row and make
+// it the dir's main — unless a pinned pick already holds main (pins survive
+// auto generations). Uploads/selects pass pinned=true and always take main.
+async function pgAddReference({ projectId, dir, file, prompt, engine, source = "generated" }) {
+  const filePath = `outputs/${dir}/${file}`;
+  const facts = diskFacts(dir, file);
+  const nowISO = new Date().toISOString();
+  const client = await pgPool.connect();
+  try {
+    await client.query("BEGIN");
+    const ver = await client.query(
+      "SELECT max(version) AS v FROM scenario_versions WHERE name = (SELECT name FROM projects WHERE project_id = $1)",
+      [projectId]);
+    const version = ver.rows[0]?.v ?? null;
+    const pin = await client.query(
+      `SELECT id FROM project_references
+       WHERE project_id = $1 AND output_dir = $2 AND pinned LIMIT 1`,
+      [projectId, dir]);
+    const takeMain = source !== "generated" || pin.rowCount === 0;
+    if (takeMain) {
+      await client.query(
+        `UPDATE project_references SET is_main = FALSE, pinned = CASE WHEN $3 THEN FALSE ELSE pinned END
+         WHERE project_id = $1 AND output_dir = $2`,
+        [projectId, dir, source !== "generated"]);
+    }
+    const ins = await client.query(
+      `INSERT INTO project_references (
+         project_id, output_dir, version, prompt, file_path,
+         model, workflow, attempts, source, is_main, pinned, metadata,
+         started_at, completed_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11::jsonb, $12::timestamptz, $12::timestamptz)
+       RETURNING id`,
+      [projectId, dir, version, prompt ?? null, filePath, REF_MODEL, REF_WORKFLOW,
+        source, takeMain, source !== "generated",
+        JSON.stringify({ engine, file, ...facts }), nowISO]);
+    await client.query("COMMIT");
+    return ins.rows[0].id;
+  } catch (e) {
+    try { await client.query("ROLLBACK"); } catch { /* already closed */ }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+// UI "set as main" for a reference file: flip is_main (+pinned, it's a
+// deliberate pick) onto its row, clearing the dir scope. Unknown files
+// (legacy, recorded nowhere) are inserted first so the pick sticks.
+async function pgSetReferenceMain({ projectId, dir, file, prompt, engine }) {
+  const filePath = `outputs/${dir}/${file}`;
+  const client = await pgPool.connect();
+  try {
+    await client.query("BEGIN");
+    const hit = await client.query(
+      `SELECT id FROM project_references
+       WHERE project_id = $1 AND output_dir = $2
+         AND (file_path = $3 OR metadata->>'file' = $4) LIMIT 1`,
+      [projectId, dir, filePath, file]);
+    await client.query(
+      "UPDATE project_references SET is_main = FALSE, pinned = FALSE WHERE project_id = $1 AND output_dir = $2",
+      [projectId, dir]);
+    if (hit.rowCount) {
+      await client.query(
+        "UPDATE project_references SET is_main = TRUE, pinned = TRUE, updated_at = now() WHERE id = $1",
+        [hit.rows[0].id]);
+    } else {
+      const facts = diskFacts(dir, file);
+      const nowISO = new Date().toISOString();
+      const ver = await client.query(
+        "SELECT max(version) AS v FROM scenario_versions WHERE name = (SELECT name FROM projects WHERE project_id = $1)",
+        [projectId]);
+      await client.query(
+        `INSERT INTO project_references (
+           project_id, output_dir, version, prompt, file_path,
+           model, workflow, attempts, source, is_main, pinned, metadata,
+           started_at, completed_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', TRUE, TRUE, $8::jsonb, $9::timestamptz, $9::timestamptz)`,
+        [projectId, dir, ver.rows[0]?.v ?? null, prompt ?? null, filePath,
+          REF_MODEL, REF_WORKFLOW, JSON.stringify({ engine, file, ...facts }), nowISO]);
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    try { await client.query("ROLLBACK"); } catch { /* already closed */ }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+// Backfill the references table from on-disk ref mains (one row per dir).
+// Skips projects that already have rows — never duplicates.
+async function pgBackfillReferences(name, folder, cfg) {
+  if (!pgUp) return;
+  try {
+    const pid = await pgProjectId(name);
+    if (pid == null) return;
+    const has = await pgPool.query(
+      "SELECT 1 FROM project_references WHERE project_id = $1 LIMIT 1", [pid]);
+    if (has.rowCount) return;
+    const v = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
+    const version = v.rows[0]?.v ?? null;
+    for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
+      const dir = folder + suffix;
+      const full = path.join(OUTPUTS, dir);
+      if (!fs.existsSync(full)) continue;
+      try {
+        const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
+        const vm = versionMap(full, prefixForDir(dir), seq);
+        if (!vm.refMain) continue;
+        const filePath = `outputs/${dir}/${vm.refMain}`;
+        const dup = await pgPool.query(
+          "SELECT 1 FROM project_references WHERE project_id = $1 AND file_path = $2 LIMIT 1",
+          [pid, filePath]);
+        if (dup.rowCount) continue;
+        const facts = diskFacts(dir, vm.refMain);
+        const nowISO = new Date().toISOString();
+        await pgPool.query(
+          `INSERT INTO project_references (
+             project_id, output_dir, version, prompt, file_path,
+             model, workflow, attempts, source, is_main, pinned, metadata,
+             started_at, completed_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', TRUE, $8, $9::jsonb, $10::timestamptz, $10::timestamptz)`,
+          [pid, dir, version, cfg?.referencePrompt ?? null, filePath,
+            REF_MODEL, REF_WORKFLOW, !!vm.refPinned,
+            JSON.stringify({ engine: engineForDir(dir), file: vm.refMain, ...facts }), nowISO]);
+      } catch (e) { console.warn(`[pg] reference backfill failed for ${dir}:`, e.message); }
+    }
+  } catch (e) { console.warn("[pg] reference backfill failed:", e.message); }
+}
 // Mark ONE asset row COMPLETED the moment its file finishes generating
 // (called per [asset] event, so rows flip one by one).
 // RETRY SAFE: a failed generation retried via --regen only re-runs the
@@ -846,9 +1275,11 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
 // actual prompt/scene change). Status/progress/error updates likewise stay
 // on the same row.
 // asset: { file, stage: 'reference'|'keyframe'|'clip'|'final', index? }
-// Stage -> (asset_type, beat_index): reference -> (REFERENCE, 0),
-// keyframe -> (KEYFRAME, N), clip -> (VIDEO, N), final -> (FINAL, V) where V
-// is the 1-based stitch version — every stitch INSERTs a new FINAL row.
+// Stage -> (asset_type, beat_index): keyframe -> (KEYFRAME, N),
+// clip -> (VIDEO, N), final -> (FINAL, V) where V is the 1-based stitch
+// version — every stitch INSERTs a new FINAL row. Reference visuals skip
+// project_assets entirely (they live in project_references, one row per
+// generation — see the reference branch below).
 // UPDATE first; when the row does not exist yet (e.g. never saved), INSERT
 // it as COMPLETED.
 async function pgMarkAssetComplete(projectName, asset, opts = {}) {
@@ -861,14 +1292,28 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
     if (!version) return; // never saved — rows are created on the next Save
     const engine = opts.engine || "ltx";
     const format = normalizeFormat(opts.format);
-    const outputFolder = opts.outputFolder || outDirName(projectName, engine, format);
+    // Folder-based storage (immutable); callers pass the run's outputFolder
+    // explicitly — this fallback only serves direct callers.
+    const outputFolder = opts.outputFolder || outDirName(await folderFor(projectName), engine, format);
+    // Reference completion -> project_references (never project_assets).
+    // Each generation is a NEW row carrying its own master prompt; it takes
+    // main unless a pinned pick already holds it. Vertical cuts record into
+    // their own dir scope so the landscape main stays canonical.
+    if (asset.stage === "reference") {
+      let prompt = null;
+      try {
+        const raw = await dbGetScenario(projectName);
+        prompt = raw ? JSON.parse(raw).referencePrompt ?? null : null;
+      } catch { prompt = null; }
+      await pgAddReference({
+        projectId, dir: outputFolder, file: asset.file, prompt, engine, source: "generated",
+      });
+      return;
+    }
     const facts = diskFacts(outputFolder, asset.file);
     const filePath = `outputs/${outputFolder}/${asset.file}`;
     let target = null;
-    if (asset.stage === "reference") {
-      target = { type: "REFERENCE", beat: 0, model: REF_MODEL, workflow: REF_WORKFLOW,
-        meta: { engine, file: asset.file, ...facts } };
-    } else if (asset.stage === "keyframe") {
+    if (asset.stage === "keyframe") {
       const beat = asset.index ?? 0;
       target = { type: "KEYFRAME", beat, model: IMG_MODEL, workflow: IMG_WORKFLOW,
         meta: { engine, file: asset.file, beat, ...facts } };
@@ -892,7 +1337,7 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
     // landscape run — the UNIQUE key has no format dimension. Record the
     // vertical file in metadata only and never overwrite the landscape
     // file_path/status (the landscape cut stays canonical in project_assets;
-    // the per-folder `assets` catalog is what separates the two cuts).
+    // the per-folder output dirs on disk are what separate the two cuts).
     if (format === "vertical") {
       try {
         await pgPool.query(
@@ -960,7 +1405,8 @@ async function pgRefreshProjectFiles(projectName, outputFolder) {
          WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $5`,
         [relPath(file), pid, Number(version), type, beat]);
     };
-    await touch("REFERENCE", 0, mains.ref ?? null);
+    // Reference mains are NOT refreshed here — project_references is the
+    // record (appended on generation/upload, flipped on UI select).
     for (let i = 0; i < seq.length; i++) {
       const n = i + 1;
       const bm = (mains.beats && mains.beats[String(n)]) || {};
@@ -974,19 +1420,114 @@ async function pgRefreshProjectFiles(projectName, outputFolder) {
     }
   } catch (e) { console.warn("[pg] project files refresh failed:", e.message); }
 }
-// File list for the gallery — served from the DB (null = PG down, use disk).
-async function pgAssetFiles(folder) {
+// Storage slug for a project display name (single source of truth lives in
+// lib/variant.mjs — server, scripts and lib share the exact same rule).
+// Immutable after project creation — never updated on edits/renames, so
+// output dirs, filenames and DB paths stay stable and media keeps resolving.
+const folderName = folderSlug;
+
+// Get existing folder_name from the database row for a given project.
+const getFolderNameFromRow = async (name) => {
   if (!pgUp) return null;
-  try {
-    const r = await pgPool.query("SELECT file FROM assets WHERE scenario = $1 ORDER BY file", [folder]);
-    return r.rows.map((x) => x.file);
-  } catch { return null; }
+  const r = await pgPool.query("SELECT folder_name FROM projects WHERE name = $1", [name]);
+  return r.rows[0]?.folder_name ?? null;
+};
+
+  // Storage folder for a project display name: the stored immutable
+  // folder_name when the project row exists, else the slug of the name
+  // (legacy rows / PG-down fallback). Never contains spaces.
+
+const folderFor = async (name) =>
+  (await getFolderNameFromRow(name)) || folderName(name);
+
+// Storage folder guaranteed unique across projects AND existing output dirs
+// ("my_video", "my_video_2", ...). excludeName skips the caller's own row
+// (edits must keep their folder, never mint a new one).
+async function ensureUniqueFolder(base, excludeName = null) {
+  let candidate = folderName(base);
+  for (let i = 2; ; i++) {
+    let taken = false;
+    if (pgUp) {
+      try {
+        const r = await pgPool.query(
+          "SELECT 1 FROM projects WHERE folder_name = $1 AND name <> $2 LIMIT 1",
+          [candidate, excludeName]);
+        taken = r.rowCount > 0;
+      } catch { /* treat as free — insert path re-checks */ }
+    }
+    if (!taken && allDirsFor(candidate).some((d) => fs.existsSync(path.join(OUTPUTS, d)))) {
+      // A stray output dir (deleted project, CLI run) already owns it.
+      // Own dirs of the caller's previous folder don't count — but the
+      // caller passes a NEW base here, so any hit means taken.
+      taken = true;
+    }
+    if (!taken) return candidate;
+    candidate = `${folderName(base).slice(0, 97)}_${i}`;
+  }
 }
+
+// Split an output dir into its storage-folder base + engine/format suffix.
+const splitDirSuffix = (dir) => {
+  let base = String(dir || ""), suffix = "";
+  if (base.endsWith("_vertical")) { base = base.slice(0, -"_vertical".length); suffix = "_vertical"; }
+  if (base.endsWith("_wan")) { base = base.slice(0, -"_wan".length); suffix = "_wan" + suffix; }
+  return { base, suffix };
+};
+
+// Translate any output dir (folder- OR legacy display-name-based) to its
+// canonical storage dir. Falls back to the input when the folder is unknown
+// or the canonical dir doesn't exist yet but the given one does (legacy).
+async function storageDirFor(dir) {
+  const { base, suffix } = splitDirSuffix(dir);
+  if (!base) return dir;
+  let folder = null;
+  if (pgUp) {
+    try {
+      // Base may already BE the folder, or a display name with a stored folder.
+      const hit = await pgPool.query(
+        "SELECT folder_name FROM projects WHERE folder_name = $1 OR name = $1 LIMIT 1", [base]);
+      folder = hit.rows[0]?.folder_name ?? null;
+    } catch { folder = null; }
+  }
+  folder ||= folderName(base);
+  const canonical = folder + suffix;
+  if (canonical === dir) return dir;
+  if (fs.existsSync(path.join(OUTPUTS, canonical))) return canonical;
+  if (fs.existsSync(path.join(OUTPUTS, dir))) return dir; // legacy dir still on disk
+  return canonical; // canonical going forward (migration creates it on demand)
+}
+
+// Display name that owns a storage folder base (reverse of folderFor).
+// Falls back to the base itself for legacy/unknown folders.
+async function displayNameForFolder(folderBase) {
+  if (pgUp) {
+    try {
+      const r = await pgPool.query("SELECT name FROM projects WHERE folder_name = $1 LIMIT 1", [folderBase]);
+      if (r.rows[0]?.name) return r.rows[0].name;
+    } catch { /* fall through */ }
+  }
+  return folderBase;
+}
+
 async function pgInit() {
   if (!(await pgProbe())) return;
   try {
     await pgPool.query(PG_SCHEMA);
+    // Legacy `assets` catalog is retired (project_assets + project_references
+    // + disk are canonical) — drop it on existing installs.
+    await pgPool.query(`DROP TABLE IF EXISTS public.assets`);
     await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_id SERIAL UNIQUE`);
+    await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS folder_name TEXT`);
+    await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS master_prompt TEXT`);
+    // Backfill folder_name for existing projects that don't have one.
+    await pgPool.query(
+      `UPDATE projects SET folder_name = substr(regexp_replace(regexp_replace(lower(name), '[^a-z0-9]+', '_', 'g'), '^_+|_+$', ''), 1, 100) WHERE folder_name IS NULL OR folder_name = ''`);
+    // References moved to project_references: drop legacy REFERENCE rows
+    // (superseded by the per-dir mains backfilled into the new table below).
+    try {
+      const del = await pgPool.query("DELETE FROM project_assets WHERE asset_type = 'REFERENCE'");
+      if (del.rowCount) console.log(`[pg] removed ${del.rowCount} legacy REFERENCE project_assets rows`);
+    } catch (e) { console.warn("[pg] reference rows cleanup failed:", e.message); }
     // --- narrow project_assets schema: ensure every column/index exists ---
     // Fresh installs get the exact DDL from PG_SCHEMA above; a pre-existing
     // table (created from the same DDL by hand) gains any missing narrow
@@ -995,6 +1536,7 @@ async function pgInit() {
     // and let boot recreate it.
     const NARROW_COLS = [
       `project_id INTEGER NOT NULL`,
+      `folder_name TEXT`,
       `version INTEGER NOT NULL DEFAULT 1`,
       `scene_id INTEGER`,
       `beat_index INTEGER NOT NULL DEFAULT 0`,
@@ -1149,16 +1691,20 @@ const readJson = (req) => new Promise((res, rej) => {
 });
 
 // ---------------------------------------------------------------- runs
-// One run = one spawned `node scripts/character_sequence{,_wan}.mjs <scenario>`
+// One run = one spawned `node scripts/character_sequence{,_wan}.mjs <folder>`
 // (repeated `opts.count` times for batch reference generation).
+// Storage runs on the IMMUTABLE folder (outputs/<folder>/…): `scenario` is
+// the display name (prompts/<scenario>.json via --config-name), `folder`
+// (opts.storageFolder, resolved by the route via migrateProjectStorage) is
+// what the script writes to — so renames never orphan generations.
 // engine: "ltx" (default) or "wan" — picks the i2v backend script.
 // format: "landscape" (default) or "vertical" — the vertical (9:16 Instagram
-//   Reel) cut regenerates every asset into outputs/<scenario>[_wan]_vertical/.
+//   Reel) cut regenerates every asset into outputs/<folder>[_wan]_vertical/.
 // opts.stitch   -> --stitch (re-stitch final from selected mains only)
 // opts.regen    -> --regen <ref|keyframe|clip> [beat] (regenerate one asset, keeps old versions)
 // opts.count    -> repeat a `ref` regen this many times (each pass writes a new
 //                  _vN version to pick from); anything else always runs once.
-const runs = new Map(); // id -> { scenario, status, log, startedAt, proc, subs:Set<res> }
+const runs = new Map(); // id -> { scenario, folder, status, log, startedAt, proc, subs:Set<res> }
 
 function startRun(scenario, opts = {}) {
   const { stitch = false, regen = null, engine = "ltx" } = opts;
@@ -1167,8 +1713,14 @@ function startRun(scenario, opts = {}) {
   const count = regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(opts.count) || 1)) : 1;
   if ([...runs.values()].some((r) => r.status === "running"))
     throw new Error("another run is still active (ComfyUI queue is serial)");
+  // Storage identity: immutable folder for dirs/prefixes, display name only
+  // for the prompts JSON. Callers resolve the folder; the slug fallback keeps
+  // direct/CLI-style calls working when the DB is unreachable.
+  const folder = opts.storageFolder || folderName(scenario);
+  const configName = opts.configName || scenario;
   const script = engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
-  const argv = [script, scenario];
+  const argv = [script, folder];
+  if (configName !== folder) argv.push("--config-name", configName);
   if (stitch) argv.push("--stitch");
   if (regen) {
     argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
@@ -1180,7 +1732,7 @@ function startRun(scenario, opts = {}) {
   // reveals the active run and the SSE log endpoint replays its log + asset
   // events, letting the client rebuild progress and button state from the
   // real stream instead of guessing.
-  const run = { id, scenario, engine, format, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  const run = { id, scenario, folder, engine, format, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -1197,11 +1749,12 @@ function startRun(scenario, opts = {}) {
         const asset = JSON.parse(m[1]);
         run.assets.push(asset);
         for (const s of run.subs) s.write(`event: asset\ndata: ${JSON.stringify(asset)}\n\n`);
-        // Save every finished generation to the Postgres catalog (assets
-        // table + flip that one project_assets row to COMPLETED).
-        const dirName = outDirName(run.scenario, run.engine, run.format);
-        pgUpsertAsset(dirName, asset.file)
-          .then(() => pgMarkAssetComplete(projectForDir(dirName), asset, { engine: run.engine, format: run.format, outputFolder: dirName }))
+        // Record every finished generation (project_references for reference
+        // visuals, project_assets row -> COMPLETED for keyframes/clips/finals).
+        // Dirs are folder-based (immutable storage); the project link stays
+        // the display name.
+        const dirName = outDirName(run.folder, run.engine, run.format);
+        pgMarkAssetComplete(run.scenario, asset, { engine: run.engine, format: run.format, outputFolder: dirName })
           .catch((e) => console.warn("[pg] catalog failed:", e.message));
       }
     }
@@ -1211,10 +1764,10 @@ function startRun(scenario, opts = {}) {
     push(`\n[${status}]\n`);
     for (const s of run.subs) { s.write("event: close\ndata: " + JSON.stringify({ status: run.status }) + "\n\n"); s.end(); }
     run.subs.clear();
-    // Reconcile the run's output dir with the DB (catches final.mp4 + anything missed).
-    const dirName = outDirName(run.scenario, run.engine, run.format);
-    pgSyncFolder(dirName)
-      .then(() => pgRefreshProjectFiles(projectForDir(dirName), dirName))
+    // Refresh the current version's project_assets file names from the
+    // run's output dir (catches final.mp4 + anything missed).
+    const dirName = outDirName(run.folder, run.engine, run.format);
+    pgRefreshProjectFiles(run.scenario, dirName)
       .catch((e) => console.warn("[pg] sync failed:", e.message));
   };
   const launch = () => {
@@ -1279,16 +1832,15 @@ async function llmStatus() {
 // services being offline never blocks project data either (health is a
 // separate endpoint). Error details stay server-side (logs), the client only
 // gets "dashboard unavailable".
-const folderProject = (folder) => projectForDir(folder);
 const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null });
 
-// Disk coverage for one project dir (PG-down fallback + thumbnail existence).
-// Prefers the landscape ltx dir, then _wan, then the vertical cuts;
+// Disk coverage for a project's dirs (folder dirs first, legacy display-name
+// dirs after). Prefers the landscape ltx dir, then _wan, then vertical cuts;
 // thumbnail = highest-beat keyframe main, else the reference main.
-function diskCoverageFor(name, cfg) {
+function diskCoverageFor(dirs, cfg) {
   const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
   const cov = newCoverage();
-  for (const dir of allDirsFor(name)) {
+  for (const dir of dirs) {
     const full = path.join(OUTPUTS, dir);
     if (!fs.existsSync(full)) continue;
     let vm = null;
@@ -1312,97 +1864,110 @@ function diskCoverageFor(name, cfg) {
 }
 
 async function dashboardPayload() {
-  // 1) Scenario list (PG canonical; prompts/*.json fallback when PG is down).
+  // 1) Project list — the projects TABLE is canonical for Recent Projects
+  // (name, folder_name, description, dates, project_id all come from it).
+  // FULL OUTER JOIN keeps scenarios that have no project row yet (legacy /
+  // pre-save drafts) so no project ever vanishes from Home; prompts/*.json
+  // is the last-resort fallback when PG is down.
   let rows;
-  try {
-    rows = (await dbListScenarios()).map((r) => ({
-      name: r.name, configText: String(r.config), updated_at: Number(r.updated_at),
-    }));
-  } catch (e) {
-    console.warn("[dashboard] scenario store unreachable, falling back to prompts/*.json");
-    rows = [];
+  if (pgUp) {
     try {
-      fs.mkdirSync(PROMPTS, { recursive: true });
-      for (const f of fs.readdirSync(PROMPTS).filter((f) => f.endsWith(".json"))) {
-        const full = path.join(PROMPTS, f);
-        try {
-          rows.push({ name: f.replace(/\.json$/, ""), configText: fs.readFileSync(full, "utf8"), updated_at: Math.round(fs.statSync(full).mtimeMs) });
-        } catch { /* skip unreadable prompt files */ }
-      }
-    } catch { /* no prompts dir — empty list */ }
+      const r = await pgPool.query(
+        `SELECT COALESCE(p.name, s.name) AS name,
+                p.project_id, p.folder_name, p.description AS pdesc,
+                p.created_at, p.updated_at AS pupdated,
+                s.config::text AS config, s.updated_at_ms
+         FROM projects p FULL OUTER JOIN scenarios s ON s.name = p.name
+         ORDER BY COALESCE(s.updated_at_ms, (extract(epoch from p.updated_at) * 1000)::bigint) DESC NULLS LAST`);
+      rows = r.rows.map((x) => ({
+        name: x.name,
+        project_id: x.project_id != null ? Number(x.project_id) : null,
+        folder_name: x.folder_name ?? null,
+        pdesc: x.pdesc ?? null,
+        created_at: x.created_at ? new Date(x.created_at).getTime() : null,
+        pupdated: x.pupdated ? new Date(x.pupdated).getTime() : null,
+        configText: x.config != null ? String(x.config) : null,
+        updated_at: x.updated_at_ms != null ? Number(x.updated_at_ms) : null,
+      }));
+    } catch (e) { console.warn("[dashboard] projects query failed:", e.message); rows = null; }
+  } else { rows = null; }
+  if (!rows) {
+    try {
+      rows = (await dbListScenarios()).map((r) => ({
+        name: r.name, project_id: null, folder_name: null, pdesc: null,
+        created_at: null, pupdated: null,
+        configText: String(r.config), updated_at: Number(r.updated_at),
+      }));
+    } catch (e) {
+      console.warn("[dashboard] scenario store unreachable, falling back to prompts/*.json");
+      rows = [];
+      try {
+        fs.mkdirSync(PROMPTS, { recursive: true });
+        for (const f of fs.readdirSync(PROMPTS).filter((f) => f.endsWith(".json"))) {
+          const full = path.join(PROMPTS, f);
+          try {
+            rows.push({
+              name: f.replace(/\.json$/, ""), project_id: null, folder_name: null,
+              pdesc: null, created_at: null, pupdated: null,
+              configText: fs.readFileSync(full, "utf8"), updated_at: Math.round(fs.statSync(full).mtimeMs),
+            });
+          } catch { /* skip unreadable prompt files */ }
+        }
+      } catch { /* no prompts dir — empty list */ }
+    }
   }
   const cfgs = new Map();
   for (const r of rows) {
-    try { cfgs.set(r.name, JSON.parse(r.configText)); }
+    // Config for scene counts/thumbs: scenario row first, prompts JSON copy
+    // as fallback (a project row can exist before its first Save).
+    let text = r.configText;
+    if (text == null) {
+      try { text = fs.readFileSync(path.join(PROMPTS, r.name + ".json"), "utf8"); }
+      catch { text = null; }
+    }
+    try { cfgs.set(r.name, text != null ? JSON.parse(text) : null); }
     catch { cfgs.set(r.name, null); }
   }
   const names = rows.map((r) => r.name);
-  const folders = [...new Set(names.flatMap((n) => allDirsFor(n)))];
-
-  // 2) Coverage from the PG assets catalog (one GROUP BY), else disk scan.
-  const covs = new Map(); // name -> coverage
-  const get = (n) => {
-    let c = covs.get(n);
-    if (!c) { c = newCoverage(); covs.set(n, c); }
-    return c;
+  // Immutable storage folder per project (stored folder_name, else the slug).
+  // Coverage, thumbs, running-state and the payload all key off it. Legacy
+  // display-name dirs are unioned in for reads so assets generated before
+  // folder-immutability keep rendering.
+  const fnames = new Map(rows.map((r) => [r.name, r.folder_name ?? null]));
+  const folderOf = (n) => fnames.get(n) || folderName(n);
+  const dirsOf = (n) => {
+    const f = folderOf(n);
+    const dirs = allDirsFor(f);
+    if (f !== n) for (const d of allDirsFor(n)) if (!dirs.includes(d)) dirs.push(d);
+    return dirs;
   };
-  let thumbs = new Map();
-  if (pgUp && names.length) {
-    try {
-      const cov = await pgPool.query(
-        `SELECT scenario, kind, beat_index FROM assets
-          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe','clip','final')`,
-        [folders]);
-      for (const row of cov.rows) {
-        const c = get(folderProject(row.scenario));
-        if (row.kind === "reference") c.ref = true;
-        else if (row.kind === "keyframe" && row.beat_index != null) c.kf.add(Number(row.beat_index));
-        else if (row.kind === "clip" && row.beat_index != null) c.clips.add(Number(row.beat_index));
-        else if (row.kind === "final") c.final = true;
-      }
-      const th = await pgPool.query(
-        `SELECT DISTINCT ON (scenario) scenario, file FROM assets
-          WHERE scenario = ANY($1) AND kind IN ('reference','keyframe')
-          ORDER BY scenario, mtime DESC`,
-        [folders]);
-      thumbs = new Map(th.rows.map((r) => [r.scenario, r.file]));
-    } catch (e) {
-      console.warn("[dashboard] asset aggregate failed, using disk scan:", e.message);
-    }
+  // Heal legacy storage on view (one-time move to folder dirs; no-op after).
+  for (const n of names) {
+    try { await migrateProjectStorage(n); } catch { /* never break the dashboard */ }
   }
-  if (!pgUp) {
-    for (const n of names) covs.set(n, diskCoverageFor(n, cfgs.get(n)));
-  } else {
-    // PG was up: fill projects that have no catalog rows from disk (CLI runs
-    // / backfill gaps must never report zero progress), and resolve thumbs.
-    for (const n of names) {
-      const c = get(n);
-      if (!c.ref && !c.kf.size && !c.clips.size && !c.final) {
-        const d = diskCoverageFor(n, cfgs.get(n));
-        if (d.ref || d.kf.size || d.clips.size || d.final) covs.set(n, d);
-      }
-    }
-  }
+  // 2) Coverage from disk (outputs/ dirs are the source of truth for files).
+  const covs = new Map(); // name -> coverage
+  for (const n of names) covs.set(n, diskCoverageFor(dirsOf(n), cfgs.get(n)));
+  const thumbs = new Map();
 
-  // 3) Project created dates + integer ids (one query; nulls when unavailable).
-  let created = new Map();
-  let pids = new Map();
-  if (pgUp && names.length) {
-    try {
-      const r = await pgPool.query("SELECT name, project_id, created_at FROM projects WHERE name = ANY($1)", [names]);
-      created = new Map(r.rows.map((x) => [x.name, x.created_at ? new Date(x.created_at).getTime() : null]));
-      pids = new Map(r.rows.map((x) => [x.name, x.project_id != null ? Number(x.project_id) : null]));
-    } catch (e) { console.warn("[dashboard] projects lookup failed:", e.message); }
-  }
+  // 3) Identity/dates already resolved per row in section 1 (projects
+  // table first) — no extra query. Row maps for the payload below.
+  const created = new Map(rows.map((r) => [r.name, r.created_at ?? null]));
+  const pids = new Map(rows.map((r) => [r.name, r.project_id ?? null]));
+  const pdescs = new Map(rows.map((r) => [r.name, r.pdesc ?? null]));
+  const pupdates = new Map(rows.map((r) => [r.name, r.pupdated ?? null]));
 
   // 4) Currently generating (in-memory runs — ComfyUI queue is serial).
   const runningByScenario = new Map();
   for (const r of runs.values()) {
     if (r.status === "running" && !runningByScenario.has(r.scenario)) {
       runningByScenario.set(r.scenario, r);
-      // Engine/format variants are stored under the base scenario name; also
-      // match every suffixed folder name so all dashboard keys resolve.
-      for (const dir of allDirsFor(r.scenario)) runningByScenario.set(dir, r);
+      // Runs write to folder dirs but are keyed by display name — match both
+      // (plus every engine/format variant) so all dashboard keys resolve.
+      for (const base of new Set([r.scenario, r.folder])) {
+        if (!base) continue;
+        for (const dir of allDirsFor(base)) runningByScenario.set(dir, r);
+      }
     }
   }
   const generating = new Set(runningByScenario.keys());
@@ -1418,9 +1983,10 @@ async function dashboardPayload() {
     const status = c.final ? "completed" : (done > 0 ? "in_progress" : "draft");
     // Thumbnail: PG catalog pick, else disk pick; must exist on disk.
     // Landscape dirs win over the vertical cuts (main video is canonical).
-    const thumbDirs = [r.name, `${r.name}_wan`, `${r.name}_vertical`, `${r.name}_wan_vertical`];
+    // Dirs are folder-based (immutable storage) with legacy name dirs after.
+    const thumbDirs = dirsOf(r.name);
     let thumbFile = c.thumb?.file ?? null;
-    let thumbDir = c.thumb?.dir ?? r.name;
+    let thumbDir = c.thumb?.dir ?? thumbDirs[0];
     for (const dir of thumbDirs) {
       if (thumbs.has(dir)) { thumbFile = thumbs.get(dir); thumbDir = dir; break; }
     }
@@ -1431,7 +1997,10 @@ async function dashboardPayload() {
     return {
       name: r.name,
       project_id: pids.get(r.name) ?? null,
-      description: typeof cfg?.description === "string" ? cfg.description : "",
+      folder_name: folderOf(r.name),
+      // Description from the projects TABLE first (the stored project data),
+      // scenario config as fallback.
+      description: pdescs.get(r.name) ?? (typeof cfg?.description === "string" ? cfg.description : ""),
       status,
       generating: thumbDirs.some((dir) => generating.has(dir)),
       startedAt: thumbDirs.map((dir) => runningByScenario.get(dir)?.startedAt).find((t) => t != null) ?? null,
@@ -1443,7 +2012,8 @@ async function dashboardPayload() {
       hasFinal: c.final,
       thumbnailUrl: thumbFile ? `/outputs/${thumbDir}/${thumbFile}` : null,
       createdAt: created.get(r.name) ?? null,
-      updatedAt: Number.isFinite(r.updated_at) ? r.updated_at : null,
+      // Freshness: scenario save first, project-row update as fallback.
+      updatedAt: Number.isFinite(r.updated_at) ? r.updated_at : (pupdates.get(r.name) ?? null),
     };
   }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
@@ -1816,6 +2386,82 @@ Write the publishing metadata.`;
   };
 }
 
+/**
+ * Ask the local LLM for a single Master Prompt (cinematic key-visual of the
+ * main character) from a Description + the chosen Video Type (presetId /
+ * presetRules). Stateless — nothing persisted; the Create New Project dialog
+ * fills its Master Prompt box with the result.
+ */
+async function craftMasterPrompt({ description = "", presetId, presetRules } = {}) {
+  const idea = String(description ?? "").trim();
+  if (!idea) throw new Error("description required");
+  // Video-type rules shape the master prompt's visual language. Per-project
+  // custom rules win over the preset file; a missing/unreadable preset file
+  // falls back to no-rules instead of failing the whole call.
+  const customRules = String(presetRules ?? "").trim();
+  let presetMeta = null;
+  let presetContent = "";
+  if (customRules) {
+    const preset = resolvePresetId(presetId);
+    presetMeta = GetPresetById(preset) ?? { id: preset, name: preset };
+    presetContent = customRules;
+  } else {
+    try {
+      const preset = resolvePresetId(presetId);
+      const got = GetPresetContent(preset);
+      presetMeta = got.meta;
+      presetContent = got.content;
+    } catch (e) {
+      console.warn("[master-prompt] preset unavailable, continuing without rules:", e.message);
+    }
+  }
+  const system = [
+    "You write a single cinematic key-visual prompt for AI image generation (Flux text-to-image).",
+    "Output ONLY the prompt text — 2-4 dense sentences, no JSON, no quotes, no markdown, no preamble.",
+    "Rules: describe ONE consistent main character (age, look, outfit) + art style + lighting + mood + setting detail,",
+    "keep it reusable as a prefix for every scene's keyframe prompt. No camera motion, no cuts, no story beats.",
+  ].join(" ");
+  const user = [
+    `Video description:\n${idea}`,
+    `Video type: ${presetMeta ? presetMeta.name : "general"}`,
+    ...(presetContent
+      ? [`Video-type rules — the Master Prompt MUST follow this visual language:\n${presetContent}`]
+      : []),
+    "Write the Master Prompt (cinematic key-visual of the main character).",
+  ].join("\n\n");
+  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "local",
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      temperature: 0.7,
+      max_tokens: 500,
+      chat_template_kwargs: { enable_thinking: false },
+    }),
+  });
+  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const d = await r.json();
+  let text = String(d.choices?.[0]?.message?.content || "").trim();
+  // Strip fences/quotes if the model adds them despite the instructions.
+  text = text.replace(/^\s*```(?:\w+)?\s*/, "").replace(/\s*```\s*$/, "").trim();
+  text = text.replace(/^["“”']+|["“”']+$/g, "").trim();
+  // Collapse to a single prompt: first JSON string value, or first paragraph.
+  if (/^\s*\{/.test(text)) {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        const o = JSON.parse(m[0]);
+        const cand = o.masterPrompt || o.referencePrompt || o.prompt || o.text;
+        if (cand) text = String(cand).trim();
+      } catch { /* keep raw text */ }
+    }
+  }
+  text = text.split(/\n\s*\n/)[0].trim().replace(/\s+/g, " ");
+  if (!text) throw new Error("LLM returned an empty master prompt");
+  return { masterPrompt: text.slice(0, 2000) };
+}
+
 // ---------------------------------------------------------------------------
 function toYouTubeTitle(s) {
   let t = String(s || "").replace(/^["“”']+|["“”']+$/g, "").trim();
@@ -1860,30 +2506,30 @@ async function outputsPayload(name) {
   const onDisk = fs.existsSync(dir)
     ? fs.readdirSync(dir).filter((f) => !f.startsWith(".")).sort()
     : [];
-  // File list = Postgres catalog first (stable order), unioned with whatever
-  // is actually on disk. An empty-but-reachable catalog (CLI runs, PG-down
-  // gaps, missed backfills) must never hide rendered files — everything on
-  // disk always renders. Rows are intersected with disk so deleted files
-  // never render broken media.
-  const listed = await pgAssetFiles(name);
-  const files = [...new Set([...(listed || []), ...onDisk])]
+  // File list comes from disk (outputs/ dirs are the source of truth).
+  // Deleted files simply vanish from the listing — never broken media.
+  const files = [...onDisk]
     .filter((f) => fs.existsSync(path.join(dir, f)));
   const versions = { ref: [], beats: {}, final: [] };
   const mains = { ref: null, beats: {}, final: null, pinned: { ref: false, beats: {} } };
   // Config for version mapping: prompts JSON first, store copy as fallback
   // (a scenario can live in the store while its JSON is missing/renamed).
+  // Dirs are folder-based; the config is keyed by DISPLAY name, resolved
+  // from the owning project row (legacy dirs fall back to suffix-stripping).
   let cfg = null;
-  const cfgPath = path.join(PROMPTS, cfgNameFor(name) + ".json");
+  const { base: folderBase } = splitDirSuffix(name);
+  const cfgName = (pgUp ? await displayNameForFolder(folderBase) : null) || cfgNameFor(name);
+  const cfgPath = path.join(PROMPTS, cfgName + ".json");
   try {
     if (fs.existsSync(cfgPath)) cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
   } catch { cfg = null; }
   if (!cfg) {
     try {
-      const raw = await dbGetScenario(cfgNameFor(name));
+      const raw = await dbGetScenario(cfgName);
       if (raw) cfg = JSON.parse(raw);
     } catch { cfg = null; }
   }
-  if (files.length && cfg?.referencePrompt && Array.isArray(cfg?.sequence) && cfg.sequence.length) {
+  if (files.length && cfg?.referencePrompt && Array.isArray(cfg?.sequence)) {
     const vm = versionMap(dir, prefixFor(name), cfg.sequence);
     mains.ref = vm.refMain;
     mains.pinned.ref = !!vm.refPinned;
@@ -1896,7 +2542,36 @@ async function outputsPayload(name) {
     versions.final = vm.final ?? [];
     mains.final = vm.finalMain ?? null;
   }
-  return { files, versions, mains };
+  // Reference section is served from project_references (one row per
+  // generation/upload, is_main = UI-selected main), unioned with the
+  // on-disk versions so files without a row yet (CLI runs, backfill gaps)
+  // still render. DB order/metadata win; missing files are filtered so
+  // deleted renders never show. Disk stays the fallback (drafts, PG down,
+  // never-recorded legacy files).
+  let refMeta = {};
+  if (pgUp) {
+    try {
+      const pid = await pgProjectId(cfgName);
+      if (pid != null) {
+        const refs = (await pgReferenceList(pid, name)).filter((r) =>
+          fs.existsSync(path.join(dir, r.file)));
+        if (refs.length) {
+          const byFile = new Map(versions.ref.map((v) => [v.file, v.v]));
+          for (const r of refs) byFile.set(r.file, r.v);
+          versions.ref = [...byFile.entries()]
+            .map(([file, v]) => ({ file, v }))
+            .sort((a, b) => a.v - b.v || (a.file < b.file ? -1 : 1));
+          const main = refs.find((r) => r.is_main) ?? refs[refs.length - 1];
+          mains.ref = main.file;
+          mains.pinned.ref = !!main.pinned;
+          refMeta = Object.fromEntries(refs.map((r) => [r.file, {
+            prompt: r.prompt, source: r.source, pinned: r.pinned,
+          }]));
+        }
+      }
+    } catch (e) { console.warn("[outputs] reference overlay failed:", e.message); }
+  }
+  return { files, versions, mains, refMeta };
 }
 
 // ---------------------------------------------------------------- router
@@ -1939,15 +2614,18 @@ const server = http.createServer(async (req, res) => {
       let rows;
       try { rows = await dbListScenarios(); }
       catch (e) { return json(res, 503, { error: "database unavailable" }); }
-      // Integer project ids for the sidebar (desc sort + #id chip). The
-      // scenarios store itself has no project_id column — it lives on the
-      // projects table. Null in SQLite mode / pre-migration rows.
+      // Integer project ids + immutable storage folders for the sidebar
+      // (desc sort + #id chip + output-dir resolution). Both live on the
+      // projects table; the scenarios store itself has neither column.
+      // Null in SQLite mode / pre-migration rows (callers fall back to slug).
       let pidMap = new Map();
+      let folderMap = new Map();
       if (pgUp) {
         try {
-          const pr = await pgPool.query("SELECT name, project_id FROM projects");
+          const pr = await pgPool.query("SELECT name, project_id, folder_name FROM projects");
           pidMap = new Map(pr.rows.map((x) => [x.name, Number(x.project_id)]));
-        } catch { /* ids stay null — sidebar falls back to mtime order */ }
+          folderMap = new Map(pr.rows.map((x) => [x.name, x.folder_name ?? null]));
+        } catch { /* ids/folders stay null — sidebar falls back to mtime order/slug */ }
       }
       return json(res, 200, rows.map((r) => {
         const c = JSON.parse(r.config);
@@ -1962,6 +2640,7 @@ const server = http.createServer(async (req, res) => {
           mtimeMs: Number(r.updated_at),
           favorite: favs.includes(r.name),
           project_id: pidMap.has(r.name) ? pidMap.get(r.name) : null,
+          folder_name: folderMap.get(r.name) ?? null,
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
     }
@@ -2038,6 +2717,25 @@ const server = http.createServer(async (req, res) => {
       const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const cfg = await readJson(req);
+      // folder_name is minted ONCE (unique) and frozen: creation stamps it
+      // from the project name, edits/renames never change it — output dirs,
+      // filenames and DB paths stay stable so media keeps resolving.
+      const storedFolder = pgUp ? await getFolderNameFromRow(name) : null;
+      let folder = storedFolder;
+      if (!folder && pgUp) {
+        folder = await ensureUniqueFolder(name, name);
+        try {
+          await pgPool.query(
+            "UPDATE projects SET folder_name = $2 WHERE name = $1 AND (folder_name IS NULL OR folder_name = '')",
+            [name, folder]);
+        } catch { /* row may not exist yet — claimed on version save */ }
+      }
+      if (typeof cfg === "object" && cfg) {
+        // A fresh claim always wins — never inherit another project's folder
+        // from a duplicated/copied config. A stored folder is never
+        // overwritten, only backfilled when the config lacks it.
+        if (!storedFolder || !cfg.folder_name) cfg.folder_name = folder || folderName(name);
+      }
       // Retired fields — never persist even if an old client/draft sends them.
       if (cfg && typeof cfg === "object") { delete cfg.topic; delete cfg.requirements; }
       // No-change save = no-op: an identical config must not stack a duplicate version.
@@ -2072,11 +2770,13 @@ const server = http.createServer(async (req, res) => {
         // Keep the JSON export for the CLI runners.
         fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
       }
-      // Explicit save = new version of the same project in the database.
-      // Delta versioning: the version row + ONLY the changed scene rows are
-      // inserted in one transaction (see pgSaveVersionDelta). Unchanged
-      // scenes keep resolving to their previous rows via the effective
-      // query on GET /api/project/:name/assets.
+      // Explicit save updates the CURRENT project in place — never a new
+      // project row and never a new version row. The scenarios row, the
+      // prompts JSON, the projects row and the LATEST scenario_versions
+      // config are overwritten; only changed scenes' project_assets rows at
+      // that same version are refreshed (see pgSaveVersionInPlace).
+      // First save of a project still mints v1 (full snapshot via
+      // pgSaveVersionDelta) so per-scene pills and the gallery have a base.
       let version = null;
       let project_id = null;
       if (pgUp) {
@@ -2084,20 +2784,30 @@ const server = http.createServer(async (req, res) => {
           let prevCfg = null;
           try { prevCfg = prevRaw != null ? JSON.parse(prevRaw) : null; }
           catch { prevCfg = null; }
-          const saved = await pgSaveVersionDelta(name, prevCfg, cfg);
-          version = saved.version;
-          project_id = saved.projectId;
+          const latestRow = await pgPool.query(
+            "SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
+          const latest = Number(latestRow.rows[0]?.v);
+          if (!Number.isInteger(latest)) {
+            const saved = await pgSaveVersionDelta(name, prevCfg, cfg);
+            version = saved.version;
+            project_id = saved.projectId;
+          } else {
+            const saved = await pgSaveVersionInPlace(name, latest, prevCfg, cfg);
+            version = saved.version;
+            project_id = saved.projectId;
+          }
         }
         catch (e) { console.warn("[pg] version save failed:", e.message); }
       }
-      return json(res, 200, { ok: true, version, project_id });
+      return json(res, 200, { ok: true, version, project_id, updated: true });
     }
-    // Rename a project (POST /api/scenario/:name/rename { newName }). Moves
-    // the prompts JSON + outputs dirs (swapping the embedded filename prefix
-    // and state.json mains), updates every name-keyed row (scenarios,
-    // scenario_versions, projects, assets incl. _wan/_vertical variants + file
-    // paths) and favorites. Blocked while a run for the project is active —
-    // run records, SSE tails and the serial queue all key off the name.
+    // Rename a project (POST /api/scenario/:name/rename { newName }).
+    // DISPLAY NAME ONLY: scenarios, scenario_versions, projects.name,
+    // prompts JSON and favorites move. Storage (outputs dirs, filenames,
+    // assets/project_assets paths, folder_name) is IMMUTABLE by design —
+    // nothing moves on disk, so images, thumbnails and videos keep
+    // resolving on Home and the Project page after a rename. Blocked while
+    // a run for the project is active (run records key off the name).
     if (p.startsWith("/api/scenario/") && req.method === "POST" && p.split("/").length === 5 && p.split("/")[4] === "rename") {
       const oldName = pathName(p.split("/")[3]);
       let body;
@@ -2116,8 +2826,6 @@ const server = http.createServer(async (req, res) => {
       if (newRaw !== null) return json(res, 409, { error: "a project with that name already exists" });
       if ([...runs.values()].some((r) => r.status === "running" && r.scenario === oldName))
         return json(res, 409, { error: "stop the active run before renaming" });
-      if (allDirsFor(newName).some((dir) => fs.existsSync(path.join(OUTPUTS, dir))))
-        return json(res, 409, { error: "outputs folder for that name already exists" });
       try {
         await dbRenameScenario(oldName, newName);
         renameScenarioFiles(oldName, newName);
@@ -2171,13 +2879,17 @@ const server = http.createServer(async (req, res) => {
       await dbDeleteScenario(name);
       const f = path.join(PROMPTS, name + ".json");
       if (fs.existsSync(f)) fs.unlinkSync(f);
-      const outDir = path.join(OUTPUTS, name);
-      if (fs.existsSync(outDir)) fs.rmSync(outDir, { recursive: true, force: true });
-      for (const dir of allDirsFor(name).slice(1)) {
+      // Storage is folder-based (immutable) — remove folder dirs plus any
+      // legacy display-name dirs left from before folder-immutability.
+      const delFolder = (pgUp ? await getFolderNameFromRow(name) : null) || folderName(name);
+      const delDirs = new Set([...allDirsFor(delFolder), ...allDirsFor(name)]);
+      for (const dir of delDirs) {
         const full = path.join(OUTPUTS, dir);
         if (fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true });
       }
-      pgDeleteScenarioMirror(name).catch((e) => console.warn("[pg] scenario unmirror failed:", e.message));
+      try {
+        await pgDeleteScenarioMirror(name);
+      } catch (e) { console.warn("[pg] scenario unmirror failed:", e.message); }
       return json(res, 200, { ok: true });
     }
     if (p === "/api/runs" && req.method === "POST") {
@@ -2185,14 +2897,19 @@ const server = http.createServer(async (req, res) => {
       if (typeof body.scenario !== "string" || !isSafe(body.scenario))
         return json(res, 400, { error: "bad scenario" });
       try {
+        // Resolve (and heal) immutable storage before spawning: the script
+        // writes to outputs/<folder>/ while reading prompts/<scenario>.json.
+        const folder = await migrateProjectStorage(body.scenario);
         const run = startRun(body.scenario, {
           stitch: !!body.stitch,
           engine: body.engine || "ltx",
           format: body.format ?? (body.vertical ? "vertical" : undefined),
           regen: body.regen || null,
           count: body.count,
+          storageFolder: folder,
+          configName: body.scenario,
         });
-        return json(res, 200, { id: run.id });
+        return json(res, 200, { id: run.id, folder });
       } catch (e) {
         return json(res, 409, { error: String(e.message || e) });
       }
@@ -2224,22 +2941,42 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/outputs" && req.method === "GET") {
       const name = u.searchParams.get("scenario");
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
-      return json(res, 200, await outputsPayload(name));
+      // Dirs are folder-based storage; legacy display-name dirs translate,
+      // and viewing heals legacy storage so old media reappears.
+      const dir = await storageDirFor(name);
+      if (dir !== name) {
+        try {
+          const { base } = splitDirSuffix(name);
+          await migrateProjectStorage((pgUp ? await displayNameForFolder(base) : null) || base);
+        } catch { /* read anyway */ }
+      }
+      return json(res, 200, await outputsPayload(dir));
     }
     if (p === "/api/outputs/select" && req.method === "POST") {
       const body = await readJson(req);
       const { scenario, kind, index, file } = body;
       if (!isSafe(scenario) || typeof file !== "string") return json(res, 400, { error: "bad body" });
-      const dir = path.join(OUTPUTS, scenario);
+      const storDir = await storageDirFor(scenario);
+      const dir = path.join(OUTPUTS, storDir);
       if (!fs.existsSync(dir)) return json(res, 404, { error: "no outputs" });
       // A manual pick pins the main: it keeps winning on reloads until a
       // regen records a fresh auto main.
-      setMain(dir, prefixFor(scenario), kind, kind === "ref" ? 0 : index, null, file, { pinned: true });
-      return json(res, 200, await outputsPayload(scenario));
+      setMain(dir, prefixFor(storDir), kind, kind === "ref" ? 0 : index, null, file, { pinned: true });
+      // Reference picks also flip the project_references main (+pin), which
+      // is what the Reference section displays.
+      if (kind === "ref" && pgUp) {
+        try {
+          const { base } = splitDirSuffix(scenario);
+          const owner = (await displayNameForFolder(base)) || cfgNameFor(scenario);
+          const pid = await pgProjectId(owner);
+          if (pid != null) await pgSetReferenceMain({ projectId: pid, dir: storDir, file, engine: engineForDir(storDir) });
+        } catch (e) { console.warn("[pg] reference main flip failed:", e.message); }
+      }
+      return json(res, 200, await outputsPayload(storDir));
     }
     if (p === "/api/upload/ref" && req.method === "POST") {
       // Upload an image as the scenario's reference (browse / drag-drop / clipboard).
-      // Stored as the next ref version in outputs/<scenario>/ and selected as main,
+      // Stored as the next ref version in outputs/<folder>/ and selected as main,
       // so the pipeline skips Flux ref generation and uses the uploaded image.
       const body = await readJson(req);
       const scenario = String(body.scenario || "");
@@ -2249,22 +2986,39 @@ const server = http.createServer(async (req, res) => {
       if (!m) return json(res, 400, { error: "expected a data:image base64 payload" });
       const buf = Buffer.from(m[1], "base64");
       if (!buf.length) return json(res, 400, { error: "empty image" });
-      const outDir = path.join(OUTPUTS, scenario);
+      const storDir = await storageDirFor(scenario);
+      const outDir = path.join(OUTPUTS, storDir);
       fs.mkdirSync(outDir, { recursive: true });
-      const prefix = prefixFor(scenario);
+      const prefix = prefixFor(storDir);
       const v = nextVersion(outDir, prefix, "ref", 0, ".png");
       const file = v === 1 ? `${prefix}_ref.png` : `${prefix}_ref_v${v}.png`;
       fs.writeFileSync(path.join(outDir, file), buf);
       // An upload is a deliberate choice — pin it as main.
       setMain(outDir, prefix, "ref", 0, null, file, { pinned: true });
-      pgUpsertAsset(scenario, file)
-        .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
+      const { base: refBase } = splitDirSuffix(scenario);
+      const refOwner = (pgUp ? await displayNameForFolder(refBase) : null) || cfgNameFor(scenario);
+      pgRefreshProjectFiles(refOwner, storDir)
         .catch((e) => console.warn("[pg] catalog failed:", e.message));
-      return json(res, 200, await outputsPayload(scenario));
+      // Uploaded references are recorded (pinned main) in project_references.
+      if (pgUp) {
+        pgProjectId(refOwner).then(async (pid) => {
+          if (pid == null) return;
+          let prompt = null;
+          try {
+            const raw = await dbGetScenario(refOwner);
+            prompt = raw ? JSON.parse(raw).referencePrompt ?? null : null;
+          } catch { prompt = null; }
+          await pgAddReference({
+            projectId: pid, dir: storDir, file, prompt,
+            engine: engineForDir(storDir), source: "upload",
+          });
+        }).catch((e) => console.warn("[pg] reference record failed:", e.message));
+      }
+      return json(res, 200, await outputsPayload(storDir));
     }
     if (p === "/api/upload/keyframe" && req.method === "POST") {
       // Upload an image as beat N's keyframe. Stored as the next keyframe
-      // version in outputs/<scenario>/ and selected as main, so a later
+      // version in outputs/<folder>/ and selected as main, so a later
       // clip (re)generation runs i2v from the uploaded image instead of the
       // Flux keyframe. Same versioning mechanics as every other asset.
       const body = await readJson(req);
@@ -2277,12 +3031,17 @@ const server = http.createServer(async (req, res) => {
       if (!m) return json(res, 400, { error: "expected a data:image base64 payload" });
       const buf = Buffer.from(m[1], "base64");
       if (!buf.length) return json(res, 400, { error: "empty image" });
-      const outDir = path.join(OUTPUTS, scenario);
+      const storDir = await storageDirFor(scenario);
+      const outDir = path.join(OUTPUTS, storDir);
       if (!fs.existsSync(outDir)) return json(res, 404, { error: "no outputs" });
       // Beat title feeds the versioned filename — resolve it from the
-      // prompts JSON first, stored scenario copy as fallback.
+      // prompts JSON first, stored scenario copy as fallback. The title is
+      // slugified into the filename (space-free); the raw title stays in
+      // state.json lookups + DB beat_title.
+      const { base: kfBase } = splitDirSuffix(scenario);
+      const kfOwner = (pgUp ? await displayNameForFolder(kfBase) : null) || cfgNameFor(scenario);
       let title = null;
-      const cfgPath = path.join(PROMPTS, cfgNameFor(scenario) + ".json");
+      const cfgPath = path.join(PROMPTS, kfOwner + ".json");
       try {
         if (fs.existsSync(cfgPath)) {
           const seq = JSON.parse(fs.readFileSync(cfgPath, "utf8")).sequence;
@@ -2291,35 +3050,38 @@ const server = http.createServer(async (req, res) => {
       } catch { title = null; }
       if (title == null) {
         try {
-          const raw = await dbGetScenario(cfgNameFor(scenario));
+          const raw = await dbGetScenario(kfOwner);
           const seq = raw ? JSON.parse(raw).sequence : null;
           title = Array.isArray(seq) ? seq[n - 1]?.title ?? null : null;
         } catch { title = null; }
       }
       if (title == null) return json(res, 400, { error: `no beat ${n}` });
-      const prefix = prefixFor(scenario);
+      const prefix = prefixFor(storDir);
+      const slugTitle = fileSlug(title);
       const v = nextVersion(outDir, prefix, "seq", n, ".png", title);
-      const file = v === 1 ? `${prefix}_seq${n}_${title}.png` : `${prefix}_seq${n}_${title}_v${v}.png`;
+      const file = v === 1 ? `${prefix}_seq${n}_${slugTitle}.png` : `${prefix}_seq${n}_${slugTitle}_v${v}.png`;
       fs.writeFileSync(path.join(outDir, file), buf);
       // An upload is a deliberate choice — pin it as main.
       setMain(outDir, prefix, "seq", n, title, file, { pinned: true });
-      pgUpsertAsset(scenario, file)
-        .then(() => pgMarkAssetComplete(cfgNameFor(scenario),
-          { file, stage: "keyframe", index: n },
-          { engine: engineForFolder(scenario), outputFolder: scenario }))
-        .then(() => pgRefreshProjectFiles(cfgNameFor(scenario), scenario))
+      pgMarkAssetComplete(kfOwner,
+        { file, stage: "keyframe", index: n },
+        { engine: engineForFolder(storDir), outputFolder: storDir })
+        .then(() => pgRefreshProjectFiles(kfOwner, storDir))
         .catch((e) => console.warn("[pg] catalog failed:", e.message));
-      return json(res, 200, await outputsPayload(scenario));
+      return json(res, 200, await outputsPayload(storDir));
     }
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
       if (!isSafe(body.scenario)) return json(res, 400, { error: "bad scenario" });
+      const folder = await migrateProjectStorage(body.scenario);
       const run = startRun(body.scenario, {
         stitch: true,
         engine: body.engine || "ltx",
         format: body.format ?? (body.vertical ? "vertical" : undefined),
+        storageFolder: folder,
+        configName: body.scenario,
       });
-      return json(res, 200, { id: run.id });
+      return json(res, 200, { id: run.id, folder });
     }
     // Preview of the exact LLM messages a craft would send (AI Craft
     // "View Prompt" popup). No LLM call, nothing persisted — the UI lets the
@@ -2395,6 +3157,15 @@ const server = http.createServer(async (req, res) => {
           delete cfg.topic;
           delete cfg.requirements;
           project_id = await pgEnsureProject(target, cfg);
+          // Stamp the minted immutable folder into the crafted config so the
+          // draft Save (PUT) keeps the same storage identity.
+          try {
+            const claimed = await getFolderNameFromRow(target);
+            if (claimed) {
+              cfg.folder_name = claimed;
+              crafted.config = { ...crafted.config, folder_name: claimed };
+            }
+          } catch { /* row keeps it; PUT re-resolves */ }
         } catch (e) { console.warn("[pg] craft project save failed:", e.message); }
       }
       return json(res, 200, { ...crafted, project_id });
@@ -2434,6 +3205,24 @@ const server = http.createServer(async (req, res) => {
       const cfg = body.config;
       if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
       return json(res, 200, await craftVideoMeta(cfg));
+    }
+    // Single Master Prompt from Description + Video Type (Create New Project
+    // "Get by AI" button). Stateless — the dialog fills its Master Prompt box
+    // with the result; nothing is persisted.
+    if (p === "/api/master-prompt" && req.method === "POST") {
+      const body = await readJson(req);
+      const description = String(body.description ?? body.topic ?? "").trim();
+      if (!description) return json(res, 400, { error: "description required" });
+      try {
+        return json(res, 200, await craftMasterPrompt({
+          description,
+          presetId: body.presetId,
+          presetRules: body.presetRules,
+        }));
+      } catch (e) {
+        console.error("[master-prompt] failed:", e.message);
+        return json(res, 502, { error: String(e.message || "master prompt failed") });
+      }
     }
     // Predefined video-type presets (system-owned presets/*.md defaults).
     // List carries metadata only; content is fetched per id when needed
@@ -2519,15 +3308,44 @@ const server = http.createServer(async (req, res) => {
       const r = await pgPool.query(exact ? EXACT_VERSION_SQL : EFFECTIVE_ASSETS_SQL, [pid, version]);
       return json(res, 200, r.rows);
     }
+    // Reference visuals for a project (one row per generation/upload).
+    // GET /api/project/:name/references[?dir=<outputDir>] — is_main marks the
+    // record selected as main on the UI. This is what the Reference section
+    // of the gallery displays.
+    if (p.startsWith("/api/project/") && p.endsWith("/references") && req.method === "GET") {
+      const segs = p.split("/");
+      const name = decodeURIComponent(segs[3] || "");
+      if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      if (!pgUp) return json(res, 503, { error: "database unavailable" });
+      const pid = await pgProjectId(name);
+      if (pid == null) return json(res, 200, []);
+      const dir = u.searchParams.get("dir");
+      const r = dir && isSafe(dir)
+        ? await pgPool.query(
+          `SELECT id, project_id, output_dir, version, prompt, negative_prompt, file_path,
+                  model, workflow, seed, attempts, source, is_main, pinned, metadata,
+                  started_at, completed_at, created_at, updated_at
+           FROM project_references WHERE project_id = $1 AND output_dir = $2
+           ORDER BY created_at ASC, id ASC`,
+          [pid, dir])
+        : await pgPool.query(
+          `SELECT id, project_id, output_dir, version, prompt, negative_prompt, file_path,
+                  model, workflow, seed, attempts, source, is_main, pinned, metadata,
+                  started_at, completed_at, created_at, updated_at
+           FROM project_references WHERE project_id = $1
+           ORDER BY output_dir ASC, created_at ASC, id ASC`,
+          [pid]);
+      return json(res, 200, r.rows);
+    }
     if (p === "/api/db" && req.method === "GET") {
       if (!(await pgProbe())) return json(res, 200, { up: false });
-      const [a, s, pj, pa] = await Promise.all([
-        pgPool.query("SELECT count(*)::int AS n FROM assets"),
+      const [s, pj, pa, pr] = await Promise.all([
         pgPool.query("SELECT count(*)::int AS n FROM scenarios"),
         pgPool.query("SELECT count(*)::int AS n FROM projects").catch(() => ({ rows: [{ n: null }] })),
         pgPool.query("SELECT count(*)::int AS n FROM project_assets").catch(() => ({ rows: [{ n: null }] })),
+        pgPool.query("SELECT count(*)::int AS n FROM project_references").catch(() => ({ rows: [{ n: null }] })),
       ]);
-      return json(res, 200, { up: true, assets: a.rows[0].n, scenarios: s.rows[0].n, projects: pj.rows[0].n, project_assets_linked: pa.rows[0].n });
+      return json(res, 200, { up: true, scenarios: s.rows[0].n, projects: pj.rows[0].n, project_assets_linked: pa.rows[0].n, references: pr.rows[0].n });
     }
     if (p.startsWith("/outputs/")) {
       const [, , scenario, file] = p.split("/");
