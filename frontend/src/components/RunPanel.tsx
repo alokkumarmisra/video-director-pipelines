@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec, type VideoFormat } from "../api";
+import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec, type VideoFormat, type VideoType } from "../api";
 import OutputGallery from "./OutputGallery";
+import { useDialog } from "./Dialog";
 import { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
 import RenderMonitor, { type RmPin } from "./RenderMonitor";
 import { IconPanel, IconPlay, IconScissors, IconStop, IconClapper, Spinner } from "./Icons";
+import Collapse from "./Collapse";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
 
 // One collapsible zone inside the Rendered Clip card (Program / Render /
-// Terminal), each with its own persisted hide/show toggle.
-// Hiding unmounts the body (listings refetch on show) — except with
-// keepMounted (Terminal: the log keeps streaming + autoscrolling while hidden).
-function RunPart({ storageKey, title, label, keepMounted, children }: {
+// Terminal), each with its own persisted hide/show toggle. Bodies stay
+// mounted and animate via Collapse (Terminal log keeps streaming +
+// autoscrolling while hidden).
+function RunPart({ storageKey, title, label, children }: {
   storageKey: string;
   title: string;
   label: string;
-  keepMounted?: boolean;
   children: ReactNode;
 }) {
   const [hidden, setHidden] = useState(() => localStorage.getItem(storageKey) === "closed");
@@ -39,19 +40,24 @@ function RunPart({ storageKey, title, label, keepMounted, children }: {
           <IconPanel size={15} />
         </button>
       </div>
-      {keepMounted ? (
-        <div className="rm-part-body" style={hidden ? { display: "none" } : undefined}>{children}</div>
-      ) : (
-        !hidden && <div className="rm-part-body">{children}</div>
-      )}
+      <Collapse open={!hidden}>
+        <div className="rm-part-body">{children}</div>
+      </Collapse>
     </section>
   );
 }
 
 interface Props {
   scenario: string;
+  /** Immutable storage folder for the viewed project (outputs/<folder>/). */
+  folder?: string;
   engine: Engine;
   onEngine: (e: Engine) => void;
+  /** Which cut this section shows and generates: YOUTUBE (landscape main
+      cut) or INSTAGRAM (9:16 Reel cut). A live run always owns the panel;
+      the selection applies to the idle view and the next header run. */
+  videoType?: VideoType;
+  onVideoType?: (v: VideoType) => void;
   onDone: () => void;
   // Status reports the regen spec + format of the run that is actually active
   // (null regen for full runs, "landscape" default format) — so the gallery /
@@ -67,7 +73,7 @@ interface Props {
   // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
   // server replays the full log + asset events — so progress, the header bar
   // and every generating button pick up the live run instead of idling.
-  attachRun?: { id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null;
+  attachRun?: { id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null;
   // Run the server reports as active (from GET /api/runs, polled by App) —
   // independent of this panel's own run. While set and this panel is idle,
   // the backend rejects new runs, so the panel names the blocker and offers
@@ -82,7 +88,11 @@ interface Props {
 // Start / stitch / stop a run + live log tail (SSE) + live asset gallery.
 // Progress + ETA are derived from the real asset stream (see `progress`
 // below) — never fake timers.
-export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress, comfyQueue = 0 }: Props) {
+export default function RunPanel({ scenario, folder, engine, onEngine, videoType = "YOUTUBE", onVideoType, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress, comfyQueue = 0 }: Props) {
+  // Displayed cut: the live run owns the panel while running; when idle the
+  // YOUTUBE/INSTAGRAM dropdown picks which cut's outputs show (and what the
+  // header Generate/Stitch buttons produce next).
+  const idleFormat: VideoFormat = videoType === "INSTAGRAM" ? "vertical" : "landscape";
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>("idle");
   // Scenario this panel's run is generating (captured at start, so it stays
@@ -90,6 +100,9 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
   // trigger of the active run (null = full run) — reported via onStatus so
   // App never has to guess from a stale pendingRun.
   const [runScenario, setRunScenario] = useState<string | null>(null);
+  // Storage folder of the active run (from the start response / server
+  // record) — output dirs resolve from this, never the display name.
+  const [runFolder, setRunFolder] = useState<string | null>(null);
   const [runRegen, setRunRegen] = useState<RegenSpec | null>(null);
   // Engine the active run was started with (captured at start — the header
   // engine switch must not rewrite the monitor's badge/URLs mid-run).
@@ -140,6 +153,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       localStorage.setItem("ss-sec-run", c ? "open" : "closed");
       return !c;
     });
+  const dialog = useDialog();
   // Pace bookkeeping (refs, not state — written from the SSE callback):
   // last completion time + already-seen files, so each landed asset records
   // exactly one duration sample even if the server re-emits an event.
@@ -197,6 +211,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
       const { id } = res;
       setRunId(id);
       setRunScenario(scenario);
+      setRunFolder(res.folder ?? folder ?? scenario);
       setRunRegen(regen);
       setRunEngine(runEngine);
       setRunFormat(runFormat);
@@ -260,6 +275,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
     // The run's own scenario, not the currently viewed one — the user may
     // have refreshed while looking at a different project.
     setRunScenario(meta.scenario);
+    setRunFolder(meta.folder ?? folder ?? meta.scenario);
     setRunRegen(regen);
     setRunEngine(engine);
     setRunFormat(meta.format ?? "landscape");
@@ -519,17 +535,31 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
 
   return (
     <section className={`card${collapsed ? " collapsed" : ""}`} aria-label="Rendered Clip">
-      <div className="card-head">
-        <h2>
-          <span className="head-icon hi-output"><IconClapper size={15} /></span>
-          Rendered Clip
-        </h2>
+      <div className="card-head run-head">
+        <div className="run-head-top">
+          <h2>
+            <span className="head-icon hi-output"><IconClapper size={15} /></span>
+            Rendered Clip
+          </h2>
+          {statusPill}
+          <span className="spacer" />
+          <button
+            className="icon-btn"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Show rendered clip" : "Hide rendered clip"}
+            aria-label={collapsed ? "Show rendered clip" : "Hide rendered clip"}
+            aria-expanded={!collapsed}
+          >
+            <IconPanel size={15} />
+          </button>
+        </div>
+        <div className="run-head-controls">
         <div className="run-head-actions" role="group" aria-label="Run controls">
-          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run")} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : "Start a full generation"}>
+          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation" : "Start a full generation"}>
             {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
             {starting === "run" ? "Starting…" : "Generate"}
           </button>
-          <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch")} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : "Re-stitch final from selected mains only"}>
+          <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Re-stitch the Reel final from selected mains only" : "Re-stitch final from selected mains only"}>
             {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
             {starting === "stitch" ? "Starting…" : "Stitch only"}
           </button>
@@ -552,28 +582,32 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
             {stopping ? "Stopping…" : "Stop"}
           </button>
         </div>
-        <span className="seg" title="i2v engine">
-          <button className={engine === "ltx" ? "on" : ""} onClick={() => onEngine("ltx")}>
-            LTX 2.5
-          </button>
-          <button className={engine === "wan" ? "on" : ""} onClick={() => onEngine("wan")}>
-            Wan 2.1
-          </button>
+        <span className="ctl-group" title="i2v engine — which video model renders clips">
+          <span className="vt-label">Model</span>
+          <span className="seg" title="i2v engine">
+            <button className={engine === "ltx" ? "on" : ""} onClick={() => onEngine("ltx")}>
+              LTX 2.5
+            </button>
+            <button className={engine === "wan" ? "on" : ""} onClick={() => onEngine("wan")}>
+              Wan 2.1
+            </button>
+          </span>
         </span>
-        {statusPill}
-        <button
-          className="icon-btn"
-          onClick={toggleCollapsed}
-          title={collapsed ? "Show rendered clip" : "Hide rendered clip"}
-          aria-label={collapsed ? "Show rendered clip" : "Hide rendered clip"}
-          aria-expanded={!collapsed}
-        >
-          <IconPanel size={15} />
-        </button>
+        <label className="vt-select" title="Switch the video for this project — YouTube (landscape main cut) or Instagram (9:16 Reel cut). Applies to the idle view below and the next Generate/Stitch; a live run always shows itself.">
+          <span className="vt-label">Video</span>
+          <select
+            value={videoType}
+            onChange={(e) => onVideoType?.(e.target.value as VideoType)}
+            aria-label="Switch video: YouTube or Instagram"
+          >
+            <option value="YOUTUBE">YouTube</option>
+            <option value="INSTAGRAM">Instagram</option>
+          </select>
+        </label>
+        </div>
       </div>
 
-      {!collapsed && (
-      <>
+      <Collapse open={!collapsed}>
       {/* Another run owns the (serial) backend — name the blocker and offer
           to stop it. Hidden while this panel's own run is active (its Stop
           button covers that case). */}
@@ -598,7 +632,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
                 await killRun(serverRun.id);
               } catch (e) {
                 setStoppingServer(false);
-                window.alert(`Stop failed: ${e instanceof Error ? e.message : String(e)}`);
+                await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Stop failed", tone: "error" });
               }
             }}
           >
@@ -615,7 +649,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           <RunPart storageKey="ss-sec-run-program" title="Program" label="Program monitor">
             <RenderMonitor
               scenario={runScenario ?? scenario}
-              outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
+              outDir={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, status === "running" ? runFormat : idleFormat)}
               engine={runEngine ?? engine}
               status={status}
               progress={progress}
@@ -634,7 +668,7 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
           <RunPart storageKey="ss-sec-run-render" title="Render" label="Render status and outputs">
             <RenderMonitor
               scenario={runScenario ?? scenario}
-              outDir={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)}
+              outDir={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, status === "running" ? runFormat : idleFormat)}
               engine={runEngine ?? engine}
               status={status}
               progress={progress}
@@ -649,8 +683,11 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
               pin={pin}
               onPin={setPin}
             />
-            {assets.length > 0 && (
-              <OutputGallery scenario={outScenario(runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} progress={progress} />
+            {/* Run history belongs to the cut that produced it: while running
+                the panel follows the run, but an idle panel on the other cut
+                hides it (the monitors above already show that cut from disk). */}
+            {assets.length > 0 && (status === "running" || runFormat === idleFormat) && (
+              <OutputGallery scenario={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} progress={progress} />
             )}
           </RunPart>
         </>
@@ -658,14 +695,13 @@ export default function RunPanel({ scenario, engine, onEngine, onDone, onStatus,
         <p className="hint">Select or save a scenario first, then start a run.</p>
       )}
 
-      <RunPart storageKey="ss-sec-run-terminal" title="Terminal" label="Run log terminal" keepMounted>
+      <RunPart storageKey="ss-sec-run-terminal" title="Terminal" label="Run log terminal">
         <pre ref={boxRef} className="log">
           {log || <span className="log-empty">— log will stream here once a run starts —</span>}
         </pre>
       </RunPart>
 
-      </>
-      )}
+      </Collapse>
     </section>
   );
 }

@@ -10,6 +10,10 @@ export interface Scenario {
   referencePrompt: string;
   duration: number;
   sequence: Beat[];
+  // Immutable storage folder (projects.folder_name), stamped by the server
+  // on creation. Display names may contain spaces — this never does, and it
+  // is never updated on edits/renames.
+  folder_name?: string | null;
   // Predefined video-type preset id (presets/presets.json). Resolved to
   // presets/*.md rules at craft/generation time — only the id is stored,
   // never the .md content. Absent = default preset (cinematic).
@@ -28,11 +32,15 @@ export interface ScenarioInfo {
   favorite?: boolean;
   /** Integer id from the projects table (null in SQLite mode / unknown). */
   project_id?: number | null;
+  /** Immutable folder name derived from project name on creation (snake_case, <=100 chars). */
+  folder_name?: string | null;
 }
 
 export interface Run {
   id: string;
   scenario: string;
+  /** Immutable storage folder the run writes to (outputs/<folder>/…). */
+  folder?: string;
   status: "running" | "done" | "error";
   log: string;
   startedAt: number;
@@ -97,23 +105,53 @@ export interface OutputsInfo {
   files: string[];
   versions: VersionsInfo;
   mains: MainsInfo;
+  /** Reference rows from project_references (one per generation/upload):
+      master prompt + source per file. Absent = disk listing (draft/PG-down). */
+  refMeta?: Record<string, { prompt?: string | null; source?: string | null }>;
 }
 
 export type AssetKind = "ref" | "keyframe" | "clip";
+
+// One row of public.project_references (one row per reference generation or
+// upload — a project accumulates many master prompts / reference images).
+// is_main marks the record selected as main on the UI (one per output dir).
+export interface ProjectReference {
+  id: number;
+  project_id: number;
+    output_dir: string;
+    video_type?: string | null;
+  version: number | null;
+  prompt: string | null;
+  negative_prompt: string | null;
+  file_path: string | null;
+  model: string | null;
+  workflow: string | null;
+  seed: number | null;
+  attempts: number;
+  source: "generated" | "upload";
+  is_main: boolean;
+  pinned: boolean;
+  metadata: Record<string, unknown> | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 // One row of the narrow public.project_assets table (one row per asset).
 export type ProjectAssetType = "REFERENCE" | "IMAGE" | "KEYFRAME" | "VIDEO" | "FINAL";
 export type ProjectAssetStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "SKIPPED";
 
-export interface ProjectAsset {
-  id: number;
-  project_id: number;
-  version: number;
-  scene_id: number | null;
-  beat_index: number;
-  beat_title: string | null;
-  asset_type: ProjectAssetType;
-  status: ProjectAssetStatus;
+  export interface ProjectAsset {
+    id: number;
+    project_id: number;
+    version: number;
+    scene_id: number | null;
+    beat_index: number;
+    beat_title: string | null;
+    asset_type: ProjectAssetType;
+    video_type?: string | null;
+    status: ProjectAssetStatus;
   prompt: string | null;
   negative_prompt: string | null;
   file_path: string | null;
@@ -140,6 +178,8 @@ export interface DashboardProject {
   name: string;
   /** Integer id from the projects table (null when unavailable). */
   project_id: number | null;
+  /** Immutable storage folder (null when unknown — fall back to the slug). */
+  folder_name: string | null;
   description: string;
   status: DashboardStatus;
   generating: boolean;

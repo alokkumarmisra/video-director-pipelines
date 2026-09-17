@@ -35,6 +35,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 const scenario = args.find((a) => !a.startsWith("--")) || "anime_sequence";
+// --config-name <displayName>: the positional arg is the STORAGE folder
+// (outputs/<folder>/, space-free, immutable) while the prompt config lives
+// under the display name (prompts/<displayName>.json). The server passes
+// both when they differ; CLI use omits the flag (config == storage arg).
+const cfgNameIdx = args.indexOf("--config-name");
+const cfgName = cfgNameIdx >= 0 && args[cfgNameIdx + 1] ? args[cfgNameIdx + 1] : scenario;
 // --vertical: regenerate every asset at 9:16 into outputs/<scenario>_vertical/
 // (Instagram Reel cut). Never touches the landscape outputs.
 const format = normalizeFormat(args.includes("--vertical") ? VERTICAL : "landscape");
@@ -44,9 +50,9 @@ const regen = regenIdx >= 0
   ? { kind: args[regenIdx + 1], index: Number(args[regenIdx + 2]) || 0 }
   : null;
 
-const cfgPath = path.join(here, `../prompts/${scenario}.json`);
+const cfgPath = path.join(here, `../prompts/${cfgName}.json`);
 if (!fs.existsSync(cfgPath)) {
-  console.error(`[char] no prompts/${scenario}.json — available:`);
+  console.error(`[char] no prompts/${cfgName}.json — available:`);
   console.error("  " + fs.readdirSync(path.join(here, "../prompts")).filter((f) => f.endsWith(".json")).join("\n  "));
   process.exit(1);
 }

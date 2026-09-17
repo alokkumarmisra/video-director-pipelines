@@ -43,7 +43,11 @@ Generic runners (a new scenario = one new `prompts/<scenario>.json`):
   prompts gain a portrait-framing suffix) into `outputs/<scenario>[_wan]_vertical/`
   (see `lib/variant.mjs` — the single source of truth for the mapping). The landscape
   cut is never touched; the frontend's Reel card (`InstagramCut`) triggers it via
-  `POST /api/runs` with `{ format: "vertical" }`.
+  `POST /api/runs` with `{ format: "vertical" }`. The Rendered Clip header's Video
+  dropdown switches the workspace cut (YOUTUBE landscape / INSTAGRAM vertical):
+  Reference, Story Board and Keyframes→clips all follow it (vertical regens run
+  with `format: "vertical"`); the Reel card renders only on INSTAGRAM, plus the
+  short-cut dropdown (`POST /api/reel-cut` trims the Reel final to 30/60/90s).
 - `make_music.mjs [scenario]` — music-only: LTX **t2v** at tiny 64×64 (video throwaway),
   extracts the generated AAC to `.wav`; optionally lays it onto an existing video with the
   video's audio ducked. JSON: `{ musicPrompt, duration, fps?, size?, video?, videoVolume?, musicVolume?, out? }`.
@@ -81,10 +85,15 @@ Gotchas:
   ComfyUI queue is serial) — new runs are rejected while one is `running`.
 - Runs stream script logs via SSE and parse `[asset] {...}` lines into live asset events —
   keep emitting `[asset]` JSON from any script you want surfaced in the UI.
-- **Postgres catalog**: every finished generation is indexed in the `video_generator`
-  DB (`assets` table; binaries stay in `outputs/`). `server.mjs` upserts on each
-  `[asset]` event, reconciles the run dir on exit, backfills on boot, and serves the
-  gallery file list from `assets` (disk fallback when PG is down). Scenario saves are
+- **Postgres catalog**: every finished generation is recorded in the `video_generator`
+  DB (`project_assets` rows for keyframes/clips/finals, `project_references` rows
+  for reference visuals; binaries stay in `outputs/`). `project_assets` carries a
+  `video_type` cut dimension (`YOUTUBE` landscape / `INSTAGRAM` vertical, in the
+  unique key) — both cuts keep a full per-scene row set; the Rendered Clip header
+  dropdown switches which cut that card shows/generates. `server.mjs` marks rows
+  complete on each `[asset]` event, refreshes the current version's file names on
+  run exit, backfills projects on boot, and serves the gallery file list from
+  disk. Scenario saves are
   versioned in `scenario_versions` (every PUT = new version, never overwrite;
   `GET /api/scenario/:name/versions[/:v]`); editor has no autosave — explicit Save only.
   Needs the `pg` npm dep + `PG_HOST`/`PG_PORT`/`PG_DATABASE`/`PG_USER`/`PG_PASSWORD`

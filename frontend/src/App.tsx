@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, folderOf, slugFolder, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat, type VideoType } from "./api";
 import type { Beat, Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
@@ -11,8 +11,10 @@ import InstagramCut from "./components/InstagramCut";
 import VideoMetaPanel from "./components/VideoMetaPanel";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
+import ResourcePage from "./components/ResourcePage";
 import Login from "./components/Login";
-import { IconCheck, IconChevronDown, IconClapper, IconFolder, IconLogOut, IconMoon, IconPanel, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { DialogProvider, useDialog } from "./components/Dialog";
+import { IconCheck, IconChevronDown, IconClapper, IconDatabase, IconFolder, IconLogOut, IconMoon, IconPanel, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
@@ -132,14 +134,16 @@ export default function App() {
   if (!auth) return <Login onAuthed={setAuth} />;
 
   return (
-    <Studio
-      user={auth.user}
-      onLogout={handleLogout}
-      theme={theme}
-      onToggleTheme={toggleTheme}
-      themeColor={themeColor}
-      onThemeColor={setThemeColor}
-    />
+    <DialogProvider>
+      <Studio
+        user={auth.user}
+        onLogout={handleLogout}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        themeColor={themeColor}
+        onThemeColor={setThemeColor}
+      />
+    </DialogProvider>
   );
 }
 
@@ -152,7 +156,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   onThemeColor: (c: string) => void;
 }) {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -161,6 +165,14 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // `shown` — so clicking another project never blanks/flashes the page: the
   // old project stays mounted until the new config has arrived.
   const [shownName, setShownName] = useState("");
+  // Last project that FAILED to load ({ name, message }). Rendered as an
+  // error banner with Retry — loading used to fail silently (the old content
+  // just stayed on screen with no explanation).
+  const [loadError, setLoadError] = useState<{ name: string; message: string } | null>(null);
+  // Mirror of shownName for the load effect's failure path (reverting `name`
+  // must read the current value, not a stale closure).
+  const shownRef = useRef("");
+  shownRef.current = shownName;
   // True while the newly selected project's config is loading. The old
   // content stays mounted (dimmed) until it lands — no blank flash.
   const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
@@ -176,6 +188,16 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // 9:16 Instagram Reel). Reported by RunPanel from the run that actually
   // started — gates every "generating" indicator to the matching cut.
   const [runFormat, setRunFormat] = useState<VideoFormat>("landscape");
+  // Video facing the Rendered Clip section: YOUTUBE (landscape main cut) or
+  // INSTAGRAM (9:16 Reel cut) — same vocabulary as the project_assets
+  // video_type column. Persisted per project folder; the header dropdown
+  // switches the idle view and the next header run (a live run owns the
+  // panel regardless).
+  const [videoType, setVideoType] = useState<VideoType>("YOUTUBE");
+  const changeVideoType = (v: VideoType) => {
+    setVideoType(v);
+    try { localStorage.setItem(`ss-video-type:${contentFolder}`, v); } catch { /* ignore */ }
+  };
   const [regenTarget, setRegenTarget] = useState<{ kind: AssetKind; index?: number } | null>(null);
   // Unsaved brief-field edits from the AI Craft + Generate Reference cards,
   // keyed by Scenario field (absent key = no edit). Merged into the save
@@ -212,7 +234,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // when this page loaded (refresh mid-generation). Restored here — not in
   // RunPanel — so the header bar, sidebar spinners and every generating
   // button flip to generating immediately, before the SSE tail replays.
-  const [attachRun, setAttachRun] = useState<{ id: string; scenario: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null>(null);
+  const [attachRun, setAttachRun] = useState<{ id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null>(null);
   // Serial run queue: Regen clicks that land while a run is active wait here
   // (the server rejects concurrent runs) and fire one-by-one as each run
   // ends. Only the actively targeted button is disabled — the rest stay
@@ -231,6 +253,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // in small type on the right of each row). Same dashboard payload as the
   // topbar progress — no extra endpoint.
   const [dashMap, setDashMap] = useState<Map<string, DashboardProject>>(new Map());
+  // Global alert/confirm popups (replaces the native window.alert/confirm).
+  const dialog = useDialog();
 
   // Progress Status popup in the top menu bar — the Images / Videos /
   // Overall bars live inside this toggleable window, not inline in the bar.
@@ -480,8 +504,31 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     runActivePrev.current = runActive;
   }, [runActive, runQueue]);
 
-  const handleRegen = (kind: AssetKind, index: number | null) =>
-    requestRun({ regen: { kind, index: index ?? undefined } });
+  // `format` pins the regen to a cut (the Reel browser passes "vertical" so
+  // a vertical regen renders into the _vertical dir; default = main cut).
+  const handleRegen = (kind: AssetKind, index: number | null, format?: VideoFormat) =>
+    requestRun({ regen: { kind, index: index ?? undefined }, ...(format ? { format } : {}) });
+
+  // Cross-navigation between Keyframes → clips and the Scenario Editor:
+  // scrolls to the matching scene container and flashes it once so it is
+  // easy to spot. Opening the editor first when it is collapsed (its beats
+  // are unmounted while hidden, so the scroll waits a tick for them).
+  const gotoScene = useCallback((target: "editor" | "clip", n: number) => {
+    const flash = (el: HTMLElement | null) => {
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.remove("flash");
+      void el.offsetWidth;
+      el.classList.add("flash");
+      window.setTimeout(() => el.classList.remove("flash"), 1700);
+    };
+    if (target === "editor") {
+      if (!editorOpen) toggleEditor();
+      window.setTimeout(() => flash(document.getElementById(`beat-${n}`)), 120);
+    } else {
+      flash(document.getElementById(`shot-${n}`));
+    }
+  }, [editorOpen, toggleEditor]);
 
   // "Apply to All Scene": append the Master Prompt box text to every scene's
   // keyframe image prompt below (same append rules as craft-time fan-out —
@@ -492,12 +539,16 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     if (!editor) return { applied: 0, saved: false };
     const m = String(master ?? "").trim();
     if (!m) return { applied: 0, saved: false };
-    const before = Array.isArray(editor.config.sequence) ? editor.config.sequence : [];
+    // Fold unsaved card edits (reference prompt, description, ...) into the
+    // base config first — otherwise this save would persist a stale
+    // referencePrompt and wipe the user's Generate Reference edit in the DB.
+    const base: Scenario = draft ? draft.config : { ...editor.config, ...overrides };
+    const before = Array.isArray(base.sequence) ? base.sequence : [];
     if (before.length === 0) return { applied: 0, saved: false };
     const r = await fetch("/api/apply-master", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: editor.config, master: m }),
+      body: JSON.stringify({ config: base, master: m }),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "apply failed");
@@ -508,10 +559,13 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     });
     if (applied === 0) return { applied: 0, saved: false };
     if (draft) {
-      setDraft({ ...draft, config: { ...draft.config, sequence: next } });
+      setDraft({ ...draft, config: { ...base, sequence: next } });
       return { applied, saved: false };
     }
-    await saveScenario(editor.name, { ...editor.config, sequence: next });
+    await saveScenario(editor.name, { ...base, sequence: next });
+    // The save folded the card overrides in — drop them so the cards fall
+    // back to the freshly saved config.
+    dropEdits();
     const sc = await getScenario(editor.name);
     setCfg(sc.config);
     refreshScenarios().catch(() => {});
@@ -519,16 +573,56 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     return { applied, saved: true };
   };
 
+  // Generate Reference save-first: the reference-prompt box lives in
+  // `overrides` until explicit Save, but generation reads the SAVED prompt
+  // (prompts/<name>.json + scenarios/config + projects.master_prompt). Persist
+  // the merged config before queueing the ref run so the edited text is what
+  // gets generated AND what lands in the database. Without this the DB column
+  // kept the old prompt even though the UI showed the new text.
+  const handleGenerateRef = async (count: number) => {
+    if (draft) return;
+    // Reference regens render into the viewed cut (vertical dir on INSTAGRAM).
+    const refFormat = cutFormat === "vertical" ? { format: "vertical" as VideoFormat } : {};
+    const target = shownName || name;
+    if (!target || !cfg) {
+      requestRun({ regen: { kind: "ref" }, count, ...refFormat });
+      return;
+    }
+    // Never persist a half-switched state.
+    if (shownName && shownName !== target) {
+      requestRun({ regen: { kind: "ref" }, count, ...refFormat });
+      return;
+    }
+    const merged: Scenario = { ...cfg, ...overrides };
+    try {
+      await saveScenario(target, merged);
+      dropEdits();
+      setCfg(merged);
+      refreshScenarios().catch(() => {});
+    } catch (e) {
+      await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Could not save reference prompt", tone: "error" });
+      return;
+    }
+    // Server treats an identical config as a no-op (no duplicate version),
+    // so saving every time is safe even with no edits.
+    requestRun({ regen: { kind: "ref" }, count, ...refFormat });
+  };
+
   // Home -> workspace navigation. The workspace itself is unchanged —
-  // opening a project just selects it and switches the view.
+  // opening a project just selects it and switches the view. The nonce
+  // forces a refetch even when re-clicking the already-selected project.
+  const [loadNonce, setLoadNonce] = useState(0);
   const openProject = useCallback((n: string) => {
     setDraft(null);
+    setLoadError(null);
+    setLoadNonce((x) => x + 1);
     setName(n);
     setView("workspace");
   }, []);
 
-  // Delete confirmation popup for the Project bar (Yes/No — no native
-  // window.confirm). `confirmDelete` is the pending project name, if any.
+  // Delete confirmation popup for the Project bar (styled like the global
+  // dialog alerts, with its own flow so the Delete button spins while the
+  // deletion runs). `confirmDelete` is the pending project name, if any.
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -555,7 +649,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
       await refreshScenarios();
       refresh();
     } catch (e) {
-      window.alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
+      await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Delete failed", tone: "error" });
     } finally {
       setDeleting(false);
       setConfirmDelete(null);
@@ -598,7 +692,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     try {
       await setFavorite(s.name, on);
     } catch (e) {
-      window.alert(`Favorite update failed: ${e instanceof Error ? e.message : String(e)}`);
+      await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Favorite update failed", tone: "error" });
       refreshScenarios();
     }
   };
@@ -619,6 +713,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     // loads (blanking it here is what made the page flick on every click).
     // `shownName`/`cfg` only flip together once the fetch lands.
     setCfgLoading(true);
+    setLoadError(null);
     const req = name;
     getScenario(req)
       .then((r) => {
@@ -628,14 +723,20 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           setCfgLoading(false);
         }
       })
-      .catch(() => {
-        // Keep the old project mounted on failure — never blank the page.
-        if (!cancelled) setCfgLoading(false);
+      .catch((e) => {
+        if (cancelled) return;
+        setCfgLoading(false);
+        const message = e instanceof Error ? e.message : String(e);
+        setLoadError({ name: req, message });
+        // Unwedge: fall back to the project still on screen so the sidebar
+        // stops spinning on a project that never arrived. (Re-setting the
+        // same value is a no-op — e.g. the very first load failing.)
+        setName((cur) => (cur === req ? shownRef.current : cur));
       });
     return () => {
       cancelled = true;
     };
-  }, [name]);
+  }, [name, loadNonce]);
 
   useEffect(() => {
     comfyStatus().then(setComfy).catch(() => {});
@@ -679,6 +780,43 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     }
   };
 
+  // Save-first for "Craft scenario": persist the open saved project's
+  // current AI Craft edits (description, duration, preset/rules, master
+  // prompt + staged rename) as a new version BEFORE the LLM crafts, so
+  // crafting always builds on stored project data. Drafts skip this — the
+  // craft itself creates their project. Resolves the display name to craft
+  // against (null = draft). Throwing aborts the craft with the error shown.
+  const persistOpenProject = useCallback(async (): Promise<string | null> => {
+    if (draft) return null;
+    const target = name || null;
+    if (!target) return null;
+    // Never persist a half-switched state: the loaded config must belong to
+    // the target project, otherwise just craft (server backfills from DB).
+    if (!cfg || shownName !== target) return target;
+    const merged: Scenario = { ...cfg, ...overrides };
+    const newName = nameOv && nameOv.trim() !== target ? nameOv.trim() : null;
+    if (newName) {
+      if (runActive && runScenario === target)
+        throw new Error("Stop the active run before renaming.");
+      await renameScenario(target, newName);
+      await saveScenario(newName, merged);
+      dropEdits();
+      await refreshScenarios();
+      const r = await getScenario(newName);
+      setCfg(r.config);
+      setShownName(newName);
+      setName(newName);
+      refresh();
+      return newName;
+    }
+    await saveScenario(target, merged);
+    // The save folded the card overrides in — drop them so the cards fall
+    // back to the freshly saved config (PUT is a no-op version-wise when
+    // nothing actually changed).
+    dropEdits();
+    return target;
+  }, [draft, name, shownName, cfg, overrides, nameOv, runActive, runScenario, dropEdits, refreshScenarios, refresh]);
+
   // Craft renders below as an unsaved draft.
   // The project row is already saved in the DB at craft time (with its
   // project_id); explicit "Save scenario" persists everything as v1 with
@@ -713,8 +851,28 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // True while the requested project differs from what's on screen (its
   // config is still flying in). Sidebar shows a spinner; content stays put.
   const switching = !draft && (!!cfgLoading || (!!name && name !== shownName));
+  // Blank-the-cards gate for the workspace below: true only while the NEWLY
+  // selected project differs from what's on screen. Same-project refetches
+  // (cfgLoading alone — e.g. re-clicking the open project) keep content.
+  const switchingProject = !draft && !!name && name !== shownName;
   // Project whose content is actually on screen right now.
   const contentName = draft ? draft.name : shownName;
+  // Immutable storage folder for the on-screen project (outputs/<folder>/).
+  // Display names may contain spaces — dirs never do. Drafts have no storage
+  // yet; the slug fallback keeps gallery URLs well-formed (empty listing).
+  const folderForName = (n: string | null): string =>
+    n ? folderOf(scenarios.find((s) => s.name === n) ?? null, n) : "";
+  const contentFolder = draft ? slugFolder(draft.name) : folderForName(shownName);
+  // Workspace cut from the Video dropdown: YOUTUBE = landscape main cut,
+  // INSTAGRAM = vertical Reel cut. Every project section below follows it;
+  // single-cut sections (Reel manager card) unmount instead of showing stale
+  // content. Drafts resolve to an empty listing like before.
+  const cutFormat: VideoFormat = videoType === "INSTAGRAM" ? "vertical" : "landscape";
+  const cutDir = contentFolder ? outScenario(contentFolder, engine, cutFormat) : "";
+  const cutFormatParam = cutFormat === "vertical" ? { format: "vertical" as VideoFormat } : {};
+  // Storage folder of the active run (dirs the galleries compare against).
+  // runScenario stays the display name for display-vs-display checks.
+  const runFolderBase = runActive && runScenario ? folderForName(runScenario) : null;
   // Unsaved card edits belong to the project on screen — drop them on
   // switch so the next project's saved values show (nothing is lost: the
   // editor only enables Save while its own content is on screen).
@@ -722,6 +880,13 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     dropEdits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentName]);
+  // Restore the per-project video facing (Rendered Clip dropdown) when the
+  // on-screen project changes — defaulting to the YouTube main cut.
+  useEffect(() => {
+    try {
+      setVideoType(localStorage.getItem(`ss-video-type:${contentFolder}`) === "INSTAGRAM" ? "INSTAGRAM" : "YOUTUBE");
+    } catch { setVideoType("YOUTUBE"); }
+  }, [contentFolder]);
 
   // Opening a project (Continue) syncs remote state immediately — the
   // workspace header shows server truth within ~a second even when the last
@@ -744,6 +909,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
       return {
         id: serverRun.id,
         scenario: serverRun.scenario,
+        folder: serverRun.folder,
         stitch: !!serverRun.stitch,
         regen: regen ? { kind: regen.kind, index: regen.index } : null,
         count: serverRun.count ?? 1,
@@ -767,6 +933,20 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const refGenerating =
     runActive && regenTarget?.kind === "ref" && !!contentName && !draft && runScenario === contentName;
 
+  // Icon-only service pills (PostgreSQL / LM Studio / ComfyUI) — the full
+  // status text lives in the tooltip + aria-label, not in the pill.
+  const dbTip = !health ? "PostgreSQL · checking…" : health.db.up ? "PostgreSQL · connected" : "PostgreSQL · offline";
+  const llmTip = !health
+    ? "LM Studio · checking…"
+    : health.llm.up
+      ? "LM Studio · connected"
+      : `LM Studio · offline${health.llm.error ? ` — ${health.llm.error}` : ""}`;
+  const comfyTip = !comfy
+    ? "ComfyUI · checking…"
+    : comfy.up
+      ? `ComfyUI · online${comfyQueue > 0 ? ` · ${comfyQueue} queued` : ""}${comfy.error ? ` — ${comfy.error}` : ""}`
+      : `ComfyUI · offline${comfy.error ? ` — ${comfy.error}` : ""}`;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -775,7 +955,6 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             <IconClapper size={17} />
           </span>
           <span className="brand-name">Sanskriti AI</span>
-          <span className="brand-sub">AI Video Generator</span>
         </div>
         <nav className="topnav" aria-label="Primary">
           <button
@@ -792,6 +971,14 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             title={draft ? `Workspace: ${draft.name} (unsaved)` : name ? `Workspace: ${name}` : "Open a project from Home first"}
           >
             Projects
+          </button>
+          <button
+            className={`topnav-btn ${view === "resource" ? "on" : ""}`}
+            onClick={() => setView("resource")}
+            aria-current={view === "resource" ? "page" : undefined}
+            title="Open the Resource page"
+          >
+            Resource
           </button>
         </nav>
         {/* Global generation status — a toggleable "Progress Status" window
@@ -876,19 +1063,21 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         </div>
         <div className="topbar-right">
           <div className="topbar-health" role="status" aria-label="Service status">
-            <span className={`pill ${health ? (health.db.up ? "ok" : "err") : ""}`} title="PostgreSQL database">
-              <span className={`dot ${health?.db.up ? "pulse" : ""}`} />
-              {health ? (health.db.up ? "PostgreSQL connected" : "PostgreSQL offline") : "PostgreSQL checking"}
+            <span className={`pill svc svc-db ${health ? (health.db.up ? "ok" : "err") : ""}`} title={dbTip} aria-label={dbTip}>
+              <IconDatabase size={14} />
+              <span className="svc-code" aria-hidden="true">PG</span>
+              <span className={`dot st-${!health ? "wait" : health.db.up ? "ok" : "err"}${health?.db.up ? " pulse" : ""}`} aria-hidden="true" />
             </span>
-            <span className={`pill ${health ? (health.llm.up ? "ok" : "err") : ""}`} title={health?.llm.error ?? "LM Studio (LLM)"}>
-              <span className={`dot ${health?.llm.up ? "pulse" : ""}`} />
-              {health ? (health.llm.up ? "LM Studio connected" : "LM Studio offline") : "LM Studio checking"}
+            <span className={`pill svc svc-llm ${health ? (health.llm.up ? "ok" : "err") : ""}`} title={llmTip} aria-label={llmTip}>
+              <IconSparkles size={14} />
+              <span className="svc-code" aria-hidden="true">LM</span>
+              <span className={`dot st-${!health ? "wait" : health.llm.up ? "ok" : "err"}${health?.llm.up ? " pulse" : ""}`} aria-hidden="true" />
             </span>
-            <span className={`pill ${comfy?.up ? "ok" : "err"}`} title={comfy?.error ?? ""}>
-              <span className={`dot ${comfy?.up ? "pulse" : ""}`} />
-              {comfy?.up
-                ? `ComfyUI online${comfyQueue > 0 ? ` · ${comfyQueue} queued` : ""}`
-                : "ComfyUI offline"}
+            <span className={`pill svc svc-comfy ${comfy ? (comfy.up ? "ok" : "err") : ""}`} title={comfyTip} aria-label={comfyTip}>
+              <IconClapper size={14} />
+              <span className="svc-code" aria-hidden="true">CF</span>
+              <span className={`dot st-${!comfy ? "wait" : comfy.up ? "ok" : "err"}${comfy?.up ? " pulse" : ""}`} aria-hidden="true" />
+              {comfyQueue > 0 && <span className="svc-count" aria-hidden="true">{comfyQueue}</span>}
             </span>
           </div>
           <button
@@ -949,8 +1138,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-      <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}`}>
-        {!sidebarOpen && view === "workspace" && (
+      <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}`}>
+        {!sidebarOpen && view !== "home" && (
           <button
             className="sidebar-show"
             onClick={toggleSidebar}
@@ -971,8 +1160,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             }}
           />
         </div>
+        {/* Resource library — same Projects panel on the left as the
+            workspace, library in the middle column. Stays mounted like
+            Home/workspace so the top menu (and any running generation) is
+            never disturbed; only the visible view swaps. */}
+        <div className="col" style={view !== "resource" ? { display: "none" } : undefined}>
+          <ResourcePage onOpenProject={openProject} />
+        </div>
         {sidebarOpen && (
-        <aside className="sidebar" style={view !== "workspace" ? { display: "none" } : undefined}>
+        <aside className="sidebar" style={view === "home" ? { display: "none" } : undefined}>
           <div className="sidebar-head">
             <span>Projects</span>
             <span className="muted sidebar-count">
@@ -1093,26 +1289,52 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         )}
 
         <div className="col" style={view !== "workspace" ? { display: "none" } : undefined}>
-          {/* First open (nothing loaded yet): stable loading skeleton with the
-              same card layout, so the editor mounting later doesn't reflow. */}
-          {switching && !editor ? (
-            <>
-              <section className="card ws-loading" aria-label="Loading project">
-                <Spinner size={16} /> Loading {name}…
-              </section>
-              <section className="card ws-loading" aria-label="Loading run panel">
-                <Spinner size={16} /> Loading {name}…
-              </section>
-            </>
-          ) : (
-          <>
-          {/* Rendered Clip (run) window on top, Generate Reference just below
-              it, then the Shot List, then keyframes → clips. Each card
-              hides/shows on its own toggle. */}
+          {/* Switching projects blanks the project-specific cards (loading
+              skeleton) instead of showing the previous project's editor and
+              gallery in between — a project with no data shows blank, never
+              another project's resources. The error banner and the Rendered
+              Clip run console below stay mounted regardless, so a live
+              generation (log, assets, progress) survives the switch and is
+              still there when you come back to the generating project. */}
+          {loadError && (
+            <section className="card" role="alert" aria-label="Project load error">
+              <div className="card-head">
+                <h2>Couldn't load project</h2>
+                <span className="spacer" />
+                <button
+                  className="ghost"
+                  onClick={() => setLoadError(null)}
+                  title="Dismiss"
+                  aria-label="Dismiss load error"
+                >
+                  Dismiss
+                </button>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    const retry = loadError.name;
+                    setLoadError(null);
+                    setName(retry);
+                    setLoadNonce((x) => x + 1);
+                  }}
+                  title={`Retry loading ${loadError.name}`}
+                >
+                  Retry
+                </button>
+              </div>
+              <p className="err-text">
+                "{loadError.name}": {loadError.message}
+                {loadError.message === "unauthorized" && " — your session expired, refresh the page and sign in again."}
+              </p>
+            </section>
+          )}
           <RunPanel
             scenario={draft ? "" : contentName}
+            folder={draft ? "" : contentFolder}
             engine={engine}
             onEngine={setEngine}
+            videoType={videoType}
+            onVideoType={changeVideoType}
             onDone={refresh}
             onStatus={(s, sc, regen, format) => {
               setRunActive(s === "running");
@@ -1129,11 +1351,19 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             onProgress={setGenProgress}
             comfyQueue={comfyQueue}
           />
+          {switchingProject ? (
+            <section className="card ws-loading" aria-label="Loading project">
+              <Spinner size={16} /> Loading {name}…
+            </section>
+          ) : (
+          <>
+          {/* Project cards below the run console: Generate Reference, then
+              the Shot List, then keyframes → clips. Each card hides/shows on
+              its own toggle. */}
           <GenerateReference
             referencePrompt={overrides.referencePrompt ?? (draft ? draft.config : cfg)?.referencePrompt ?? ""}
             onReferencePromptChange={(v) => patchOverrides({ referencePrompt: v })}
-            onGenerateRef={(count) =>
-              !draft && requestRun({ regen: { kind: "ref" }, count })}
+            onGenerateRef={(count) => void handleGenerateRef(count)}
             refBusy={runActive}
             refGenerating={refGenerating}
             isDraft={!!draft}
@@ -1142,15 +1372,17 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 // While a run is active, follow the run's own output dir
                 // (engine + Reel cut included) — the same listing the
                 // Rendered Clip reference used to show — so generating
-                // chips, versions and uploads track the live run.
-                scenario={runActive && runScenario ? outScenario(runScenario, engine, runFormat) : outScenario(contentName, engine)}
+                // chips, versions and uploads track the live run. Idle, the
+                // gallery follows the Video dropdown cut (cutDir). Dirs are
+                // folder-based (immutable storage), never display names.
+                scenario={runActive && runScenario ? outScenario(folderForName(runScenario), engine, runFormat) : cutDir}
                 refreshKey={refreshKey}
                 section="reference"
-                generatingScenario={runActive ? runScenario : null}
+                generatingScenario={runFolderBase}
                 generatingFormat={runActive ? runFormat : null}
                 regenTarget={runActive ? regenTarget : null}
                 runQueue={runQueue}
-                onRegen={handleRegen}
+                onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
                 onUploaded={refresh}
               />
             ) : null}
@@ -1158,8 +1390,12 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           {editor && (
             <ShotList
               name={editor.name}
+              folder={contentFolder}
               engine={engine}
+              format={cutFormat}
+              videoType={videoType}
               config={editor.config}
+              overrides={overrides}
               isDraft={!!draft}
               onDraftChange={(next) => setDraft((d) => (d ? { ...d, config: next } : d))}
               onChanged={(next) => {
@@ -1168,33 +1404,37 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 refresh();
               }}
               refreshKey={refreshKey}
-              generatingScenario={runActive ? runScenario : null}
+              generatingScenario={runFolderBase}
               generatingFormat={runActive ? runFormat : null}
               regenTarget={runActive ? regenTarget : null}
               progress={topProgress}
               comfyQueue={comfyQueue}
-              onRegen={handleRegen}
-              onStitch={() => requestRun({ stitch: true })}
+              onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
+              onStitch={() => requestRun({ stitch: true, ...cutFormatParam })}
               runBusy={runActive}
               runQueue={runQueue}
             />
           )}
           <OutputGallery
-            scenario={contentName ? outScenario(contentName, engine) : ""}
+            scenario={cutDir}
             refreshKey={refreshKey}
             section="beats"
-            generatingScenario={runActive ? runScenario : null}
+            generatingScenario={runFolderBase}
             generatingFormat={runActive ? runFormat : null}
             regenTarget={runActive ? regenTarget : null}
             runQueue={runQueue}
-            onRegen={handleRegen}
+            onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
             progress={topProgress}
+            onGotoEditorScene={(n) => gotoScene("editor", n)}
           />
-          {!draft && contentName && (
+          {/* Reel manager card: only on the INSTAGRAM cut — the scenes
+              themselves browse in the sections above (they follow the cut).
+              YouTube hides this card entirely (not rendered). */}
+          {!draft && contentName && videoType === "INSTAGRAM" && (
             <InstagramCut
-              scenario={contentName}
+              scenario={contentFolder}
               engine={engine}
               refreshKey={refreshKey}
               totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
@@ -1244,10 +1484,19 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             syncEpoch={craftEpoch}
             onPatch={patchOverrides}
             onNameChange={setNameOv}
+            onBeforeCraft={persistOpenProject}
             sceneCount={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : 0}
             onApplyMaster={applyMasterToScenes}
           />
-          {(!editorOpen || switching) && !editor ? (
+          {/* Same blank-while-switching rule as the middle column: the editor
+              shows the newly selected project's beats only, never the
+              previous project's. (CraftPanel above stays mounted so an
+              in-flight craft keeps its spinner and results.) */}
+          {switchingProject ? (
+            <section className="card ws-loading" aria-label="Loading scenario editor">
+              <Spinner size={16} /> Loading {name}…
+            </section>
+          ) : (!editorOpen || switching) && !editor ? (
             !editorOpen ? null : (
             <section className="card ws-loading" aria-label="Loading scenario editor">
               <Spinner size={16} /> Loading {name}…
@@ -1266,6 +1515,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               onSave={handleSave}
               overrides={overrides}
               onOverridesClear={dropEdits}
+              onGotoClipScene={(n) => gotoScene("clip", n)}
             />
           ) : (
             <section className="card">
@@ -1283,31 +1533,33 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         </div>
       </div>
 
-      {/* Delete confirmation popup for the Project bar. */}
+      {/* Delete confirmation popup for the Project bar — same beautiful
+          dialog look as the global alerts (keeps its own flow so the Yes
+          button can spin while the deletion runs). */}
       {confirmDelete && (
         <div
-          className="confirm-overlay"
+          className="dlg-overlay"
           role="alertdialog"
           aria-modal="true"
           aria-label={`Delete project ${confirmDelete}`}
           onClick={() => !deleting && setConfirmDelete(null)}
         >
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 className="confirm-title">Delete project?</h3>
-            <p className="confirm-text">
-              Delete <b>{confirmDelete}</b>?
-            </p>
-            <p className="confirm-sub">
+          <div className="dlg-box" data-tone="error" onClick={(e) => e.stopPropagation()}>
+            <div className="dlg-icon" data-tone="error" aria-hidden="true">
+              <IconTrash size={20} />
+            </div>
+            <h3 className="dlg-title">Delete "{confirmDelete}"?</h3>
+            <p className="dlg-message">
               Its generated outputs will be removed too. This cannot be undone.
             </p>
-            <div className="confirm-actions">
+            <div className="dlg-actions">
               <button
                 className="ghost"
                 onClick={() => setConfirmDelete(null)}
                 disabled={deleting}
                 autoFocus
               >
-                No
+                Keep
               </button>
               <button
                 className="danger"
@@ -1315,7 +1567,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 disabled={deleting}
               >
                 {deleting ? <Spinner size={12} /> : <IconTrash size={12} />}
-                {deleting ? "Deleting…" : "Yes"}
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
   type RunRequest,
   type ScenarioVersionInfo,
   type VideoFormat,
+  type VideoType,
 } from "../api";
 import type {
   AssetKind,
@@ -26,10 +27,12 @@ import type { GenerationProgress } from "./GenerationProgressBar";
 import { formatLiveElapsed } from "./GenerationProgressBar";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
+import { useDialog } from "./Dialog";
 import { SceneBadge } from "./OutputGallery";
 import {
   IconCheck,
   IconClapper,
+  IconExpand,
   IconFilm,
   IconImage,
   IconPanel,
@@ -41,6 +44,7 @@ import {
   IconX,
   Spinner,
 } from "./Icons";
+import Collapse from "./Collapse";
 
 // ---------------------------------------------------------------------------
 // Shot type heuristic — derived from the real beat prompts, never hard-coded
@@ -79,11 +83,24 @@ interface ShotRow {
 }
 
 interface Props {
-  /** Base scenario name ("" when nothing selected / unsaved draft). */
+  /** Display name ("" when nothing selected / unsaved draft) — used for the
+      scenario APIs (assets, versions, save). Output dirs come from `folder`. */
   name: string;
+  /** Immutable storage folder (outputs/<folder>/) — never changes on rename. */
+  folder?: string;
   engine: Engine;
+  /** Which cut this board shows: landscape (YouTube main) or vertical
+      (Instagram Reel). Drives the output dir, the asset-status query and the
+      generating spinners — same scenes, other cut's files. */
+  format?: VideoFormat;
+  /** Catalog cut for the asset statuses (defaults to YOUTUBE server-side). */
+  videoType?: VideoType;
   /** Saved (or draft) scenario config — prompts + duration come from here. */
   config: Scenario | null;
+  /** Unsaved card edits (Generate Reference + AI Craft) owned by the parent.
+      Folded into every beat save so a Story Board edit never persists a stale
+      referencePrompt over the user's newer Generate Reference text. */
+  overrides?: Partial<Scenario>;
   refreshKey: number;
   /** Output dir of the currently running generation (null when idle). */
   generatingScenario: string | null;
@@ -125,8 +142,12 @@ const emptyOutputs: OutputsInfo = {
 // /api/project/:name/assets statuses, live run progress). No mocks.
 export default function ShotList({
   name,
+  folder,
   engine,
+  format,
+  videoType,
   config,
+  overrides,
   refreshKey,
   generatingScenario,
   generatingFormat,
@@ -144,6 +165,7 @@ export default function ShotList({
   const [outputs, setOutputs] = useState<OutputsInfo>(emptyOutputs);
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [versions, setVersions] = useState<ScenarioVersionInfo[]>([]);
+  const dialog = useDialog();
   const [filter, setFilter] = useState<number | "all">("all");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<PreviewItem | null>(null);
@@ -195,15 +217,16 @@ export default function ShotList({
   // projects alike, even while another beat generates.
   const mutBusy = saving || genBusy;
 
-  const outDir = name ? outScenario(name, engine) : "";
+  const outDir = (folder || name) ? outScenario(folder || name, engine, format ?? "landscape") : "";
   const seq = useMemo(() => (config && Array.isArray(config.sequence) ? config.sequence : []), [config]);
-  const clipDur = Number.isFinite(Number(config?.duration)) ? Number(config?.duration) : 0;
+  const clipDur = Number.isFinite(Number(overrides?.duration ?? config?.duration))
+    ? Number(overrides?.duration ?? config?.duration) : 0;
 
   // Clamp the scene filter when the scenario changes / beats shrink.
   useEffect(() => {
     setFilter("all");
     setExpanded(new Set());
-  }, [name, engine]);
+  }, [name, folder, engine, format]);
   useEffect(() => {
     if (filter !== "all" && (filter < 1 || filter > seq.length)) setFilter("all");
   }, [filter, seq.length]);
@@ -222,26 +245,40 @@ export default function ShotList({
 
   // Drafts have no server state yet (nothing saved to list) — beats edit
   // the draft locally until Save Scenario.
+  // Never show another project/engine dir's rows: the moment the viewed dir
+  // changes, blank outputs/assets/versions (statuses fall back to pending)
+  // until the new listing lands. Same-dir refreshes keep their data.
+  const dirKeyRef = useRef<string>("");
   useEffect(() => {
     if (!name || isDraft) {
       setOutputs(emptyOutputs);
       setAssets([]);
       setVersions([]);
       setLoadError("");
+      dirKeyRef.current = "";
       return;
+    }
+    const dirKey = `${name}|${outDir}`;
+    if (dirKeyRef.current !== dirKey) {
+      dirKeyRef.current = dirKey;
+      setOutputs(emptyOutputs);
+      setAssets([]);
+      setVersions([]);
     }
     let cancelled = false;
     const load = async () => {
       try {
         const [o, a, v] = await Promise.all([
           listOutputs(outDir),
-          listProjectAssets(name).catch(() => [] as ProjectAsset[]),
+          listProjectAssets(name, undefined, undefined, videoType).catch(() => [] as ProjectAsset[]),
           listVersions(name).catch(() => [] as ScenarioVersionInfo[]),
         ]);
         if (cancelled) return;
-        setOutputs(o);
-        setAssets(a);
-        setVersions(v);
+        // Shape-guard the payloads: an error object must never land in array
+        // state (it crashed assetFor with "assets.filter is not a function").
+        setOutputs(o && typeof o === "object" ? o : emptyOutputs);
+        setAssets(Array.isArray(a) ? a : []);
+        setVersions(Array.isArray(v) ? v : []);
         setLoadError("");
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
@@ -273,12 +310,12 @@ export default function ShotList({
     return rows.reduce((a, b) => (b.version > a.version ? b : a));
   };
 
-  // generatingScenario arrives as the base scenario name; Wan renders into
-  // the suffixed outDir, so both forms match (ltx needs no suffix). The
-  // format must match as well — a vertical Reel run renders into the
-  // _vertical dir and must not spin this landscape board.
+  // generatingScenario arrives as the run's display name; this board renders
+  // the folder-based outDir, so the display name, the folder and the full
+  // dir all match (ltx needs no suffix). The format must match as well — a
+  // run only spins the board of the cut it renders into.
   const generatingHere = !!generatingScenario && !!outDir &&
-    (generatingScenario === outDir || generatingScenario === name) &&
+    (generatingScenario === outDir || generatingScenario === name || ( !!folder && generatingScenario === folder)) &&
     (generatingFormat ?? "landscape") === (isVerticalOut(outDir) ? "vertical" : "landscape");
 
   // Per-button run state: only the actively generating target is disabled —
@@ -315,6 +352,20 @@ export default function ShotList({
     return null;
   }, [mainsInfo, seq.length]);
 
+  // Live in-flight asset from run progress — wins over the first-missing
+  // heuristic below: mains are only re-listed every 15s, so the heuristic
+  // freezes the generating row on the first missing scene while the real
+  // work has moved on. Skips stream as events, so this advances past
+  // resumed scenes to the asset actually rendering.
+  const liveTarget: { kind: "keyframe" | "clip"; index: number } | null =
+    generatingHere && progress.status === "running" && progress.activeScene != null && progress.activeScene > 0
+      ? progress.activeKind === "image"
+        ? { kind: "keyframe", index: progress.activeScene }
+        : progress.activeKind === "video"
+          ? { kind: "clip", index: progress.activeScene }
+          : null
+      : null;
+
   const rows: ShotRow[] = useMemo(
     () =>
       seq.map((beat, i) => {
@@ -328,6 +379,9 @@ export default function ShotList({
           if (!generatingHere) return false;
           if (regenTarget) {
             return regenTarget.kind === kind && (regenTarget.index ?? n) === n;
+          }
+          if (liveTarget) {
+            return liveTarget.kind === kind && liveTarget.index === n;
           }
           return nextMissing?.kind === kind && nextMissing.index === n;
         };
@@ -363,7 +417,7 @@ export default function ShotList({
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [seq, mainsInfo, assets, generatingHere, regenTarget, nextMissing]
+    [seq, mainsInfo, assets, generatingHere, regenTarget, nextMissing, liveTarget?.kind, liveTarget?.index]
   );
 
   // ---- header / summary numbers (all derived, never hard-coded) ----
@@ -403,9 +457,11 @@ export default function ShotList({
 
   // Persist a beat list: drafts update locally (Save Scenario persists
   // them later), saved scenarios store a new version via the API.
+  // Unsaved card edits (overrides) are folded in so this save never writes a
+  // stale referencePrompt/description over a newer Generate Reference edit.
   const persistSequence = async (nextSeq: Beat[]): Promise<void> => {
     if (!config) return;
-    const next: Scenario = { ...config, sequence: nextSeq };
+    const next: Scenario = { ...config, ...overrides, sequence: nextSeq };
     if (isDraft) {
       onDraftChange?.(next);
       return;
@@ -458,12 +514,16 @@ export default function ShotList({
   const deleteShot = async (n: number) => {
     const b = seq[n - 1];
     if (!b) return;
-    if (
-      !window.confirm(
-        `Delete shot ${n}.1 (${b.title || "untitled"})? Its prompts are removed from the scenario (generated files are kept).`
-      )
-    )
-      return;
+    const ok = await dialog.confirm(
+      "Its prompts are removed from the scenario (generated files are kept).",
+      {
+        title: "Delete shot " + n + ".1 (" + (b.title || "untitled") + ")?",
+        tone: "error",
+        okText: "Delete",
+        cancelText: "Keep",
+      }
+    );
+    if (!ok) return;
     try {
       await persistSequence(seq.filter((_, i) => i !== n - 1));
     } catch {
@@ -474,8 +534,9 @@ export default function ShotList({
   const addShot = () => {
     // Master Prompt prefill: a manually added shot starts with the stored
     // master in the keyframe box (blank master = empty boxes, as before).
-    // Motion is never prefilled.
-    const master = String(config?.referencePrompt ?? "").trim();
+    // Unsaved Generate Reference edits win — the box shows what generation
+    // will actually use. Motion is never prefilled.
+    const master = String(overrides?.referencePrompt ?? config?.referencePrompt ?? "").trim();
     setDraftBeat({ title: `beat${seq.length + 1}`, image: master, motion: "" });
     setSaveError("");
     setEditing("new");
@@ -489,7 +550,7 @@ export default function ShotList({
     setGenBusy(true);
     setGenError("");
     try {
-      const res = await craftBeat(config, genCount);
+      const res = await craftBeat({ ...config, ...overrides }, genCount);
       const beats = res.beats ?? (res.beat ? [res.beat] : []); // beat = old server shape
       const used = new Set(seq.map((b) => b.title));
       const next = beats.map((b, k) => {
@@ -609,6 +670,11 @@ export default function ShotList({
           <span className="shotlist-of" title={`${shotsDone} of ${totalShots} shots fully generated (image + video)`}>
             {ofLabel}
           </span>
+          {isVerticalOut(outDir) && (
+            <span className="pill" title="Showing the Instagram (9:16) cut — switch Video to YouTube for the main cut">
+              9:16 Reel
+            </span>
+          )}
           {latestVersion != null && (
             <span className="pill" title={`Scenario version v${latestVersion}`}>
               v{latestVersion}
@@ -627,8 +693,7 @@ export default function ShotList({
         </div>
       </div>
 
-      {!collapsed && (
-      <>
+      <Collapse open={!collapsed}>
       {/* Overall generation progress (real coverage, persistent at the top) */}
       <div className="shotlist-progress" role="status" aria-label={`Overall generation ${pct} percent`}>
         <div className="shotlist-progress-top">
@@ -799,6 +864,9 @@ export default function ShotList({
                           >
                             <SmoothImage src={outputUrl(outDir, r.imageFile)} alt="" />
                             <span className="shotlist-thumb-tag" title={`Scene ${r.n}`}>S{r.n}</span>
+                            <span className="shotlist-thumb-expand" title={`Fullscreen preview of scene ${r.n} image`} aria-hidden="true">
+                              <IconExpand size={10} />
+                            </span>
                             {imgRunning && (imgPct != null || imgElapsed != null) && (
                               <span className="gen-pct" title={imgGenLabel}>{imgReadout}</span>
                             )}
@@ -860,6 +928,9 @@ export default function ShotList({
                               {clipRunning ? <Spinner size={10} /> : <IconPlay size={10} />}
                             </span>
                             <span className="shotlist-thumb-tag" title={`Video ${r.n}`}>V{r.n}</span>
+                            <span className="shotlist-thumb-expand" title={`Fullscreen preview of video ${r.n}`} aria-hidden="true">
+                              <IconExpand size={10} />
+                            </span>
                             {clipRunning && (clipPct != null || clipElapsed != null) && (
                               <span className="gen-pct" title={clipGenLabel}>{clipReadout}</span>
                             )}
@@ -990,7 +1061,7 @@ export default function ShotList({
                         ))}
                     </span>
                   </div>
-                  {open && (
+                  <Collapse open={open}>
                     <div className="shotlist-detail">
                       {editing === r.n ? (
                         <>
@@ -1056,7 +1127,7 @@ export default function ShotList({
                         </>
                       )}
                     </div>
-                  )}
+                  </Collapse>
                 </div>
               );
             })}
@@ -1130,8 +1201,7 @@ export default function ShotList({
         <SceneBadge scene={1} total={1} />
         <IconCheck size={1} />
       </span>
-      </>
-      )}
+      </Collapse>
     </section>
   );
 }

@@ -55,13 +55,19 @@ interface Props {
   // the next explicit Save), saved projects persist immediately as a new
   // version. Resolves { applied, saved } for the confirmation hint.
   onApplyMaster: (master: string) => Promise<{ applied: number; saved: boolean }>;
+  // Save-first hook: the parent persists the open saved project's current
+  // box edits (rename + new version) BEFORE the LLM crafts, so crafting
+  // always builds on stored project data. Resolves the display name to
+  // craft against (null = draft/unsaved — craft creates a new project).
+  // Throwing aborts the craft with the error shown.
+  onBeforeCraft?: () => Promise<string | null>;
 }
 
 // Project brief editor (mirrors Create New Project) + description +
 // master prompt -> local LLM crafts a scenario JSON.
 export default function CraftPanel({
   onCrafted, craftTarget, source, isDraft, syncEpoch, onPatch, onNameChange,
-  open, onToggle, sceneCount, onApplyMaster,
+  open, onToggle, sceneCount, onApplyMaster, onBeforeCraft,
 }: Props) {
   const [name, setName] = useState(source.name);
   const [description, setDescription] = useState(source.description);
@@ -139,13 +145,13 @@ export default function CraftPanel({
 
   // Request body shared by preview + craft so the popup shows exactly
   // what "Craft scenario" would send. `userPrompt` carries popup edits.
-  const craftBody = (userPrompt?: string) => ({
+  const craftBody = (target: string | null, userPrompt?: string) => ({
     description,
     masterPrompt: master,
     ...(rulesEnabled
       ? { presetId, ...(presetRules.trim() ? { presetRules } : {}) }
       : { rulesDisabled: true }),
-    ...(craftTarget ? { target: craftTarget } : {}),
+    ...(target ? { target } : {}),
     ...(userPrompt !== undefined ? { userPrompt } : {}),
   });
 
@@ -156,10 +162,14 @@ export default function CraftPanel({
     const t0 = Date.now();
     const tick = setInterval(() => setSeconds((Date.now() - t0) / 1000), 500);
     try {
+      // Persist the open project's current edits FIRST (rename + new
+      // version) so the craft builds on stored project data. Drafts skip
+      // this — the craft itself creates their project.
+      const target = onBeforeCraft ? await onBeforeCraft() : (craftTarget ?? null);
       const r = await fetch("/api/craft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(craftBody(userPrompt)),
+        body: JSON.stringify(craftBody(target, userPrompt)),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
@@ -192,7 +202,7 @@ export default function CraftPanel({
       const r = await fetch("/api/craft-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(craftBody()),
+        body: JSON.stringify(craftBody(craftTarget ?? null)),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
@@ -288,14 +298,14 @@ export default function CraftPanel({
           )}
         </div>
         <div className="form-row-side">
-          <label htmlFor="craft-duration">Clip length (sec)</label>
+          <label htmlFor="craft-duration">Clip length</label>
           <input
             id="craft-duration"
             type="number"
             min={1}
             max={10}
             value={durationStr}
-            placeholder="3"
+            placeholder="sec"
             disabled={busy}
             onChange={(e) => setDuration(e.target.value)}
           />
@@ -341,7 +351,7 @@ export default function CraftPanel({
           onPatch({ referencePrompt: e.target.value });
         }}
       />
-      <p className="hint">Edits update on the next explicit Save in the Scenario Editor.</p>
+      <p className="hint">Edits save automatically before Craft scenario, or on the next explicit Save in the Scenario Editor.</p>
       <div className="row craft-actions" style={{ marginTop: 12 }}>
         <button
           className="btn-blue"

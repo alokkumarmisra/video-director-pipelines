@@ -12,6 +12,7 @@ import type { DashboardProject, DashboardResponse, OutputsInfo } from "../types"
 import CreateProjectDialog from "./CreateProjectDialog";
 import EditProjectDialog from "./EditProjectDialog";
 import ProjectCard from "./ProjectCard";
+import { useDialog } from "./Dialog";
 import { IconAlert, IconClapper, IconPlus, IconRefresh, IconSearch, Spinner } from "./Icons";
 
 type LoadState = "loading" | "success" | "empty" | "error";
@@ -74,6 +75,7 @@ export default function HomePage({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editName, setEditName] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const dialog = useDialog();
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setState("loading");
@@ -120,21 +122,26 @@ export default function HomePage({
         onProjectsChanged();
         await load();
       } catch (e) {
-        window.alert(`Duplicate failed: ${e instanceof Error ? e.message : String(e)}`);
+        await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Duplicate failed", tone: "error" });
       }
     },
-    [data, load, onProjectsChanged]
+    [data, dialog, load, onProjectsChanged]
   );
 
   const handleDelete = useCallback(
     async (name: string) => {
       const proj = data?.projects.find((p) => p.name === name);
       if (proj?.generating) {
-        window.alert(`"${name}" is still generating — stop the run before deleting.`);
+        await dialog.alert("Stop the run before deleting.", { title: name + " is still generating", tone: "warning" });
         return;
       }
-      if (!window.confirm(`Delete project "${name}"?\nIts generated outputs will be removed too. This cannot be undone.`))
-        return;
+      const ok = await dialog.confirm("Its generated outputs will be removed too. This cannot be undone.", {
+        title: `Delete "${name}"?`,
+        tone: "error",
+        okText: "Delete",
+        cancelText: "Keep",
+      });
+      if (!ok) return;
       if (busyAction) return;
       setBusyAction(`delete:${name}`);
       try {
@@ -142,12 +149,12 @@ export default function HomePage({
         onProjectsChanged();
         await load(true);
       } catch (e) {
-        window.alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
+        await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Delete failed", tone: "error" });
       } finally {
         setBusyAction(null);
       }
     },
-    [busyAction, data, load, onProjectsChanged]
+    [busyAction, data, dialog, load, onProjectsChanged]
   );
 
   // Start a full generation run for the project (reference + keyframes +
@@ -172,21 +179,22 @@ export default function HomePage({
         await load(true);
         onOpen(name);
       } catch (e) {
-        window.alert(`Make a clip failed: ${e instanceof Error ? e.message : String(e)}`);
+        await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Make a clip failed", tone: "error" });
       } finally {
         setBusyAction(null);
       }
     },
-    [busyAction, data, load, onOpen, onProjectsChanged]
+    [busyAction, data, dialog, load, onOpen, onProjectsChanged]
   );
 
   // Download the project's best finished file: the stitched final cut when
-  // present, else any clip, else a still image. Checks both the ltx dir and
-  // the _wan dir (Wan runs write to outputs/<name>_wan/).
+  // present, else any clip, else a still image. Dirs are folder-based
+  // (immutable storage) with the legacy _wan variant alongside.
   const handleDownload = useCallback(async (name: string) => {
     if (busyAction) return;
     setBusyAction(`download:${name}`);
     try {
+      const base = data?.projects.find((p) => p.name === name)?.folder_name || name;
       const pick = (info: OutputsInfo | null): string | null => {
         if (!info) return null;
         if (info.mains?.final) return info.mains.final;
@@ -198,19 +206,19 @@ export default function HomePage({
         if (anyVideo.length) return anyVideo[anyVideo.length - 1];
         return info.files.filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f))[0] ?? null;
       };
-      const ltx = await listOutputs(name).catch(() => null);
-      let dir = name;
+      const ltx = await listOutputs(base).catch(() => null);
+      let dir = base;
       let file = pick(ltx);
       if (!file) {
-        const wan = await listOutputs(`${name}_wan`).catch(() => null);
+        const wan = await listOutputs(`${base}_wan`).catch(() => null);
         const wanFile = pick(wan);
         if (wanFile) {
-          dir = `${name}_wan`;
+          dir = `${base}_wan`;
           file = wanFile;
         }
       }
       if (!file) {
-        window.alert(`Nothing to download yet for "${name}" — use Make a clip first.`);
+        await dialog.alert("Use Make a clip first.", { title: "Nothing to download yet", tone: "info" });
         return;
       }
       // Fetch as a blob (same-origin, carries the session cookie) so the
@@ -231,11 +239,11 @@ export default function HomePage({
         setTimeout(() => URL.revokeObjectURL(url), 5000);
       }
     } catch (e) {
-      window.alert(`Download failed: ${e instanceof Error ? e.message : String(e)}`);
+      await dialog.alert(e instanceof Error ? e.message : String(e), { title: "Download failed", tone: "error" });
     } finally {
       setBusyAction(null);
     }
-  }, [busyAction]);
+  }, [busyAction, dialog]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();

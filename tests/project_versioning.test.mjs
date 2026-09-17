@@ -207,6 +207,25 @@ describe("delta versioning", () => {
     assert.match(NEXT_VERSION_SQL, /COALESCE\s*\(\s*MAX\s*\(\s*version\s*\)\s*,\s*0\s*\)\s*\+\s*1/i);
   });
 
+  it("asset reads are cut-scoped (YOUTUBE vs INSTAGRAM)", () => {
+    // Both queries carry the cut as $3 so the two cuts never mix rows.
+    assert.match(EFFECTIVE_ASSETS_SQL, /video_type\s*=\s*\$3/i);
+    assert.match(EXACT_VERSION_SQL, /video_type\s*=\s*\$3/i);
+  });
+
+  it("resolveEffective keeps both cuts independently (typeless rows read as YOUTUBE)", () => {
+    const rows = [
+      { id: 1, version: 1, beat_index: 1, asset_type: "KEYFRAME", file_path: "outputs/p/p_seq1_a.png" },
+      { id: 2, version: 1, beat_index: 1, asset_type: "KEYFRAME", video_type: "INSTAGRAM", file_path: "outputs/p_vertical/p_seq1_a.png" },
+      { id: 3, version: 1, beat_index: 1, asset_type: "KEYFRAME", video_type: "YOUTUBE", file_path: "outputs/p/p_seq1_a_v2.png" },
+    ];
+    const eff = resolveEffective(rows, 1);
+    assert.equal(eff.length, 2);
+    const byType = Object.fromEntries(eff.map((r) => [r.video_type ?? "YOUTUBE", r.file_path]));
+    assert.equal(byType.YOUTUBE, "outputs/p/p_seq1_a_v2.png");
+    assert.equal(byType.INSTAGRAM, "outputs/p_vertical/p_seq1_a.png");
+  });
+
   it("server no longer full-copies versions on save/refresh", () => {
     const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
     // The old snapshot path called pgSaveProject() for every save and from

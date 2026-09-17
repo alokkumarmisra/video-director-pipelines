@@ -497,6 +497,7 @@ CREATE TABLE IF NOT EXISTS project_assets (
   beat_index INTEGER NOT NULL DEFAULT 0,
   beat_title TEXT,
   asset_type TEXT NOT NULL,
+  video_type TEXT NOT NULL DEFAULT 'YOUTUBE',
   status TEXT NOT NULL DEFAULT 'PENDING',
   prompt TEXT,
   negative_prompt TEXT,
@@ -517,6 +518,8 @@ CREATE TABLE IF NOT EXISTS project_assets (
     REFERENCES public.projects(project_id) ON DELETE CASCADE,
   CONSTRAINT project_assets_asset_type_check CHECK (
     asset_type IN ('REFERENCE', 'IMAGE', 'KEYFRAME', 'VIDEO', 'FINAL')),
+  CONSTRAINT project_assets_video_type_check CHECK (
+    video_type IN ('YOUTUBE', 'INSTAGRAM')),
   CONSTRAINT project_assets_status_check CHECK (
     status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'SKIPPED')),
   CONSTRAINT project_assets_version_check CHECK (version > 0),
@@ -525,7 +528,7 @@ CREATE TABLE IF NOT EXISTS project_assets (
     attempts >= 0 AND max_retries >= 0)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS project_assets_project_version_type_beat_key
-  ON public.project_assets(project_id, version, asset_type, beat_index);
+  ON public.project_assets(project_id, version, asset_type, beat_index, video_type);
 CREATE INDEX IF NOT EXISTS idx_project_assets_project_id ON public.project_assets(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_assets_scene_id ON public.project_assets(scene_id);
 CREATE INDEX IF NOT EXISTS idx_project_assets_project_version_beat ON public.project_assets(project_id, version, beat_index);
@@ -556,6 +559,7 @@ CREATE TABLE IF NOT EXISTS project_references (
   seed BIGINT,
   attempts INTEGER NOT NULL DEFAULT 0,
   source TEXT NOT NULL DEFAULT 'generated' CHECK (source IN ('generated', 'upload')),
+  video_type TEXT NOT NULL DEFAULT 'YOUTUBE',
   is_main BOOLEAN NOT NULL DEFAULT FALSE,
   pinned BOOLEAN NOT NULL DEFAULT FALSE,
   metadata JSONB,
@@ -566,6 +570,9 @@ CREATE TABLE IF NOT EXISTS project_references (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS project_references_one_main
   ON public.project_references(project_id, output_dir) WHERE is_main;
+ALTER TABLE project_references DROP CONSTRAINT IF EXISTS project_references_video_type_check;
+ALTER TABLE project_references ADD CONSTRAINT project_references_video_type_check
+  CHECK (video_type IN ('YOUTUBE', 'INSTAGRAM'));
 CREATE INDEX IF NOT EXISTS idx_project_references_project ON public.project_references(project_id);`;
 // NOTE: project_assets uses the narrow canonical DDL above (one row per
 // asset: KEYFRAME / VIDEO / FINAL (+ IMAGE for ad-hoc stills), with a
@@ -791,6 +798,77 @@ const engineForFolder = (folder) => engineForDir(folder);
 // file_path/model/workflow/attempts/metadata/timing. Size/dims live inside
 // metadata (no width/height columns in the narrow DDL).
 // Existing COMPLETED rows are never downgraded back to PENDING.
+// Seed INSTAGRAM (vertical Reel cut) rows from an existing vertical output
+// dir: one COMPLETED row per beat that already has a main file on disk, plus
+// the vertical FINAL when stitched. Landscape saves stay YOUTUBE-only;
+// vertical generations fill rows via pgMarkAssetComplete. `query` is a
+// (text, params) function (pool or transaction client).
+async function pgSeedInstagramRows(query, projectId, folder, engine, cfg, version) {
+  try {
+    const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+    if (!seq.length) return 0;
+    const vdir = outDirName(folder, engine, "vertical");
+    if (!fs.existsSync(path.join(OUTPUTS, vdir))) return 0;
+    const vm = versionMap(path.join(OUTPUTS, vdir), prefixForDir(vdir), seq);
+    const UPSERT_IG = `INSERT INTO project_assets (
+      project_id, folder_name, version, scene_id, beat_index, beat_title,
+      asset_type, video_type, status, prompt, negative_prompt, file_path,
+      model, workflow, attempts, max_retries, metadata, started_at, completed_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, 'INSTAGRAM', $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
+      $16::timestamptz, $17::timestamptz
+    )
+    ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
+      folder_name = EXCLUDED.folder_name,
+      scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
+      file_path = COALESCE(EXCLUDED.file_path, project_assets.file_path),
+      model = EXCLUDED.model, workflow = EXCLUDED.workflow,
+      attempts = GREATEST(project_assets.attempts, EXCLUDED.attempts),
+      metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata),
+      status = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN 'COMPLETED' ELSE project_assets.status END,
+      started_at = CASE WHEN EXCLUDED.file_path IS NOT NULL AND project_assets.started_at IS NULL THEN now() ELSE project_assets.started_at END,
+      completed_at = CASE WHEN EXCLUDED.file_path IS NOT NULL THEN now() ELSE project_assets.completed_at END`;
+    const nowISO = new Date().toISOString();
+    const negative = cfg.negative ?? null;
+    const videoModel = engine === "wan" ? WAN_MODEL : LTX_MODEL;
+    const videoWorkflow = engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW;
+    const relPath = (file) => (file ? `outputs/${vdir}/${file}` : null);
+    let seeded = 0;
+    for (let i = 0; i < seq.length; i++) {
+      const b = seq[i] || {};
+      const n = i + 1;
+      const bv = (vm.beats && vm.beats[String(n)]) || {};
+      const kf = bv.keyframeMain ?? null;
+      const cl = bv.clipMain ?? null;
+      if (kf) {
+        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null, "KEYFRAME",
+          "COMPLETED", b.image ?? null, negative, relPath(kf), IMG_MODEL, IMG_WORKFLOW, 1,
+          JSON.stringify({ engine, format: "vertical", video_type: "INSTAGRAM", file: kf, beat: n, ...diskFacts(vdir, kf) }), nowISO, nowISO]);
+        seeded++;
+      }
+      if (cl) {
+        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null, "VIDEO",
+          "COMPLETED", b.motion ?? null, negative, relPath(cl), videoModel, videoWorkflow, 1,
+          JSON.stringify({ engine, format: "vertical", video_type: "INSTAGRAM", file: cl, beat: n, ...diskFacts(vdir, cl) }), nowISO, nowISO]);
+        seeded++;
+      }
+    }
+    const finals = [...(vm.final ?? [])].sort((a, b) => a.v - b.v);
+    const fin = finals.length ? finals[finals.length - 1].file : null;
+    if (fin) {
+      const finalV = finalCutVersion(fin) ?? 1;
+      await query(UPSERT_IG, [projectId, folder, version, 0, finalV, null, "FINAL",
+        "COMPLETED", null, negative, relPath(fin), null, "ffmpeg-concat", 1,
+        JSON.stringify({ engine, format: "vertical", video_type: "INSTAGRAM", file: fin, final_version: finalV, ...diskFacts(vdir, fin) }), nowISO, nowISO]);
+      seeded++;
+    }
+    return seeded;
+  } catch (e) {
+    console.warn("[pg] instagram seed failed:", e.message);
+    return 0;
+  }
+}
 async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
   // Asset rows carry the STORED immutable folder (a rename must not rewrite
   // history paths). outputFolder defaults to it when the caller passes none.
@@ -811,13 +889,13 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
   const relPath = (file) => (file ? `outputs/${folder}/${file}` : null);
   const UPSERT = `INSERT INTO project_assets (
     project_id, folder_name, version, scene_id, beat_index, beat_title,
-    asset_type, status, prompt, negative_prompt, file_path,
+    asset_type, video_type, status, prompt, negative_prompt, file_path,
     model, workflow, attempts, max_retries, metadata, started_at, completed_at
   ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
+    $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
     $16::timestamptz, $17::timestamptz
   )
-  ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+  ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
     folder_name = EXCLUDED.folder_name,
     scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
     prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
@@ -842,7 +920,7 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
       "KEYFRAME", done(kf), b.image ?? null, negative,
       relPath(kf), IMG_MODEL, IMG_WORKFLOW, kf ? 1 : 0,
-      kf ? JSON.stringify({ engine, file: kf, beat: n, ...kfFacts }) : null,
+      kf ? JSON.stringify({ engine, video_type: "YOUTUBE", file: kf, beat: n, ...kfFacts }) : null,
       kf ? nowISO : null, kf ? nowISO : null]);
     const img = cfg.image; // optional still from AI Craft
     if (img) {
@@ -855,7 +933,7 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
       "VIDEO", done(cl), b.motion ?? null, negative,
       relPath(cl), videoModel, videoWorkflow, cl ? 1 : 0,
-      cl ? JSON.stringify({ engine, file: cl, beat: n, fps: videoFps, duration: videoDur, ...clFacts }) : null,
+      cl ? JSON.stringify({ engine, video_type: "YOUTUBE", file: cl, beat: n, fps: videoFps, duration: videoDur, ...clFacts }) : null,
       cl ? nowISO : null, cl ? nowISO : null]);
   }
   // Stitched final cut (one row per stitch; beat_index = stitch version).
@@ -865,9 +943,11 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     await pgPool.query(UPSERT, [projectId, folderSlug, version, 0, finalV, null,
       "FINAL", "COMPLETED", null, negative,
       relPath(mains.final), null, "ffmpeg-concat", 1,
-      JSON.stringify({ engine, file: mains.final, final_version: finalV, ...ff }),
+      JSON.stringify({ engine, video_type: "YOUTUBE", file: mains.final, final_version: finalV, ...ff }),
       nowISO, nowISO]);
   }
+  // Mirror any already-rendered vertical cut into INSTAGRAM rows (same beats).
+  await pgSeedInstagramRows((t, p) => pgPool.query(t, p), projectId, folder, engine, cfg, version);
   return projectId;
 }
 // ---------------------------------------------------------------- delta versioning
@@ -920,12 +1000,12 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
     const negative = cfg.negative ?? null;
     const INSERT = `INSERT INTO project_assets (
       project_id, folder_name, version, scene_id, beat_index, beat_title,
-      asset_type, status, prompt, negative_prompt, file_path,
+      asset_type, video_type, status, prompt, negative_prompt, file_path,
       model, workflow, attempts, max_retries, metadata
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+      $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
     )
-    ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+    ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
       folder_name = EXCLUDED.folder_name,
       scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
       prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
@@ -978,6 +1058,8 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
         await full(0, finalV, null, "FINAL", null, null, "ffmpeg-concat",
           mains.final, { ...diskFacts(folder, mains.final), final_version: finalV });
       }
+      // Mirror any already-rendered vertical cut into INSTAGRAM rows.
+      await pgSeedInstagramRows((t, p) => client.query(t, p), projectId, folder, engine, cfg, version);
     } else {
       // v2+ = delta only: insert PENDING rows for changed scenes, nothing else.
       // Reference prompt changes do NOT create rows here — the next generated
@@ -1063,12 +1145,12 @@ async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg) {
     const negative = cfg.negative ?? null;
     const UPSERT = `INSERT INTO project_assets (
       project_id, folder_name, version, scene_id, beat_index, beat_title,
-      asset_type, status, prompt, negative_prompt, file_path,
+      asset_type, video_type, status, prompt, negative_prompt, file_path,
       model, workflow, attempts, max_retries, metadata
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+      $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
     )
-    ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+    ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
       folder_name = EXCLUDED.folder_name,
       scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
       prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
@@ -1122,7 +1204,7 @@ const refVersionOf = (file) => {
 // source, is_main, pinned, model, created_at }].
 async function pgReferenceList(projectId, dir) {
   const r = await pgPool.query(
-    `SELECT id, prompt, file_path, metadata, source, is_main, pinned, model,
+    `SELECT id, prompt, file_path, metadata, source, video_type, is_main, pinned, model,
             version, created_at
      FROM project_references WHERE project_id = $1 AND output_dir = $2
      ORDER BY created_at ASC, id ASC`,
@@ -1133,6 +1215,7 @@ async function pgReferenceList(projectId, dir) {
     v: refVersionOf(x.metadata?.file ?? x.file_path),
     prompt: x.prompt ?? null,
     source: x.source,
+    video_type: x.video_type ?? null,
     is_main: !!x.is_main,
     pinned: !!x.pinned,
     model: x.model ?? null,
@@ -1168,12 +1251,12 @@ async function pgAddReference({ projectId, dir, file, prompt, engine, source = "
     const ins = await client.query(
       `INSERT INTO project_references (
          project_id, output_dir, version, prompt, file_path,
-         model, workflow, attempts, source, is_main, pinned, metadata,
+         model, workflow, attempts, source, video_type, is_main, pinned, metadata,
          started_at, completed_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11::jsonb, $12::timestamptz, $12::timestamptz)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, $12::jsonb, $13::timestamptz, $13::timestamptz)
        RETURNING id`,
       [projectId, dir, version, prompt ?? null, filePath, REF_MODEL, REF_WORKFLOW,
-        source, takeMain, source !== "generated",
+        source, /_vertical$/.test(dir) ? "INSTAGRAM" : "YOUTUBE", takeMain, source !== "generated",
         JSON.stringify({ engine, file, ...facts }), nowISO]);
     await client.query("COMMIT");
     return ins.rows[0].id;
@@ -1213,11 +1296,12 @@ async function pgSetReferenceMain({ projectId, dir, file, prompt, engine }) {
       await client.query(
         `INSERT INTO project_references (
            project_id, output_dir, version, prompt, file_path,
-           model, workflow, attempts, source, is_main, pinned, metadata,
+           model, workflow, attempts, source, video_type, is_main, pinned, metadata,
            started_at, completed_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', TRUE, TRUE, $8::jsonb, $9::timestamptz, $9::timestamptz)`,
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', $8, TRUE, TRUE, $9::jsonb, $10::timestamptz, $10::timestamptz)`,
         [projectId, dir, ver.rows[0]?.v ?? null, prompt ?? null, filePath,
-          REF_MODEL, REF_WORKFLOW, JSON.stringify({ engine, file, ...facts }), nowISO]);
+          REF_MODEL, REF_WORKFLOW, /_vertical$/.test(dir) ? "INSTAGRAM" : "YOUTUBE",
+          JSON.stringify({ engine, file, ...facts }), nowISO]);
     }
     await client.query("COMMIT");
   } catch (e) {
@@ -1257,11 +1341,11 @@ async function pgBackfillReferences(name, folder, cfg) {
         await pgPool.query(
           `INSERT INTO project_references (
              project_id, output_dir, version, prompt, file_path,
-             model, workflow, attempts, source, is_main, pinned, metadata,
+             model, workflow, attempts, source, video_type, is_main, pinned, metadata,
              started_at, completed_at
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', TRUE, $8, $9::jsonb, $10::timestamptz, $10::timestamptz)`,
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 'generated', $8, TRUE, $9, $10::jsonb, $11::timestamptz, $11::timestamptz)`,
           [pid, dir, version, cfg?.referencePrompt ?? null, filePath,
-            REF_MODEL, REF_WORKFLOW, !!vm.refPinned,
+            REF_MODEL, REF_WORKFLOW, /_vertical$/.test(dir) ? "INSTAGRAM" : "YOUTUBE", !!vm.refPinned,
             JSON.stringify({ engine: engineForDir(dir), file: vm.refMain, ...facts }), nowISO]);
       } catch (e) { console.warn(`[pg] reference backfill failed for ${dir}:`, e.message); }
     }
@@ -1333,40 +1417,31 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
       return;
     }
     const sceneId = target.scene ?? target.beat;
-    // Vertical (Instagram Reel) runs share the versioned rows with the
-    // landscape run — the UNIQUE key has no format dimension. Record the
-    // vertical file in metadata only and never overwrite the landscape
-    // file_path/status (the landscape cut stays canonical in project_assets;
-    // the per-folder output dirs on disk are what separate the two cuts).
-    if (format === "vertical") {
-      try {
-        await pgPool.query(
-          `UPDATE project_assets SET metadata = COALESCE(metadata, '{}'::jsonb) || $5::jsonb
-           WHERE project_id = $1 AND version = $2 AND asset_type = $3 AND beat_index = $4`,
-          [projectId, version, target.type, target.beat,
-            JSON.stringify({ ...target.meta, format: "vertical", vertical_file: asset.file })]);
-      } catch (e) { console.warn("[pg] vertical mark failed:", e.message); }
-      return;
-    }
+    // Cut dimension: landscape runs record YOUTUBE rows, vertical (Instagram
+    // Reel) runs record INSTAGRAM rows — both cuts keep a full per-scene set
+    // under the wider unique key (project, version, type, beat, video_type).
+    // file_path already points at the run's own output dir (outputFolder).
+    const videoType = format === "vertical" ? "INSTAGRAM" : "YOUTUBE";
+    target.meta.video_type = videoType;
     const upd = await pgPool.query(
       `UPDATE project_assets SET file_path = $1, status = 'COMPLETED', error_message = NULL,
          attempts = attempts + 1,
          model = COALESCE(model, $5), workflow = COALESCE(workflow, $6),
          metadata = COALESCE(metadata, $7::jsonb),
          started_at = COALESCE(started_at, now()), completed_at = now()
-       WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $8`,
+       WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $8 AND video_type = $9`,
       [filePath, projectId, version, target.type, target.model, target.workflow,
-       JSON.stringify(target.meta), target.beat]);
+       JSON.stringify(target.meta), target.beat, videoType]);
     if (upd.rowCount === 0) {
       await pgPool.query(
         `INSERT INTO project_assets (
-           project_id, version, scene_id, beat_index, asset_type, status,
+           project_id, version, scene_id, beat_index, asset_type, video_type, status,
            file_path, model, workflow, attempts, metadata, started_at, completed_at
-         ) VALUES ($1, $2, $3, $4, $5, 'COMPLETED', $6, $7, $8, 1, $9::jsonb, now(), now())
-         ON CONFLICT (project_id, version, asset_type, beat_index) DO UPDATE SET
+         ) VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED', $7, $8, $9, 1, $10::jsonb, now(), now())
+         ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
            file_path = EXCLUDED.file_path, status = 'COMPLETED', error_message = NULL,
            attempts = project_assets.attempts + 1, completed_at = now()`,
-        [projectId, version, sceneId, target.beat, target.type, filePath,
+        [projectId, version, sceneId, target.beat, target.type, videoType, filePath,
          target.model, target.workflow, JSON.stringify(target.meta)]);
     }
   } catch (e) { console.warn("[pg] mark complete failed:", e.message); }
@@ -1389,11 +1464,14 @@ async function pgRefreshProjectFiles(projectName, outputFolder) {
     if (!version) return; // never saved — files are recorded on the next Save
     const pid = await pgProjectId(projectName);
     if (pid == null) return;
+    // Refresh only the cut being refreshed: a vertical dir touches INSTAGRAM
+    // rows, anything else the YOUTUBE rows — never cross-write the other cut.
+    const videoType = /_vertical$/.test(outputFolder || "") ? "INSTAGRAM" : "YOUTUBE";
     const mains = mainsFor(outputFolder, cfg);
     const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
     const existing = await pgPool.query(
-      "SELECT asset_type, beat_index FROM project_assets WHERE project_id = $1 AND version = $2",
-      [pid, Number(version)]);
+      "SELECT asset_type, beat_index FROM project_assets WHERE project_id = $1 AND version = $2 AND video_type = $3",
+      [pid, Number(version), videoType]);
     const has = new Set(existing.rows.map((r) => `${r.asset_type}:${r.beat_index}`));
     const relPath = (file) => (file ? `outputs/${outputFolder}/${file}` : null);
     const touch = async (type, beat, file) => {
@@ -1402,8 +1480,8 @@ async function pgRefreshProjectFiles(projectName, outputFolder) {
         `UPDATE project_assets SET file_path = COALESCE(file_path, $1),
            status = CASE WHEN file_path IS NOT NULL OR $1 IS NOT NULL THEN 'COMPLETED' ELSE status END,
            completed_at = CASE WHEN file_path IS NOT NULL OR $1 IS NOT NULL THEN COALESCE(completed_at, now()) ELSE completed_at END
-         WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $5`,
-        [relPath(file), pid, Number(version), type, beat]);
+         WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $5 AND video_type = $6`,
+        [relPath(file), pid, Number(version), type, beat, videoType]);
     };
     // Reference mains are NOT refreshed here — project_references is the
     // record (appended on generation/upload, flipped on UI select).
@@ -1542,6 +1620,7 @@ async function pgInit() {
       `beat_index INTEGER NOT NULL DEFAULT 0`,
       `beat_title TEXT`,
       `asset_type TEXT NOT NULL`,
+      `video_type TEXT NOT NULL DEFAULT 'YOUTUBE'`,
       `status TEXT NOT NULL DEFAULT 'PENDING'`,
       `prompt TEXT`,
       `negative_prompt TEXT`,
@@ -1598,9 +1677,21 @@ async function pgInit() {
       await pgPool.query(`ALTER TABLE project_assets ADD CONSTRAINT project_assets_asset_type_check
         CHECK (asset_type IN ('REFERENCE', 'IMAGE', 'KEYFRAME', 'VIDEO', 'FINAL'))`);
     } catch (e) { console.warn("[pg] asset_type check migration failed:", e.message); }
+    // video_type cut dimension: fresh installs get the 5-column UNIQUE key
+    // from PG_SCHEMA above; pre-existing installs carry the 4-column index
+    // under the same name — drop it first so the recreate below actually
+    // takes effect (otherwise INSTAGRAM rows would collide with YOUTUBE rows).
+    // ADD COLUMN DEFAULT 'YOUTUBE' already stamped every existing row, so the
+    // wider key stays duplicate-free.
     try {
+      await pgPool.query(`ALTER TABLE project_assets DROP CONSTRAINT IF EXISTS project_assets_video_type_check`);
+      await pgPool.query(`ALTER TABLE project_assets ADD CONSTRAINT project_assets_video_type_check
+        CHECK (video_type IN ('YOUTUBE', 'INSTAGRAM'))`);
+    } catch (e) { console.warn("[pg] video_type check migration failed:", e.message); }
+    try {
+      await pgPool.query(`DROP INDEX IF EXISTS project_assets_project_version_type_beat_key`);
       await pgPool.query(`CREATE UNIQUE INDEX IF NOT EXISTS project_assets_project_version_type_beat_key
-        ON public.project_assets(project_id, version, asset_type, beat_index)`);
+        ON public.project_assets(project_id, version, asset_type, beat_index, video_type)`);
       await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_project_assets_project_id ON public.project_assets(project_id)`);
       await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_project_assets_scene_id ON public.project_assets(scene_id)`);
       await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_project_assets_project_version_beat ON public.project_assets(project_id, version, beat_index)`);
@@ -1624,6 +1715,52 @@ async function pgInit() {
       await pgPool.query(`UPDATE scenarios SET config = (config - 'topic' - 'requirements') WHERE config ?| ARRAY['topic','requirements']`);
       await pgPool.query(`UPDATE scenario_versions SET config = (config - 'topic' - 'requirements') WHERE config ?| ARRAY['topic','requirements']`);
     } catch (e) { console.warn("[pg] scenario topic/requirements strip failed:", e.message); }
+    // Materialize INSTAGRAM rows for vertical files previously recorded only
+    // inside landscape-row metadata (format='vertical' + vertical_file): one
+    // INSTAGRAM row per (project, version, type, beat) so both cuts keep all
+    // scenes. Idempotent (unique key + DO NOTHING).
+    try {
+      const vr = await pgPool.query(
+        `SELECT project_id, folder_name, version, scene_id, beat_index, beat_title,
+                asset_type, status, prompt, negative_prompt, model, workflow,
+                attempts, error_message, metadata, started_at, completed_at,
+                metadata->>'engine' AS eng, metadata->>'vertical_file' AS vfile
+           FROM project_assets
+          WHERE metadata->>'format' = 'vertical' AND metadata->>'vertical_file' IS NOT NULL`);
+      let seeded = 0;
+      for (const r of vr.rows) {
+        if (!r.folder_name || !r.vfile) continue;
+        const vdir = outDirName(r.folder_name, r.eng || "ltx", "vertical");
+        const meta = { ...(r.metadata || {}), video_type: "INSTAGRAM" };
+        const ins = await pgPool.query(
+          `INSERT INTO project_assets (
+             project_id, folder_name, version, scene_id, beat_index, beat_title,
+             asset_type, video_type, status, prompt, negative_prompt, file_path,
+             model, workflow, attempts, max_retries, error_message, metadata,
+             started_at, completed_at
+           ) VALUES (
+             $1,$2,$3,$4,$5,$6,$7,'INSTAGRAM',$8,$9,$10,$11,$12,$13,$14,3,$15,$16::jsonb,$17,$18
+           )
+           ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO NOTHING`,
+          [r.project_id, r.folder_name, r.version, r.scene_id, r.beat_index, r.beat_title,
+           r.asset_type, r.status, r.prompt, r.negative_prompt,
+           `outputs/${vdir}/${r.vfile}`, r.model, r.workflow, r.attempts ?? 0,
+           r.error_message, JSON.stringify(meta), r.started_at, r.completed_at]);
+        if (ins.rowCount) seeded++;
+      }
+      if (seeded) console.log(`[pg] seeded ${seeded} INSTAGRAM asset rows from vertical metadata`);
+    } catch (e) { console.warn("[pg] instagram backfill failed:", e.message); }
+    // video_type on project_references (cut dimension for the reference
+    // catalog, derived from the output dir — vertical dirs are INSTAGRAM).
+    // No data loss: plain ADD COLUMN + UPDATE, never DROP TABLE.
+    try {
+      await pgPool.query(`ALTER TABLE project_references ADD COLUMN IF NOT EXISTS video_type TEXT NOT NULL DEFAULT 'YOUTUBE'`);
+      await pgPool.query(`ALTER TABLE project_references DROP CONSTRAINT IF EXISTS project_references_video_type_check`);
+      await pgPool.query(`ALTER TABLE project_references ADD CONSTRAINT project_references_video_type_check
+        CHECK (video_type IN ('YOUTUBE', 'INSTAGRAM'))`);
+      await pgPool.query(
+        `UPDATE project_references SET video_type = CASE WHEN output_dir LIKE '%_vertical' THEN 'INSTAGRAM' ELSE 'YOUTUBE' END`);
+    } catch (e) { console.warn("[pg] references video_type migration failed:", e.message); }
     await syncAllToPg();
   } catch (e) { console.warn("[pg] init failed:", e.message); }
 }
@@ -1632,6 +1769,156 @@ pgInit();
 const DIST = path.join(__dirname, "dist");
 const PORT = Number(process.env.PORT || 8790);
 const LLM_BASE = (process.env.LLM_BASE || "https://furian-1.tailb2c0b0.ts.net").replace(/\/+$/, "");
+
+// ---------------------------------------------------------------- resources
+// User-uploaded images/videos library (the Resource page). Files live in
+// resources/ (gitignored); resources/meta.json is the sidecar index so the
+// library works with or without Postgres. Each entry carries an AI prompt:
+// auto-captioned on upload when a vision model is loaded in the local LLM
+// backend, otherwise generated on demand via POST /api/resources/:id/caption.
+// "Use in project" wires an entry into the exact Project workflow: a new
+// project is created with the caption as Master Prompt and the image (or the
+// video's middle frame) installed as the pinned reference visual — from
+// there AI Craft + Generate behave like any other project.
+const RESOURCES = path.join(ROOT, "resources");
+const RES_META = path.join(RESOURCES, "meta.json");
+const resReadMeta = () => {
+  try {
+    const m = JSON.parse(fs.readFileSync(RES_META, "utf8"));
+    return Array.isArray(m) ? m : [];
+  } catch { return []; }
+};
+const resWriteMeta = (rows) => {
+  fs.mkdirSync(RESOURCES, { recursive: true });
+  fs.writeFileSync(RES_META, JSON.stringify(rows, null, 2));
+};
+const resMimeExt = (mime) => ({
+  "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif",
+  "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov",
+}[String(mime || "").toLowerCase()] ?? null);
+const newResId = () => `res_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 6)}`;
+// Shell out to ffmpeg/ffprobe (same binaries the stitch path relies on).
+const runCmd = (cmd, args, timeoutMs = 60000) => new Promise((res, rej) => {
+  const p = spawn(cmd, args, { windowsHide: true });
+  let out = "", err = "";
+  const t = setTimeout(() => { try { p.kill(); } catch { /* already dead */ } rej(new Error(`${cmd} timed out`)); }, timeoutMs);
+  p.stdout.on("data", (c) => (out += c));
+  p.stderr.on("data", (c) => (err += c));
+  p.on("error", (e) => { clearTimeout(t); rej(e); });
+  p.on("close", (code) => { clearTimeout(t); code === 0 ? res(out || err) : rej(new Error(`${cmd} exited ${code}: ${err.slice(0, 300)}`)); });
+});
+async function videoDurationSec(full) {
+  try {
+    const out = await runCmd("ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", full], 30000);
+    const n = Number(String(out).trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch { return null; }
+}
+// Middle frame of a video as a JPEG (grid thumbnail + vision-caption source
+// + reference visual when a video seeds a project).
+async function extractMiddleFrame(videoFull, jpgFull) {
+  const dur = await videoDurationSec(videoFull);
+  const ss = dur != null ? String(Math.max(0, dur / 2)) : "1";
+  await runCmd("ffmpeg", ["-y", "-ss", ss, "-i", videoFull, "-frames:v", "1", jpgFull], 60000);
+}
+// The local LLM backend serves only the loaded model (LM Studio /
+// llama-server, OpenAI-compatible). Force vision with LLM_VISION=1.
+const LLM_VISION_FORCE = ["1", "true", "yes", "on"].includes(String(process.env.LLM_VISION || "").trim().toLowerCase());
+let llmModelCache = { at: 0, id: null };
+async function llmModelId() {
+  if (Date.now() - llmModelCache.at < 30000 && llmModelCache.id) return llmModelCache.id;
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) return null;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(`${base}/v1/models`, { signal: ctl.signal });
+    clearTimeout(t);
+    const d = await r.json().catch(() => null);
+    const id = d?.data?.[0]?.id ?? null;
+    if (id) llmModelCache = { at: Date.now(), id: String(id) };
+    return id;
+  } catch { return llmModelCache.id; }
+}
+const looksVision = (id) => /vl|vision|llava|moondream|pixtral|gemma[-_ ]?3|qwenvl/i.test(String(id || ""));
+// Describe an image (data URL) as an image-generation prompt via the local
+// vision model. Throws a human-readable error when no vision model is loaded.
+async function captionImageWithVision(dataUrl) {
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) throw new Error("LLM_BASE not set — captioning unavailable.");
+  const novision = new Error("vision-unavailable");
+  if (!LLM_VISION_FORCE) {
+    const id = await llmModelId();
+    if (!looksVision(id)) {
+      novision.detail =
+        `The loaded LLM ("${id || "unknown"}") cannot read images. ` +
+        `In LM Studio load a vision model (Qwen3-VL-4B/8B is already downloaded), ` +
+        `then Generate prompt again.`;
+      throw novision;
+    }
+  }
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 180000);
+  try {
+    const r = await fetch(`${base}/v1/chat/completions`, {
+      method: "POST",
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local",
+        messages: [
+          {
+            role: "system",
+            content: "You describe a reference photo for an AI image generator. Output ONLY one detailed static-scene prompt: subject identity and appearance, clothing, pose, setting, lighting, colors, medium and quality tags. No quotes, no preamble, no trailing commentary.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Describe this image as an image-generation prompt." },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 500,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+    if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const d = await r.json();
+    const text = String(d.choices?.[0]?.message?.content ?? "").trim();
+    if (!text) throw new Error("The vision model returned an empty caption.");
+    return text;
+  } catch (e) {
+    if (e?.name === "AbortError") throw new Error("Caption timed out (180s) — the vision model may still be loading; try again.");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+// Data URL the vision model reads for a resource entry (original image, or
+// the video's extracted middle frame).
+function resCaptionSource(entry) {
+  const full = path.join(RESOURCES, entry.file);
+  if (entry.kind === "image") {
+    if (!fs.existsSync(full)) throw new Error("resource file missing — re-upload it.");
+    const buf = fs.readFileSync(full);
+    if (buf.length > 25 * 1024 * 1024) throw new Error("image over 25MB — downscale it and re-upload to caption.");
+    return `data:${mimeFor(entry.file) || "image/png"};base64,${buf.toString("base64")}`;
+  }
+  const thumbFull = path.join(RESOURCES, entry.thumb || "");
+  if (!entry.thumb || !fs.existsSync(thumbFull)) throw new Error("video thumbnail missing — re-upload the video.");
+  return `data:image/jpeg;base64,${fs.readFileSync(thumbFull).toString("base64")}`;
+}
+async function captionResource(entry) {
+  const prompt = await captionImageWithVision(resCaptionSource(entry));
+  return { ...entry, prompt, captionError: null };
+}
+function serveResource(res, file) {
+  const p = path.join(RESOURCES, file);
+  if (!isSafe(file) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { res.writeHead(404); return res.end(); }
+  res.writeHead(200, { "Content-Type": MIME[path.extname(p).toLowerCase()] || "application/octet-stream", "Cache-Control": "no-store" });
+  fs.createReadStream(p).pipe(res);
+}
 
 // ---------------------------------------------------------------- auth
 // Single-user login. Credentials come from env (video_test/.env or real env);
@@ -2472,7 +2759,7 @@ function toYouTubeTitle(s) {
 }
 
 // ---------------------------------------------------------------- static files
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".wav": "audio/wav", ".ico": "image/x-icon" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".wav": "audio/wav", ".ico": "image/x-icon" };
 function serveStatic(req, res, urlPath) {
   let file = path.normalize(path.join(DIST, urlPath));
   if (!file.startsWith(DIST)) { res.writeHead(403); return res.end(); }
@@ -2606,7 +2893,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Everything below (API + generated outputs) requires a session.
-    if ((p.startsWith("/api/") || p.startsWith("/outputs/")) && !authedUser(req))
+    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/")) && !authedUser(req))
       return json(res, 401, { error: "unauthorized" });
 
     if (p === "/api/scenarios" && req.method === "GET") {
@@ -3016,6 +3303,381 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, await outputsPayload(storDir));
     }
+    // Resource library (the Resource page): upload images/videos, AI-caption
+    // them with the local vision model, and wire them into the Project
+    // workflow (new project or an existing project's reference).
+    if (p === "/api/resources" && req.method === "GET") {
+      return json(res, 200, resReadMeta().slice().reverse());
+    }
+    if (p === "/api/resources" && req.method === "POST") {
+      const body = await readJson(req);
+      if (typeof body.data !== "string") return json(res, 400, { error: "data (base64) required" });
+      const m = body.data.match(/^data:((?:image|video)\/[\w.+-]+);base64,(.+)$/s);
+      if (!m) return json(res, 400, { error: "expected a data:image/* or data:video/* base64 payload" });
+      const ext = resMimeExt(m[1]);
+      if (!ext) return json(res, 400, { error: `unsupported media type ${m[1]}` });
+      const buf = Buffer.from(m[2], "base64");
+      if (!buf.length) return json(res, 400, { error: "empty file" });
+      const id = newResId();
+      const file = id + ext;
+      const kind = m[1].startsWith("video/") ? "video" : "image";
+      fs.mkdirSync(RESOURCES, { recursive: true });
+      fs.writeFileSync(path.join(RESOURCES, file), buf);
+      const entry = {
+        id, file, kind, thumb: null, prompt: null,
+        captionError: null, novision: false, created_at: new Date().toISOString(),
+      };
+      if (kind === "video") {
+        entry.thumb = `${id}_thumb.jpg`;
+        try {
+          await extractMiddleFrame(path.join(RESOURCES, file), path.join(RESOURCES, entry.thumb));
+        } catch (e) {
+          entry.thumb = null;
+          entry.captionError = `thumbnail failed: ${e.message}`;
+        }
+      }
+      if (!entry.captionError) {
+        // Auto-caption on upload (best effort — the file is kept either way).
+        try {
+          Object.assign(entry, await captionResource(entry));
+        } catch (e) {
+          entry.prompt = null;
+          entry.captionError = e.detail || String(e.message || e);
+          entry.novision = e.message === "vision-unavailable";
+        }
+      }
+      const rows = resReadMeta();
+      rows.push(entry);
+      resWriteMeta(rows);
+      return json(res, 200, entry);
+    }
+    if (p.startsWith("/api/resources/") && req.method === "POST" && p.endsWith("/caption")) {
+      const id = pathName(p.split("/")[3]);
+      const rows = resReadMeta();
+      const entry = rows.find((r) => r.id === id);
+      if (!entry) return json(res, 404, { error: "no such resource" });
+      try {
+        const next = await captionResource(entry);
+        resWriteMeta(rows.map((r) => (r.id === id ? { ...next, novision: false } : r)));
+        return json(res, 200, { ...next, novision: false });
+      } catch (e) {
+        if (e.message === "vision-unavailable") return json(res, 409, { error: e.detail, vision: false });
+        return json(res, 502, { error: String(e.message || e) });
+      }
+    }
+    if (p.startsWith("/api/resources/") && req.method === "PUT" && p.split("/").length === 4) {
+      const id = pathName(p.split("/")[3]);
+      const body = await readJson(req);
+      if (typeof body.prompt !== "string") return json(res, 400, { error: "prompt required" });
+      const rows = resReadMeta();
+      if (!rows.some((r) => r.id === id)) return json(res, 404, { error: "no such resource" });
+      const next = rows.map((r) => (r.id === id
+        ? { ...r, prompt: body.prompt.trim() || null, captionError: null }
+        : r));
+      resWriteMeta(next);
+      return json(res, 200, next.find((r) => r.id === id));
+    }
+    if (p.startsWith("/api/resources/") && req.method === "DELETE" && p.split("/").length === 4) {
+      const id = pathName(p.split("/")[3]);
+      const rows = resReadMeta();
+      const entry = rows.find((r) => r.id === id);
+      if (!entry) return json(res, 404, { error: "no such resource" });
+      for (const f of [entry.file, entry.thumb]) {
+        if (!f) continue;
+        try { fs.unlinkSync(path.join(RESOURCES, f)); } catch { /* already gone */ }
+      }
+      resWriteMeta(rows.filter((r) => r.id !== id));
+      return json(res, 200, { ok: true, deleted: id });
+    }
+    if (p.startsWith("/api/resources/") && req.method === "POST" && p.endsWith("/use")) {
+      const id = pathName(p.split("/")[3]);
+      const entry = resReadMeta().find((r) => r.id === id);
+      if (!entry) return json(res, 404, { error: "no such resource" });
+      const body = await readJson(req);
+      // Source pixels: the image itself, or the video's middle frame.
+      const srcFile = entry.kind === "image" ? entry.file : entry.thumb;
+      if (!srcFile || !fs.existsSync(path.join(RESOURCES, srcFile)))
+        return json(res, 400, { error: "source image missing — re-upload the resource" });
+      const srcBuf = fs.readFileSync(path.join(RESOURCES, srcFile));
+      const refPrompt = entry.prompt ?? "";
+      if (body.mode === "ref") {
+        // Pinned reference of an EXISTING project (same mechanics as
+        // POST /api/upload/ref, sourced from the library).
+        const project = String(body.project || "");
+        if (!isSafe(project)) return json(res, 400, { error: "project required" });
+        let raw;
+        try { raw = await dbGetScenario(project); }
+        catch { return json(res, 503, { error: "database unavailable" }); }
+        if (raw === null) return json(res, 404, { error: "no such project" });
+        const storDir = await storageDirFor(project);
+        const outDir = path.join(OUTPUTS, storDir);
+        fs.mkdirSync(outDir, { recursive: true });
+        const prefix = prefixFor(storDir);
+        const v = nextVersion(outDir, prefix, "ref", 0, ".png");
+        const file = v === 1 ? `${prefix}_ref.png` : `${prefix}_ref_v${v}.png`;
+        fs.writeFileSync(path.join(outDir, file), srcBuf);
+        // An upload is a deliberate choice — pin it as main.
+        setMain(outDir, prefix, "ref", 0, null, file, { pinned: true });
+        const { base: refBase } = splitDirSuffix(project);
+        const refOwner = (pgUp ? await displayNameForFolder(refBase) : null) || cfgNameFor(project);
+        pgRefreshProjectFiles(refOwner, storDir)
+          .catch((e) => console.warn("[pg] catalog failed:", e.message));
+        if (pgUp) {
+          pgProjectId(refOwner).then(async (pid) => {
+            if (pid == null) return;
+            await pgAddReference({
+              projectId: pid, dir: storDir, file, prompt: refPrompt || null,
+              engine: engineForDir(storDir), source: "upload",
+            });
+          }).catch((e) => console.warn("[pg] reference record failed:", e.message));
+        }
+        return json(res, 200, { ok: true, mode: "ref", project, file });
+      }
+      // New project FROM this resource: the caption becomes the Master
+      // Prompt and the pixels become the pinned reference visual — then the
+      // exact Project workflow takes over (AI Craft beats, Generate).
+      const newName = String(body.name || body.project || "").trim();
+      if (!isSafe(newName)) return json(res, 400, { error: "project name required" });
+      let taken = false;
+      try { taken = (await dbGetScenario(newName)) !== null; }
+      catch { return json(res, 503, { error: "database unavailable" }); }
+      if (taken) return json(res, 409, { error: "a project with that name already exists" });
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT 1 FROM projects WHERE name = $1", [newName]);
+          if (r.rowCount > 0) return json(res, 409, { error: "a project with that name already exists" });
+        } catch { /* row check best-effort — the scenario check above governs */ }
+      }
+      const cfg = { description: "", referencePrompt: refPrompt, duration: 3, sequence: [] };
+      if (pgUp) {
+        try {
+          await pgEnsureProject(newName, cfg);
+          const claimed = await getFolderNameFromRow(newName);
+          if (claimed) cfg.folder_name = claimed;
+        } catch (e) { console.warn("[pg] resource project ensure failed:", e.message); }
+      }
+      if (!cfg.folder_name) cfg.folder_name = folderName(newName);
+      await dbSaveScenario(newName, cfg);
+      fs.writeFileSync(path.join(PROMPTS, newName + ".json"), JSON.stringify(cfg, null, 2));
+      let project_id = null;
+      if (pgUp) {
+        try {
+          const saved = await pgSaveVersionDelta(newName, null, cfg);
+          project_id = saved.projectId;
+        } catch (e) { console.warn("[pg] resource project save failed:", e.message); }
+      }
+      const folder = cfg.folder_name;
+      const outDir = path.join(OUTPUTS, folder);
+      fs.mkdirSync(outDir, { recursive: true });
+      const prefix = prefixFor(folder);
+      const file = `${prefix}_ref.png`;
+      fs.writeFileSync(path.join(outDir, file), srcBuf);
+      setMain(outDir, prefix, "ref", 0, null, file, { pinned: true });
+      if (pgUp) {
+        try {
+          const pid = project_id ?? await pgProjectId(newName);
+          if (pid != null) {
+            await pgAddReference({
+              projectId: pid, dir: folder, file, prompt: refPrompt || null,
+              engine: engineForDir(folder), source: "upload",
+            });
+          }
+        } catch (e) { console.warn("[pg] resource reference record failed:", e.message); }
+      }
+      return json(res, 200, { ok: true, mode: "new", name: newName });
+    }
+    if (p === "/api/resources/build-project" && req.method === "POST") {
+      // Save the WHOLE Resource Library as one project: one beat per
+      // resource (oldest upload first), each resource's AI prompt as its
+      // scene image prompt, the first prompt as Master Prompt — through the
+      // SAME project save path as every other project (scenarios row +
+      // prompts JSON + projects row + one KEYFRAME/VIDEO project_assets row
+      // per scene). Media is installed under the pipeline's own filename
+      // pattern (<prefix>_seqN_<slug>.png / <prefix>_clipN_<slug>.mp4 /
+      // <prefix>_ref.png) so Keyframes → clips, Story Board and Rendered
+      // Clip resolve them by name with no frontend/path changes.
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const name = String(body.name || "").trim();
+      if (!isSafe(name)) return json(res, 400, { error: "project name required" });
+      let taken = false;
+      try { taken = (await dbGetScenario(name)) !== null; }
+      catch { return json(res, 503, { error: "database unavailable" }); }
+      if (taken) return json(res, 409, { error: "a project with that name already exists" });
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT 1 FROM projects WHERE name = $1", [name]);
+          if (r.rowCount > 0) return json(res, 409, { error: "a project with that name already exists" });
+        } catch { /* the scenario check above governs */ }
+      }
+      const entries = resReadMeta()
+        .filter((r) => r && r.file && fs.existsSync(path.join(RESOURCES, r.file)))
+        .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+      if (!entries.length)
+        return json(res, 400, { error: "no resources yet — upload images/videos first" });
+      if (!pgUp && !USE_SQLITE) return json(res, 503, { error: "database unavailable" });
+      const beats = entries.map((e, i) => ({
+        title: `Scene ${i + 1}`,
+        image: String(e.prompt ?? "").trim(),
+        motion: "",
+      }));
+      const cfg = {
+        description: `Built from Resource Library (${entries.length} item${entries.length === 1 ? "" : "s"})`,
+        referencePrompt: String(entries[0].prompt ?? "").trim(),
+        duration: 3,
+        presetId: "cinematic",
+        sequence: beats,
+      };
+      // Claim the immutable storage folder FIRST (pgEnsureProject mints it
+      // into the projects row; sqlite falls back to the slug) so media and
+      // every DB path below agree on one folder.
+      let folder;
+      if (pgUp) {
+        await pgEnsureProject(name, cfg);
+        folder = await getFolderNameFromRow(name);
+      } else {
+        folder = folderName(name);
+      }
+      cfg.folder_name = folder;
+      if (USE_SQLITE) {
+        await dbSaveScenario(name, cfg);
+        fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
+        pgSaveScenarioMirror(name, cfg).catch((e) => console.warn("[pg] scenario mirror failed:", e.message));
+      } else {
+        await dbSaveScenario(name, cfg);
+        fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
+      }
+      // Install every resource's pixels under the pipeline filename pattern.
+      // Images convert to real PNG via ffmpeg (the keyframe scanner only
+      // matches .png); videos install as the beat clip (.mp4, remuxed or
+      // transcoded when the upload isn't mp4) with their middle frame as the
+      // beat keyframe. Byte-copy fallbacks keep a viewable file even when
+      // ffmpeg is unavailable.
+      const outDir = path.join(OUTPUTS, folder);
+      fs.mkdirSync(outDir, { recursive: true });
+      const prefix = prefixFor(folder);
+      const warnings = [];
+      const toPng = async (srcFull, dstFull, what) => {
+        if (srcFull.toLowerCase().endsWith(".png")) {
+          fs.copyFileSync(srcFull, dstFull);
+          return;
+        }
+        try {
+          await runCmd("ffmpeg", ["-y", "-i", srcFull, dstFull], 60000);
+        } catch (e) {
+          fs.copyFileSync(srcFull, dstFull);
+          warnings.push(`${what}: PNG convert failed (${e.message}) — kept original bytes.`);
+        }
+      };
+      const toMp4 = async (srcFull, dstFull, what) => {
+        if (srcFull.toLowerCase().endsWith(".mp4")) {
+          fs.copyFileSync(srcFull, dstFull);
+          return;
+        }
+        try {
+          await runCmd("ffmpeg", ["-y", "-i", srcFull, "-c", "copy", dstFull], 120000);
+        } catch {
+          try {
+            await runCmd("ffmpeg", ["-y", "-i", srcFull,
+              "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", dstFull], 300000);
+          } catch (e) {
+            fs.copyFileSync(srcFull, dstFull);
+            warnings.push(`${what}: MP4 convert failed (${e.message}) — kept original bytes.`);
+          }
+        }
+      };
+      const installedKf = {};
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        const n = i + 1;
+        const slug = fileSlug(beats[i].title);
+        try {
+          if (e.kind === "image") {
+            const kf = `${prefix}_seq${n}_${slug}.png`;
+            await toPng(path.join(RESOURCES, e.file), path.join(outDir, kf), `Scene ${n}`);
+            setMain(outDir, prefix, "seq", n, beats[i].title, kf, { pinned: true });
+            installedKf[n] = kf;
+          } else {
+            const cl = `${prefix}_clip${n}_${slug}.mp4`;
+            await toMp4(path.join(RESOURCES, e.file), path.join(outDir, cl), `Scene ${n}`);
+            setMain(outDir, prefix, "clip", n, beats[i].title, cl, { pinned: true });
+            let thumb = e.thumb && fs.existsSync(path.join(RESOURCES, e.thumb)) ? e.thumb : null;
+            if (!thumb) {
+              try {
+                const fresh = `${e.id}_thumb.jpg`;
+                await extractMiddleFrame(path.join(RESOURCES, e.file), path.join(RESOURCES, fresh));
+                if (fs.existsSync(path.join(RESOURCES, fresh))) {
+                  thumb = fresh;
+                  resWriteMeta(resReadMeta().map((r) => (r.id === e.id ? { ...r, thumb } : r)));
+                }
+              } catch { thumb = null; }
+            }
+            if (thumb) {
+              const kf = `${prefix}_seq${n}_${slug}.png`;
+              await toPng(path.join(RESOURCES, thumb), path.join(outDir, kf), `Scene ${n}`);
+              setMain(outDir, prefix, "seq", n, beats[i].title, kf, { pinned: true });
+              installedKf[n] = kf;
+            } else {
+              warnings.push(`Scene ${n}: no keyframe still (video thumbnail unavailable) — clip only.`);
+            }
+          }
+        } catch (err) {
+          warnings.push(`Scene ${n}: media install failed — ${err.message}`);
+        }
+      }
+      // Pinned reference = Scene 1's keyframe pixels (same source the
+      // per-card "Start project" flow installs, without re-converting).
+      let refInstalled = null;
+      if (installedKf[1]) {
+        try {
+          const refFile = `${prefix}_ref.png`;
+          fs.copyFileSync(path.join(outDir, installedKf[1]), path.join(outDir, refFile));
+          setMain(outDir, prefix, "ref", 0, null, refFile, { pinned: true });
+          refInstalled = refFile;
+        } catch (err) {
+          warnings.push(`Reference install failed — ${err.message}`);
+        }
+      } else {
+        warnings.push("Reference skipped — Scene 1 has no keyframe image.");
+      }
+      // Projects row already exists (pgEnsureProject above); the v1 full
+      // snapshot adds one KEYFRAME + one VIDEO project_assets row per scene
+      // (COMPLETED with file paths, since mains are on disk) and refreshes
+      // the projects row. The reference gets its project_references row.
+      let version = null;
+      let project_id = null;
+      if (pgUp) {
+        try {
+          const saved = await pgSaveVersionDelta(name, null, cfg);
+          version = saved.version;
+          project_id = saved.projectId;
+        } catch (e) {
+          warnings.push(`version snapshot failed: ${e.message}`);
+          console.warn("[pg] build-project version save failed:", e.message);
+        }
+        if (project_id == null) {
+          try { project_id = await pgProjectId(name); }
+          catch { project_id = null; }
+        }
+        if (refInstalled && project_id != null) {
+          try {
+            await pgAddReference({
+              projectId: project_id, dir: folder, file: refInstalled,
+              prompt: cfg.referencePrompt || null,
+              engine: engineForDir(folder), source: "upload",
+            });
+          } catch (e) {
+            warnings.push(`reference record skipped: ${e.message}`);
+            console.warn("[pg] build-project reference record failed:", e.message);
+          }
+        }
+      }
+      return json(res, 200, {
+        ok: true, name, folder, scenes: entries.length,
+        version, project_id, warnings,
+      });
+    }
     if (p === "/api/upload/keyframe" && req.method === "POST") {
       // Upload an image as beat N's keyframe. Stored as the next keyframe
       // version in outputs/<folder>/ and selected as main, so a later
@@ -3082,6 +3744,42 @@ const server = http.createServer(async (req, res) => {
         configName: body.scenario,
       });
       return json(res, 200, { id: run.id, folder });
+    }
+    // Short cut for Instagram Reels/Shorts: trim the dir's latest final cut
+    // down to the first N seconds. Writes
+    // outputs/<dir>/<prefix>_reel_<N>s.mp4 via stream copy (fast, lossless)
+    // so the Reel panel can play the exact short; re-cutting the same length
+    // overwrites the same file (no version sprawl). When the final is already
+    // shorter than N seconds, no file is written — the final itself is the cut.
+    if (p === "/api/reel-cut" && req.method === "POST") {
+      const body = await readJson(req);
+      if (!isSafe(body.dir)) return json(res, 400, { error: "bad dir" });
+      const seconds = Math.floor(Number(body.seconds));
+      if (![30, 60, 90].includes(seconds)) return json(res, 400, { error: "seconds must be 30, 60 or 90" });
+      const full = path.join(OUTPUTS, body.dir);
+      let st = null;
+      try { st = fs.statSync(full); } catch { st = null; }
+      if (!st || !st.isDirectory()) return json(res, 404, { error: "unknown outputs dir" });
+      const prefix = prefixForDir(body.dir);
+      const vm = versionMap(full, prefix, []);
+      const finals = [...(vm.final ?? [])].sort((a, b) => a.v - b.v);
+      const latest = finals.length ? finals[finals.length - 1].file : null;
+      if (!latest) return json(res, 400, { error: "no final cut yet — create the video first" });
+      const srcFull = path.join(full, latest);
+      const dur = await videoDurationSec(srcFull);
+      if (dur != null && dur <= seconds) {
+        return json(res, 200, { file: latest, duration: dur, cut: false, from: latest, fromDuration: dur });
+      }
+      const outFile = `${prefix}_reel_${seconds}s.mp4`;
+      const dstFull = path.join(full, outFile);
+      try {
+        await runCmd("ffmpeg", ["-y", "-i", srcFull, "-t", String(seconds),
+          "-c", "copy", "-movflags", "+faststart", dstFull], 120000);
+      } catch (e) {
+        return json(res, 500, { error: `cut failed: ${e.message || e}` });
+      }
+      const outDur = await videoDurationSec(dstFull);
+      return json(res, 200, { file: outFile, duration: outDur ?? seconds, cut: true, from: latest, fromDuration: dur });
     }
     // Preview of the exact LLM messages a craft would send (AI Craft
     // "View Prompt" popup). No LLM call, nothing persisted — the UI lets the
@@ -3296,7 +3994,10 @@ const server = http.createServer(async (req, res) => {
       if (!pgUp) return json(res, 503, { error: "database unavailable" });
       const pid = await pgProjectId(name);
       if (pid == null) return json(res, 200, []);
-      let version = Number(u.searchParams.get("version"));
+      // Missing ?version= means latest — Number(null) is 0, which is a valid
+      // integer but never a real version, so only parse when present.
+      const versionParam = u.searchParams.get("version");
+      let version = versionParam == null || versionParam === "" ? NaN : Number(versionParam);
       if (!Number.isInteger(version)) {
         const r = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
         version = Number(r.rows[0]?.v);
@@ -3305,7 +4006,11 @@ const server = http.createServer(async (req, res) => {
       const mode = String(u.searchParams.get("mode") || "").toLowerCase();
       const exact = mode === "exact" || mode === "delta" || mode === "raw" ||
         u.searchParams.get("exact") === "1";
-      const r = await pgPool.query(exact ? EXACT_VERSION_SQL : EFFECTIVE_ASSETS_SQL, [pid, version]);
+      // Cut-scoped history: YOUTUBE (landscape main cut) by default, INSTAGRAM
+      // (vertical Reel cut) on request — the two cuts keep independent rows.
+      const vtParam = String(u.searchParams.get("video_type") || "").toUpperCase();
+      const videoType = vtParam === "INSTAGRAM" ? "INSTAGRAM" : "YOUTUBE";
+      const r = await pgPool.query(exact ? EXACT_VERSION_SQL : EFFECTIVE_ASSETS_SQL, [pid, version, videoType]);
       return json(res, 200, r.rows);
     }
     // Reference visuals for a project (one row per generation/upload).
@@ -3323,14 +4028,14 @@ const server = http.createServer(async (req, res) => {
       const r = dir && isSafe(dir)
         ? await pgPool.query(
           `SELECT id, project_id, output_dir, version, prompt, negative_prompt, file_path,
-                  model, workflow, seed, attempts, source, is_main, pinned, metadata,
+                  model, workflow, seed, attempts, source, video_type, is_main, pinned, metadata,
                   started_at, completed_at, created_at, updated_at
            FROM project_references WHERE project_id = $1 AND output_dir = $2
            ORDER BY created_at ASC, id ASC`,
           [pid, dir])
         : await pgPool.query(
           `SELECT id, project_id, output_dir, version, prompt, negative_prompt, file_path,
-                  model, workflow, seed, attempts, source, is_main, pinned, metadata,
+                  model, workflow, seed, attempts, source, video_type, is_main, pinned, metadata,
                   started_at, completed_at, created_at, updated_at
            FROM project_references WHERE project_id = $1
            ORDER BY output_dir ASC, created_at ASC, id ASC`,
@@ -3350,6 +4055,10 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith("/outputs/")) {
       const [, , scenario, file] = p.split("/");
       return serveOutput(res, decodeURIComponent(scenario), decodeURIComponent(file));
+    }
+    if (p.startsWith("/resources/")) {
+      const [, , file] = p.split("/");
+      return serveResource(res, decodeURIComponent(file));
     }
     if (p.startsWith("/api/")) return json(res, 404, { error: "unknown route" });
     serveStatic(req, res, p === "/" ? "/index.html" : p);

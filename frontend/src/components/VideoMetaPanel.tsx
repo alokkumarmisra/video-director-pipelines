@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { craftVideoMeta } from "../api";
 import type { Scenario } from "../types";
 import { IconCheck, IconClipboard, IconPanel, IconRefresh, IconSparkles, Spinner } from "./Icons";
+import Collapse from "./Collapse";
 
 interface Props {
   /** Base scenario name ("" when nothing selected). */
@@ -177,8 +178,7 @@ export default function VideoMetaPanel({ name, config }: Props) {
         </button>
       </div>
 
-      {!collapsed && (
-        <>
+      <Collapse open={!collapsed}>
           <p className="card-desc">
             Publishing copy for <b>{name}</b> — drafted by the local LLM from this project's story and visuals.
           </p>
@@ -270,8 +270,7 @@ export default function VideoMetaPanel({ name, config }: Props) {
           <p className="hint">
             Edits are kept per project in this browser. Regenerate drafts fresh copy from the current scenes.
           </p>
-        </>
-      )}
+      </Collapse>
     </section>
   );
 }

@@ -78,4 +78,32 @@ describe("main pins", () => {
     setMain(outDir, prefix, "ref", 0, null, `${prefix}_ref.png`, { pinned: true });
     assert.equal(resolveMain(outDir, prefix, "ref", 0, ".png", null, loadState(outDir)), `${prefix}_ref.png`);
   });
+
+  it("a skip-only full run keeps the pinned ref main (no silent unpin to latest)", async () => {
+    // Reported bug: user pins ref v3 with v4 on disk; the next full run
+    // skipped the reference but cleared the pin, so the gallery flipped to
+    // v4 (auto-latest) on reload. Skips must preserve the pin.
+    process.env.COMFY_BASE ??= "http://localhost:1";
+    const { runSequence } = await import("../lib/sequence.mjs");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pin-run-"));
+    const ref = (v) => (v === 1 ? `${prefix}_ref.png` : `${prefix}_ref_v${v}.png`);
+    for (const v of [1, 2, 3, 4]) fs.writeFileSync(path.join(dir, ref(v)), "x");
+    // User picks v3 as main (what the UI select-as-main does).
+    setMain(dir, prefix, "ref", 0, null, ref(3), { pinned: true });
+    // Empty sequence: genRef takes the skip path (no network), stitch is a
+    // no-op with no scenes (no ffmpeg) — only state handling is exercised.
+    const builders = {
+      buildRef: () => { throw new Error("must not generate on skip"); },
+      buildKeyframe: () => { throw new Error("must not generate on skip"); },
+      buildClip: () => { throw new Error("must not generate on skip"); },
+    };
+    await runSequence({
+      scenario: prefix, outDir: dir, prefix, tag: "[test]", cfg: { sequence: [] },
+      videoNode: "75", ...builders,
+    });
+    const st = loadState(dir);
+    assert.equal(isPinnedState(st, "ref", 0), true);
+    assert.equal(st.ref, ref(3));
+    assert.equal(resolveMain(dir, prefix, "ref", 0, ".png", null, st), ref(3));
+  });
 });

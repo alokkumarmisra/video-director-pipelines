@@ -1,0 +1,29 @@
+{
+  "description": "An elegant female engineer in a utility jumpsuit with reflective piping walks through a glowing hangar towards a massive starship under construction.",
+  "character": "Elegant female engineer",
+  "referencePrompt": "High-quality digital illustration of an elegant female engineer in a utility jumpsuit with reflective piping, walking through a sleek brushed-metal hangar. Soft cyan-hued lighting highlights her confident stride as she approaches the massive starship under construction. Holographic blueprints overlay the structure, casting dynamic shadows against a deep-space black backdrop.",
+  "duration": 5,
+  "sequence": [
+    {
+      "title": "engineer_in_hangar",
+      "image": "An elegant female engineer in a utility jumpsuit with reflective piping walks through a sleek brushed-metal hangar. Soft cyan-hued lighting highlights her confident stride as she approaches the massive starship under construction. Holographic blueprints overlay the structure, casting dynamic shadows against a deep-space black backdrop., In a sleek, brushed-metal cityscape of the future, an elegant female engineer in a utility jumpsuit with reflective piping walks through a glowing hangar. Her visor reflects the vibrant tech glow, casting dynamic shadows against the deep-space black backdrop. Soft, cyan-hued lighting highlights her confident stride as she approaches a massive starship under construction, where holographic blueprints overlay the structure.",
+      "motion": "The camera follows the engineer's confident walk across the hangar floor, capturing her reflection in the metallic surfaces and the glowing tech around her."
+    },
+    {
+      "title": "approach_to_starship",
+      "image": "The elegant female engineer continues walking towards a massive starship under construction. Holographic blueprints overlay the structure, casting dynamic shadows against a deep-space black backdrop., In a sleek, brushed-metal cityscape of the future, an elegant female engineer in a utility jumpsuit with reflective piping walks through a glowing hangar. Her visor reflects the vibrant tech glow, casting dynamic shadows against the deep-space black backdrop. Soft, cyan-hued lighting highlights her confident stride as she approaches a massive starship under construction, where holographic blueprints overlay the structure.",
+      "motion": "The camera gradually zooms in on the approaching starship as the engineer nears it, showcasing its sleek brushed-metal design and the vibrant tech glow emanating from it."
+    },
+    {
+      "title": "blueprint_overlay",
+      "image": "A close-up of the elegant female engineer examining a section of the massive starship. Holographic blueprints overlay the structure, casting dynamic shadows against a deep-space black backdrop., In a sleek, brushed-metal cityscape of the future, an elegant female engineer in a utility jumpsuit with reflective piping walks through a glowing hangar. Her visor reflects the vibrant tech glow, casting dynamic shadows against the deep-space black backdrop. Soft, cyan-hued lighting highlights her confident stride as she approaches a massive starship under construction, where holographic blueprints overlay the structure.",
+      "motion": "The camera focuses on the engineer's visor reflecting the vibrant tech glow and the holographic blueprints as she inspects the starship."
+    },
+    {
+      "title": "engineering_in_action",
+      "image": "The elegant female engineer is seen working on a panel of the massive starship. Holographic blueprints overlay the structure, casting dynamic shadows against a deep-space black backdrop., In a sleek, brushed-metal cityscape of the future, an elegant female engineer in a utility jumpsuit with reflective piping walks through a glowing hangar. Her visor reflects the vibrant tech glow, casting dynamic shadows against the deep-space black backdrop. Soft, cyan-hued lighting highlights her confident stride as she approaches a massive starship under construction, where holographic blueprints overlay the structure.",
+      "motion": "The camera captures her precise movements as she works on the starship's systems, highlighting the reflective piping and her confident hands."
+    }
+  ],
+  "presetId": "sci-fi"
+}

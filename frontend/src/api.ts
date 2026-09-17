@@ -1,6 +1,15 @@
 import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, ProjectReference, DashboardResponse, HealthResponse } from "./types";
 
-const get = async <T,>(url: string) => (await fetch(url)).json() as Promise<T>;
+// Never treat an HTTP error body as data: a 500 {error: ...} object once
+// resolved into array state and crashed the gallery (assets.filter is not a
+// function). Reject like every other helper in this file; callers already
+// handle rejections (they fall back to disk listings / empty states).
+const get = async <T,>(url: string) => {
+  const r = await fetch(url);
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(d?.error || `request failed (HTTP ${r.status})`);
+  return d as T;
+};
 
 // ---------------------------------------------------------------- auth
 export type { AuthUser } from "./types";
@@ -160,9 +169,12 @@ export const saveTheme = (t: ThemeFile) =>
 
 export type Engine = "ltx" | "wan";
 
-// Landscape = the main (YouTube-style 16:9) cut; vertical = the 9:16
-// Instagram Reel cut (fresh vertical images + clips in a separate folder).
-export type VideoFormat = "landscape" | "vertical";
+  // Landscape = the main (YouTube-style 16:9) cut; vertical = the 9:16
+  // Instagram Reel cut (fresh vertical images + clips in a separate folder).
+  export type VideoFormat = "landscape" | "vertical";
+  // Catalog cut label stored per project_assets row (video_type): YOUTUBE =
+  // landscape main cut, INSTAGRAM = vertical Reel cut.
+  export type VideoType = "YOUTUBE" | "INSTAGRAM";
 
 export interface RegenSpec {
   kind: "ref" | "keyframe" | "clip";
@@ -281,6 +293,22 @@ export const stitchOnly = (scenario: string, engine: Engine = "ltx", format: Vid
     body: JSON.stringify({ scenario, engine, format }),
   }).then((r) => r.json() as Promise<{ id: string; folder?: string }>);
 
+// Short cut for Instagram Reels/Shorts: trim the output dir's latest final
+// cut down to the first `seconds` (30/60/90). Resolves to the trimmed file
+// (plus both durations); when the final is already shorter, it resolves to
+// the final itself with cut=false (nothing written).
+export const cutReel = (dir: string, seconds: 30 | 60 | 90) =>
+  fetch("/api/reel-cut", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dir, seconds }),
+  }).then(
+    (r) =>
+      r.ok
+        ? r.json() as Promise<{ file: string; duration: number; cut: boolean; from: string; fromDuration: number | null }>
+        : r.json().then((d) => Promise.reject(new Error(d.error || "cut failed")))
+  );
+
 // Ask the local LLM to extend a scenario with the next `count` beats in the story.
 export const craftBeat = (config: Scenario, count = 1) =>
   fetch("/api/craft-beat", {
@@ -372,6 +400,95 @@ export function tailRun(
 
 export const outputUrl = (scenario: string, file: string) => `/outputs/${scenario}/${file}`;
 
+// Resource library (the Resource page): user-uploaded images/videos, each
+// with an AI-generated prompt. "Use in project" wires one into the exact
+// Project workflow — a new project (caption as Master Prompt + pixels as the
+// pinned reference visual) or an existing project's reference.
+export interface ResourceEntry {
+  id: string;
+  file: string;
+  kind: "image" | "video";
+  thumb: string | null;
+  prompt: string | null;
+  captionError: string | null;
+  novision?: boolean;
+  created_at: string;
+}
+export const resourceUrl = (file: string) => `/resources/${file}`;
+export const listResources = () => get<ResourceEntry[]>("/api/resources");
+export const uploadResource = (data: string) =>
+  fetch("/api/resources", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `upload failed (HTTP ${r.status})`);
+    return d as ResourceEntry;
+  });
+// (Re)generate the AI prompt by having the local vision model read the
+// image (or the video's middle frame). Rejects with `vision: false` on the
+// error when no vision model is loaded, so the UI can point at Qwen3-VL.
+export const captionResource = (id: string) =>
+  fetch(`/api/resources/${id}/caption`, { method: "POST" }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) {
+      const e = new Error(d?.error || `caption failed (HTTP ${r.status})`) as Error & { vision?: boolean };
+      if (d?.vision === false) e.vision = false;
+      throw e;
+    }
+    return d as ResourceEntry;
+  });
+export const saveResourcePrompt = (id: string, prompt: string) =>
+  fetch(`/api/resources/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `save failed (HTTP ${r.status})`);
+    return d as ResourceEntry;
+  });
+export const deleteResource = (id: string) =>
+  fetch(`/api/resources/${id}`, { method: "DELETE" }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `delete failed (HTTP ${r.status})`);
+    return d as { ok: boolean; deleted: string };
+  });
+export const useResource = (
+  id: string,
+  opts: { mode: "new"; name: string } | { mode: "ref"; project: string }
+) =>
+  fetch(`/api/resources/${id}/use`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `use failed (HTTP ${r.status})`);
+    return d as { ok: boolean; mode: string; name?: string; project?: string; file?: string };
+  });
+// Save the WHOLE library as one project: one beat per resource (oldest
+// first), each AI prompt as its scene image prompt, first prompt as Master
+// Prompt, first pixels as the pinned reference — through the same project
+// save path as every other project (scenarios row + prompts JSON + projects
+// row + one KEYFRAME/VIDEO project_assets row per scene). Media lands under
+// the pipeline filename pattern so Keyframes → clips, Story Board and
+// Rendered Clip resolve by name.
+export const buildProjectFromResources = (name: string) =>
+  fetch("/api/resources/build-project", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `save failed (HTTP ${r.status})`);
+    return d as {
+      ok: boolean; name: string; folder: string; scenes: number;
+      version: number | null; project_id: number | null; warnings: string[];
+    };
+  });
+
 // Reference visuals for a project (project_references — one row per
 // generation/upload, is_main = UI-selected main). Optional dir narrows to
 // one output dir; without it every cut is returned.
@@ -386,7 +503,11 @@ export const listReferences = (name: string, dir?: string) =>
 // returns the EFFECTIVE state by default — the latest applicable row per
 // (beat, asset type) with version <= requested — and the UI keeps showing
 // all scenes. Pass mode "exact" for the raw delta rows stored at a version.
-export const listProjectAssets = (name: string, version?: number, mode?: "effective" | "exact") =>
-  get<ProjectAsset[]>(
-    `/api/project/${name}/assets${version != null ? `?version=${version}` : ""}${mode === "exact" ? (version != null ? "&mode=exact" : "?mode=exact") : ""}`
-  );
+export const listProjectAssets = (name: string, version?: number, mode?: "effective" | "exact", videoType?: VideoType) => {
+  const params = new URLSearchParams();
+  if (version != null) params.set("version", String(version));
+  if (mode === "exact") params.set("mode", "exact");
+  if (videoType) params.set("video_type", videoType);
+  const q = params.toString();
+  return get<ProjectAsset[]>(`/api/project/${name}/assets${q ? `?${q}` : ""}`);
+};

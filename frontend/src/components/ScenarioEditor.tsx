@@ -4,6 +4,7 @@ import type { ScenarioVersionInfo } from "../api";
 import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionApi, craftBeat } from "../api";
 import { IconCheck, IconEye, IconEyeOff, IconFilm, IconLayers, IconPanel, IconPlus, IconSparkles, IconTrash, Spinner } from "./Icons";
 import Collapse from "./Collapse";
+import { useDialog } from "./Dialog";
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
@@ -70,6 +71,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
   const [genCount, setGenCount] = useState(1);
   const [genBusy, setGenBusy] = useState(false);
   const [genError, setGenError] = useState("");
+  const dialog = useDialog();
 
   const loadVersions = async () => {
     try {
@@ -163,11 +165,17 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     const target = viewVersion ?? versions[0]?.version;
     if (target == null || delBusy) return;
     const isLatest = target === versions[0]?.version;
-    if (!window.confirm(
-      `Delete v${target} of "${name}"?` +
-      (dirty ? " Your unsaved edits will be lost." : "") +
-      (isLatest ? " Current config rolls back to the previous version." : "")
-    )) return;
+    const okDel = await dialog.confirm(
+      (dirty ? "Your unsaved edits will be lost. " : "") +
+      (isLatest ? "Current config rolls back to the previous version." : "This cannot be undone."),
+      {
+        title: "Delete v" + target + " of " + name + "?",
+        tone: "error",
+        okText: "Delete",
+        cancelText: "Keep",
+      }
+    );
+    if (!okDel) return;
     setDelBusy(true);
     setError("");
     try {
@@ -190,7 +198,15 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
   };
 
   const switchVersion = async (v: number | null) => {
-    if (dirty && !window.confirm("Discard unsaved edits and switch version?")) return;
+    if (dirty) {
+      const okSwitch = await dialog.confirm("Switch to the selected version without saving?", {
+        title: "Discard unsaved edits?",
+        tone: "warning",
+        okText: "Discard",
+        cancelText: "Keep editing",
+      });
+      if (!okSwitch) return;
+    }
     setError("");
     try {
       const r = v === null ? await getScenario(name) : await getVersion(name, v);
@@ -277,15 +293,19 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     });
     setSaved(false);
   };
-  const deleteBeat = (i: number) => {
+  const deleteBeat = async (i: number) => {
     const b = beats[i];
     if (!b) return;
-    if (
-      !window.confirm(
-        `Delete Scene ${i + 1} (${b.title || "untitled"})? Its prompts are removed on the next Save (generated files are kept).`
-      )
-    )
-      return;
+    const okBeat = await dialog.confirm(
+      "Its prompts are removed on the next Save (generated files are kept).",
+      {
+        title: "Delete Scene " + (i + 1) + " (" + (b.title || "untitled") + ")?",
+        tone: "error",
+        okText: "Delete",
+        cancelText: "Keep",
+      }
+    );
+    if (!okBeat) return;
     setCfg((prev) => ({ ...prev, sequence: (prev.sequence || []).filter((_, k) => k !== i) }));
     setSaved(false);
   };

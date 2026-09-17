@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { IconPanel, IconSparkles, Spinner } from "./Icons";
+import Collapse from "./Collapse";
 
 interface Props {
   // Effective reference prompt (saved config + any unsaved edits from this
   // card). Edits are held by the parent and merged into the scenario on
-  // explicit Save in the Scenario Editor — nothing saves automatically.
+  // explicit Save in the Scenario Editor — and are also persisted
+  // automatically when Generate Reference is pressed (generation reads the
+  // saved prompt, so the save happens first).
   referencePrompt: string;
   onReferencePromptChange: (v: string) => void;
   // Batch-generate reference images from the reference prompt (needs a saved
@@ -62,8 +65,7 @@ export default function GenerateReference({
           <IconPanel size={15} />
         </button>
       </div>
-      {!collapsed && (
-      <>
+      <Collapse open={!collapsed}>
       <label>Reference prompt — Flux t2i key visual</label>
       <textarea
         rows={3}
@@ -96,11 +98,10 @@ export default function GenerateReference({
       {isDraft ? (
         <p className="hint">Save the scenario first — reference generation runs from the saved prompt.</p>
       ) : (
-        <p className="hint">Each image becomes a new reference version — pick the best one below.</p>
+        <p className="hint">Generate saves the prompt above first, then renders — each image becomes a new reference version; pick the best one below.</p>
       )}
       {referenceSlot}
-      </>
-      )}
+      </Collapse>
     </section>
   );
 }

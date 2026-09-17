@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getPresetsCached, getPreset, type PresetInfo } from "../api";
+import Collapse from "./Collapse";
 
 // Category group order for the dropdown (matches the documented preset
 // groups). Unknown categories sink to the end, never lost.
@@ -199,7 +200,7 @@ export default function PresetSelect({
       {!rulesOn && showToggle && (
         <p className="hint">Rules disabled — Craft scenario uses only Description + Master prompt.</p>
       )}
-      {showRules && rulesOn && (
+      <Collapse open={showRules && rulesOn}>
         <div className="preset-rules" aria-label="Preset rules (editable per project)">
           {rulesBusy ? (
             <p className="hint">Loading rules…</p>
@@ -246,7 +247,7 @@ export default function PresetSelect({
             <pre>{defaultRules ?? ""}</pre>
           )}
         </div>
-      )}
+      </Collapse>
     </div>
   );
 }

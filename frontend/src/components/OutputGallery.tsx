@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, type AssetEvent, type RunRequest, type VideoFormat } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
 import type { GenerationProgress } from "./GenerationProgressBar";
 import { formatLiveElapsed } from "./GenerationProgressBar";
-import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, Spinner } from "./Icons";
+import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, IconEdit, Spinner } from "./Icons";
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
+import Collapse from "./Collapse";
 
 interface Props {
   scenario: string;
@@ -39,6 +40,9 @@ interface Props {
   /** Live run progress — the in-flight keyframe/clip tile shows its
       estimated ~% (RunPanel). Absent = indeterminate shimmer only. */
   progress?: GenerationProgress | null;
+  /** Jump to Scene n in the Scenario Editor (App scrolls + flashes the
+      matching beat). Absent = no Edit button on the scene cards. */
+  onGotoEditorScene?: (n: number) => void;
 }
 
 type RefMode = "generate" | "upload";
@@ -52,10 +56,12 @@ const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
+  // Master prompt + source per reference file (from project_references).
+  const [refMeta, setRefMeta] = useState<Record<string, { prompt?: string | null; source?: string | null }>>({});
   const [error, setError] = useState("");
   // Which final-cut version is previewed (null = latest). Reset whenever the
   // scenario or file list changes so a fresh stitch always shows the new cut.
@@ -119,6 +125,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       setFiles([]);
       setVersions({ ref: [], beats: {}, final: [] });
       setMains({ ref: null, beats: {}, final: null });
+      setRefMeta({});
       setViewFinal(null);
       setLoadedFor("");
       setError("");
@@ -127,25 +134,75 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     if (assets) return;
     // Keep the old listing on screen until the new one lands (no blanking).
     let cancelled = false;
-    listOutputs(scenario).then((r) => {
-      if (cancelled) return;
-      setFiles(r.files);
-      setVersions(r.versions);
-      setMains(r.mains);
-      setLoadedFor(scenario);
-      setError("");
-    }).catch((e) => {
-      // A failed background refresh must never wipe already-shown data —
-      // keep the stale listing, just surface the error.
-      if (!cancelled) setError(String((e as Error).message || e));
-    });
+    const load = () => {
+      listOutputs(scenario).then((r) => {
+        if (cancelled) return;
+        setFiles(r.files);
+        setVersions(r.versions);
+        setMains(r.mains);
+        setRefMeta(r.refMeta ?? {});
+        setLoadedFor(scenario);
+        setError("");
+      }).catch((e) => {
+        // A failed background refresh must never wipe already-shown data —
+        // keep the stale listing, just surface the error. But a failed load
+        // for a NEW dir still advances past it — otherwise the gallery sits
+        // on "Loading outputs…" forever with nothing on screen.
+        if (!cancelled) setError(String((e as Error).message || e));
+        if (!cancelled) setLoadedFor(scenario);
+      });
+    };
+    load();
+    // While a run is active anywhere, re-list on the same 15s cadence as the
+    // Story Board so landed assets and version mains advance mid-run instead
+    // of freezing at their pre-run state (frozen mains pinned the generating
+    // chip on the first missing scene for the whole run).
+    if (generatingScenario) {
+      const t = setInterval(load, 15000);
+      return () => { cancelled = true; clearInterval(t); };
+    }
     return () => { cancelled = true; };
-  }, [scenario, refreshKey, assets]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scenario, refreshKey, assets, generatingScenario]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset the picked final-cut version only when moving to another project
   // (a refreshKey bump from a fresh stitch keeps working via `shownFinal`
   // falling back to latest when the picked file is gone).
   useEffect(() => { setViewFinal(null); }, [scenario]);
+
+  // Never show another dir's files: the moment `scenario` changes, blank
+  // the listing (a loading skeleton shows until the new one lands). Refresh
+  // polls for the SAME dir keep their data — no flashing mid-run.
+  const prevScenarioRef = useRef(scenario);
+  useEffect(() => {
+    if (assets) return;
+    if (prevScenarioRef.current !== scenario) {
+      prevScenarioRef.current = scenario;
+      setFiles([]);
+      setVersions({ ref: [], beats: {}, final: [] });
+      setMains({ ref: null, beats: {}, final: null });
+      setRefMeta({});
+    }
+  }, [scenario, assets]);
+
+  // Live "Generated so far" view also tracks the dir's current mains: the
+  // Reference tile below shows the version selected as main RIGHT NOW, so a
+  // re-picked main (v3) replaces the file the last run emitted (v4) instead
+  // of disagreeing with the Generate Reference card. Refetches on every
+  // landed asset (state.json is written before the event is emitted) plus a
+  // 15s poll for picks made while no new events land.
+  useEffect(() => {
+    if (!assets || !scenario) return;
+    let cancelled = false;
+    const load = () => {
+      listOutputs(scenario).then((r) => {
+        if (cancelled) return;
+        setMains(r.mains);
+      }).catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [scenario, assets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sibling engine dir (LTX <-> Wan): when THIS dir is empty, check whether
   // the project's renders live under the other engine, so the empty state
@@ -210,6 +267,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       return null;
     })();
     const mediaCount = keyframes.length + clips.length + (ref ? 1 : 0) + (final ? 1 : 0);
+    // Reference tile file: while the reference itself is in flight, show the
+    // run's own file (or the generating placeholder below); otherwise show
+    // the version currently selected as main — the run's emit freezes at
+    // generation time but a re-picked main (v3 over the run's v4) must win,
+    // or this tile disagrees with the Generate Reference card.
+    const liveRefFile = liveGenTarget === "ref" ? ref : (mains.ref ?? ref);
     const Tag = bare ? "div" : "section";
     return (
       <Tag className={bare ? undefined : "card"}>
@@ -227,11 +290,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         )}
         <>
           <div className="section-label">Reference</div>
-          {ref ? (
+          {liveRefFile ? (
             <div className="img-frame">
               <SceneBadge label="REF" title="Reference visual" />
-              <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(viewScenario, ref), kind: "image", alt: "reference" })} />
-              <SmoothImage src={outputUrl(viewScenario, ref)} alt="reference" />
+              <ExpandButton title="Fullscreen preview of reference" onOpen={() => setPreview({ src: outputUrl(viewScenario, liveRefFile), kind: "image", alt: "reference" })} />
+              <SmoothImage src={outputUrl(viewScenario, liveRefFile)} alt="reference" />
             </div>
           ) : (
             <div className="img-frame">
@@ -266,7 +329,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 const kfReadout = kfGen ? liveReadout("image") : "generating";
                 const clipReadout = clipGen ? liveReadout("video") : "generating";
                 return (
-                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
                   <div className="shot-head" aria-hidden="true">
                     Scene {n}{liveTotal != null ? `/${liveTotal}` : ""}
                   </div>
@@ -309,6 +372,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       </div>
                     )}
                   </div>
+                  {onGotoEditorScene && (
+                    <div className="shot-foot">
+                      <button
+                        className="icon-btn shot-goto"
+                        onClick={() => onGotoEditorScene(n)}
+                        title={`Edit Scene ${n} in Scenario Editor`}
+                        aria-label={`Edit Scene ${n} in Scenario Editor`}
+                      >
+                        <IconEdit size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 );
               })}
@@ -381,6 +456,17 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       if (regenTarget.kind === "keyframe") return `kf:${regenTarget.index}`;
       if (regenTarget.kind === "clip") return `clip:${regenTarget.index}`;
     }
+    // Live in-flight asset wins over the first-missing heuristic below:
+    // versions/mains are only re-listed on refresh, so the heuristic would
+    // freeze the chip on the first missing scene for the whole run while the
+    // real work has moved on. progress.activeScene tracks the actual asset
+    // (skips stream as events, so it advances past resumed scenes).
+    if (progress?.status === "running" && progress.activeScene != null) {
+      if (progress.activeKind === "image")
+        return progress.activeScene > 0 ? `kf:${progress.activeScene}` : "ref";
+      if (progress.activeKind === "video" && progress.activeScene > 0)
+        return `clip:${progress.activeScene}`;
+    }
     if (!versions.ref.length) return "ref";
     for (const n of beatNums) {
       if (!versions.beats[String(n)].keyframe.length) return `kf:${n}`;
@@ -406,6 +492,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       setVersions(r.versions);
       setMains(r.mains);
       setFiles(r.files);
+      setRefMeta(r.refMeta ?? {});
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -454,7 +541,14 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         <div className={`ref-card${mains.ref === v.file ? " on" : ""}`} key={v.file}>
           <div
             className="img-frame"
-            title={mains.ref === v.file ? `${v.file} (main — ${mains.pinned?.ref ? "your pick" : "latest"})` : `Set ${v.file} as main (your pick)`}
+            title={[
+              mains.ref === v.file
+                ? `${v.file} (main — ${mains.pinned?.ref ? "your pick" : "latest"})`
+                : `Set ${v.file} as main (your pick)`,
+              refMeta[v.file]?.prompt?.trim()
+                ? `Master prompt: ${refMeta[v.file].prompt!.trim().slice(0, 200)}`
+                : null,
+            ].filter(Boolean).join("\n")}
           >
             <span className="ver-badge">v{v.v}</span>
             <SceneBadge label="REF" title="Reference visual" />
@@ -499,7 +593,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
   // Follow the newest stitch automatically: when a fresh final cut lands
   // while the previous latest (or nothing) was showing, drop the pick so
-  // the new final clip shows on its own. An explicit older pick is kept.
+  // the new final clip shows on its own.
   const prevLatestFinal = useRef<string | null>(null);
   useEffect(() => {
     if (prevLatestFinal.current !== null && latestFinal && latestFinal !== prevLatestFinal.current) {
@@ -508,6 +602,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     }
     prevLatestFinal.current = latestFinal;
   });
+  // Anchor for an explicit older pick: the latest final at pick time. A
+  // refresh (stitch run done, re-list) that brings a NEWER final clears the
+  // pick so the fresh full stitch shows on its own — the gallery must never
+  // sit on an older cut forever after you hit Stitch. Refreshes with no new
+  // final (saves, uploads) keep the pick.
+  const pickAnchor = useRef<string | null>(null);
+  useEffect(() => {
+    if (viewFinal && latestFinal && pickAnchor.current && latestFinal !== pickAnchor.current) {
+      pickAnchor.current = latestFinal;
+      setViewFinal(null);
+    }
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Current loaded media for the Rendered Clip card: the single latest
   // finished keyframe image and clip video (highest scene number with a
@@ -624,8 +730,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </div>
       )}
 
-      {!(isCard && collapsed) && (
-      <>
+      <Collapse open={!(isCard && collapsed)}>
       {error && <p className="hint err-text">{error}</p>}
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
@@ -654,6 +759,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   {curClip && <SceneBadge small label={sceneNums.length ? `V${curClip.n}/${sceneNums.length}` : `V${curClip.n}`} title={`Video ${curClip.n} — current clip`} />}
                   {curClip ? (
                     <>
+                      <ExpandButton title={`Fullscreen preview of ${pretty(curClip.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, curClip.file), kind: "video", alt: pretty(curClip.file) })} />
                       <video controls preload="metadata" src={outputUrl(viewScenario, curClip.file)} />
                       {clipGen && <span className="gen-scanline" aria-hidden="true" />}
                       {clipGen && curClipReadout && curClipReadout !== "generating" && (
@@ -713,7 +819,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       key={v.file}
                       className={`vchip ${shownFinal === v.file ? "on" : ""}`}
                       title={shownFinal === v.file ? `${v.file} (showing)` : `Show ${v.file}`}
-                      onClick={() => setViewFinal(v.file)}
+                      onClick={() => { pickAnchor.current = latestFinal ?? null; setViewFinal(v.file); }}
                     >
                       {shownFinal === v.file && <IconCheck size={10} />}
                       v{v.v}
@@ -753,8 +859,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               {versions.ref.length > 1 && <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}> · {versions.ref.length} versions</span>}
             </div>
           )}
-          {!(section === "reference" && refCollapsed) && (
-          <>
+          <Collapse open={!(section === "reference" && refCollapsed)}>
           <div className="seg ref-mode">
             <button className={refMode === "generate" ? "on" : ""} onClick={() => setRefMode("generate")} title="Generate the reference with Flux from the reference prompt">
               Generate
@@ -816,8 +921,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               {refCards}
             </>
           )}
-          </>
-          )}
+          </Collapse>
         </>
       ) : null}
       {(section === "all" || section === "beats") && (sceneNums.length > 0 || fallbackShots.length > 0) && (
@@ -853,8 +957,19 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const clipReadout = clipPct != null ? `~${Math.round(clipPct)}%` : (clipElapsed ?? "generating");
               const kfLabel = kfPct != null ? `Generating scene ${n} keyframe… ~${Math.round(kfPct)}% (estimated)` : kfElapsed != null ? `Generating scene ${n} keyframe… ${kfElapsed} elapsed` : `Generating scene ${n} keyframe…`;
               const clipLabel = clipPct != null ? `Generating video ${n}… ~${Math.round(clipPct)}% (estimated)` : clipElapsed != null ? `Generating video ${n}… ${clipElapsed} elapsed` : `Generating video ${n}…`;
+              // Edit button lives in the last row (clip versions), right side.
+              const editAction = onGotoEditorScene ? (
+                <button
+                  className="icon-btn shot-goto"
+                  onClick={() => onGotoEditorScene(n)}
+                  title={`Edit Scene ${n} in Scenario Editor`}
+                  aria-label={`Edit Scene ${n} in Scenario Editor`}
+                >
+                  <IconEdit size={13} />
+                </button>
+              ) : null;
               return (
-                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} title={`Scene ${n} — keyframe image + video clip`}>
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
                   <div className="shot-head" aria-hidden="true">
                     Scene {n}/{total}
                   </div>
@@ -876,9 +991,6 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                             : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
                         </div>}
                   </div>
-                  {kfGen && !bv.keyframe.length && (
-                    <GenChip v={1} pct={kfPct} elapsed={kfElapsed} />
-                  )}
                   <VersionRow
                     versions={bv.keyframe}
                     main={mains.beats[String(n)]?.keyframe}
@@ -897,6 +1009,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       {clipV != null && (
                         <span className="ver-badge" title={`Scene ${n} clip v${clipV} (main)`}>v{clipV}</span>
                       )}
+                      <ExpandButton title={`Fullscreen preview of ${pretty(clipMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clipMain), kind: "video", alt: pretty(clipMain) })} />
                       <video controls preload="metadata" src={outputUrl(viewScenario, clipMain)} className="shot-clip-bare" />
                       {clipGen && <span className="gen-scanline" aria-hidden="true" />}
                       {clipGen && (clipPct != null || clipElapsed != null) && (
@@ -940,9 +1053,6 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       </div>
                     </div>
                   )}
-                  {clipGen && !bv.clip.length && (
-                    <GenChip v={1} pct={clipPct} elapsed={clipElapsed} />
-                  )}
                   <VersionRow
                     versions={bv.clip}
                     main={mains.beats[String(n)]?.clip}
@@ -955,6 +1065,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     queued={!generating && queuedRegen("clip", n)}
                     pct={clipPct}
                     elapsed={clipElapsed}
+                    action={editAction}
                   />
                 </div>
               );
@@ -964,7 +1075,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const m = kf.match(/_seq(\d+)_/);
               const fn = m ? Number(m[1]) : fi + 1;
               return (
-              <div className="shot" key={kf} title={`Scene ${fn} — keyframe image + video clip`}>
+              <div className="shot" key={kf} id={`shot-${fn}`} title={`Scene ${fn} — keyframe image + video clip`}>
                 <div className="shot-head" aria-hidden="true">Scene {fn}/{fallbackShots.length}</div>
                 <div className="img-frame">
                   <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
@@ -972,7 +1083,20 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 </div>
                 {clip && (
                   <div className="shot-clip-frame">
+                    <ExpandButton title={`Fullscreen preview of ${pretty(clip)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clip), kind: "video", alt: pretty(clip) })} />
                     <video controls preload="metadata" src={outputUrl(viewScenario, clip)} className="shot-clip-bare" />
+                  </div>
+                )}
+                {onGotoEditorScene && (
+                  <div className="shot-foot">
+                    <button
+                      className="icon-btn shot-goto"
+                      onClick={() => onGotoEditorScene(fn)}
+                      title={`Edit Scene ${fn} in Scenario Editor`}
+                      aria-label={`Edit Scene ${fn} in Scenario Editor`}
+                    >
+                      <IconEdit size={13} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -1038,8 +1162,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </span>
         </div>
       )}
-      </>
-      )}
+      </Collapse>
     </Tag>
   );
 }
@@ -1070,7 +1193,7 @@ export function SceneBadge({ scene, total, label, title, small }: {
 }
 
 // Expand button overlaying a frame corner — opens the fullscreen Lightbox.
-function ExpandButton({ title, onOpen }: { title: string; onOpen: () => void }) {
+export function ExpandButton({ title, onOpen }: { title: string; onOpen: () => void }) {
   return (
     <button
       className="frame-expand"
@@ -1087,20 +1210,9 @@ function ExpandButton({ title, onOpen }: { title: string; onOpen: () => void }) 
 // producing this version; previous versions are kept. pct is the estimated
 // ~% for the in-flight asset, elapsed the live seconds while no pace exists
 // yet (null = indeterminate).
-function GenChip({ v, pct, elapsed }: { v: number; pct?: number | null; elapsed?: string | null }) {
-  const extra = pct != null ? `~${Math.round(pct)}%` : elapsed;
-  return (
-    <div className="versions">
-      <span className="vchip gen" title={pct != null ? `Generating v${v} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${v} — previous versions are kept`}>
-        <span className="dot pulse" />
-        v{v} <span className="gen-dots">generating</span>{extra ? ` ${extra}` : ""}
-      </span>
-    </div>
-  );
-}
-
 // Version chips (v1, v2, …) + regenerate button for one versioned asset.
-function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, generating, busy, queued, pct, elapsed }: {
+// `action` (e.g. the Edit-scene button) pins to the right end of the row.
+function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, generating, busy, queued, pct, elapsed, action }: {
   versions: AssetVersion[];
   main: string | null;
   // True when the main is the user's explicit pick (survives reloads);
@@ -1114,9 +1226,10 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
   queued?: boolean; // a regen is queued behind the active run
   pct?: number | null; // estimated ~% for the in-flight version (null = indeterminate)
   elapsed?: string | null; // live seconds while no pace exists yet
+  action?: ReactNode; // trailing right-aligned element (Edit-scene button)
 }) {
-  if (versions.length === 0) return null;
-  const nextV = versions[versions.length - 1].v + 1;
+  if (versions.length === 0 && !generating && !onRegen && !action) return null;
+  const nextV = versions.length > 0 ? versions[versions.length - 1].v + 1 : 1;
   return (
     <div className="versions">
       {versions.map((v) => (
@@ -1131,9 +1244,9 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
         </button>
       ))}
       {generating && (
-        <span className="vchip gen" title={pct != null ? `Generating v${nextV} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${nextV} — previous versions are kept`}>
-          <span className="dot pulse" />
-          v{nextV} <span className="gen-dots">generating</span>{pct != null ? ` ~${Math.round(pct)}%` : (elapsed ? ` ${elapsed}` : "")}
+        <span className="vchip gen gen-stacked" title={pct != null ? `Generating v${nextV} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${nextV} — previous versions are kept`}>
+          <span className="gen-stack-top"><span className="dot pulse" /> <span className="gen-dots">generating</span></span>
+          <span className="gen-stack-sub">v{nextV}{pct != null ? ` ~${Math.round(pct)}%` : (elapsed ? ` ${elapsed}` : "")}</span>
         </span>
       )}
       {onRegen && (
@@ -1144,9 +1257,10 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
           disabled={busy || generating}
         >
           {generating ? <Spinner size={10} /> : <IconRefresh size={10} />}
-          {generating ? "generating…" : queued ? "queued" : "regen"}
+          {generating ? "working…" : queued ? "queued" : "regen"}
         </button>
       )}
+      {action && <span className="versions-action">{action}</span>}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { GenerationProgress } from "./GenerationProgressBar";
 import type { RunStatus } from "./RunPanel";
 import SmoothImage from "./SmoothImage";
 import { Spinner } from "./Icons";
+import Collapse from "./Collapse";
 
 interface Props {
   /** Base scenario name for labels (run's own scenario, not the viewed one). */
@@ -486,9 +487,9 @@ export default function RenderMonitor({
           <span className={`rm-console-caret${consoleOpen ? " open" : ""}`} aria-hidden="true">›</span>
           Console <span className="muted">{logLines} lines</span>
         </button>
-        {consoleOpen && (
+        <Collapse open={consoleOpen}>
           <pre className="log rm-console">{log || "— log will stream here once a run starts —"}</pre>
-        )}
+        </Collapse>
       </div>
       )}
     </div>

@@ -6,8 +6,9 @@ import { IconX, Spinner } from "./Icons";
 // Edits a project's metadata through the EXISTING scenario APIs: field
 // changes go through PUT /api/scenario/:name (new version, same as the
 // workspace Save) and a renamed project goes through POST
-// /api/scenario/:name/rename first (prompts JSON + outputs dirs + every
-// name-keyed DB row move with it). Beats/character are preserved untouched.
+// /api/scenario/:name/rename first (display name only — storage folders,
+// filenames and DB paths are immutable, so media keeps resolving).
+// Beats/character are preserved untouched.
 export default function EditProjectDialog({
   name,
   onClose,

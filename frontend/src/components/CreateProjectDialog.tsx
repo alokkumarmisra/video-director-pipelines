@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { saveScenario, DEFAULT_PRESET_ID } from "../api";
+import { saveScenario, craftMasterPrompt, DEFAULT_PRESET_ID } from "../api";
 import type { Scenario } from "../types";
-import { IconX, Spinner } from "./Icons";
+import { IconSparkles, IconX, Spinner } from "./Icons";
 import PresetSelect from "./PresetSelect";
 
 // Creates a project through the EXISTING scenario save API (PUT
@@ -24,6 +24,7 @@ export default function CreateProjectDialog({
   const [presetRules, setPresetRules] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function CreateProjectDialog({
       setPresetRules("");
       setError(null);
       setBusy(false);
+      setAiBusy(false);
       setTimeout(() => nameRef.current?.focus(), 30);
     }
   }, [open ]);
@@ -50,6 +52,26 @@ export default function CreateProjectDialog({
   }, [open, onClose]);
 
   if (!open) return null;
+
+  // Fill the Master Prompt box from the Description + chosen Video Type via
+  // LM Studio (POST /api/master-prompt). Nothing is persisted — just the box.
+  const fillMasterByAI = async () => {
+    const d = description.trim();
+    if (!d || busy || aiBusy) {
+      if (!d) setError("Enter a Description first — the AI writes the Master Prompt from it.");
+      return;
+    }
+    setAiBusy(true);
+    setError(null);
+    try {
+      const r = await craftMasterPrompt(d, { presetId, presetRules });
+      setReferencePrompt(String(r.masterPrompt ?? "").trim());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Get by AI failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
 
   const submit = async () => {
     const n = name.trim();
@@ -71,7 +93,14 @@ export default function CreateProjectDialog({
       sequence: [],
     };
     try {
-      await saveScenario(n, config);
+      await saveScenario(n, { 
+        ...config, 
+        // Immutable storage folder hint (server is authoritative: it mints a
+        // unique folder on creation and freezes it — same rule as
+        // lib/variant.mjs folderSlug, kept byte-identical here).
+        folder_name: n.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 100) || 'project'
+      });
+      
       onClose();
       onCreated(n);
     } catch (e) {
@@ -113,13 +142,14 @@ export default function CreateProjectDialog({
               />
             </div>
             <div className="form-row-side">
-              <label htmlFor="create-duration">Clip length (sec)</label>
+              <label htmlFor="create-duration">Clip length</label>
               <input
                 id="create-duration"
                 type="number"
                 min={1}
                 max={10}
                 value={duration}
+                placeholder="sec"
                 onChange={(e) => setDuration(Number(e.target.value))}
                 disabled={busy}
               />
@@ -142,14 +172,28 @@ export default function CreateProjectDialog({
             onCustomRulesChange={(v) => setPresetRules(v ?? "")}
             disabled={busy}
           />
-          <label htmlFor="create-master">Master Prompt * (Applied in All Scene)</label>
+          <label htmlFor="create-master" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>Master Prompt * (Applied in All Scene)</span>
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              className="btn-blue"
+              onClick={() => void fillMasterByAI()}
+              disabled={busy || aiBusy || !description.trim()}
+              title={description.trim() ? "Ask LM Studio to write the Master Prompt from the Description + Video Type above" : "Enter a Description above first"}
+              style={{ padding: "2px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              {aiBusy ? <Spinner size={12} /> : <IconSparkles size={12} />}
+              {aiBusy ? "Writing…" : "Get by AI"}
+            </button>
+          </label>
           <textarea
             id="create-master"
             value={referencePrompt}
             onChange={(e) => setReferencePrompt(e.target.value)}
             placeholder="Cinematic key-visual of the main character…"
             rows={3}
-            disabled={busy}
+            disabled={busy || aiBusy}
           />
           {error && (
             <p className="err-text dialog-error" role="alert">
