@@ -1,0 +1,108 @@
+{
+  "description": "Minku Story — Minku, a cute and adventurous young mouse, faces his first big challenge when he encounters a fierce cat but manages to outsmart her with the help of his friends.",
+  "duration": 3,
+  "referencePrompt": "a young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing., a small house made with leaves and sticks, located near a large tree with green leaves. The house has a door made from branches and a roof made from more leaves. It is surrounded by grass and flowers., Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "sequence": [
+    {
+      "title": "minku_wakes_up",
+      "image": "Minku (minku), a young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku stretching arms upwards and yawning, then looking out the door curiously with wide open eyes. Camera stays at eye level, static shot."
+    },
+    {
+      "title": "finding_cheese",
+      "image": "Minku (minku), a young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Jungle with a big tree and bushes (jungle_with_tree_and_bushes).",
+      "motion": "Minku sniffing the ground curiously, his tail wiggling. Camera stays at eye level, static shot."
+    },
+    {
+      "title": "suddenly_appears_cat",
+      "image": "Minku (minku), Mother Mouse (mothermouse), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Jungle with a big tree and bushes (jungle_with_tree_and_bushes).",
+      "motion": "Minku running backwards, ears flattened, tail flicking nervously. Camera follows his movement in a tracking shot."
+    },
+    {
+      "title": "hiding_behind_bush",
+      "image": "Minku (minku) and Mother Mouse (mothermouse), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Jungle with a big tree and bushes (jungle_with_tree_and_bushes).",
+      "motion": "Minku hiding behind the small bush with Mother Mouse, ears perked up, tail relaxed. Camera at eye level, static shot."
+    },
+    {
+      "title": "calling_friends",
+      "image": "Minku (minku) and Mother Mouse (mothermouse), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku and Mother Mouse calling out for their friends to come with the cheese."
+    },
+    {
+      "title": "friends_arrive",
+      "image": "Minku (minku), Mother Mouse (mothermouse), a group of mouse friends, Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku's friends arriving with the cheese and walking towards their home."
+    },
+    {
+      "title": "enjoying_cheese",
+      "image": "Minku (minku), Mother Mouse (mothermouse), a group of mouse friends, Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku and Mother Mouse sitting together with their friends, eating the cheese slowly and thoughtfully."
+    },
+    {
+      "title": "hugging_mother",
+      "image": "Minku (minku) and Mother Mouse (mothermouse), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku hugging Mother Mouse tightly with head resting on each other's shoulders."
+    },
+    {
+      "title": "end_card",
+      "image": "The title 'Minku Story' with a tagline about friendship and teamwork. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "The end card appears with the title 'Minku Story' and a tagline about friendship and teamwork."
+    },
+    {
+      "title": "reflection",
+      "image": "Minku (minku) and Mother Mouse (mothermouse), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "Minku and Mother Mouse standing together on their doorstep after hugging each other tightly, looking into each other's eyes."
+    },
+    {
+      "title": "the_end",
+      "image": "The screen fades to black. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "The screen fades to black as the music plays softly in the background."
+    },
+    {
+      "title": "credits",
+      "image": "The screen shows the credits rolling. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Home of Mother Mouse (home_of_mother_mouse).",
+      "motion": "The screen shows the credits rolling."
+    },
+    {
+      "title": "minku_wakes_up",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. Home of Mother Mouse (home_of_mother_mouse). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku stirs from sleep, yawns widely and stretches his arms above his head."
+    },
+    {
+      "title": "minku_finds_cheese",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. Jungle with a big tree and bushes (jungle_with_tree_and_bushes). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku hops out of his home, looking around the jungle. He spots a big yellow cheese near a bush and immediately gets excited."
+    },
+    {
+      "title": "encounter_with_cat",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. A fierce cat standing in the jungle. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku is about to take the cheese when a fierce cat appears. Minku gets scared and runs back home in fear."
+    },
+    {
+      "title": "hiding_from_cat",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. A small green bush with dark green leaves in a jungle. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku hides behind a small bush, peeking out to see if the cat has gone. He waves his tail and makes a noise to trick the cat into thinking he is still there."
+    },
+    {
+      "title": "calling_friends",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. Mother Mouse (mothermouse) standing by the door of her home. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku runs back to his home, calls out for his friends. Mother Mouse comes out and listens intently."
+    },
+    {
+      "title": "friends_arrive",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. Mother Mouse (mothermouse) standing by the door of her home with a smile on her face. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku's friends arrive, bringing the cheese. Minku and his mother welcome them with open arms."
+    },
+    {
+      "title": "hugging_mother",
+      "image": "A young mouse with brown fur and white patches, big round black eyes, pointed ears, small agile body, wearing natural mouse attire without any clothing. Mother Mouse (mothermouse) standing by the door of her home with a smile on her face. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Minku and Mother Mouse hug each other tightly, feeling proud of their teamwork."
+    },
+    {
+      "title": "end_credits",
+      "image": "A cozy mouse home with a door made from branches, surrounded by green grass and flowers. Minku and Mother Mouse walking back into their home together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "The screen shows the credits rolling."
+    }
+  ],
+  "folder_name": "minku_story_2"
+}

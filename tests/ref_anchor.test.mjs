@@ -14,7 +14,7 @@ const ROOT = path.resolve(__dirname, "..");
 // builder tests never touch the network.
 process.env.COMFY_BASE ??= "http://localhost:1";
 const comfy = await import("../lib/comfy.mjs");
-const { buildFluxGraph, buildFluxImg2ImgGraph } = comfy;
+const { buildFluxGraph, buildFluxImg2ImgGraph, hashSeed } = comfy;
 
 describe("buildFluxImg2ImgGraph", () => {
   it("anchors the sampler on the VAE-encoded reference image", () => {
@@ -82,6 +82,22 @@ describe("sequence wiring", () => {
     const hits = src.match(/newFile \?\? path\.basename\(resolveMain\(/g) || [];
     assert.equal(hits.length, 3, "genRef + genKeyframe + genClip must select the fresh file");
     assert.match(src, /newFile = path\.basename\(dest\)/);
+  });
+
+  it("keyframe seeds are deterministic per beat+version (character stability)", () => {
+    const src = read("lib/sequence.mjs");
+    // Same inputs reproduce; a new version takes a fresh take — faces drift
+    // less between scenes than with pure random seeds.
+    assert.match(src, /hashSeed\(`\$\{prefix\}:kf\$\{n\}:v\$\{v\}`\)/);
+    assert.match(src, /kfGraph\["75:73"\]\.inputs\.noise_seed/);
+  });
+
+  it("hashSeed is stable and version-sensitive", () => {
+    assert.equal(hashSeed("p:kf1:v1"), hashSeed("p:kf1:v1"));
+    assert.notEqual(hashSeed("p:kf1:v1"), hashSeed("p:kf1:v2"));
+    assert.notEqual(hashSeed("p:kf1:v1"), hashSeed("p:kf2:v1"));
+    const s = hashSeed("p:kf1:v1");
+    assert.ok(Number.isInteger(s) && s >= 0 && s <= 0xffffffff);
   });
 
   it("both runners build img2img keyframes when a ref input exists", () => {

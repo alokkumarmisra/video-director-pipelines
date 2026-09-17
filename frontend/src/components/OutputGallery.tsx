@@ -54,6 +54,25 @@ const pretty = (f: string) =>
 
 const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0);
 
+// Centered loading overlay for the single generating tile in Keyframes →
+// clips: dims the frame and centers a spinner + "Generating" readout so the
+// processing scene is identifiable at a glance — whether or not a previous
+// version is already showing underneath. Pointer-transparent, so video
+// controls and expand buttons underneath stay clickable.
+function GenOverlay({ label, readout }: { label: string; readout?: string | null }) {
+  return (
+    <span className="gen-overlay" role="status" aria-label={label} title={label}>
+      <span className="gen-overlay-pill">
+        <Spinner size={15} />
+        <span className="gen-dots">Generating</span>
+        {readout && readout !== "generating" && (
+          <span className="gen-overlay-readout">{readout}</span>
+        )}
+      </span>
+    </span>
+  );
+}
+
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
 export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene }: Props) {
@@ -981,13 +1000,19 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                         )}
                         <ExpandButton title={`Fullscreen preview of ${pretty(kfMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kfMain), kind: "image", alt: pretty(kfMain) })} />
                         <SmoothImage src={outputUrl(viewScenario, kfMain)} alt={pretty(kfMain)} />
+                        {kfGen && (
+                          <GenOverlay
+                            label={kfLabel}
+                            readout={kfPct != null || kfElapsed != null ? kfReadout : null}
+                          />
+                        )}
                       </>
                       : <div className={`frame-missing${kfGen ? " is-generating" : ""}`}>
                           {kfGen
-                            ? <span className="gen-flag" title={kfLabel}>
-                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
-                                <span className="gen-dots">Generating</span>{(kfPct != null || kfElapsed != null) && <span> {kfReadout}</span>}
-                              </span>
+                            ? <GenOverlay
+                                label={kfLabel}
+                                readout={kfPct != null || kfElapsed != null ? kfReadout : null}
+                              />
                             : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
                         </div>}
                   </div>
@@ -1012,6 +1037,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       <ExpandButton title={`Fullscreen preview of ${pretty(clipMain)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, clipMain), kind: "video", alt: pretty(clipMain) })} />
                       <video controls preload="metadata" src={outputUrl(viewScenario, clipMain)} className="shot-clip-bare" />
                       {clipGen && <span className="gen-scanline" aria-hidden="true" />}
+                      {clipGen && (
+                        <GenOverlay
+                          label={clipLabel}
+                          readout={clipPct != null || clipElapsed != null ? clipReadout : null}
+                        />
+                      )}
                       {clipGen && (clipPct != null || clipElapsed != null) && (
                         <>
                           <span className="gen-pct" title={clipLabel}>{clipReadout}</span>
@@ -1034,10 +1065,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                                 </span>
                               )}
                               <span className="gen-scanline" aria-hidden="true" />
-                              <span className="gen-flag" title={clipLabel}>
-                                <span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span>
-                                <span className="gen-dots">Generating</span>{(clipPct != null || clipElapsed != null) && <span> {clipReadout}</span>}
-                              </span>
+                              <GenOverlay
+                                label={clipLabel}
+                                readout={clipPct != null || clipElapsed != null ? clipReadout : null}
+                              />
                               {(clipPct != null || clipElapsed != null) && (
                                 <>
                                   <span className="gen-pct" title={clipLabel}>{clipReadout}</span>

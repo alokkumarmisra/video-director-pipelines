@@ -1,5 +1,16 @@
 # AGENTS.md — operating notes for video generation + frontend
 
+## AI Story Director (Story-to-Video)
+Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
+`lib/director.mjs`, `director/<slug>.json` board files — no new DB tables).
+Two LLM calls via the shared llama-server convention (`llmChatJson` in
+`server.mjs`): (1) bible (analysis + character/location/object bibles + beats),
+(2) scene batches of ≤12 (`SCENE_BATCH`) with identity-string context only.
+`APPROVE` returns a standard scenario config; the client persists it through
+the existing `saveScenario` PUT and opens the workspace — image/video/merge/
+progress/resume are 100% the existing pipeline. Style lock is appended
+server-side (`boardToScenario`) so scenes can't drift off-style.
+
 ## What this is
 Repo root is the folder `comfyui-video-pipelines-frontend/` (all paths below are
 relative to it). Two parts:

@@ -1,0 +1,1459 @@
+{
+  "id": "mathematical_table_song",
+  "input": {
+    "title": "Mathematical Table Song",
+    "story": "[Intro]\nHello, hello, little stars,\nLet's learn numbers near and far!\nClap your hands, come sing with me,\nMath is fun as fun can be!\n\n[Chorus]\nOne, two, three, come count with me,\nFour, five, six, so happily!\nSeven, eight, nine, ten,\nLet's learn our tables once again!\n\nTables are fun, tables are bright,\nWe can learn them day and night!\nClap, clap, count along,\nLearning numbers with a song!\n\n[Verse]\nOne times one is one, hooray!\nTwo times one is two today!\nThree times one is three, you see,\nNumbers are fun for you and me!\n\n[Chorus]\nOne, two, three, come count with me,\nFour, five, six, so happily!\nSeven, eight, nine, ten,\nLet's learn our tables once again!\n\n[Learning Break]\nThink, think, what will it be?\nCount the groups and you will see!\nTake your time, don't hurry through,\nThe answer is waiting there for you!\n\n[Verse 2]\nTwo by two, we're counting along,\nFour and six, come sing our song!\nEight and ten, twelve and fourteen,\nLearning numbers is so much fun!\n\n[Chorus]\nTables are fun, tables are bright,\nWe can learn them day and night!\nClap your hands and count along,\nLearning numbers with a song!\n\n[Playful Bridge]\nThree, six, nine, twelve, fifteen,\nCount the numbers nice and clean!\nFour, eight, twelve, sixteen, twenty,\nLearning tables is super fun-y!\n\nFive, ten, fifteen, twenty-five,\nKeep on counting, feel alive!\n\n[Quiz Break]\nWait a minute, here comes a game!\nCan you find the answer's name?\nThink it through and count with me,\nYou are a little math champion!\n\n[Final Chorus]\nOne to ten, we learned today,\nWe counted, played and learned the way!\nClap your hands, hooray, hooray!\nWe are math stars every day!\n\nTables are fun, tables are bright,\nKeep practicing day and night!\nCount, learn, smile and sing,\nMath can be a wonderful thing!\n\n[Outro]\nGreat job, little mathematicians!\nYou did amazing!\nKeep practicing your tables,\nAnd keep smiling!\n\nBye-bye!",
+    "language": "English",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 300,
+    "sceneSeconds": 3,
+    "aspectRatio": "16:9",
+    "instructions": "Cheerful Hindi-English preschool educational children's song, bright playful 3D cartoon atmosphere, catchy kindergarten learning song, happy child-friendly melody, cute xylophone, marimba, glockenspiel, ukulele, soft piano, gentle hand claps, playful bells, light percussion, warm friendly vocals, clear pronunciation, energetic chorus, simple repetitive melody, interactive counting feeling, call-and-response moments, joyful classroom atmosphere, clean modern children's YouTube music production, wholesome and positive, easy for children to sing along, no dramatic cinematic elements, no heavy bass, no aggressive drums, no scary sounds, no sad mood, no complex vocal runs"
+  },
+  "status": "approved",
+  "blueprint": {
+    "logline": "A cheerful preschool educational children's song that teaches basic multiplication tables through a fun and interactive classroom atmosphere.",
+    "analysis": {
+      "plot": "The story introduces kids to basic multiplication tables in an engaging way, encouraging them to learn by singing along with the catchy tune of the song.",
+      "beginning": "The cheerful introduction sets the stage for the learning journey. The children are greeted and invited to join in the fun of counting numbers and learning tables.",
+      "middle": "Through verses that introduce multiplication facts and a playful bridge, kids practice and reinforce what they've learned through call-and-response moments.",
+      "climax": "The quiz break introduces an interactive element where kids have to find answers by thinking about groups of numbers.",
+      "ending": "A final chorus summarizes the day's learning in a joyful way, reinforcing the idea that math is fun.",
+      "main_character": "The children themselves",
+      "supporting_characters": [
+        "Teacher",
+        "Classmates"
+      ],
+      "antagonist": null,
+      "objects": [
+        "Xylophone",
+        "Marimba",
+        "Glockenspiel",
+        "Ukulele",
+        "Piano",
+        "Clapsticks",
+        "Bells",
+        "Counters (toy)"
+      ],
+      "locations": [
+        "Classroom"
+      ],
+      "events": [
+        "Children are introduced to the concept of numbers and tables.",
+        "Learning verses introduce multiplication facts.",
+        "Call-and-response moments reinforce learning.",
+        "A break where kids think about groups of numbers.",
+        "Final chorus summarizes the day's activities."
+      ],
+      "relationships": "Children learn from each other through singing along, with a teacher guiding the activity.",
+      "emotional_progression": "Happy and excited as they start; more engaged and confident as they sing together and solve problems.",
+      "timeline": "Introduction -> Learning verses -> Call-and-response -> Quiz break -> Final chorus",
+      "visual_moments": [
+        "Children clapping hands",
+        "Laughing and singing",
+        "Group counting with counters",
+        "Thinking faces",
+        "Smiling children"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "child_student",
+        "name": "Little Mathematicians",
+        "role": "main_character",
+        "species": "Human",
+        "age": "5-6 years old",
+        "appearance": {
+          "body": "Cute, friendly faces with round eyes and big smiles.",
+          "fur": "",
+          "eyes": "Bright and curious",
+          "ears": "Perky"
+        },
+        "clothing": {
+          "top": "Colorful t-shirt with a fun math symbol print.",
+          "bottom": "Khaki shorts or denim overalls."
+        },
+        "personality": [
+          "Curious",
+          "Friendly",
+          "Engaged"
+        ],
+        "visual_identity_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols on them. (3D preschool animation)"
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "classroom",
+        "name": "Classroom",
+        "description": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls. The room is bright and cheerful, filled with children sitting on colorful chairs.",
+        "visual_identity_prompt": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs (3D preschool animation)",
+        "time_of_day": "Afternoon",
+        "lighting": "Natural light coming through large windows illuminates the space warmly.",
+        "color_palette": "Bright yellow,Sky blue,Green,Red"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "xylophone",
+        "name": "Xylophone",
+        "description": "A small, colorful xylophone that the teacher uses to play along with the song.",
+        "visual_identity_prompt": "A small, colorful xylophone used by a teacher in an educational children's animation."
+      },
+      {
+        "object_id": "marimba",
+        "name": "Marimba",
+        "description": "A beautiful marimba being played by another child as part of the song.",
+        "visual_identity_prompt": "A beautiful marimba being played by a child in an educational children's animation."
+      },
+      {
+        "object_id": "glockenspiel",
+        "name": "Glockenspiel",
+        "description": "A gleaming glockenspiel used to add melody.",
+        "visual_identity_prompt": "A gleaming glockenspiel used by a child in an educational children's animation."
+      },
+      {
+        "object_id": "ukulele",
+        "name": "Ukulele",
+        "description": "A small, vibrant ukulele played to enhance the tune.",
+        "visual_identity_prompt": "A small, vibrant ukulele being played by a child in an educational children's animation."
+      },
+      {
+        "object_id": "piano",
+        "name": "Piano",
+        "description": "A grand piano used for the song’s melody.",
+        "visual_identity_prompt": "A grand piano being played by a teacher in an educational children's animation."
+      },
+      {
+        "object_id": "clapsticks",
+        "name": "Clapsticks",
+        "description": "Children clapping along to the beat of the song.",
+        "visual_identity_prompt": "Children clapping their hands in rhythm while singing a mathematical table song in an educational children's animation."
+      },
+      {
+        "object_id": "bells",
+        "name": "Bells",
+        "description": "Soft, playful bells that add to the cheerful atmosphere of the song.",
+        "visual_identity_prompt": "Playful soft bells adding to the cheerful atmosphere of a mathematical table song in an educational children's animation."
+      },
+      {
+        "object_id": "counters_toy",
+        "name": "Counters (toy)",
+        "description": "Children using small, colorful counters to practice counting.",
+        "visual_identity_prompt": "Children using small, colorful counters to count and learn numbers in an educational children's animation."
+      }
+    ],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Introduction",
+        "summary": "The cheerful introduction sets the stage for learning."
+      },
+      {
+        "n": 2,
+        "title": "Learning Verses - Verse One",
+        "summary": "Children are introduced to basic multiplication facts through a fun verse."
+      },
+      {
+        "n": 3,
+        "title": "Call-and-Response Moments",
+        "summary": "The children sing along in call-and-response format, reinforcing their learning."
+      },
+      {
+        "n": 4,
+        "title": "Learning Break - Think and Count",
+        "summary": "A break where kids think about groups of numbers to solve a problem."
+      },
+      {
+        "n": 5,
+        "title": "Learning Verses - Verse Two",
+        "summary": "Further verses introduce more multiplication facts, encouraging active participation."
+      },
+      {
+        "n": 6,
+        "title": "Playful Bridge",
+        "summary": "Children sing along to a playful bridge that introduces new numbers and facts."
+      },
+      {
+        "n": 7,
+        "title": "Quiz Break - Think it Through",
+        "summary": "A quiz break where children are encouraged to find the answers by thinking about groups of numbers."
+      },
+      {
+        "n": 8,
+        "title": "Final Chorus",
+        "summary": "The final chorus summarizes the day's learning, reinforcing the idea that math is fun and enjoyable."
+      },
+      {
+        "n": 9,
+        "title": "Outro",
+        "summary": "The children are praised for their hard work and encouraged to keep practicing."
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Introduction",
+      "story_beat": "Beat 1: Introduction - The cheerful introduction sets the stage for learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children are seated neatly, looking at the teacher who stands in front of the class. The teacher smiles warmly and waves her hand to gain attention.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with enthusiasm",
+      "body_language": "Hands on hips, standing tall with a friendly smile",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with posters of numbers and tables",
+      "continuity_from_previous_scene": "N/A - This is the opening scene.",
+      "transition_to_next_scene": "Cut to close-up on teacher.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 2,
+      "title": "Learning Verses - Verse One",
+      "story_beat": "Beat 2: Learning Verses - Children are introduced to basic multiplication facts through a fun verse.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher sings the first verse of the song, and children follow along with their hands on their laps.",
+      "emotion": "Engaged and attentive",
+      "expression": "Eyes focused on teacher, mouths open in a smile or slight frown as they sing",
+      "body_language": "Sitting upright, hands on laps following the teacher's lead",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 3,
+      "title": "Call-and-Response Moments",
+      "story_beat": "Beat 3: Call-and-Response Moments - The children sing along in call-and-response format, reinforcing their learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher leads a call-and-response segment where the children respond with enthusiasm.",
+      "emotion": "Excited and engaged",
+      "expression": "Eyes wide, mouths smiling or open in surprise as they sing",
+      "body_language": "Hands raised, nodding their heads in response to teacher's lead",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 4,
+      "title": "Learning Break - Think and Count",
+      "story_beat": "Beat 4: Learning Break - A break where kids think about groups of numbers to solve a problem.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children are given small counters and encouraged to count in groups, demonstrating their understanding.",
+      "emotion": "Thoughtful and focused",
+      "expression": "Eyes concentrated, mouths slightly open as they think through the problem",
+      "body_language": "Hands manipulating counters, heads tilted in concentration",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs using small, colorful counters to count and learn numbers. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 5,
+      "title": "Learning Verses - Verse Two",
+      "story_beat": "Beat 5: Learning Verses - Further verses introduce more multiplication facts, encouraging active participation.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher sings the second verse of the song, and children follow along with their hands on their laps.",
+      "emotion": "Engaged and attentive",
+      "expression": "Eyes focused on teacher, mouths open in a smile or slight frown as they sing",
+      "body_language": "Sitting upright, hands on laps following the teacher's lead",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 6,
+      "title": "Playful Bridge",
+      "story_beat": "Beat 6: Playful Bridge - Children sing along to a playful bridge that introduces new numbers and facts.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher leads the children in a playful segment, encouraging them to sing and clap along.",
+      "emotion": "Cheerful and playful",
+      "expression": "Eyes wide with excitement, mouths smiling as they sing and clap",
+      "body_language": "Clapping hands together, bodies swaying gently from side to side",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 7,
+      "title": "Quiz Break - Think it Through",
+      "story_beat": "Beat 7: Quiz Break - A quiz break where children are encouraged to find the answers by thinking about groups of numbers.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher poses a question, and children think and discuss with their neighbors before answering.",
+      "emotion": "Thoughtful and collaborative",
+      "expression": "Eyes narrowed in concentration, mouths slightly open as they think and whisper to each other",
+      "body_language": "Hands on laps or desks, heads tilted in thought, turning to face neighboring friends",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 8,
+      "title": "Final Chorus",
+      "story_beat": "Beat 8: Final Chorus - The final chorus summarizes the day's learning, reinforcing the idea that math is fun and enjoyable.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing the final chorus together with enthusiasm, clapping their hands in rhythm.",
+      "emotion": "Joyful and celebratory",
+      "expression": "Eyes bright with joy, mouths smiling widely as they sing and clap",
+      "body_language": "Clapping hands together, bodies swaying gently from side to side, heads bobbing up and down",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to teacher praising children.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 9,
+      "title": "Teacher Praises",
+      "story_beat": "Beat 8: Final Chorus - The final chorus summarizes the day's learning, reinforcing the idea that math is fun and enjoyable.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher walks around the classroom, praising each child for their participation and enthusiasm.",
+      "emotion": "Proud and encouraging",
+      "expression": "Smiling warmly, eyes twinkling with pride",
+      "body_language": "Walking slowly among children, hands on hips, nodding approvingly as she speaks",
+      "camera": {
+        "shot_type": "Tracking Shot",
+        "angle": "Eye Level",
+        "movement": "Slow"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 10,
+      "title": "Encouragement to Practice",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher stands in front of the class, holding a hand up high as she encourages children to keep practicing math.",
+      "emotion": "Proud and encouraging",
+      "expression": "Smiling warmly, eyes twinkling with pride",
+      "body_language": "Standing tall with hands clasped together at chest level, head tilted slightly upwards",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 11,
+      "title": "Children Sing Along",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing the final chorus together with enthusiasm, clapping their hands in rhythm.",
+      "emotion": "Joyful and celebratory",
+      "expression": "Eyes bright with joy, mouths smiling widely as they sing and clap",
+      "body_language": "Clapping hands together, bodies swaying gently from side to side, heads bobbing up and down",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 12,
+      "title": "Classroom Exit",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children exit the classroom, waving goodbye to the teacher as they head outside.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Waving hands in a wave, turning around to look back at the teacher",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": ""
+    },
+    {
+      "scene_number": 13,
+      "title": "Learning Verses - Verse One",
+      "story_beat": "Beat 2: Learning Verses - Verse One",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sit in their chairs, eyes bright with anticipation. A teacher stands at the front of the classroom, holding a xylophone.",
+      "emotion": "Curious and attentive",
+      "expression": "Looking forward with wide eyes",
+      "body_language": "Sitting upright, hands on laps, eager faces",
+      "camera": {
+        "shot_type": "Establishing Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Teacher standing at the front holding a xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher strikes the xylophone once, children look up and start singing in unison."
+    },
+    {
+      "scene_number": 14,
+      "title": "Call-and-Response Moments",
+      "story_beat": "Beat 3: Call-and-Response Moments",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher, clapping in rhythm.",
+      "emotion": "Engaged and joyful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children counting with counters.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 15,
+      "title": "Learning Break - Think and Count",
+      "story_beat": "Beat 4: Learning Break - Think and Count",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children pick up colorful counters, thinking about the numbers.",
+      "emotion": "Thoughtful and focused",
+      "expression": "Deep in thought with furrowed brows",
+      "body_language": "Holding counters close to their chests, heads tilted slightly",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along to a playful bridge.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children holding counters close to their chests, heads tilted slightly in deep thought. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children holding counters, heads tilted slightly."
+    },
+    {
+      "scene_number": 16,
+      "title": "Learning Verses - Verse Two",
+      "story_beat": "Beat 5: Learning Verses - Verse Two",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher, clapping in rhythm.",
+      "emotion": "Engaged and joyful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing a playful bridge.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 17,
+      "title": "Playful Bridge",
+      "story_beat": "Beat 6: Playful Bridge",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher, clapping in rhythm.",
+      "emotion": "Engaged and joyful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing a quiz question.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 18,
+      "title": "Quiz Break - Think it Through",
+      "story_beat": "Beat 7: Quiz Break - Think it Through",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children think about the quiz question, heads tilted in concentration.",
+      "emotion": "Focused and thoughtful",
+      "expression": "Deep in thought with furrowed brows",
+      "body_language": "Holding hands behind their backs, heads tilted slightly",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along during the final chorus.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children holding hands behind their backs, heads tilted slightly in concentration. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children holding hands behind their backs, heads tilted slightly."
+    },
+    {
+      "scene_number": 19,
+      "title": "Final Chorus",
+      "story_beat": "Beat 8: Final Chorus",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher, clapping in rhythm.",
+      "emotion": "Excited and proud",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children exiting the classroom waving goodbye.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 20,
+      "title": "Classroom Exit",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children exit the classroom, waving goodbye to the teacher as they head outside.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Waving hands in a wave, turning around to look back at the teacher",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Warm, soft lighting from large windows",
+      "environment": "Clean, colorful classroom with colorful posters of numbers and tables hanging on the walls",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children waving hands in a wave, turning around to look back at the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "scene_number": 21,
+      "title": "Outside Play",
+      "story_beat": "Beat N: Outside Play",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children play outside, laughing and running around.",
+      "emotion": "Happy and playful",
+      "expression": "Laughing out loud, eyes bright with joy",
+      "body_language": "Running around, playing games, laughing loudly",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children running around, laughing loudly."
+    },
+    {
+      "scene_number": 22,
+      "title": "Singing Along",
+      "story_beat": "Beat N: Singing Along",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children sing along while playing outside, clapping in rhythm.",
+      "emotion": "Engaged and joyful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along during a final chorus.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 23,
+      "title": "Final Chorus",
+      "story_beat": "Beat 8: Final Chorus",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher, clapping in rhythm.",
+      "emotion": "Excited and proud",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing, clapping hands together, swaying gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children exiting the classroom waving goodbye.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing in unison, clapping hands together."
+    },
+    {
+      "scene_number": 24,
+      "title": "Classroom Exit",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children exit the classroom, waving goodbye to the teacher as they head outside.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Waving hands in a wave, turning around to look back at the teacher",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and waving goodbye to the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "scene_number": 25,
+      "title": "Introduction to Learning Verses",
+      "story_beat": "Beat 1: Introduction - The cheerful introduction sets the stage for learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sit on colorful chairs, eyes wide with curiosity as a teacher introduces the lesson.",
+      "emotion": "Excited and eager to learn",
+      "expression": "Bright smiles, open mouths ready to sing",
+      "body_language": "Sitting up straight, hands clasped in anticipation",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children sitting up straight, hands clasped in anticipation as a teacher introduces the lesson."
+    },
+    {
+      "scene_number": 26,
+      "title": "Learning Verses - Verse One",
+      "story_beat": "Beat 2: Learning Verses - Verse One - Children are introduced to basic multiplication facts through a fun verse.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher plays xylophone, children sing along in unison.",
+      "emotion": "Happy and engaged",
+      "expression": "Smiling widely, mouths forming clear pronunciation of numbers",
+      "body_language": "Children nodding heads in rhythm with the music, hands clapping gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to call-and-response moments.",
+      "image_prompt": "Teacher playing a small, colorful xylophone. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher playing xylophone, children singing along in unison."
+    },
+    {
+      "scene_number": 27,
+      "title": "Call-and-Response Moments",
+      "story_beat": "Beat 3: Call-and-Response Moments - The children sing along in call-and-response format, reinforcing their learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children respond to teacher's questions with loud and clear answers.",
+      "emotion": "Excited and confident",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Hands raised high in the air, jumping up and down in place",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to learning break - Think and Count.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children responding to teacher's questions with loud and clear answers. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children raising hands high in the air, jumping up and down in place."
+    },
+    {
+      "scene_number": 28,
+      "title": "Learning Break - Think and Count",
+      "story_beat": "Beat 4: Learning Break - Think and Count - A break where kids think about groups of numbers to solve a problem.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children use counters and clapping hands to count in groups.",
+      "emotion": "Thoughtful and focused",
+      "expression": "Nodding heads, eyes concentrated on the task",
+      "body_language": "Hands holding small colorful counters, clapping gently",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to learning verses - Verse Two.",
+      "image_prompt": "Children using small, colorful counters to count. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children counting in groups. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children holding counters and clapping hands."
+    },
+    {
+      "scene_number": 29,
+      "title": "Learning Verses - Verse Two",
+      "story_beat": "Beat 5: Learning Verses - Verse Two - Further verses introduce more multiplication facts, encouraging active participation.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher plays marimba and glockenspiel while children sing along.",
+      "emotion": "Happy and engaged",
+      "expression": "Smiling widely, mouths forming clear pronunciation of numbers",
+      "body_language": "Children nodding heads in rhythm with the music, hands clapping gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to playful bridge.",
+      "image_prompt": "Teacher playing a beautiful marimba and a gleaming glockenspiel. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher playing marimba and glockenspiel, children singing along."
+    },
+    {
+      "scene_number": 30,
+      "title": "Playful Bridge",
+      "story_beat": "Beat 6: Playful Bridge - Children sing along to a playful bridge that introduces new numbers and facts.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children playfully sing while teacher uses ukulele.",
+      "emotion": "Happy and playful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Children swaying side to side in rhythm, hands clapping gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to quiz break - Think it Through.",
+      "image_prompt": "Teacher playing a small vibrant ukulele. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing playfully. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher playing ukulele, children singing playfully."
+    },
+    {
+      "scene_number": 31,
+      "title": "Quiz Break - Think it Through",
+      "story_beat": "Beat 7: Quiz Break - Think it Through - A quiz break where children are encouraged to find the answers by thinking about groups of numbers.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children think and count in small groups, using counters and clapping hands.",
+      "emotion": "Thoughtful and focused",
+      "expression": "Nodding heads, eyes concentrated on the task",
+      "body_language": "Hands holding small colorful counters, clapping gently",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to final chorus.",
+      "image_prompt": "Children thinking and counting in small groups. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children thinking and counting in small groups. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children holding counters and clapping hands."
+    },
+    {
+      "scene_number": 32,
+      "title": "Final Chorus",
+      "story_beat": "Beat 8: Final Chorus - The final chorus summarizes the day's learning, reinforcing the idea that math is fun and enjoyable.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing the final verse of the chorus together with teacher.",
+      "emotion": "Happy and joyful",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Children swaying side to side in rhythm, hands clapping gently",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to outro.",
+      "image_prompt": "Teacher playing a grand piano. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing together in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher playing piano, children singing together."
+    },
+    {
+      "scene_number": 33,
+      "title": "Outro",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student",
+        "teacher"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher smiles broadly at the children, encouraging them with words of praise.",
+      "emotion": "Warm and appreciative",
+      "expression": "Smiling widely, eyes full of warmth and affection",
+      "body_language": "Teacher standing in front of the class, hands clasped together in a gesture of encouragement",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight streaming through the windows",
+      "environment": "Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children exiting the classroom waving goodbye to the teacher as they head outside.",
+      "image_prompt": "Teacher smiling broadly at the children. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children looking up at their teacher with admiration. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher standing in front of the class, hands clasped together."
+    },
+    {
+      "scene_number": 34,
+      "title": "Children Exiting",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children exit the classroom, waving goodbye to the teacher as they head outside.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Waving hands in a wave, turning around to look back at the teacher",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children singing along.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and waving goodbye to the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "scene_number": 35,
+      "title": "Singing Along",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children continue to sing the song as they play outside, enjoying the day.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing along loudly, hands clapping in rhythm",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children playing outside.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children singing along loudly while enjoying the day. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing along loudly."
+    },
+    {
+      "scene_number": 36,
+      "title": "Playing Outside",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children play outside, enjoying the day after a fun math lesson.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Running around, climbing on equipment, playing games",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "End of scene plan.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside after a fun math lesson. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children running around, climbing on equipment, playing games."
+    },
+    {
+      "scene_number": 37,
+      "title": "Cheerful Introduction",
+      "story_beat": "Beat 1: Introduction - The cheerful introduction sets the stage for learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sit on colorful chairs, eyes bright with excitement. Teacher stands at the front of the classroom, smiling warmly.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with anticipation",
+      "body_language": "Sitting up straight, hands clasped in laps",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs.",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "Cut to children standing up as teacher starts singing.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher stands at the front of a clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children standing up as teacher starts singing."
+    },
+    {
+      "scene_number": 38,
+      "title": "Learning Verses - Verse One",
+      "story_beat": "Beat 2: Learning Verses - Verse One - Children are introduced to basic multiplication facts through a fun verse.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along, clapping hands in rhythm. Teacher plays xylophone and marimba to accompany the song.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Clapping hands in rhythm while singing",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing and clapping hands in rhythm.",
+      "continuity_from_previous_scene": "Children are still standing up and singing.",
+      "transition_to_next_scene": "Cut to call-and-response moments.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing along, clapping hands in rhythm. Teacher plays xylophone and marimba to accompany the song. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing and clapping hands in rhythm."
+    },
+    {
+      "scene_number": 39,
+      "title": "Call-and-Response Moments",
+      "story_beat": "Beat 3: Call-and-Response Moments - The children sing along in call-and-response format, reinforcing their learning.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children respond to teacher's calls with enthusiasm. Teacher plays piano and claps along.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Responding energetically to the teacher’s calls",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children responding to teacher’s calls.",
+      "continuity_from_previous_scene": "Children are still singing and clapping hands in rhythm.",
+      "transition_to_next_scene": "Cut to a break where kids think about groups of numbers to solve a problem.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children respond to teacher’s calls with enthusiasm. Teacher plays piano and claps along. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children responding to the teacher's calls."
+    },
+    {
+      "scene_number": 40,
+      "title": "Learning Break - Think and Count",
+      "story_beat": "Beat 4: Learning Break - Think and Count - A break where kids think about groups of numbers to solve a problem.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children use counters to count and solve problems. Teacher walks around, observing their work.",
+      "emotion": "Focused and engaged",
+      "expression": "Concentrated expressions, eyes focused on the task",
+      "body_language": "Using counters to count and solve problems",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children using counters to count and solve problems.",
+      "continuity_from_previous_scene": "Children are still singing and clapping hands in rhythm.",
+      "transition_to_next_scene": "Cut to further verses introducing more multiplication facts.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children use counters to count and solve problems. Teacher walks around, observing their work. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children using counters to count and solve problems."
+    },
+    {
+      "scene_number": 41,
+      "title": "Learning Verses - Verse Two",
+      "story_beat": "Beat 5: Learning Verses - Verse Two - Further verses introduce more multiplication facts, encouraging active participation.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing along with the teacher. Teacher plays glockenspiel and ukulele to accompany the song.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing along with enthusiasm, clapping hands in rhythm",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing along.",
+      "continuity_from_previous_scene": "Children are still using counters to count and solve problems.",
+      "transition_to_next_scene": "Cut to a playful bridge introducing new numbers and facts.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing along with the teacher. Teacher plays glockenspiel and ukulele to accompany the song. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing along with the teacher."
+    },
+    {
+      "scene_number": 42,
+      "title": "Playful Bridge",
+      "story_beat": "Beat 6: Playful Bridge - Children sing along to a playful bridge that introduces new numbers and facts.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing the playful bridge, clapping hands in rhythm. Teacher plays bells to add to the cheerful atmosphere.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing the playful bridge, clapping hands in rhythm",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing the playful bridge.",
+      "continuity_from_previous_scene": "Children are still using counters to count and solve problems.",
+      "transition_to_next_scene": "Cut to a quiz break where children find answers by thinking about groups of numbers.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing the playful bridge, clapping hands in rhythm. Teacher plays bells to add to the cheerful atmosphere. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing the playful bridge."
+    },
+    {
+      "scene_number": 43,
+      "title": "Quiz Break - Think it Through",
+      "story_beat": "Beat 7: Quiz Break - Think it Through - A quiz break where children are encouraged to find the answers by thinking about groups of numbers.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children think and discuss in small groups. Teacher walks around, listening to their discussions.",
+      "emotion": "Focused and engaged",
+      "expression": "Concentrated expressions, eyes focused on the task",
+      "body_language": "Thinking and discussing in small groups",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children thinking and discussing in small groups.",
+      "continuity_from_previous_scene": "Children are still singing the playful bridge.",
+      "transition_to_next_scene": "Cut to the final chorus summarizing the day's learning.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children think and discuss in small groups. Teacher walks around, listening to their discussions. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children thinking and discussing in small groups."
+    },
+    {
+      "scene_number": 44,
+      "title": "Final Chorus",
+      "story_beat": "Beat 8: Final Chorus - The final chorus summarizes the day's learning, reinforcing the idea that math is fun and enjoyable.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Children sing the final chorus with energy. Teacher plays piano and claps along.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Singing the final chorus with energy",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing the final chorus.",
+      "continuity_from_previous_scene": "Children are still thinking and discussing in small groups.",
+      "transition_to_next_scene": "Cut to the children being praised for their hard work.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing the final chorus with energy. Teacher plays piano and claps along. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children singing the final chorus."
+    },
+    {
+      "scene_number": 45,
+      "title": "Praise for Hard Work",
+      "story_beat": "Beat 8: Final Chorus - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher gives a warm smile and thumbs up. Children cheer in response.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Cheering in response to the teacher’s praise",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children cheering in response to the teacher’s praise.",
+      "continuity_from_previous_scene": "Children are still singing the final chorus.",
+      "transition_to_next_scene": "Cut to children playing outside after a fun math lesson.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher gives a warm smile and thumbs up. Children cheer in response. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher giving a warm smile and thumbs up."
+    },
+    {
+      "scene_number": 46,
+      "title": "Playing Outside",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children play outside, enjoying the day after a fun math lesson. Some children are seen climbing on equipment, others playing games.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Running around, climbing on equipment, playing games",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "Clean playground with swings, slides, and monkey bars.",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "End of scene plan.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children play outside, enjoying the day after a fun math lesson. Some children are seen climbing on equipment, others playing games. Clean playground with swings, slides, and monkey bars. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children running around, climbing on equipment, playing games."
+    },
+    {
+      "scene_number": 47,
+      "title": "Reflection",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "classroom",
+      "time_of_day": "Morning",
+      "action": "Teacher reflects on the day's lesson, smiling warmly. Children listen intently.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Reflecting on the day’s lesson, smiling warmly",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful.",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "End of scene plan.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher reflects on the day's lesson, smiling warmly. Children listen intently. Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Teacher reflecting on the day's lesson."
+    },
+    {
+      "scene_number": 48,
+      "title": "Closing",
+      "story_beat": "Beat 9: Outro - The children are praised for their hard work and encouraged to keep practicing.",
+      "duration_seconds": 3,
+      "characters": [
+        "child_student"
+      ],
+      "location": "playground",
+      "time_of_day": "Morning",
+      "action": "Children wave goodbye as they leave the classroom. Teacher waves back, smiling warmly.",
+      "emotion": "Happy and excited",
+      "expression": "Smiling widely, eyes bright with excitement",
+      "body_language": "Waving goodbye",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Bright sunlight from the morning sky",
+      "environment": "A clean playground with swings, slides, and monkey bars.",
+      "continuity_from_previous_scene": "Children are still seated in the same place.",
+      "transition_to_next_scene": "End of scene plan.",
+      "image_prompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children wave goodbye as they leave the classroom. Teacher waves back, smiling warmly. Clean playground with swings, slides, and monkey bars. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "video_prompt": "Children waving goodbye."
+    }
+  ],
+  "sceneCount": 48,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": "Mathematical Table Song",
+  "error": null,
+  "createdAt": "2026-09-17T17:01:55.655Z",
+  "updatedAt": "2026-09-17T17:32:40.320Z"
+}

@@ -244,6 +244,14 @@ body {
    the remaining width as intended. */
 .shell.is-resource .sidebar,
 .shell.is-resource .sidebar-show { order: -1; }
+/* Director view: Projects panel on the left, AI Story Director filling the
+   middle — no right column is ever rendered there. Same DOM-order situation
+   as Resource (director column comes after the <aside>), so the same
+   order pull-back applies. */
+.shell.is-director { grid-template-columns: 336px minmax(0, 1fr); }
+.shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+.shell.is-director .sidebar,
+.shell.is-director .sidebar-show { order: -1; }
 /* Right-column rails dock to the RIGHT edge of the window (the Projects rail
    docks left). Rails-only column stays narrow so the middle keeps the space. */
 .col.right-col.rails-only { gap: 12px; }
@@ -1904,11 +1912,13 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
    Top nav (Home / Projects)
    ============================================================ */
 .topnav { display: flex; align-items: center; gap: 2px; margin-left: 6px; }
-.topnav-btn {
-  background: transparent; border: 1px solid transparent;
-  color: var(--text-2); border-radius: var(--radius-s);
-  padding: 6px 13px; font-size: 13px; font-weight: 600;
-}
+  .topnav-btn {
+    background: transparent; border: 1px solid transparent;
+    color: var(--text-2); border-radius: var(--radius-s);
+    padding: 6px 13px; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .topnav-btn svg { flex: none; }
 .topnav-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
 .topnav-btn.on {
   background: var(--accent-soft); color: var(--accent-2);
@@ -1997,10 +2007,59 @@ select:focus-visible, textarea:focus-visible {
 }
 .proj-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 /* Actively generating card: accent ring + soft glow so the running project
-   stands out in the Recent Projects grid at a glance. */
+   stands out in the Recent Projects grid at a glance. The ring breathes
+   (glow pulsing) and a shimmer sweeps across the thumbnail while the run
+   is live, so the card reads as in-flight even at a glance. */
 .proj-card.generating {
   border-color: var(--accent-line);
   box-shadow: var(--shadow-2), 0 0 0 1px var(--accent-line), 0 0 24px -6px var(--accent-soft);
+  animation: projGenGlow 2.2s ease-in-out infinite;
+}
+@keyframes projGenGlow {
+  0%, 100% {
+    box-shadow: var(--shadow-2), 0 0 0 1px var(--accent-line), 0 0 16px -8px var(--accent-soft);
+  }
+  50% {
+    box-shadow: var(--shadow-2), 0 0 0 1px var(--accent-2), 0 0 28px -4px var(--accent-line);
+  }
+}
+/* Shimmer sweep across the generating thumbnail (overlay only — the
+   thumbnail itself never moves, so layout stays stable). */
+.proj-card.generating .proj-media::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%);
+  background-size: 200% 100%;
+  transform: translateX(-101%);
+  animation: barSweep 2.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .proj-card.generating { animation: none; }
+  .proj-card.generating .proj-media::after { animation: none; display: none; }
+  .scenario-row.generating { animation: none; }
+  .scenario-row.generating::after { animation: none; display: none; }
+}
+/* Sidebar Projects row for the run in flight: same live language as the
+   dashboard card (breathing accent ring + shimmer sweep), scaled to the
+   compact row. Overlay-only — layout and click targets never move. */
+.sidebar-list > .scenario-row.generating {
+  border-color: var(--accent-line);
+  animation: projGenGlow 2.2s ease-in-out infinite;
+}
+/* Selected + generating keeps the emerald gradient fill — the breathing
+   glow still reads on top of it. */
+.sidebar-list > .scenario-row.selected.generating {
+  border-color: var(--accent-2);
+}
+.scenario-row.generating::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.14) 50%, transparent 70%);
+  background-size: 200% 100%;
+  transform: translateX(-101%);
+  animation: barSweep 2.2s linear infinite;
+}
+.sidebar-list > .scenario-row.selected.generating::after {
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  background-size: 200% 100%;
 }
 .proj-media {
   position: relative;
@@ -2228,6 +2287,8 @@ select:focus-visible, textarea:focus-visible {
   .shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
   .shell.is-resource { grid-template-columns: 280px minmax(0, 1fr); }
   .shell.is-resource.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+  .shell.is-director { grid-template-columns: 280px minmax(0, 1fr); }
+  .shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
 }
 @media (max-width: 1180px) {
   /* Service pills stay in one horizontal row — allow the bar to wrap
@@ -2243,6 +2304,8 @@ select:focus-visible, textarea:focus-visible {
   .shell.no-sidebar.no-right { grid-template-columns: 1fr; }
   .shell.is-resource { grid-template-columns: 1fr; }
   .shell.is-resource.no-sidebar { grid-template-columns: 1fr; }
+  .shell.is-director { grid-template-columns: 1fr; }
+  .shell.is-director.no-sidebar { grid-template-columns: 1fr; }
   .sidebar-show { flex-direction: row; position: static; width: 100%; }
   .sidebar-show-label { writing-mode: horizontal-tb; }
   .sidebar { position: static; max-height: none; }
@@ -2643,6 +2706,29 @@ select:focus-visible, textarea:focus-visible {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   border-radius: 0 99px 99px 0;
   transition: width 1s linear;
+}
+/* Centered loading overlay on the single generating tile in Keyframes →
+   clips (image or video, with or without a previous version underneath):
+   dims the frame and centers a spinner pill so the processing scene is
+   identifiable at a glance. Pointer-transparent — controls, expand buttons
+   and version chips underneath stay clickable. */
+.gen-overlay {
+  position: absolute; inset: 0; z-index: 2;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.gen-overlay-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 99px;
+  background: rgba(0, 0, 0, 0.68);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-2);
+  font-size: 11.5px; font-weight: 600; white-space: nowrap;
+}
+.gen-overlay-readout {
+  font-family: var(--mono); font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 @keyframes genShimmer {
   from { background-position: 200% 0; }

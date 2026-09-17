@@ -121,6 +121,76 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   const [stoppingServer, setStoppingServer] = useState(false);
   useEffect(() => { if (!serverRun) setStoppingServer(false); }, [serverRun]);
 
+  // Idle view follows the selected project — never the previous run's
+  // captured scenario/folder/engine. A live run owns the panel regardless.
+  const idle = status !== "running";
+  const displayScenario = idle ? scenario : (runScenario ?? scenario);
+  const displayFolder = idle ? (folder ?? scenario) : (runFolder ?? folder ?? runScenario ?? scenario);
+  const displayEngine = idle ? engine : (runEngine ?? engine);
+  const displayFormat: VideoFormat = idle ? idleFormat : runFormat;
+  const displayOutDir = displayFolder ? outScenario(displayFolder, displayEngine, displayFormat) : "";
+
+  // Project switch while idle: drop the previous project's run state
+  // (scenario/folder/assets/log/totals) so the Rendered Clip card reloads
+  // for the newly selected project instead of keeping the old clip on
+  // screen. A live run owns the panel — switching mid-run keeps the tail
+  // until it finishes (see the run-end effect below).
+  const viewedKey = `${scenario}|${folder ?? ""}`;
+  const prevViewedKey = useRef(viewedKey);
+  useEffect(() => {
+    if (prevViewedKey.current === viewedKey) return;
+    prevViewedKey.current = viewedKey;
+    if (status === "running") return;
+    setRunScenario(null);
+    setRunFolder(null);
+    setRunRegen(null);
+    setRunEngine(null);
+    setRunMeta({ stitch: false, regen: null, count: 1 });
+    setAssets([]);
+    setLog("");
+    setAssetTimes([]);
+    setStartedAt(null);
+    setEndedAt(null);
+    setCancelled(false);
+    setPin(null);
+    setTotalBeats(null);
+    setStatus("idle");
+    if (scenario) {
+      getScenario(scenario)
+        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
+        .catch(() => setTotalBeats(null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewedKey]);
+
+  // A run that finishes while another project is on screen must not leave
+  // its assets/log/progress behind — fall back to the viewed project's
+  // idle state instead of showing the other project's results here.
+  useEffect(() => {
+    if (status === "running") return;
+    if (!runScenario || runScenario === scenario) return;
+    setRunScenario(null);
+    setRunFolder(null);
+    setRunRegen(null);
+    setRunEngine(null);
+    setRunMeta({ stitch: false, regen: null, count: 1 });
+    setAssets([]);
+    setLog("");
+    setAssetTimes([]);
+    setStartedAt(null);
+    setEndedAt(null);
+    setCancelled(false);
+    setPin(null);
+    setTotalBeats(null);
+    setStatus("idle");
+    if (scenario) {
+      getScenario(scenario)
+        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
+        .catch(() => setTotalBeats(null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, runScenario, scenario]);
+
   useEffect(() => { onStatus?.(status, runScenario ?? scenario, status === "running" ? runRegen : null, runFormat); }, [status, onStatus, runScenario, runRegen, runFormat, scenario]);
   useEffect(() => { if (status !== "running") setStopping(false); }, [status]);
   const [log, setLog] = useState("");
@@ -648,9 +718,9 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         <>
           <RunPart storageKey="ss-sec-run-program" title="Program" label="Program monitor">
             <RenderMonitor
-              scenario={runScenario ?? scenario}
-              outDir={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, status === "running" ? runFormat : idleFormat)}
-              engine={runEngine ?? engine}
+              scenario={displayScenario}
+              outDir={displayOutDir}
+              engine={displayEngine}
               status={status}
               progress={progress}
               assets={assets}
@@ -667,9 +737,9 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
           </RunPart>
           <RunPart storageKey="ss-sec-run-render" title="Render" label="Render status and outputs">
             <RenderMonitor
-              scenario={runScenario ?? scenario}
-              outDir={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, status === "running" ? runFormat : idleFormat)}
-              engine={runEngine ?? engine}
+              scenario={displayScenario}
+              outDir={displayOutDir}
+              engine={displayEngine}
               status={status}
               progress={progress}
               assets={assets}

@@ -14,6 +14,7 @@ import {
   planDelta,
   beatAssetTypes,
   nextVersionNumber,
+  latestVersionOf,
   resolveEffective,
   EFFECTIVE_ASSETS_SQL,
   EXACT_VERSION_SQL,
@@ -200,6 +201,23 @@ describe("delta versioning", () => {
     assert.equal(nextVersionNumber([1, 2, 5]), 6);
   });
 
+  it("latestVersionOf never yields the phantom v0 (version_check regression)", () => {
+    // SELECT max(version) returns NULL with zero version rows — Number(null)
+    // is 0, a valid integer but never a real version (CHECK version > 0).
+    // Routing it into an asset INSERT violated project_assets_version_check.
+    assert.equal(latestVersionOf(null), null);
+    assert.equal(latestVersionOf(undefined), null);
+    assert.equal(latestVersionOf(0), null);
+    assert.equal(latestVersionOf("0"), null);
+    assert.equal(latestVersionOf(-1), null);
+    assert.equal(latestVersionOf(1.5), null);
+    assert.equal(latestVersionOf(NaN), null);
+    assert.equal(latestVersionOf("abc"), null);
+    assert.equal(latestVersionOf(1), 1);
+    assert.equal(latestVersionOf(3), 3);
+    assert.equal(latestVersionOf("2"), 2);
+  });
+
   it("SQL strings implement delta semantics", () => {
     assert.match(EFFECTIVE_ASSETS_SQL, /DISTINCT ON/i);
     assert.match(EFFECTIVE_ASSETS_SQL, /version\s*<=\s*\$2/i);
@@ -226,6 +244,24 @@ describe("delta versioning", () => {
     assert.equal(byType.INSTAGRAM, "outputs/p_vertical/p_seq1_a.png");
   });
 
+  it("server never routes a phantom v0 into project_assets (version_check)", () => {
+    const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
+    // The helper must exist and be imported by the server.
+    assert.ok(srv.includes("latestVersionOf"), "server must use latestVersionOf");
+    // No bare Number(max-cell) coercion may remain anywhere a max(version)
+    // read feeds version logic — Number(null) === 0 is the phantom.
+    assert.ok(!/Number\(\s*[a-zA-Z_$][\w$]*\.rows\[0\]\?\.v\s*\)/.test(srv),
+      "no bare Number(rows[0]?.v) coercion allowed");
+    assert.ok(!/Number\(latestRow\.rows\[0\]\?\.v\)/.test(srv),
+      "PUT save must parse max(version) via latestVersionOf");
+    // pgSaveVersionInPlace must defend itself (delegate to the delta path)
+    // even if a future caller passes 0/NaN.
+    assert.match(srv, /async function pgSaveVersionInPlace[\s\S]{0,800}?latestVersionOf\(latestVersion\)/);
+    // pgSaveProject must fail fast with a clear message, never a raw
+    // constraint violation.
+    assert.match(srv, /pgSaveProject: refusing phantom version/);
+  });
+
   it("server no longer full-copies versions on save/refresh", () => {
     const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
     // The old snapshot path called pgSaveProject() for every save and from
@@ -243,5 +279,16 @@ describe("delta versioning", () => {
     assert.match(srv, /\[version\].*previousVersion.*newVersion.*changedScenes.*insertedAssetIds/s);
     // Effective endpoint defaults to DISTINCT ON resolution.
     assert.ok(srv.includes("EFFECTIVE_ASSETS_SQL"), "effective query must be used");
+  });
+
+  it("director approve names the project exactly like the story title", () => {
+    const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
+    // Regression: approve slugified the frozen analyze-time title, so "Rat
+    // story" became minku_story. The project must take the board title
+    // verbatim (spaces allowed, like other display names).
+    assert.match(srv, /let target = String\(board\.input\.title/);
+    assert.ok(!srv.includes("slug(board.input.title)"), "must not slugify the story title");
+    // Boards are renamable before approve.
+    assert.match(srv, /board\.input\.title = nt/);
   });
 });

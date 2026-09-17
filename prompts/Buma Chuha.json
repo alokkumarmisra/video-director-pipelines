@@ -1,0 +1,248 @@
+{
+  "description": "Buma Chuha — A mischievous little mouse named Buma and a playful cat named Fuba chase each other through a cozy home, turning their chase into a joyful game of tag that ends in laughter and friendship.",
+  "duration": 3,
+  "referencePrompt": "A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style., A cozy, colorful living room with a wooden table, chairs, a rug, and soft pastel walls, lit warmly with natural daylight, in a 3D preschool animation style., Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "sequence": [
+    {
+      "title": "meet_buma_and_fuba",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs around a wooden table in a cozy colorful living room. A fluffy orange cat with white paws and large expressive eyes watches him curiously, sitting on a chair. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in small circles around the table; Fuba remains seated, head tilted slightly, eyes following Buma’s movement."
+    },
+    {
+      "title": "buma_hides",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, hides under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward to peek under the table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma scurries under table; Fuba leans forward, paws on table edge, eyes focused on Buma’s peeking eyes."
+    },
+    {
+      "title": "play_together",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes pounces playfully. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma pops out from under table; Fuba pounces forward, then both start chasing each other in small circles."
+    },
+    {
+      "title": "game_of_tag",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a fluffy orange cat with white paws and large expressive eyes. Both are laughing, eyes sparkling. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in circles; Fuba jumps and spins, both laughing, paws off ground, tails flicking."
+    },
+    {
+      "title": "goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "title": "buma_s_surprise",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, climbs onto a wooden table and taps a colorful xylophone with paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma climbs onto table, picks up xylophone, taps keys with paws, tail twitching."
+    },
+    {
+      "title": "fuba_joins_in",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, plays a colorful xylophone on a wooden table. A fluffy orange cat with white paws and large expressive eyes sits beside, clapping rhythmically with paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Fuba sits beside Buma, listens, then claps rhythmically with paws, tail swaying."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, rings cheerful bells with paws on a wooden table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma picks up bells, rings them with paws, jumps up and down, bells jingling."
+    },
+    {
+      "title": "fuba_s_surprise",
+      "image": "A fluffy orange cat with white paws and large expressive eyes, wearing no clothes, rings a cheerful bell with paws behind a wooden table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "motion": "Fuba finds a bell behind table, rings it with paws, jumps up and down, bell jingling."
+    },
+    {
+      "title": "together_again",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances around a wooden table ringing bells. A fluffy orange cat with white paws and large expressive eyes dances beside, ringing bells. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba dance around table, each ringing bells with paws, tails swaying, bells jingling."
+    },
+    {
+      "title": "clapping_hands",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, claps hands rhythmically with a fluffy orange cat with white paws and large expressive eyes. Both spin in circles. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba clap hands rhythmically, then spin in circles, bells still jingling."
+    },
+    {
+      "title": "final_goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "title": "intro_meet_buma_and_fuba",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles near a wooden table. A fluffy orange cat with white paws and large expressive eyes sits on a rug watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in small circles near the table; Fuba remains seated, eyes wide and focused."
+    },
+    {
+      "title": "buma_hides",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, crawls under a wooden table. A fluffy orange cat with white paws and large expressive eyes peeks under the table with one paw raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma crawls under table; Fuba paws at edge, then leans down to peek."
+    },
+    {
+      "title": "play_together",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops up from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leaps playfully toward him. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma pops up; Fuba leaps forward playfully, paws extended."
+    },
+    {
+      "title": "game_of_tag",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a wooden table. A fluffy orange cat with white paws and large expressive eyes chases him, both tumbling and laughing. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in circles; Fuba chases, both tumble and laugh."
+    },
+    {
+      "title": "final_goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "title": "buma_plays_xylophone",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits at a wooden table tapping a colorful xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys with paws, making musical notes."
+    },
+    {
+      "title": "fuba_joins_in",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits at a wooden table watching. A fluffy orange cat with white paws and large expressive eyes jumps onto the table, tapping a colorful xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Fuba jumps onto table, taps xylophone; Buma watches with smile."
+    },
+    {
+      "title": "dancing_together",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances in circles with paws tapping. A fluffy orange cat with white paws and large expressive eyes dances beside him, paws tapping. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba spin in circles, paws tapping rhythmically."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances with paws clapping. A fluffy orange cat with white paws and large expressive eyes dances beside him, paws clapping. Cheerful bells ring overhead. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Bells ring; Buma and Fuba jump and clap rhythmically."
+    },
+    {
+      "title": "clapping_hands",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances and claps with paws. A fluffy orange cat with white paws and large expressive eyes dances and claps beside him. Cheerful clapping hands appear and join their rhythm. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Clapping hands appear and join Buma and Fuba’s rhythm."
+    },
+    {
+      "title": "final_dance",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, spins and claps with paws. A fluffy orange cat with white paws and large expressive eyes spins and claps beside him. Cheerful clapping hands and bells ring. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba spin and clap rhythmically, music peaks."
+    },
+    {
+      "title": "final_goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "title": "intro_meet_buma_and_fuba",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles. A fluffy orange cat with white paws and large expressive eyes sits on the rug watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in small circles, feet tapping; Fuba remains seated, eyes following Buma’s movement."
+    },
+    {
+      "title": "buma_hides",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, peeks out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward to peek. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma quickly dives under table, then peeks out with a grin; Fuba leans closer, eyes widening."
+    },
+    {
+      "title": "play_together",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, leaps from under a wooden table. A fluffy orange cat with white paws and large expressive eyes bounds after him. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma pops up, Fuba jumps back then lunges forward; both run in circles around the room."
+    },
+    {
+      "title": "game_of_tag",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, tumbles onto rug. A fluffy orange cat with white paws and large expressive eyes rolls onto back, paws flailing. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs toward Fuba, Fuba turns and pounces; both tumble onto rug, paws flailing, mouths open in laughter."
+    },
+    {
+      "title": "goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "bells_ring",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "title": "buma_runs_around",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a wooden table. A fluffy orange cat with white paws and large expressive eyes sits on a rug, watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs in circles around table; Fuba watches, head tilted, eyes wide."
+    },
+    {
+      "title": "buma_hides_under_table",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, peeks out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward, eyes wide, mouth open in surprise. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma dives under table; Fuba steps forward, peeks, then jumps back, eyes wide."
+    },
+    {
+      "title": "fuba_finds_buma",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops up from under a wooden table. A fluffy orange cat with white paws and large expressive eyes nudges his head with a paw. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Fuba nudges Buma’s head; Buma pops up, grinning, tail wagging."
+    },
+    {
+      "title": "play_together",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs toward a fluffy orange cat with white paws and large expressive eyes. The cat leaps sideways with paws raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs toward Fuba; Fuba leaps sideways, paws raised, eyes wide."
+    },
+    {
+      "title": "chase_around_table",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, circles a wooden table. A fluffy orange cat with white paws and large expressive eyes follows, paws tapping floor. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma circles table; Fuba follows, paws tapping floor, eyes wide."
+    },
+    {
+      "title": "buma_tumbles",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, falls backward over a wooden table leg. A fluffy orange cat with white paws and large expressive eyes watches, eyes wide, mouth open. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma trips over table leg, falls backward; Fuba watches, eyes wide."
+    },
+    {
+      "title": "fuba_laughs",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits up grinning. A fluffy orange cat with white paws and large expressive eyes laughs, paws flapping, eyes crinkled. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Fuba jumps back, drops to floor, laughs; Buma sits up, grinning."
+    },
+    {
+      "title": "game_of_tag",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs toward a fluffy orange cat with white paws and large expressive eyes. The cat leaps sideways with paws raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma runs toward Fuba; Fuba leaps sideways, paws raised, eyes wide."
+    },
+    {
+      "title": "buma_tags_fuba",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pounces on the back of a fluffy orange cat with white paws and large expressive eyes. The cat rolls, paws flapping, eyes wide, mouth open in laughter. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma pounces on Fuba’s back; Fuba rolls, paws flapping, laughing."
+    },
+    {
+      "title": "both_laughing",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits beside a fluffy orange cat with white paws and large expressive eyes. Both have paws raised, eyes crinkled, mouths wide open in laughter. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba sit side by side, paws raised, laughing."
+    },
+    {
+      "title": "wave_goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves paws. A fluffy orange cat with white paws and large expressive eyes waves paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba stand, wave paws, then turn to look at each other."
+    },
+    {
+      "title": "goodbye",
+      "image": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves paws. A fluffy orange cat with white paws and large expressive eyes waves paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style.",
+      "motion": "Buma and Fuba wave paws, then turn to look at each other."
+    }
+  ],
+  "folder_name": "buma_chuha"
+}

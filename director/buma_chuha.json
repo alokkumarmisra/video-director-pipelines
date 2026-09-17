@@ -1,0 +1,1472 @@
+{
+  "id": "buma_chuha",
+  "input": {
+    "title": "Buma Chuha",
+    "story": "[Intro]\n(Cheerful bells and bouncy xylophone)\nही ही ही, हा हा हा!\nबूमा चूहा, फूबा बिल्ली!\nही ही ही, हा हा हा!\n\n[Verse 1]\nएक था छोटा चूहा बूमा, (बूमा!)\nमस्ती में वो हरदम घूमा। (घूमा!)\nघर में थी एक बिल्ली फूबा, (फूबा!)\nजिसका ध्यान खेल में डूबा। (डूबा!)\nबूमा भागा आगे आगे,\nफूबा बिल्ली पीछे भागे!\n\n[Chorus]\nबूमा-फूबा, बूमा-फूबा! (ही ही ही!)\nबूमा-फूबा, बूमा-फूबा! (हा हा हा!)\nपकड़ो पकड़ो, भागो भागो!\nबूमा-फूबा, बूमा-फूबा!\n(Hand claps and bright xylophone solo)\n\n[Verse 2]\nबूमा छुपा मेज के नीचे, (नीचे!)\nफूबा आई आंखें मीचे। (मीचे!)\nबूमा बोला, \"ही ही ही!\"\nफूबा बोली, \"म्याऊं म्याऊं जी!\"\nदोनों मिलकर खेलें खेल,\nचूहे और बिल्ली का मेल!\n\n[Chorus]\nबूमा-फूबा, बूमा-फूबा! (ही ही ही!)\nबूमा-फूबा, बूमा-फूबा! (हा हा हा!)\nपकड़ो पकड़ो, भागो भागो!\nबूमा-फूबा, बूमा-फूबा!\n\n[Outro]\n(Slowing down playfully)\nबूमा भागा, फूबा हंसी,\nही ही ही, हा हा हा!\nबाय-बाय बूमा! बाय-बाय फूबा!\n(Final bouncy bell chime)",
+    "language": "Hindi",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 180,
+    "sceneSeconds": 3,
+    "aspectRatio": "16:9",
+    "instructions": ""
+  },
+  "status": "approved",
+  "blueprint": {
+    "logline": "A mischievous little mouse named Buma and a playful cat named Fuba chase each other through a cozy home, turning their chase into a joyful game of tag that ends in laughter and friendship.",
+    "analysis": {
+      "plot": "The story follows Buma the mouse and Fuba the cat as they engage in a playful chase that evolves into a cooperative game, highlighting themes of friendship and fun over rivalry.",
+      "beginning": "The story opens with a cheerful musical intro introducing Buma and Fuba. Buma is shown scampering around the house, while Fuba watches with curiosity.",
+      "middle": "Buma hides under a table, and Fuba finds him. Instead of chasing him away, they play together, showing that their relationship is more about fun than conflict.",
+      "climax": "The two engage in a synchronized game of tag, with Buma darting and Fuba pouncing playfully, culminating in a shared laugh and moment of camaraderie.",
+      "ending": "The chase ends with both characters laughing together, waving goodbye as the music fades, leaving viewers with a warm, joyful feeling.",
+      "main_character": "Buma",
+      "supporting_characters": [
+        "Fuba"
+      ],
+      "antagonist": null,
+      "objects": [
+        "table",
+        "xylophone",
+        "bells",
+        "clapping hands"
+      ],
+      "locations": [
+        "inside a cozy house",
+        "living room"
+      ],
+      "events": [
+        "Buma runs around the house.",
+        "Fuba watches Buma playfully.",
+        "Buma hides under the table.",
+        "Fuba finds Buma and they play together.",
+        "They chase each other in a game of tag.",
+        "They laugh and wave goodbye."
+      ],
+      "relationships": "Buma and Fuba start as playful adversaries but quickly become friends through their shared love of games.",
+      "emotional_progression": "From playful curiosity to joyful cooperation, ending in shared laughter and affection.",
+      "timeline": "The story progresses chronologically from introduction to chase to play to resolution, all within a single day.",
+      "visual_moments": [
+        "Buma running with a mischievous grin.",
+        "Fuba watching with wide eyes and a curious tilt of her head.",
+        "Buma hiding under a table with a cheeky expression.",
+        "Fuba pouncing playfully on Buma.",
+        "Both characters laughing and waving goodbye."
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "buma",
+        "name": "Buma",
+        "role": "main_character",
+        "species": "mouse",
+        "age": "young",
+        "appearance": {
+          "body": "small and round",
+          "fur": "soft brown with a lighter belly",
+          "eyes": "large and bright",
+          "ears": "pointy and twitchy"
+        },
+        "clothing": {
+          "top": "none",
+          "bottom": "none"
+        },
+        "personality": [
+          "mischievous",
+          "playful",
+          "curious"
+        ],
+        "visual_identity_prompt": "A small, chubby brown mouse with large bright eyes, pointy ears, and a mischievous grin, wearing no clothes, in a 3D preschool animation style."
+      },
+      {
+        "character_id": "fuba",
+        "name": "Fuba",
+        "role": "supporting",
+        "species": "cat",
+        "age": "young",
+        "appearance": {
+          "body": "slim and agile",
+          "fur": "fluffy orange with white paws",
+          "eyes": "large and expressive",
+          "ears": "big and rounded"
+        },
+        "clothing": {
+          "top": "none",
+          "bottom": "none"
+        },
+        "personality": [
+          "playful",
+          "gentle",
+          "curious"
+        ],
+        "visual_identity_prompt": "A fluffy orange cat with white paws, large expressive eyes, and rounded ears, wearing no clothes, in a 3D preschool animation style."
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "house_interior",
+        "name": "Cozy House Interior",
+        "description": "A warm, colorful living room with furniture like a table, chairs, and a rug. The walls are painted in soft pastels.",
+        "visual_identity_prompt": "A cozy, colorful living room with a wooden table, chairs, a rug, and soft pastel walls, lit warmly with natural daylight, in a 3D preschool animation style.",
+        "time_of_day": "daytime",
+        "lighting": "warm and natural",
+        "color_palette": "soft pastels, warm yellows, gentle blues"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "table",
+        "name": "Table",
+        "description": "A wooden table with a smooth surface and rounded edges, used by Buma to hide under.",
+        "visual_identity_prompt": "A wooden table with a smooth surface and rounded edges, in a 3D preschool animation style."
+      },
+      {
+        "object_id": "xylophone",
+        "name": "Xylophone",
+        "description": "A colorful xylophone with bright keys, used for musical interludes.",
+        "visual_identity_prompt": "A colorful xylophone with bright keys, in a 3D preschool animation style."
+      },
+      {
+        "object_id": "bells",
+        "name": "Bells",
+        "description": "Cheerful bells that ring during the intro and outro.",
+        "visual_identity_prompt": "Cheerful bells that ring, in a 3D preschool animation style."
+      },
+      {
+        "object_id": "clapping_hands",
+        "name": "Clapping Hands",
+        "description": "Hands clapping rhythmically during the chorus.",
+        "visual_identity_prompt": "Hands clapping rhythmically, in a 3D preschool animation style."
+      }
+    ],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Intro: Meet Buma and Fuba",
+        "summary": "Buma runs around the house, and Fuba watches him with curiosity."
+      },
+      {
+        "n": 2,
+        "title": "Buma Hides",
+        "summary": "Buma hides under the table, and Fuba finds him."
+      },
+      {
+        "n": 3,
+        "title": "Play Together",
+        "summary": "Buma and Fuba play together, turning their chase into a game."
+      },
+      {
+        "n": 4,
+        "title": "Game of Tag",
+        "summary": "They chase each other playfully, ending in laughter."
+      },
+      {
+        "n": 5,
+        "title": "Goodbye",
+        "summary": "They wave goodbye as the music fades."
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Meet Buma and Fuba",
+      "story_beat": "Beat 1: Intro: Meet Buma and Fuba — Buma runs around the house, and Fuba watches him with curiosity.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs in circles around the table; Fuba sits on a chair watching him.",
+      "emotion": "curious",
+      "expression": "wide eyes, slightly tilted head",
+      "body_language": "Fuba’s paws resting on the chair, leaning forward slightly",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "none",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs around a wooden table in a cozy colorful living room. A fluffy orange cat with white paws and large expressive eyes watches him curiously, sitting on a chair. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in small circles around the table; Fuba remains seated, head tilted slightly, eyes following Buma’s movement."
+    },
+    {
+      "scene_number": 2,
+      "title": "Buma Hides",
+      "story_beat": "Beat 2: Buma Hides — Buma hides under the table, and Fuba finds him.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma scurries under the table; Fuba leans forward to peek under it.",
+      "emotion": "playful surprise",
+      "expression": "Buma’s eyes peeking out, Fuba’s eyes wide with delight",
+      "body_language": "Buma’s body tucked under table, Fuba’s front paws on edge of table",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was running; now he hides under table",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, hides under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward to peek under the table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma scurries under table; Fuba leans forward, paws on table edge, eyes focused on Buma’s peeking eyes."
+    },
+    {
+      "scene_number": 3,
+      "title": "Play Together",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma pops out from under table; Fuba pounces playfully, then both chase each other.",
+      "emotion": "excited",
+      "expression": "Buma’s grin wide, Fuba’s eyes sparkling",
+      "body_language": "Buma’s tail flicking, Fuba’s paws ready to pounce",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was hiding; now he pops out and starts chasing Fuba",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes pounces playfully. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma pops out from under table; Fuba pounces forward, then both start chasing each other in small circles."
+    },
+    {
+      "scene_number": 4,
+      "title": "Game of Tag",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs in circles around Fuba; Fuba jumps and spins, both laughing.",
+      "emotion": "joyful",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "Buma’s tail high, Fuba’s paws off ground mid-spin",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were chasing; now they laugh while spinning",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a fluffy orange cat with white paws and large expressive eyes. Both are laughing, eyes sparkling. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in circles; Fuba jumps and spins, both laughing, paws off ground, tails flicking."
+    },
+    {
+      "scene_number": 5,
+      "title": "Goodbye",
+      "story_beat": "Beat 5: Goodbye — They wave goodbye as the music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand facing each other, both wave goodbye with paws.",
+      "emotion": "friendly",
+      "expression": "both with gentle smiles",
+      "body_language": "both standing upright, paws raised in wave",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were playing; now they stop and wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "scene_number": 6,
+      "title": "Buma's Surprise",
+      "story_beat": "Beat 6: Buma’s Surprise — Buma discovers a xylophone and starts playing it.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma climbs onto the table, picks up the xylophone, and taps keys with paws.",
+      "emotion": "excited",
+      "expression": "eyes wide, tail twitching",
+      "body_language": "Buma’s paws on xylophone keys, body leaning forward",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Low Angle",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were waving goodbye; now Buma is alone and discovers xylophone",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, climbs onto a wooden table and taps a colorful xylophone with paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma climbs onto table, picks up xylophone, taps keys with paws, tail twitching."
+    },
+    {
+      "scene_number": 7,
+      "title": "Fuba Joins In",
+      "story_beat": "Beat 7: Fuba Joins In — Fuba approaches, listens, then starts clapping along.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Fuba sits beside Buma, listens to music, then claps rhythmically with paws.",
+      "emotion": "happy",
+      "expression": "Fuba’s eyes wide, mouth open in smile",
+      "body_language": "Fuba’s paws clapping rhythmically, tail swaying",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was playing xylophone; now Fuba joins and claps",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, plays a colorful xylophone on a wooden table. A fluffy orange cat with white paws and large expressive eyes sits beside, clapping rhythmically with paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Fuba sits beside Buma, listens, then claps rhythmically with paws, tail swaying."
+    },
+    {
+      "scene_number": 8,
+      "title": "Bells Ring",
+      "story_beat": "Beat 8: Bells Ring — Buma grabs bells and rings them joyfully.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma picks up bells from table, rings them with paws, jumps up and down.",
+      "emotion": "joyful",
+      "expression": "eyes wide, mouth open in giggle",
+      "body_language": "Buma’s paws ringing bells, body bouncing",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Low Angle",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Fuba was clapping; now Buma grabs bells and rings them",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, rings cheerful bells with paws on a wooden table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma picks up bells, rings them with paws, jumps up and down, bells jingling."
+    },
+    {
+      "scene_number": 9,
+      "title": "Fuba's Surprise",
+      "story_beat": "Beat 9: Fuba's Surprise — Fuba discovers a hidden bell and rings it too.",
+      "duration_seconds": 3,
+      "characters": [
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Fuba finds a bell behind the table, rings it with paws, then jumps with joy.",
+      "emotion": "excited",
+      "expression": "eyes wide, mouth open in giggle",
+      "body_language": "Fuba’s paws on bell, body jumping",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Low Angle",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was ringing bells; now Fuba finds another bell and rings it",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A fluffy orange cat with white paws and large expressive eyes, wearing no clothes, rings a cheerful bell with paws behind a wooden table. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Fuba finds a bell behind table, rings it with paws, jumps up and down, bell jingling."
+    },
+    {
+      "scene_number": 10,
+      "title": "Together Again",
+      "story_beat": "Beat 10: Together Again — Buma and Fuba play bells together, dancing around the table.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba dance around the table, each ringing bells with paws.",
+      "emotion": "joyful",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both dancing, paws ringing bells, tails swaying",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Fuba was ringing bell; now both dance together",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances around a wooden table ringing bells. A fluffy orange cat with white paws and large expressive eyes dances beside, ringing bells. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba dance around table, each ringing bells with paws, tails swaying, bells jingling."
+    },
+    {
+      "scene_number": 11,
+      "title": "Clapping Hands",
+      "story_beat": "Beat 11: Clapping Hands — Buma and Fuba clap hands together, celebrating.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba clap hands rhythmically, then spin around together.",
+      "emotion": "celebratory",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both clapping hands, then spinning in circles",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were dancing with bells; now they clap and spin",
+      "transition_to_next_scene": "cut to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, claps hands rhythmically with a fluffy orange cat with white paws and large expressive eyes. Both spin in circles. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba clap hands rhythmically, then spin in circles, bells still jingling."
+    },
+    {
+      "scene_number": 12,
+      "title": "Final Goodbye",
+      "story_beat": "Beat 12: Final Goodbye — They wave goodbye as music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand facing each other, wave goodbye with paws, music fades.",
+      "emotion": "friendly",
+      "expression": "both with gentle smiles",
+      "body_language": "both standing upright, paws raised in wave",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were spinning and clapping; now they stop and wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "scene_number": 13,
+      "title": "Intro: Meet Buma and Fuba",
+      "story_beat": "Beat 1: Intro — Buma runs around the house, and Fuba watches him with curiosity.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs in circles near the table; Fuba sits on a rug watching with wide eyes.",
+      "emotion": "curious",
+      "expression": "Buma grinning mischievously, Fuba with wide, attentive eyes",
+      "body_language": "Buma bouncing on feet, Fuba sitting upright, paws resting",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Scene 12 ended with a wave goodbye; now the scene resets to Buma running and Fuba observing",
+      "transition_to_next_scene": "cut to Buma hiding under table",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles near a wooden table. A fluffy orange cat with white paws and large expressive eyes sits on a rug watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in small circles near the table; Fuba remains seated, eyes wide and focused."
+    },
+    {
+      "scene_number": 14,
+      "title": "Buma Hides",
+      "story_beat": "Beat 2: Buma Hides — Buma hides under the table, and Fuba finds him.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma crawls under the table; Fuba paws at the table edge, then peeks under.",
+      "emotion": "playful",
+      "expression": "Buma peeking with a grin, Fuba with a surprised smile",
+      "body_language": "Buma tucked under table, Fuba leaning forward with one paw raised",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was running; now he hides under table, Fuba discovers him",
+      "transition_to_next_scene": "cut to Buma and Fuba playing together",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, crawls under a wooden table. A fluffy orange cat with white paws and large expressive eyes peeks under the table with one paw raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma crawls under table; Fuba paws at edge, then leans down to peek."
+    },
+    {
+      "scene_number": 15,
+      "title": "Play Together",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma pops up from under table, Fuba jumps back then pounces playfully.",
+      "emotion": "excited",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma standing upright, Fuba mid-leap with paws forward",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma hid under table; now they playfully interact",
+      "transition_to_next_scene": "cut to chase sequence",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops up from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leaps playfully toward him. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma pops up; Fuba leaps forward playfully, paws extended."
+    },
+    {
+      "scene_number": 16,
+      "title": "Game of Tag",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs around table, Fuba chases him, both tumble and laugh.",
+      "emotion": "joyful",
+      "expression": "Buma with wide grin, Fuba with open-mouthed laugh",
+      "body_language": "Buma running in circles, Fuba lunging and tumbling",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were playing; now they chase and tumble",
+      "transition_to_next_scene": "cut to final goodbye",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a wooden table. A fluffy orange cat with white paws and large expressive eyes chases him, both tumbling and laughing. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in circles; Fuba chases, both tumble and laugh."
+    },
+    {
+      "scene_number": 17,
+      "title": "Final Goodbye",
+      "story_beat": "Beat 5: Goodbye — They wave goodbye as the music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand facing each other, wave goodbye with paws, music fades.",
+      "emotion": "friendly",
+      "expression": "both with gentle smiles",
+      "body_language": "both standing upright, paws raised in wave",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were spinning and clapping; now they stop and wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "scene_number": 18,
+      "title": "Buma Plays Xylophone",
+      "story_beat": "Beat 6: Buma Plays — Buma sits at table, taps xylophone with paws.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma sits at table, taps colorful xylophone with paws, makes musical notes.",
+      "emotion": "happy",
+      "expression": "Buma with big smile, eyes sparkling",
+      "body_language": "Buma sitting upright, paws tapping xylophone",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They waved goodbye; now Buma is alone playing xylophone",
+      "transition_to_next_scene": "cut to Fuba entering",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits at a wooden table tapping a colorful xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys with paws, making musical notes."
+    },
+    {
+      "scene_number": 19,
+      "title": "Fuba Joins In",
+      "story_beat": "Beat 7: Fuba Joins — Fuba jumps on table, taps xylophone with paws.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Fuba jumps onto table, taps xylophone with paws, Buma watches.",
+      "emotion": "joyful",
+      "expression": "Fuba with wide grin, Buma with big smile",
+      "body_language": "Fuba standing on table, paws tapping; Buma seated, watching",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was playing alone; now Fuba joins",
+      "transition_to_next_scene": "cut to Buma and Fuba dancing",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits at a wooden table watching. A fluffy orange cat with white paws and large expressive eyes jumps onto the table, tapping a colorful xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Fuba jumps onto table, taps xylophone; Buma watches with smile."
+    },
+    {
+      "scene_number": 20,
+      "title": "Dancing Together",
+      "story_beat": "Beat 8: Dance — Buma and Fuba dance to xylophone music.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba dance in circles, paws tapping rhythmically.",
+      "emotion": "ecstatic",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both spinning in circles, paws tapping rhythmically",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were playing xylophone; now they dance",
+      "transition_to_next_scene": "cut to bells ringing",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances in circles with paws tapping. A fluffy orange cat with white paws and large expressive eyes dances beside him, paws tapping. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba spin in circles, paws tapping rhythmically."
+    },
+    {
+      "scene_number": 21,
+      "title": "Bells Ring",
+      "story_beat": "Beat 9: Bells — Bells ring cheerfully as they dance.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Bells ring overhead; Buma and Fuba jump and clap in rhythm.",
+      "emotion": "excited",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both jumping and clapping rhythmically",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were dancing; now bells ring, they clap",
+      "transition_to_next_scene": "cut to clapping hands",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances with paws clapping. A fluffy orange cat with white paws and large expressive eyes dances beside him, paws clapping. Cheerful bells ring overhead. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Bells ring; Buma and Fuba jump and clap rhythmically."
+    },
+    {
+      "scene_number": 22,
+      "title": "Clapping Hands",
+      "story_beat": "Beat 10: Clapping — Clapping hands appear, join their rhythm.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Clapping hands appear, join Buma and Fuba’s rhythm.",
+      "emotion": "joyful",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both dancing and clapping with hands",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Bells rang; now clapping hands join",
+      "transition_to_next_scene": "cut to final wave",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, dances and claps with paws. A fluffy orange cat with white paws and large expressive eyes dances and claps beside him. Cheerful clapping hands appear and join their rhythm. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Clapping hands appear and join Buma and Fuba’s rhythm."
+    },
+    {
+      "scene_number": 23,
+      "title": "Final Dance",
+      "story_beat": "Beat 11: Final Dance — They dance together, music peaks.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba spin in circles, paws clapping, music peaks.",
+      "emotion": "ecstatic",
+      "expression": "both with wide grins, eyes sparkling",
+      "body_language": "both spinning and clapping rhythmically",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Clapping hands joined; now dance peaks",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, spins and claps with paws. A fluffy orange cat with white paws and large expressive eyes spins and claps beside him. Cheerful clapping hands and bells ring. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba spin and clap rhythmically, music peaks."
+    },
+    {
+      "scene_number": 24,
+      "title": "Final Goodbye",
+      "story_beat": "Beat 12: Final Goodbye — They wave goodbye as music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand facing each other, wave goodbye with paws, music fades.",
+      "emotion": "friendly",
+      "expression": "both with gentle smiles",
+      "body_language": "both standing upright, paws raised in wave",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were dancing; now they stop and wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "scene_number": 25,
+      "title": "Intro: Meet Buma and Fuba",
+      "story_beat": "Beat 1: Intro — Buma runs around the house, and Fuba watches him with curiosity.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs in circles around the room, Fuba sits on the rug watching with wide eyes.",
+      "emotion": "curious",
+      "expression": "Buma grinning mischievously, Fuba with wide, surprised eyes",
+      "body_language": "Buma bouncing on feet, Fuba sitting upright with paws slightly raised",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were waving goodbye; now they’re back in the house, Buma running freely",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles. A fluffy orange cat with white paws and large expressive eyes sits on the rug watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in small circles, feet tapping; Fuba remains seated, eyes following Buma’s movement."
+    },
+    {
+      "scene_number": 26,
+      "title": "Buma Hides",
+      "story_beat": "Beat 2: Buma Hides — Buma hides under the table, and Fuba finds him.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma dives under the table, Fuba leans forward to peek underneath.",
+      "emotion": "playful",
+      "expression": "Buma peeking out with a grin, Fuba with a curious, half-smiling face",
+      "body_language": "Buma tucked under table, paws peeking out; Fuba crouching low, paws hovering near table edge",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was running; now he’s hiding under the table",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, peeks out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward to peek. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma quickly dives under table, then peeks out with a grin; Fuba leans closer, eyes widening."
+    },
+    {
+      "scene_number": 27,
+      "title": "Play Together",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma pops up from under table, Fuba jumps back, then both chase each other around the room.",
+      "emotion": "excited",
+      "expression": "Buma with wide grin, Fuba with open-mouthed surprise",
+      "body_language": "Buma leaping up, Fuba bounding backward then forward",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Dolly In"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Fuba found Buma under table; now they chase each other",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, leaps from under a wooden table. A fluffy orange cat with white paws and large expressive eyes bounds after him. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma pops up, Fuba jumps back then lunges forward; both run in circles around the room."
+    },
+    {
+      "scene_number": 28,
+      "title": "Game of Tag",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs toward Fuba, Fuba turns and pounces, then both tumble onto rug laughing.",
+      "emotion": "joyful",
+      "expression": "both with wide smiles and open mouths",
+      "body_language": "Buma tumbling forward, Fuba rolling onto back, paws flailing",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were chasing; now they tumble onto rug",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, tumbles onto rug. A fluffy orange cat with white paws and large expressive eyes rolls onto back, paws flailing. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs toward Fuba, Fuba turns and pounces; both tumble onto rug, paws flailing, mouths open in laughter."
+    },
+    {
+      "scene_number": 29,
+      "title": "Goodbye",
+      "story_beat": "Beat 5: Goodbye — They wave goodbye as the music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand facing each other, wave goodbye with paws, music fades.",
+      "emotion": "friendly",
+      "expression": "both with gentle smiles",
+      "body_language": "both standing upright, paws raised in wave",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were laughing; now they stop and wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves goodbye with paws. A fluffy orange cat with white paws and large expressive eyes waves back. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand facing each other, both raise paws to wave; music fades gently."
+    },
+    {
+      "scene_number": 30,
+      "title": "Bells Ring",
+      "story_beat": "Beat 6: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were waving goodbye; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 31,
+      "title": "Bells Ring",
+      "story_beat": "Beat 7: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 32,
+      "title": "Bells Ring",
+      "story_beat": "Beat 8: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 33,
+      "title": "Bells Ring",
+      "story_beat": "Beat 9: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 34,
+      "title": "Bells Ring",
+      "story_beat": "Beat 10: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 35,
+      "title": "Bells Ring",
+      "story_beat": "Beat 11: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to next scene",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 36,
+      "title": "Bells Ring",
+      "story_beat": "Beat 12: Bells Ring — Bells ring cheerfully as they play.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma taps xylophone keys, Fuba watches, then both clap hands to rhythm.",
+      "emotion": "happy",
+      "expression": "Buma grinning, Fuba with wide eyes and open mouth",
+      "body_language": "Buma sitting on xylophone, paws tapping keys; Fuba clapping hands",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now they’re playing music",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, taps a colorful xylophone. A fluffy orange cat with white paws and large expressive eyes claps hands. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma taps xylophone keys, Fuba claps hands; bells ring cheerfully."
+    },
+    {
+      "scene_number": 37,
+      "title": "Buma Runs Around",
+      "story_beat": "Beat 1: Intro — Buma runs around the house, and Fuba watches him with curiosity.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs in circles around the table; Fuba sits on rug, watching with wide eyes.",
+      "emotion": "curious",
+      "expression": "Buma grinning with eyes sparkling; Fuba eyes wide, mouth slightly open",
+      "body_language": "Buma bouncing on paws, tail twitching; Fuba seated, paws resting, head tilted",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were clapping; now Buma is running and Fuba is watching",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs in circles around a wooden table. A fluffy orange cat with white paws and large expressive eyes sits on a rug, watching. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs in circles around table; Fuba watches, head tilted, eyes wide."
+    },
+    {
+      "scene_number": 38,
+      "title": "Buma Hides Under Table",
+      "story_beat": "Beat 2: Buma Hides — Buma hides under the table, and Fuba finds him.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma dives under table; Fuba steps forward, peeks under table, then jumps back.",
+      "emotion": "surprised",
+      "expression": "Buma peeking out with grin; Fuba eyes wide, mouth open in surprise",
+      "body_language": "Buma tucked under table, one paw raised; Fuba standing, one paw raised, leaning forward",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma was running; now he hides under table",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, peeks out from under a wooden table. A fluffy orange cat with white paws and large expressive eyes leans forward, eyes wide, mouth open in surprise. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma dives under table; Fuba steps forward, peeks, then jumps back, eyes wide."
+    },
+    {
+      "scene_number": 39,
+      "title": "Fuba Finds Buma",
+      "story_beat": "Beat 2: Buma Hides — Buma hides under the table, and Fuba finds him.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Fuba paws at table edge, then jumps down to nudge Buma’s head; Buma pops up.",
+      "emotion": "playful",
+      "expression": "Buma grinning, eyes sparkling; Fuba smiling, eyes crinkled",
+      "body_language": "Buma pops up, paws raised; Fuba nudges with paw, then steps back with tail flicking",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Fuba found Buma under table; now he nudges him",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pops up from under a wooden table. A fluffy orange cat with white paws and large expressive eyes nudges his head with a paw. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Fuba nudges Buma’s head; Buma pops up, grinning, tail wagging."
+    },
+    {
+      "scene_number": 40,
+      "title": "Play Together",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs toward Fuba; Fuba leaps sideways, paws raised to catch him.",
+      "emotion": "excited",
+      "expression": "Buma eyes wide, mouth open in excitement; Fuba eyes wide, mouth open in anticipation",
+      "body_language": "Buma running toward Fuba, paws raised; Fuba leaps sideways, paws raised",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were playing; now they chase each other",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs toward a fluffy orange cat with white paws and large expressive eyes. The cat leaps sideways with paws raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs toward Fuba; Fuba leaps sideways, paws raised, eyes wide."
+    },
+    {
+      "scene_number": 41,
+      "title": "Chase Around Table",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma circles table; Fuba follows, paws tapping floor as he runs.",
+      "emotion": "energetic",
+      "expression": "Buma grinning, eyes sparkling; Fuba eyes wide, mouth open",
+      "body_language": "Buma circling table, paws tapping; Fuba running behind, paws tapping floor",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were chasing; now they circle table",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, circles a wooden table. A fluffy orange cat with white paws and large expressive eyes follows, paws tapping floor. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma circles table; Fuba follows, paws tapping floor, eyes wide."
+    },
+    {
+      "scene_number": 42,
+      "title": "Buma Tumbles",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma trips over table leg, falls backward; Fuba stops, watches with wide eyes.",
+      "emotion": "surprised",
+      "expression": "Buma eyes wide, mouth open; Fuba eyes wide, mouth open",
+      "body_language": "Buma falling backward, paws flailing; Fuba standing still, paws raised",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were chasing; now Buma trips",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, falls backward over a wooden table leg. A fluffy orange cat with white paws and large expressive eyes watches, eyes wide, mouth open. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma trips over table leg, falls backward; Fuba watches, eyes wide."
+    },
+    {
+      "scene_number": 43,
+      "title": "Fuba Laughs",
+      "story_beat": "Beat 3: Play Together — Buma and Fuba play together, turning their chase into a game.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Fuba jumps back, paws raised, then drops to floor, laughing.",
+      "emotion": "happy",
+      "expression": "Fuba eyes crinkled, mouth wide open in laughter; Buma grinning, eyes sparkling",
+      "body_language": "Fuba jumps back, paws raised, then drops to floor, paws flapping; Buma sitting up, paws raised",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "Buma fell; now Fuba laughs",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits up grinning. A fluffy orange cat with white paws and large expressive eyes laughs, paws flapping, eyes crinkled. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Fuba jumps back, drops to floor, laughs; Buma sits up, grinning."
+    },
+    {
+      "scene_number": 44,
+      "title": "Game of Tag",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma runs toward Fuba; Fuba leaps, paws raised to catch him.",
+      "emotion": "excited",
+      "expression": "Buma eyes wide, mouth open; Fuba eyes wide, mouth open",
+      "body_language": "Buma running toward Fuba, paws raised; Fuba leaps sideways, paws raised",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were laughing; now they chase again",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, runs toward a fluffy orange cat with white paws and large expressive eyes. The cat leaps sideways with paws raised. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma runs toward Fuba; Fuba leaps sideways, paws raised, eyes wide."
+    },
+    {
+      "scene_number": 45,
+      "title": "Buma Tags Fuba",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma pounces on Fuba’s back; Fuba rolls, paws flapping, laughing.",
+      "emotion": "playful",
+      "expression": "Buma grinning, eyes sparkling; Fuba eyes wide, mouth open in laughter",
+      "body_language": "Buma pounces on Fuba’s back, paws raised; Fuba rolls, paws flapping",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were chasing; now Buma tags Fuba",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, pounces on the back of a fluffy orange cat with white paws and large expressive eyes. The cat rolls, paws flapping, eyes wide, mouth open in laughter. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma pounces on Fuba’s back; Fuba rolls, paws flapping, laughing."
+    },
+    {
+      "scene_number": 46,
+      "title": "Both Laughing",
+      "story_beat": "Beat 4: Game of Tag — They chase each other playfully, ending in laughter.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba sit side by side, paws raised, both laughing.",
+      "emotion": "happy",
+      "expression": "Buma grinning, eyes sparkling; Fuba eyes crinkled, mouth wide open",
+      "body_language": "Buma sitting, paws raised; Fuba sitting, paws raised, leaning toward Buma",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were playing tag; now they sit together laughing",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, sits beside a fluffy orange cat with white paws and large expressive eyes. Both have paws raised, eyes crinkled, mouths wide open in laughter. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba sit side by side, paws raised, laughing."
+    },
+    {
+      "scene_number": 47,
+      "title": "Wave Goodbye",
+      "story_beat": "Beat 5: Goodbye — They wave goodbye as the music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba stand, wave paws, then turn to look at each other.",
+      "emotion": "friendly",
+      "expression": "Buma grinning, eyes sparkling; Fuba eyes crinkled, mouth in smile",
+      "body_language": "Buma standing, paws raised in wave; Fuba standing, paws raised in wave",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were laughing; now they wave goodbye",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves paws. A fluffy orange cat with white paws and large expressive eyes waves paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba stand, wave paws, then turn to look at each other."
+    },
+    {
+      "scene_number": 48,
+      "title": "Goodbye",
+      "story_beat": "Beat 5: Goodbye — They wave goodbye as the music fades.",
+      "duration_seconds": 3,
+      "characters": [
+        "buma",
+        "fuba"
+      ],
+      "location": "house_interior",
+      "time_of_day": "daytime",
+      "action": "Buma and Fuba wave paws, then turn to look at each other.",
+      "emotion": "friendly",
+      "expression": "Buma grinning, eyes sparkling; Fuba eyes crinkled, mouth in smile",
+      "body_language": "Buma standing, paws raised in wave; Fuba standing, paws raised in wave",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "warm natural daylight",
+      "environment": "colorful living room with wooden table and soft pastel walls",
+      "continuity_from_previous_scene": "They were waving goodbye; now they turn to look at each other",
+      "transition_to_next_scene": "fade to black",
+      "image_prompt": "A small chubby brown mouse with large bright eyes and pointy ears, wearing no clothes, waves paws. A fluffy orange cat with white paws and large expressive eyes waves paws. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+      "video_prompt": "Buma and Fuba wave paws, then turn to look at each other."
+    }
+  ],
+  "sceneCount": 48,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": "Buma Chuha",
+  "error": null,
+  "createdAt": "2026-09-17T15:03:46.340Z",
+  "updatedAt": "2026-09-17T15:11:33.418Z"
+}

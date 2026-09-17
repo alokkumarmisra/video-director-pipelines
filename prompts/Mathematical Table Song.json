@@ -1,0 +1,248 @@
+{
+  "description": "Mathematical Table Song — A cheerful preschool educational children's song that teaches basic multiplication tables through a fun and interactive classroom atmosphere.",
+  "duration": 3,
+  "referencePrompt": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols on them. (3D preschool animation), A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs (3D preschool animation), Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "sequence": [
+    {
+      "title": "introduction",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "learning_verses_verse_one",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "call_and_response_moments",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "learning_break_think_and_count",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs using small, colorful counters to count and learn numbers. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "learning_verses_verse_two",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "playful_bridge",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "quiz_break_think_it_through",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "final_chorus",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "teacher_praises",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "encouragement_to_practice",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "children_sing_along",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "classroom_exit",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": ""
+    },
+    {
+      "title": "learning_verses_verse_one",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Teacher standing at the front holding a xylophone. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher strikes the xylophone once, children look up and start singing in unison."
+    },
+    {
+      "title": "call_and_response_moments",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "learning_break_think_and_count",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children holding counters close to their chests, heads tilted slightly in deep thought. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children holding counters, heads tilted slightly."
+    },
+    {
+      "title": "learning_verses_verse_two",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "playful_bridge",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "quiz_break_think_it_through",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children holding hands behind their backs, heads tilted slightly in concentration. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children holding hands behind their backs, heads tilted slightly."
+    },
+    {
+      "title": "final_chorus",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children singing along in unison, clapping hands together. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "classroom_exit",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Children waving hands in a wave, turning around to look back at the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "title": "outside_play",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children running around, laughing loudly."
+    },
+    {
+      "title": "singing_along",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "final_chorus",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing in unison, clapping hands together."
+    },
+    {
+      "title": "classroom_exit",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and waving goodbye to the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "title": "introduction_to_learning_verses",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children sitting up straight, hands clasped in anticipation as a teacher introduces the lesson."
+    },
+    {
+      "title": "learning_verses_verse_one",
+      "image": "Teacher playing a small, colorful xylophone. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher playing xylophone, children singing along in unison."
+    },
+    {
+      "title": "call_and_response_moments",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children responding to teacher's questions with loud and clear answers. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children raising hands high in the air, jumping up and down in place."
+    },
+    {
+      "title": "learning_break_think_and_count",
+      "image": "Children using small, colorful counters to count. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children counting in groups. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children holding counters and clapping hands."
+    },
+    {
+      "title": "learning_verses_verse_two",
+      "image": "Teacher playing a beautiful marimba and a gleaming glockenspiel. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing along in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher playing marimba and glockenspiel, children singing along."
+    },
+    {
+      "title": "playful_bridge",
+      "image": "Teacher playing a small vibrant ukulele. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing playfully. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher playing ukulele, children singing playfully."
+    },
+    {
+      "title": "quiz_break_think_it_through",
+      "image": "Children thinking and counting in small groups. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children thinking and counting in small groups. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children holding counters and clapping hands."
+    },
+    {
+      "title": "final_chorus",
+      "image": "Teacher playing a grand piano. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children singing together in unison. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher playing piano, children singing together."
+    },
+    {
+      "title": "outro",
+      "image": "Teacher smiling broadly at the children. Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children looking up at their teacher with admiration. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher standing in front of the class, hands clasped together."
+    },
+    {
+      "title": "children_exiting",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside and waving goodbye to the teacher as they head outside. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children waving hands in a wave, turning around to look back at the teacher."
+    },
+    {
+      "title": "singing_along",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children singing along loudly while enjoying the day. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing along loudly."
+    },
+    {
+      "title": "playing_outside",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. A clean playground with swings, slides, and monkey bars, bright and cheerful, filled with children playing outside after a fun math lesson. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children running around, climbing on equipment, playing games."
+    },
+    {
+      "title": "cheerful_introduction",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher stands at the front of a clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful, filled with children sitting on colorful chairs. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children standing up as teacher starts singing."
+    },
+    {
+      "title": "learning_verses_verse_one",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing along, clapping hands in rhythm. Teacher plays xylophone and marimba to accompany the song. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing and clapping hands in rhythm."
+    },
+    {
+      "title": "call_and_response_moments",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children respond to teacher’s calls with enthusiasm. Teacher plays piano and claps along. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children responding to the teacher's calls."
+    },
+    {
+      "title": "learning_break_think_and_count",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children use counters to count and solve problems. Teacher walks around, observing their work. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children using counters to count and solve problems."
+    },
+    {
+      "title": "learning_verses_verse_two",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing along with the teacher. Teacher plays glockenspiel and ukulele to accompany the song. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing along with the teacher."
+    },
+    {
+      "title": "playful_bridge",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing the playful bridge, clapping hands in rhythm. Teacher plays bells to add to the cheerful atmosphere. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing the playful bridge."
+    },
+    {
+      "title": "quiz_break_think_it_through",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children think and discuss in small groups. Teacher walks around, listening to their discussions. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children thinking and discussing in small groups."
+    },
+    {
+      "title": "final_chorus",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children sing the final chorus with energy. Teacher plays piano and claps along. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children singing the final chorus."
+    },
+    {
+      "title": "praise_for_hard_work",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher gives a warm smile and thumbs up. Children cheer in response. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher giving a warm smile and thumbs up."
+    },
+    {
+      "title": "playing_outside",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children play outside, enjoying the day after a fun math lesson. Some children are seen climbing on equipment, others playing games. Clean playground with swings, slides, and monkey bars. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children running around, climbing on equipment, playing games."
+    },
+    {
+      "title": "reflection",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Teacher reflects on the day's lesson, smiling warmly. Children listen intently. Clean modern classroom with colorful posters of numbers and tables hanging on the walls, bright and cheerful. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Teacher reflecting on the day's lesson."
+    },
+    {
+      "title": "closing",
+      "image": "Cute children with round eyes and big smiles, wearing colorful t-shirts with fun math symbols. Children wave goodbye as they leave the classroom. Teacher waves back, smiling warmly. Clean playground with swings, slides, and monkey bars. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "motion": "Children waving goodbye."
+    }
+  ],
+  "folder_name": "mathematical_table_song"
+}

@@ -167,12 +167,23 @@ describe("prompt generation", () => {
 describe("server + UI wiring (static)", () => {
   const serverSrc = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
 
-  it("server exposes GET /api/presets and GET /api/presets/:id via the registry service", () => {
-    assert.ok(serverSrc.includes('"/api/presets"'), "list route missing");
-    assert.ok(serverSrc.includes('"/api/presets/"'), "detail route missing");
-    assert.ok(serverSrc.includes("GetPresetContent"), "must resolve through PresetService");
-    assert.ok(serverSrc.includes("resolvePresetId"), "must sanitize ids through PresetService");
-  });
+    it("server exposes GET /api/presets and GET /api/presets/:id via the registry service", () => {
+      assert.ok(serverSrc.includes('"/api/presets"'), "list route missing");
+      assert.ok(serverSrc.includes('"/api/presets/"'), "detail route missing");
+      assert.ok(serverSrc.includes("GetPresetContent"), "must resolve through PresetService");
+      assert.ok(serverSrc.includes("resolvePresetId"), "must sanitize ids through PresetService");
+    });
+
+    it("folder resolution reuses a row-less scenario's own dir (no _N scatter)", () => {
+      // Regression: every row-less run minted +1 because a merely-existing
+      // dir counted as taken, scattering one project's assets across
+      // minku_story_2_2, _3, … and emptying its gallery. migrateProjectStorage
+      // must reuse the slug dir when absent or prefix-owned, and mint only on
+      // genuinely foreign collisions.
+      assert.ok(serverSrc.includes("prefixForDir(base)"), "must check prefix ownership");
+      assert.match(serverSrc, /startsWith\(`\$\{prefix\}_`\)/, "must match own files by prefix");
+      assert.ok(serverSrc.includes("ensureUniqueFolder(displayName, displayName)"), "foreign collisions must still mint");
+    });
 
   it("server never reads preset files from client-supplied paths", () => {
     // The only fs reads of preset content go through GetPresetContent(id).

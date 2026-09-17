@@ -12,9 +12,10 @@ import VideoMetaPanel from "./components/VideoMetaPanel";
 import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
 import ResourcePage from "./components/ResourcePage";
+import DirectorPage from "./components/DirectorPage";
 import Login from "./components/Login";
 import { DialogProvider, useDialog } from "./components/Dialog";
-import { IconCheck, IconChevronDown, IconClapper, IconDatabase, IconFolder, IconLogOut, IconMoon, IconPanel, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { IconCheck, IconChevronDown, IconClapper, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMoon, IconPanel, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
@@ -156,7 +157,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   onThemeColor: (c: string) => void;
 }) {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace" | "resource">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource" | "director">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -962,6 +963,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             onClick={() => setView("home")}
             aria-current={view === "home" ? "page" : undefined}
           >
+            <IconFolder size={13} aria-hidden="true" />
             Home
           </button>
           <button
@@ -970,6 +972,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             aria-current={view === "workspace" ? "page" : undefined}
             title={draft ? `Workspace: ${draft.name} (unsaved)` : name ? `Workspace: ${name}` : "Open a project from Home first"}
           >
+            <IconClapper size={13} aria-hidden="true" />
             Projects
           </button>
           <button
@@ -978,7 +981,17 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             aria-current={view === "resource" ? "page" : undefined}
             title="Open the Resource page"
           >
+            <IconDatabase size={13} aria-hidden="true" />
             Resource
+          </button>
+          <button
+            className={`topnav-btn ${view === "director" ? "on" : ""}`}
+            onClick={() => setView("director")}
+            aria-current={view === "director" ? "page" : undefined}
+            title="Open the Director view"
+          >
+            <IconFilm size={13} aria-hidden="true" />
+            Director
           </button>
         </nav>
         {/* Global generation status — a toggleable "Progress Status" window
@@ -1138,7 +1151,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-      <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}`}>
+        <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}`}>
         {!sidebarOpen && view !== "home" && (
           <button
             className="sidebar-show"
@@ -1166,6 +1179,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             never disturbed; only the visible view swaps. */}
         <div className="col" style={view !== "resource" ? { display: "none" } : undefined}>
           <ResourcePage onOpenProject={openProject} />
+        </div>
+        <div className="col" style={view !== "director" ? { display: "none" } : undefined}>
+          <DirectorPage
+            onOpenProject={openProject}
+            onProjectsChanged={() => {
+              refreshScenarios();
+              refresh();
+            }}
+          />
         </div>
         {sidebarOpen && (
         <aside className="sidebar" style={view === "home" ? { display: "none" } : undefined}>
@@ -1211,7 +1233,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                       ? `${vids}/${scenes} videos rendered`
                       : "No scenes yet";
               return (
-              <div className={`scenario-row${selected ? " selected" : ""}${loadingThis ? " loading" : ""}`} key={s.name}>
+              <div className={`scenario-row${selected ? " selected" : ""}${loadingThis ? " loading" : ""}${running ? " generating" : ""}`} key={s.name}>
                 <button
                   className={`scenario-item ${selected ? "on" : ""}`}
                   onClick={() => openProject(s.name)}
@@ -1358,7 +1380,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           ) : (
           <>
           {/* Project cards below the run console: Generate Reference, then
-              the Shot List, then keyframes → clips. Each card hides/shows on
+              Keyframes → clips, then the Shot List. Each card hides/shows on
               its own toggle. */}
           <GenerateReference
             referencePrompt={overrides.referencePrompt ?? (draft ? draft.config : cfg)?.referencePrompt ?? ""}
@@ -1369,13 +1391,14 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             isDraft={!!draft}
             referenceSlot={!draft && contentName ? (
               <OutputGallery
-                // While a run is active, follow the run's own output dir
-                // (engine + Reel cut included) — the same listing the
-                // Rendered Clip reference used to show — so generating
-                // chips, versions and uploads track the live run. Idle, the
-                // gallery follows the Video dropdown cut (cutDir). Dirs are
-                // folder-based (immutable storage), never display names.
-                scenario={runActive && runScenario ? outScenario(folderForName(runScenario), engine, runFormat) : cutDir}
+                // Always the selected project's own cut (cutDir) — never the
+                // live run's dir. Following the run here is what kept showing
+                // the previous project's references after switching projects
+                // (and sent uploads to the wrong project). Live progress
+                // still lights up via generatingScenario/generatingFormat
+                // below, like the Keyframes card. Dirs are folder-based
+                // (immutable storage), never display names.
+                scenario={cutDir}
                 refreshKey={refreshKey}
                 section="reference"
                 generatingScenario={runFolderBase}
@@ -1386,6 +1409,24 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                 onUploaded={refresh}
               />
             ) : null}
+          />
+          {/* Keyframes → clips: its own separate section directly below
+              Generate Reference (was below the Shot List), with the same
+              persisted hide/show toggle as every other card (ss-sec-beats).
+              Follows the Video dropdown cut like the rest of the workspace. */}
+          <OutputGallery
+            scenario={cutDir}
+            refreshKey={refreshKey}
+            section="beats"
+            generatingScenario={runFolderBase}
+            generatingFormat={runActive ? runFormat : null}
+            regenTarget={runActive ? regenTarget : null}
+            runQueue={runQueue}
+            onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
+            onUploaded={refresh}
+            totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
+            progress={topProgress}
+            onGotoEditorScene={(n) => gotoScene("editor", n)}
           />
           {editor && (
             <ShotList
@@ -1415,20 +1456,6 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               runQueue={runQueue}
             />
           )}
-          <OutputGallery
-            scenario={cutDir}
-            refreshKey={refreshKey}
-            section="beats"
-            generatingScenario={runFolderBase}
-            generatingFormat={runActive ? runFormat : null}
-            regenTarget={runActive ? regenTarget : null}
-            runQueue={runQueue}
-            onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
-            onUploaded={refresh}
-            totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
-            progress={topProgress}
-            onGotoEditorScene={(n) => gotoScene("editor", n)}
-          />
           {/* Reel manager card: only on the INSTAGRAM cut — the scenes
               themselves browse in the sections above (they follow the cut).
               YouTube hides this card entirely (not rendered). */}

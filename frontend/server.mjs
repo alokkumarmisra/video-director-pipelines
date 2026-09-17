@@ -16,6 +16,7 @@ import {
 } from "../lib/variant.mjs";
 import {
   planDelta,
+  latestVersionOf,
   resolveEffective,
   EFFECTIVE_ASSETS_SQL,
   EXACT_VERSION_SQL,
@@ -27,6 +28,19 @@ import {
   resolvePresetId,
 } from "../lib/presets.mjs";
 import { applyMasterToBeats } from "../lib/master_prompt.mjs";
+import {
+  SCENE_BATCH,
+  sceneCountFor,
+  styleLockFor,
+  DIRECTOR_SYSTEM,
+  stripJson,
+  normalizeBlueprint,
+  normalizeScene,
+  buildBiblePrompt,
+  buildScenesPrompt,
+  buildRegenPrompt,
+  boardToScenario,
+} from "../lib/director.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -342,7 +356,28 @@ function slugifyDirFilenames(dir, prefix, seq) {
 // rename map. Safe no-op when already canonical. Returns the folder.
 async function migrateProjectStorage(displayName) {
   const stored = pgUp ? await getFolderNameFromRow(displayName) : null;
-  const folder = stored || (pgUp ? await ensureUniqueFolder(displayName, displayName) : folderName(displayName));
+  // Stable folder claim WITHOUT a project row: reuse the slug dir when it
+  // is absent or already holds this scenario's own files (prefix match) — so
+  // every run for the same unsaved scenario lands in the SAME folder. Only a
+  // genuinely foreign collision (dir exists with other files) mints a fresh
+  // _N folder. (Previously every row-less run minted +1 merely because the
+  // previous run's dir existed, scattering one project's assets across
+  // minku_story_2_2, _3, … and emptying its gallery forever.)
+  let folder = stored;
+  if (!folder) {
+    const base = folderName(displayName);
+    let ours = false;
+    try {
+      const dir = path.join(OUTPUTS, base);
+      if (!fs.existsSync(dir)) ours = true; // fresh — claim base
+      else {
+        const prefix = prefixForDir(base);
+        ours = fs.readdirSync(dir).some((f) =>
+          f === "state.json" || f === "concat_list.txt" || f.startsWith(`${prefix}_`));
+      }
+    } catch { ours = false; }
+    folder = ours ? base : (pgUp ? await ensureUniqueFolder(displayName, displayName) : base);
+  }
   if (pgUp && !stored) {
     try {
       await pgPool.query(
@@ -870,6 +905,10 @@ async function pgSeedInstagramRows(query, projectId, folder, engine, cfg, versio
   }
 }
 async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
+  // Fail fast with a clear message instead of a cryptic
+  // project_assets_version_check violation deep in the loop below.
+  if (latestVersionOf(version) == null)
+    throw new Error(`pgSaveProject: refusing phantom version ${JSON.stringify(version)} for ${name} (must be >= 1)`);
   // Asset rows carry the STORED immutable folder (a rename must not rewrite
   // history paths). outputFolder defaults to it when the caller passes none.
   const folderSlug = (await getFolderNameFromRow(name)) || folderName(name);
@@ -1107,6 +1146,16 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
 // (EFFECTIVE_ASSETS_SQL, per-scene pills) keep working: they simply resolve
 // against a version count that no longer grows on save.
 async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg) {
+  // Total guard: latestVersion must be a real existing version (>= 1). A
+  // phantom 0/NaN (e.g. max(version) over zero rows — Number(null) is 0)
+  // would violate project_assets_version_check on the first asset INSERT.
+  // Fall back to the delta path, which mints the correct next version
+  // (COALESCE(max, 0) + 1 = 1 when empty). Checked before BEGIN so no
+  // transaction is opened for the delegated save.
+  if (latestVersionOf(latestVersion) == null) {
+    const saved = await pgSaveVersionDelta(name, prevCfg, cfg);
+    return { ...saved, updated: true };
+  }
   const client = await pgPool.connect();
   try {
     await client.query("BEGIN");
@@ -1782,6 +1831,9 @@ const LLM_BASE = (process.env.LLM_BASE || "https://furian-1.tailb2c0b0.ts.net").
 // there AI Craft + Generate behave like any other project.
 const RESOURCES = path.join(ROOT, "resources");
 const RES_META = path.join(RESOURCES, "meta.json");
+// AI Story Director boards (file-persisted JSON, one per story — resumable,
+// debuggable, works with or without Postgres like prompts/*.json).
+const DIRECTOR = path.join(ROOT, "director");
 const resReadMeta = () => {
   try {
     const m = JSON.parse(fs.readFileSync(RES_META, "utf8"));
@@ -3073,8 +3125,13 @@ const server = http.createServer(async (req, res) => {
           catch { prevCfg = null; }
           const latestRow = await pgPool.query(
             "SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
-          const latest = Number(latestRow.rows[0]?.v);
-          if (!Number.isInteger(latest)) {
+          // max() is NULL with zero version rows (all versions deleted, or a
+          // project row created without versions) — latestVersionOf maps that
+          // to null so the first save mints v1 via the delta path. A bare
+          // Number(null) is 0 and used to route into pgSaveVersionInPlace at
+          // v0, violating project_assets_version_check (version > 0).
+          const latest = latestVersionOf(latestRow.rows[0]?.v);
+          if (latest == null) {
             const saved = await pgSaveVersionDelta(name, prevCfg, cfg);
             version = saved.version;
             project_id = saved.projectId;
@@ -3732,6 +3789,273 @@ const server = http.createServer(async (req, res) => {
         .catch((e) => console.warn("[pg] catalog failed:", e.message));
       return json(res, 200, await outputsPayload(storDir));
     }
+    // ------------------------------------------------- AI Story Director
+    // Story-to-Video workflow on top of the existing pipeline: the director
+    // authors a storyboard (analysis -> bibles -> beats -> scenes) via the
+    // local LLM; APPROVE hands a standard scenario config to the EXISTING
+    // save/generation pipeline (client calls saveScenario, then opens the
+    // workspace). No separate image/video implementation exists here.
+    // Shared LLM call reusing the craft-endpoint convention (model "local",
+    // thinking disabled). Parse failures save the raw response for debugging
+    // and throw a useful error — nothing is silently discarded.
+    async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = 300000, rawTag = null }) {
+      const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+      if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), timeoutMs);
+      try {
+        const r = await fetch(`${base}/v1/chat/completions`, {
+          method: "POST",
+          signal: ctl.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "local",
+            messages: [{ role: "system", content: system }, { role: "user", content: user }],
+            temperature,
+            max_tokens: maxTokens,
+            chat_template_kwargs: { enable_thinking: false },
+          }),
+        });
+        if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        const d = await r.json();
+        const text = String(d.choices?.[0]?.message?.content ?? "");
+        try {
+          return stripJson(text);
+        } catch (e) {
+          if (rawTag) {
+            try {
+              fs.mkdirSync(DIRECTOR, { recursive: true });
+              fs.writeFileSync(path.join(DIRECTOR, rawTag), text);
+            } catch { /* raw save is best-effort */ }
+          }
+          throw new Error(`${e.message}${rawTag ? ` (raw response saved to director/${rawTag})` : ""}`);
+        }
+      } catch (e) {
+        if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
+        throw e;
+      } finally { clearTimeout(t); }
+    }
+    const directorBoardFile = (id) => path.join(DIRECTOR, `${id}.json`);
+    const readDirectorBoard = (id) => {
+      if (!isSafe(id)) throw new Error("bad board id");
+      const f = directorBoardFile(id);
+      if (!fs.existsSync(f)) throw new Error("board not found");
+      return JSON.parse(fs.readFileSync(f, "utf8"));
+    };
+    const writeDirectorBoard = (board) => {
+      fs.mkdirSync(DIRECTOR, { recursive: true });
+      board.updatedAt = new Date().toISOString();
+      fs.writeFileSync(directorBoardFile(board.id), JSON.stringify(board, null, 2));
+      return board;
+    };
+    const directorBoardMeta = (b) => ({
+      id: b.id,
+      title: b.input?.title ?? b.id,
+      status: b.status,
+      scenes: Array.isArray(b.scenes) ? b.scenes.length : 0,
+      sceneCount: b.sceneCount ?? 0,
+      scenarioName: b.scenarioName ?? null,
+      updatedAt: b.updatedAt ?? null,
+    });
+    const DIRECTOR_GENRES = ["Kids", "Devotional", "Adventure", "Fantasy", "Horror", "Comedy", "Educational", "Custom"];
+    const DIRECTOR_STYLES = ["3D Preschool Animation", "3D Cinematic", "Realistic", "Anime", "Cartoon", "Indian Mythological", "Fantasy", "Custom"];
+    const DIRECTOR_LANGS = ["Hindi", "English", "Hinglish"];
+    const DIRECTOR_ASPECTS = ["16:9", "9:16", "1:1"];
+    function directorValidateInput(body) {
+      const b = body && typeof body === "object" ? body : {};
+      const title = String(b.title || "").trim();
+      const story = String(b.story || "").trim();
+      if (!title) throw new Error("story title is required");
+      if (story.length < 20) throw new Error("story is too short — paste the full story");
+      const language = DIRECTOR_LANGS.includes(b.language) ? b.language : "English";
+      const genre = DIRECTOR_GENRES.includes(b.genre) ? b.genre : "Kids";
+      const visualStyle = DIRECTOR_STYLES.includes(b.visualStyle) ? b.visualStyle : "3D Preschool Animation";
+      const aspectRatio = DIRECTOR_ASPECTS.includes(b.aspectRatio) ? b.aspectRatio : "16:9";
+      const targetSeconds = Math.max(15, Math.min(3600, Math.floor(Number(b.targetSeconds)) || 60));
+      const sceneSeconds = Math.max(1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
+      const sceneCount = sceneCountFor(targetSeconds, sceneSeconds);
+      if (!sceneCount) throw new Error("could not derive a scene count from the durations");
+      return {
+        title,
+        story,
+        language,
+        genre,
+        genreCustom: genre === "Custom" ? String(b.genreCustom || "").trim() : "",
+        visualStyle,
+        styleCustom: visualStyle === "Custom" ? String(b.styleCustom || "").trim() : "",
+        targetSeconds,
+        sceneSeconds,
+        aspectRatio,
+        instructions: String(b.instructions || "").trim(),
+      };
+    }
+    if (p === "/api/director/boards" && req.method === "GET") {
+      fs.mkdirSync(DIRECTOR, { recursive: true });
+      const boards = fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"));
+      const list = [];
+      for (const f of boards) {
+        try { list.push(directorBoardMeta(JSON.parse(fs.readFileSync(path.join(DIRECTOR, f), "utf8")))); }
+        catch { /* skip corrupt board files */ }
+      }
+      list.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+      return json(res, 200, list);
+    }
+    if (p === "/api/director/analyze" && req.method === "POST") {
+      const input = directorValidateInput(await readJson(req));
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM,
+        user: buildBiblePrompt(input),
+        maxTokens: 8000,
+        temperature: 0.7,
+        timeoutMs: 300000,
+        rawTag: `_raw_${slug(input.title)}_bible.log`,
+      });
+      const blueprint = normalizeBlueprint(raw);
+      if (!blueprint.characters.length && !blueprint.beats.length)
+        throw new Error("director returned an empty blueprint — try again");
+      const id = slug(input.title) || `story_${Date.now().toString(36)}`;
+      const board = writeDirectorBoard({
+        id,
+        input,
+        status: "analyzed",
+        blueprint,
+        scenes: [],
+        sceneCount: sceneCountFor(input.targetSeconds, input.sceneSeconds),
+        styleLock: styleLockFor(input.visualStyle, input.styleCustom),
+        scenarioName: null,
+        error: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return json(res, 200, board);
+    }
+    {
+      // Board-scoped routes: GET/PUT/DELETE /api/director/boards/:id (board id
+      // never contains slashes — isSafe enforced on read).
+      const mBoard = p.match(/^\/api\/director\/boards\/([^/]+)$/);
+      if (mBoard) {
+        const id = decodeURIComponent(mBoard[1]);
+        if (req.method === "GET") return json(res, 200, readDirectorBoard(id));
+        if (req.method === "DELETE") {
+          readDirectorBoard(id); // throws when missing
+          fs.rmSync(directorBoardFile(id));
+          return json(res, 200, { ok: true });
+        }
+        if (req.method === "PUT") {
+          const board = readDirectorBoard(id);
+          const patch = await readJson(req);
+          // Rename the board (the approve target follows the board title, so
+          // the created project is named exactly what the user entered).
+          if (patch.input && typeof patch.input === "object") {
+            const nt = String(patch.input.title || "").trim().slice(0, 120);
+            if (nt) board.input.title = nt;
+          }
+          // Full-array merges for bible/scene edits from the storyboard UI.
+          // Deleted scenes renumber the plan and shrink its total.
+          if (patch.blueprint && typeof patch.blueprint === "object") {
+            const nb = normalizeBlueprint({ ...board.blueprint, ...patch.blueprint });
+            board.blueprint = nb;
+          }
+          for (const k of ["characters", "locations", "objects"]) {
+            if (Array.isArray(patch[k])) {
+              const norm = k === "characters" ? board.blueprint.characters.map((c, i) => ({ ...c, ...(patch[k][i] || {}) }))
+                : board.blueprint[k].map((x, i) => ({ ...x, ...(patch[k][i] || {}) }));
+              board.blueprint[k] = norm;
+            }
+          }
+          if (Array.isArray(patch.scenes)) {
+            board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds));
+            board.sceneCount = board.scenes.length;
+          }
+          board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
+          board.error = null;
+          return json(res, 200, writeDirectorBoard(board));
+        }
+      }
+    }
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/scenes$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.blueprint) throw new Error("analyze the story first");
+      const body = await readJson(req).catch(() => ({}));
+      const done = board.scenes.length;
+      const remaining = board.sceneCount - done;
+      if (remaining <= 0) return json(res, 200, board);
+      const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
+      const beats = (board.blueprint.beats || []).slice();
+      const prevScene = done > 0 ? board.scenes[done - 1] : null;
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM,
+        user: buildScenesPrompt({
+          input: board.input, blueprint: board.blueprint, beats, prevScene,
+          startNumber: done + 1, count: n, styleLock: board.styleLock,
+        }),
+        maxTokens: 16000,
+        temperature: 0.5,
+        timeoutMs: 600000,
+        rawTag: `_raw_${id}_scenes_${done + 1}.log`,
+      });
+      const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
+      if (!got.length) throw new Error("director returned no scenes — try again");
+      for (let i = 0; i < got.length && board.scenes.length < board.sceneCount; i++) {
+        board.scenes.push(normalizeScene(got[i], board.scenes.length + 1, board.input.sceneSeconds));
+      }
+      board.status = board.scenes.length >= board.sceneCount ? "ready" : "scenes-partial";
+      board.error = null;
+      return json(res, 200, writeDirectorBoard(board));
+    }
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/regenerate-scene$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const body = await readJson(req);
+      const index = Math.floor(Number(body.index));
+      if (!Number.isInteger(index) || index < 0 || index >= board.scenes.length)
+        throw new Error("bad scene index");
+      const scene = board.scenes[index];
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM,
+        user: buildRegenPrompt({
+          input: board.input, blueprint: board.blueprint, scene,
+          prevScene: index > 0 ? board.scenes[index - 1] : null,
+          nextScene: index < board.scenes.length - 1 ? board.scenes[index + 1] : null,
+          styleLock: board.styleLock,
+        }),
+        maxTokens: 4000,
+        temperature: 0.6,
+        timeoutMs: 300000,
+        rawTag: `_raw_${id}_regen_${scene.scene_number}.log`,
+      });
+      const fresh = raw.scene && typeof raw.scene === "object" ? raw.scene : raw;
+      board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds);
+      board.error = null;
+      return json(res, 200, writeDirectorBoard(board));
+    }
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/approve$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.scenes.length) throw new Error("nothing to approve — generate scenes first");
+      const config = boardToScenario(board);
+      // Project name = the story title verbatim (spaces allowed, like other
+      // display names) — never silently slugified or taken from a stale
+      // board. Same _2 suffix rule on collision.
+      let target = String(board.input.title || "").trim().slice(0, 120) || id;
+      try {
+        const taken = new Set((await dbListScenarios()).map((r) => r.name));
+        if (taken.has(target)) {
+          for (let i = 2; ; i++) {
+            if (!taken.has(`${target}_${i}`)) { target = `${target}_${i}`; break; }
+          }
+        }
+      } catch { /* name check is best-effort; save enforces uniqueness */ }
+      board.status = "approved";
+      board.scenarioName = target;
+      board.error = null;
+      writeDirectorBoard(board);
+      // The CLIENT persists via the existing saveScenario (PUT
+      // /api/scenario/:name) — identical semantics to the Scenario Editor
+      // Save — then opens the workspace for standard generation.
+      return json(res, 200, { name: target, config });
+    }
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
       if (!isSafe(body.scenario)) return json(res, 400, { error: "bad scenario" });
@@ -3994,13 +4318,15 @@ const server = http.createServer(async (req, res) => {
       if (!pgUp) return json(res, 503, { error: "database unavailable" });
       const pid = await pgProjectId(name);
       if (pid == null) return json(res, 200, []);
-      // Missing ?version= means latest — Number(null) is 0, which is a valid
-      // integer but never a real version, so only parse when present.
+      // Missing ?version= means latest. The DB fallback is NULL with zero
+      // version rows — latestVersionOf maps that (and any other phantom like
+      // Number(null) === 0) to null so the endpoint returns [] instead of
+      // querying a version that can never exist.
       const versionParam = u.searchParams.get("version");
       let version = versionParam == null || versionParam === "" ? NaN : Number(versionParam);
       if (!Number.isInteger(version)) {
         const r = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
-        version = Number(r.rows[0]?.v);
+        version = latestVersionOf(r.rows[0]?.v) ?? NaN;
       }
       if (!Number.isInteger(version)) return json(res, 200, []);
       const mode = String(u.searchParams.get("mode") || "").toLowerCase();

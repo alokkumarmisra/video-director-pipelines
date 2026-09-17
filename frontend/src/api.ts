@@ -511,3 +511,122 @@ export const listProjectAssets = (name: string, version?: number, mode?: "effect
   const q = params.toString();
   return get<ProjectAsset[]>(`/api/project/${name}/assets${q ? `?${q}` : ""}`);
 };
+
+// ---------------------------------------------------------------- AI Story Director
+// Story-to-Video boards (director/*.json on the server). The director only
+// authors storyboards — APPROVE hands a standard scenario config to the
+// existing saveScenario/workspace pipeline, so generation stays 100% existing.
+export interface DirectorInput {
+  title: string;
+  story: string;
+  language: string;
+  genre: string;
+  genreCustom?: string;
+  visualStyle: string;
+  styleCustom?: string;
+  targetSeconds: number;
+  sceneSeconds: number;
+  aspectRatio: string;
+  instructions?: string;
+}
+
+export interface DirectorScene {
+  scene_number: number;
+  title: string;
+  story_beat: string;
+  duration_seconds: number;
+  characters: string[];
+  location: string;
+  time_of_day: string;
+  action: string;
+  emotion: string;
+  expression: string;
+  body_language: string;
+  camera: { shot_type: string; angle: string; movement: string };
+  lighting: string;
+  environment: string;
+  continuity_from_previous_scene: string;
+  transition_to_next_scene: string;
+  image_prompt: string;
+  video_prompt: string;
+}
+
+export interface DirectorBoard {
+  id: string;
+  input: DirectorInput;
+  status: "analyzed" | "scenes-partial" | "ready" | "approved";
+  blueprint: {
+    logline: string;
+    analysis: Record<string, unknown>;
+    characters: Record<string, unknown>[];
+    locations: Record<string, unknown>[];
+    objects: Record<string, unknown>[];
+    beats: { n: number; title: string; summary: string }[];
+  } | null;
+  scenes: DirectorScene[];
+  sceneCount: number;
+  styleLock?: string;
+  scenarioName?: string | null;
+  error?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface DirectorBoardMeta {
+  id: string;
+  title: string;
+  status: DirectorBoard["status"];
+  scenes: number;
+  sceneCount: number;
+  scenarioName?: string | null;
+  updatedAt?: string | null;
+}
+
+const directorOk = <T,>(label: string) => (r: Response) =>
+  r.ok
+    ? r.json() as Promise<T>
+    : r.json().then((d) => Promise.reject(new Error(d?.error || label)));
+
+export const directorBoards = () =>
+  get<DirectorBoardMeta[]>("/api/director/boards");
+
+export const directorBoard = (id: string) =>
+  get<DirectorBoard>(`/api/director/boards/${encodeURIComponent(id)}`);
+
+export const directorAnalyze = (input: DirectorInput) =>
+  fetch("/api/director/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }).then(directorOk<DirectorBoard>("story analysis failed"));
+
+export const directorScenes = (id: string, count?: number) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/scenes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(count != null ? { count } : {}),
+  }).then(directorOk<DirectorBoard>("scene planning failed"));
+
+export const directorUpdateBoard = (id: string, patch: Record<string, unknown>) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  }).then(directorOk<DirectorBoard>("board update failed"));
+
+export const directorRegenScene = (id: string, index: number) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/regenerate-scene`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index }),
+  }).then(directorOk<DirectorBoard>("scene regeneration failed"));
+
+export const directorApprove = (id: string) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/approve`, {
+    method: "POST",
+  }).then(directorOk<{ name: string; config: Scenario }>("approve failed"));
+
+export const directorDeleteBoard = (id: string) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  }).then(directorOk<{ ok: boolean }>("delete failed"));

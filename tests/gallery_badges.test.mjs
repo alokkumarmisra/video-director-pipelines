@@ -53,8 +53,8 @@ describe("scene number badges", () => {
     assert.match(src, /`shot\$\{\(kfGen \|\| clipGen\) \? " generating" : ""\}/);
     const css = read("frontend/src/styles.css");
     const genHead = css.match(/\.shot\.generating \.shot-head \{[^}]*\}/)?.[0] ?? "";
-    assert.match(genHead, /background:\s*var\(--err-soft\)/);
-    assert.match(css, /\.shot\.generating \.img-frame, \.shot\.generating \.video-frame, \.shot\.generating \.shot-clip-frame \{[^}]*rgba\(248,\s*113,\s*113/);
+    assert.match(genHead, /background:\s*linear-gradient\(100deg, #450a0a, #7f1d1d/);
+    assert.match(css, /\.shot\.generating \.video-frame,[\s\S]*?\.shot\.generating \.shot-clip-frame \{[^}]*animation:\s*genGlow/);
   });
 
   it("wrapped pending labels (e.g. Video 123 · pending) stay centered", () => {
