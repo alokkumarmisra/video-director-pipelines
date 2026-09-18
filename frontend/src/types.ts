@@ -2,6 +2,12 @@ export interface Beat {
   title: string;
   image: string;
   motion: string;
+  // Per-beat clip length (dialogue beats grow to fit their voice audio —
+  // see beatTargetDuration in lib/tts.mjs). Absent = scenario.duration.
+  duration?: number;
+  // Spoken lines for this beat (voiced per character via Edge-TTS Hindi,
+  // lip-synced via Easy-Wav2Lip). Absent/empty = silent beat.
+  dialogue?: { speaker: string; line: string }[];
 }
 
 export interface Scenario {
@@ -23,6 +29,21 @@ export interface Scenario {
   // beat extension). Empty/absent = use the preset default. The system-owned
   // presets/*.md files are never modified.
   presetRules?: string;
+  // Music-video mode (AI Story Director song upload): the approved board's
+  // uploaded song. The file lives server-side in director/ and is muxed over
+  // the final cut via POST /api/director/boards/:id/mux-song.
+  song?: {
+    file: string;
+    fileName?: string;
+    durationSeconds?: number | null;
+  };
+  // Voice casting per character id (Edge-TTS voice names). Empty/absent =
+  // auto-cast in lib/tts.mjs (e.g. rabbit -> hi-IN-SwaraNeural female,
+  // lion -> hi-IN-MadhurNeural male). Edit to recast a character.
+  tts?: {
+    defaultVoice?: string;
+    voices?: Record<string, string>;
+  };
 }
 
 export interface ScenarioInfo {

@@ -5,12 +5,15 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   SCENE_BATCH,
+  MAX_SCENES,
   sceneCountFor,
   styleLockFor,
   styleKeyFor,
   stripJson,
   normalizeBlueprint,
   normalizeScene,
+  beatsForSceneRange,
+  sameLine,
   identityContext,
   buildBiblePrompt,
   buildScenesPrompt,
@@ -18,11 +21,12 @@ import {
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
-  it("derives scene count from target / scene duration", () => {
-    assert.equal(sceneCountFor(190, 3), 63 > 48 ? 48 : 63); // clamped below
+  it("derives scene count from target / scene duration (story + time driven)", () => {
+    assert.equal(sceneCountFor(190, 3), 63);
     assert.equal(sceneCountFor(60, 3), 20);
     assert.equal(sceneCountFor(30, 5), 6);
-    assert.equal(sceneCountFor(600, 3), 48); // MAX_SCENES cap
+    assert.equal(sceneCountFor(600, 3), 200);
+    assert.equal(sceneCountFor(3600, 1), MAX_SCENES); // safety ceiling only
     assert.equal(sceneCountFor(0, 3), 0);
     assert.equal(sceneCountFor(60, 0), 0);
   });
@@ -110,11 +114,36 @@ describe("prompts", () => {
     });
     const p = buildScenesPrompt({
       input, blueprint: bp, beats: bp.beats, prevScene: null,
-      startNumber: 1, count: 2, styleLock: "LOCK",
+      startNumber: 1, count: 2, styleLock: "LOCK", totalScenes: 2,
     });
     assert.ok(p.includes("grey mouse"));
     assert.ok(p.includes("LOCK"));
     assert.ok(!p.includes("A mouse."));
+  });
+  it("each batch covers only its own beats (no scene-1 repeat)", () => {
+    const beats = [1, 2, 3, 4].map((n) => ({ n, title: `B${n}`, summary: `s${n}` }));
+    // 48 scenes over 4 beats: opening batch gets beat 1, late batch gets beat 4.
+    assert.deepEqual(beatsForSceneRange(beats, 1, 12, 48).map((b) => b.n), [1]);
+    assert.deepEqual(beatsForSceneRange(beats, 37, 12, 48).map((b) => b.n), [4]);
+    // Small plan: everything fits in one batch.
+    assert.deepEqual(beatsForSceneRange(beats, 1, 4, 4).map((b) => b.n), [1, 2, 3, 4]);
+  });
+  it("sameLine spots verbatim repeats", () => {
+    assert.ok(sameLine("I will eat any animal!", "i will eat   any animal"));
+    assert.ok(!sameLine("Hello there", "Goodbye there"));
+  });
+  it("scene prompt never leaks a hardcoded example cast", () => {
+    const bp = normalizeBlueprint({
+      characters: [{ name: "Zara", character_id: "zara", visual_identity_prompt: "blue fox" }],
+      locations: [], objects: [], beats: [{ n: 1, title: "Wake", summary: "wakes" }],
+    });
+    const p = buildScenesPrompt({
+      input, blueprint: bp, beats: bp.beats, prevScene: null,
+      startNumber: 1, count: 1, styleLock: "LOCK", totalScenes: 1,
+    });
+    assert.ok(!p.includes("Chiku"));
+    assert.ok(!p.includes("Shera"));
+    assert.ok(p.includes("Zara (zara)"));
   });
   it("identityContext compacts bibles", () => {
     const bp = normalizeBlueprint({ characters: [{ name: "M", visual_identity_prompt: "id" }] });

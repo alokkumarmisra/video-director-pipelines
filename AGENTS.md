@@ -49,6 +49,23 @@ Generic runners (a new scenario = one new `prompts/<scenario>.json`):
 - `character_sequence_wan.mjs [scenario]` — same shape but clips use **Wan 2.1 i2v**
   (`buildWanGraph`, video-only, no audio). Outputs to `outputs/<scenario>_wan/` so it never
   clobbers the LTX run.
+- `dialogue_lipsync.mjs [scenario]` — **voice + lip-sync pass** over an already-generated
+  project (run AFTER clips exist). JSON: beats carry
+  `dialogue: [{ speaker, line }]` (+ optional `tts: { defaultVoice, voices }`).
+  Per beat: Edge-TTS Hindi voice audio (`lib/tts.mjs`, `<prefix>_dlg<n>_<slug>.wav`,
+  auto-cast rabbit→`hi-IN-SwaraNeural` / lion→`hi-IN-MadhurNeural`) → clip loop-extended
+  to the audio length (stream-copy, so the `-c copy` stitch stays safe) → local
+  Easy-Wav2Lip (`lib/lipsync.mjs`, `EASY_WAV2LIP_DIR`/`EASY_WAV2LIP_PYTHON` env) →
+  synced take stored as a new clip version + clip main → final re-stitched with voices.
+  Wav2Lip needs a clear (near-frontal) face: the Director stages speaking scenes as
+  frontal Close-Ups; beats with no detectable face fall back to dubbed (voice muxed,
+  no mouth movement) instead of failing. Flags: `--beats 9,11`, `--vertical`, `--wan`,
+  `--skip-tts`, `--skip-lipsync`, `--no-stitch` (voice+sync clips but leave the final
+  cut alone — review single scenes first, merge later with Stitch). The Rendered Clip
+  header's 🎙 Dialogue button triggers it via `POST /api/runs` with `{ mode: "dialogue" }`;
+  the Story Board's per-row 🎙 button runs one scene (`{ mode: "dialogue", beats: "N",
+  noStitch: true }`). Fresh clips are generated AT the
+  voice length (`beatTargetDuration` in both sequence runners reads the wav).
 - Either runner takes **`--vertical`** for the 9:16 Instagram Reel cut: every asset is
   regenerated vertical (Flux 360×640, LTX `9:16 (Portrait Widescreen)` at 0.125MP, Wan 240×416,
   prompts gain a portrait-framing suffix) into `outputs/<scenario>[_wan]_vertical/`

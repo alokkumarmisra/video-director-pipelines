@@ -68,12 +68,12 @@ interface Props {
   // Generate Reference from the scenario editor; count batches ref regens).
   // Queued requests carry the engine + format they were asked for (they may
   // have been switched since they were queued).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat } | null;
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue"; beats?: string; noStitch?: boolean } | null;
   // Reattach target: a run that was already active on the server when this
   // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
   // server replays the full log + asset events — so progress, the header bar
   // and every generating button pick up the live run instead of idling.
-  attachRun?: { id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; startedAt?: number; format?: VideoFormat } | null;
+  attachRun?: { id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; mode?: "dialogue"; beats?: string | null; startedAt?: number; format?: VideoFormat } | null;
   // Run the server reports as active (from GET /api/runs, polled by App) —
   // independent of this panel's own run. While set and this panel is idle,
   // the backend rejects new runs, so the panel names the blocker and offers
@@ -114,7 +114,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // Which local button started the POST (null = triggered externally via
   // pendingRun, or idle). Shows the spinner on the clicked button during
   // the startRun round-trip, before status flips to "running".
-  const [starting, setStarting] = useState<"run" | "stitch" | null>(null);
+  const [starting, setStarting] = useState<"run" | "stitch" | "dialogue" | null>(null);
   const [stopping, setStopping] = useState(false);
   // Stopping a FOREIGN server run (the banner below) — separate from stopping
   // this panel's own run. Resets once the server stops reporting it.
@@ -154,11 +154,16 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setCancelled(false);
     setPin(null);
     setTotalBeats(null);
+    setDlgBeats(null);
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
-        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
-        .catch(() => setTotalBeats(null));
+        .then((r) => {
+          const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
+          setTotalBeats(seq.length || null);
+          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+        })
+        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewedKey]);
@@ -182,11 +187,16 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setCancelled(false);
     setPin(null);
     setTotalBeats(null);
+    setDlgBeats(null);
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
-        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
-        .catch(() => setTotalBeats(null));
+        .then((r) => {
+          const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
+          setTotalBeats(seq.length || null);
+          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+        })
+        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, runScenario, scenario]);
@@ -200,7 +210,8 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // Real progress inputs: total beats from the scenario config, run shape,
   // start/end timestamps, and per-asset completion times for the ETA.
   const [totalBeats, setTotalBeats] = useState<number | null>(null);
-  const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number }>({ stitch: false, regen: null, count: 1 });
+  const [dlgBeats, setDlgBeats] = useState<number | null>(null);
+  const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number; mode?: "dialogue" }>({ stitch: false, regen: null, count: 1 });
   const [startedAt, setStartedAt] = useState<number | null>(null);
   // Anchor of the per-asset interval chain (see the ETA memo below). Fresh
   // runs anchor at start; reattached runs anchor at reattach time — the real
@@ -272,11 +283,11 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     return () => clearInterval(t);
   }, [status, serverRun]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape") => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "dialogue" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape", mode?: "dialogue", beats?: string, noStitch?: boolean) => {
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
-      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count });
+      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count, mode, beats, noStitch });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
@@ -285,7 +296,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       setRunRegen(regen);
       setRunEngine(runEngine);
       setRunFormat(runFormat);
-      setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1 });
+      setRunMeta({ stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(count) || 1)) : 1, ...(mode ? { mode } : {}) });
       // Keep the previous total until the fresh config lands — clearing it
       // here is what briefly hid every thumbnail slot right after Generate.
       setStartedAt(Date.now());
@@ -296,10 +307,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       setAssetTimes([]);
       setCancelled(false);
       setNow(Date.now());
-      // Real total comes from the saved scenario config (sequence length).
+      // Real total comes from the saved scenario config (sequence length +
+      // dialogue-beat count for voice runs).
       getScenario(scenario)
-        .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
-        .catch(() => setTotalBeats(null));
+        .then((r) => {
+          const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
+          setTotalBeats(seq.length || null);
+          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+        })
+        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
       setStatus("running");
       setLog("");
       setAssets([]);
@@ -322,7 +338,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // Runs triggered from the output gallery (stitch / regenerate) or the
   // scenario editor (batch reference generation).
   useEffect(() => {
-    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine, pendingRun.format ?? "landscape");
+    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine, pendingRun.format ?? "landscape", pendingRun.mode, pendingRun.beats, pendingRun.noStitch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 
@@ -349,7 +365,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setRunRegen(regen);
     setRunEngine(engine);
     setRunFormat(meta.format ?? "landscape");
-    setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1 });
+    setRunMeta({ stitch: !!meta.stitch, regen, count: regen?.kind === "ref" ? Math.min(8, Math.max(1, Number(meta.count) || 1)) : 1, ...(meta.mode === "dialogue" ? { mode: meta.mode as "dialogue" } : {}) });
     // Same as begin(): keep the previous total so thumbnail slots stay
     // mounted while the reattached run's config loads. Timing anchors at the
     // reattach moment (pre-refresh completion times are unknown — the replay
@@ -363,8 +379,12 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setCancelled(false);
     setNow(Date.now());
     getScenario(meta.scenario)
-      .then((r) => setTotalBeats(Array.isArray(r.config.sequence) ? r.config.sequence.length : null))
-      .catch(() => setTotalBeats(null));
+      .then((r) => {
+        const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
+        setTotalBeats(seq.length || null);
+        setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+      })
+      .catch(() => { setTotalBeats(null); setDlgBeats(null); });
     setStatus("running");
     setLog("");
     setAssets([]);
@@ -383,12 +403,14 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // Full run total = 1 + 2N tasks; regen/stitch runs total = their own task(s).
   const progress: GenerationProgress = useMemo(() => {
     const N = totalBeats;
-    const { stitch, regen, count } = runMeta;
+    const { stitch, regen, count, mode } = runMeta;
     const refDone = assets.some((a) => a.stage === "reference") ? 1 : 0;
     const kfIdx = new Set(assets.filter((a) => a.stage === "keyframe").map((a) => a.index ?? -1));
     const clipIdx = new Set(assets.filter((a) => a.stage === "clip").map((a) => a.index ?? -1));
     kfIdx.delete(-1);
     clipIdx.delete(-1);
+    const dlgIdx = new Set(assets.filter((a) => a.stage === "dialogue").map((a) => a.index ?? -1));
+    dlgIdx.delete(-1);
     const hasFinal = assets.some((a) => a.stage === "final");
     const start = startedAt ?? now;
     const end = status === "running" ? now : (endedAt ?? now);
@@ -419,6 +441,14 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       scene = regen.index ?? null;
       if (regen.kind === "keyframe") { imagesDone = completed; imagesTotal = 1; }
       else { videosDone = completed; videosTotal = 1; }
+    } else if (mode === "dialogue" && dlgBeats != null) {
+      // Voice + lip-sync run: D voice tracks + D synced clips + re-stitch.
+      total = 2 * dlgBeats + 1;
+      videosTotal = dlgBeats + 1;
+      videosDone = clipIdx.size + (hasFinal ? 1 : 0);
+      completed = dlgIdx.size + videosDone;
+      const seen = Math.max(0, ...[...dlgIdx, ...clipIdx]);
+      scene = dlgBeats === 0 ? null : Math.min(dlgBeats, Math.max(1, seen || 1));
     } else if (N != null) {
       // Full run: 1 reference + N keyframes (images) + N clips (videos).
       total = 1 + 2 * N;
@@ -587,7 +617,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       activeElapsedMs,
       activeExpectedMs,
     };
-  }, [assets, assetTimes, totalBeats, runMeta, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
+  }, [assets, assetTimes, totalBeats, dlgBeats, runMeta, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
 
   useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
 
@@ -632,6 +662,10 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
           <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Re-stitch the Reel final from selected mains only" : "Re-stitch final from selected mains only"}>
             {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
             {starting === "stitch" ? "Starting…" : "Stitch only"}
+          </button>
+          <button className="run-head-btn" onClick={() => begin(false, null, 1, "dialogue", engine, idleFormat, "dialogue")} disabled={status === "running" || starting !== null || !scenario || !dlgBeats} title={!scenario ? "Select or save a scenario first" : !dlgBeats ? "No dialogue lines in this project — add speaker: line dialogue in the Director or editor first" : `Voice ${dlgBeats} dialogue beat${dlgBeats === 1 ? "" : "s"} (per-character Hindi TTS) + lip-sync each clip with Easy-Wav2Lip, then re-stitch`}>
+            {starting === "dialogue" ? <Spinner size={12} /> : <span aria-hidden="true">🎙</span>}
+            {starting === "dialogue" ? "Starting…" : `Dialogue${dlgBeats ? ` (${dlgBeats})` : ""}`}
           </button>
           <button
             className="danger run-head-btn"

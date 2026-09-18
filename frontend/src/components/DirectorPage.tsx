@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
-  directorRegenScene, directorScenes, directorUpdateBoard, saveScenario,
-  type DirectorBoard, type DirectorBoardMeta, type DirectorInput, type DirectorScene,
+  directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, saveScenario,
+  type DirectorBoard, type DirectorBoardMeta, type DirectorInput, type DirectorScene, type DirectorSong,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
@@ -56,6 +56,14 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
   // Story form.
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
+  // Music-video mode: upload an mp3, paste lyrics (optional), storyboard +
+  // video are paced to the song length, and the song is muxed over the final
+  // cut after generation. The local LLM is text-only (no audio transcription)
+  // — it "reads" the song via the pasted lyrics + title + duration.
+  const [mode, setMode] = useState<"story" | "song">("story");
+  const [song, setSong] = useState<DirectorSong | null>(null);
+  const [songUploading, setSongUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const [language, setLanguage] = useState("English");
   const [genre, setGenre] = useState("Kids");
   const [genreCustom, setGenreCustom] = useState("");
@@ -78,6 +86,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [editingScene, setEditingScene] = useState<number | null>(null);
   const [sceneDraft, setSceneDraft] = useState<Partial<DirectorScene>>({});
+  const [dialogueDraft, setDialogueDraft] = useState("");
   const [regenScene, setRegenScene] = useState<number | null>(null);
   const [editingChar, setEditingChar] = useState<number | null>(null);
   const [charDraft, setCharDraft] = useState<Record<string, string>>({});
@@ -91,9 +100,38 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
       return !c;
     });
 
-  const targetSeconds = targetOpt === -1 ? Math.max(15, Number(targetCustom) || 60) : targetOpt;
+  const targetSeconds = mode === "song" && song
+    ? Math.max(15, song.durationSeconds)
+    : targetOpt === -1 ? Math.max(15, Number(targetCustom) || 60) : targetOpt;
   const sceneSeconds = sceneOpt === -1 ? Math.min(30, Math.max(1, Number(sceneCustom) || 4)) : sceneOpt;
-  const plannedScenes = Math.min(48, Math.max(1, Math.round(targetSeconds / sceneSeconds)));
+  // Scene count is purely story + time driven (target / scene). The 300 safety
+  // ceiling in lib/director.mjs only guards runaway custom inputs.
+  const plannedScenes = Math.min(300, Math.max(1, Math.round(targetSeconds / sceneSeconds)));
+
+  const onSongFile = async (f: File | undefined) => {
+    if (!f) return;
+    setError("");
+    setSongUploading(true);
+    try {
+      const data: string = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result));
+        r.onerror = () => rej(new Error("could not read the audio file"));
+        r.readAsDataURL(f);
+      });
+      const up = await directorUploadSong(data, f.name);
+      setSong({ ...up, hasLyrics: story.trim().length >= 20 });
+      if (!title.trim()) {
+        const base = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+        if (base) setTitle(base.slice(0, 120));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSongUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const refreshBoards = async () => {
     try { setBoards(await directorBoards()); }
@@ -113,17 +151,34 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
 
   const doAnalyze = async () => {
     if (busy) return;
+    const lyrics = story.trim();
+    const hasLyrics = lyrics.length >= 20;
     const input: DirectorInput = {
-      title: title.trim(), story: story.trim(), language, genre,
+      title: title.trim(),
+      story: mode === "song" && !hasLyrics
+        ? `[Instrumental song "${title.trim()}" — no lyrics provided; direct a matching visual story]`
+        : lyrics,
+      language, genre,
       genreCustom: genre === "Custom" ? genreCustom.trim() : "",
       visualStyle, styleCustom: visualStyle === "Custom" ? styleCustom.trim() : "",
       targetSeconds, sceneSeconds, aspectRatio, instructions: instructions.trim(),
+      ...(mode === "song" && song
+        ? { song: { ...song, hasLyrics } }
+        : {}),
     };
-    if (!input.title || input.story.length < 20) {
+    if (!input.title) {
+      setError("Give the story a title.");
+      return;
+    }
+    if (mode === "song" && !song) {
+      setError("Upload the song first (mp3 or wav) — the timeline comes from its length.");
+      return;
+    }
+    if (mode === "story" && input.story.length < 20) {
       setError("Give the story a title and paste the full story (20+ characters).");
       return;
     }
-    setBusy({ label: "Analyzing story — characters, locations, beats…", since: Date.now() });
+    setBusy({ label: mode === "song" ? "Reading the song — characters, locations, beats…" : "Analyzing story — characters, locations, beats…", since: Date.now() });
     setError("");
     try {
       const b = await directorAnalyze(input);
@@ -200,10 +255,22 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
     if (!board) return;
     setEditingScene(index);
     setSceneDraft({ ...board.scenes[index] });
+    const dlg = board.scenes[index].dialogue;
+    setDialogueDraft(Array.isArray(dlg) ? dlg.map((d) => {
+      const sp = String(d.speaker || "").trim();
+      const ln = String(d.line || "").trim();
+      return sp ? `${sp}: ${ln}` : ln;
+    }).filter(Boolean).join("\n") : "");
   };
   const saveEditScene = async () => {
     if (!board || editingScene == null) return;
-    const next = board.scenes.map((s, i) => (i === editingScene ? { ...s, ...sceneDraft } : s));
+    const dlg = dialogueDraft.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const c = l.indexOf(":");
+      return c > 0
+        ? { speaker: l.slice(0, c).trim(), line: l.slice(c + 1).trim() }
+        : { speaker: "", line: l };
+    }).filter((d) => d.line);
+    const next = board.scenes.map((s, i) => (i === editingScene ? { ...s, ...sceneDraft, dialogue: dlg } : s));
     try {
       const b = await directorUpdateBoard(board.id, { scenes: next });
       setBoard(b);
@@ -246,8 +313,11 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
 
   const doApprove = async () => {
     if (!board || busy || !board.scenes.length) return;
+    const songNote = board.input.song
+      ? ` The uploaded song ("${board.input.song.fileName}", ~${board.input.song.durationSeconds}s) travels with the project — after the final cut is stitched, mix it over the video from the project workspace.`
+      : "";
     const ok = await dialog.confirm(
-      `Creates project "${board.input.title}" with ${board.scenes.length} scenes, then opens it in the workspace for generation (images → videos → final cut).`,
+      `Creates project "${board.input.title}" with ${board.scenes.length} scenes, then opens it in the workspace for generation (images → videos → final cut).${songNote}`,
       { title: `Approve storyboard for "${board.input.title}"?`, tone: "info", okText: "Approve", cancelText: "Keep editing" }
     );
     if (!ok) return;
@@ -341,7 +411,68 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
               Tell a story — the AI Director breaks it into characters, locations, beats and
               cinematic scenes with image + video prompts. Approving hands a standard project
               to the existing generation pipeline (nothing here renders pixels itself).
+              Prefer a music video? Switch to Song mode: upload the mp3, optionally paste
+              the lyrics, and the storyboard + video are paced to the song length.
             </p>
+            <div className="row" role="tablist" aria-label="Director input mode" style={{ marginBottom: 10 }}>
+              <button
+                className={`ghost shotlist-btn${mode === "story" ? " on" : ""}`}
+                role="tab"
+                aria-selected={mode === "story"}
+                onClick={() => setMode("story")}
+                title="Paste a story and direct it scene by scene"
+              >
+                📖 Story
+              </button>
+              <button
+                className={`ghost shotlist-btn${mode === "song" ? " on" : ""}`}
+                role="tab"
+                aria-selected={mode === "song"}
+                onClick={() => setMode("song")}
+                title="Upload a song — storyboard + video paced to its length"
+              >
+                🎵 Song → Video
+              </button>
+            </div>
+            {mode === "song" && (
+              <div className="beat-meta-box" style={{ marginBottom: 10 }}>
+                <div className="section-label">Song (mp3 / wav)</div>
+                {!song ? (
+                  <>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,.mp3,.wav,.m4a"
+                      disabled={songUploading}
+                      onChange={(e) => void onSongFile(e.target.files?.[0])}
+                      title="Upload the song — its length becomes the video timeline"
+                    />
+                    <p className="hint" style={{ margin: "4px 0 0" }}>
+                      {songUploading
+                        ? "Reading the song file…"
+                        : "Upload the mp3 — its exact length becomes the video timeline. The Director reads the pasted lyrics + title (audio itself isn't transcribed — the local LLM is text-only)."}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: "2px 0 6px" }}>
+                      <b>{song.fileName}</b> · ~{song.durationSeconds}s · timeline locked 🎵
+                    </p>
+                    <audio controls src={directorSongUrl(song.file)} style={{ width: "100%" }} />
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <button
+                        className="ghost shotlist-btn"
+                        onClick={() => setSong(null)}
+                        disabled={songUploading || busy != null}
+                        title="Remove the song and upload a different one"
+                      >
+                        Remove song
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <label htmlFor="dir-title">Story title</label>
             <input
               id="dir-title"
@@ -350,12 +481,14 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
               placeholder="The Mouse and the Magic Cheese"
               onChange={(e) => setTitle(e.target.value)}
             />
-            <label htmlFor="dir-story" style={{ marginTop: 8 }}>Story</label>
+            <label htmlFor="dir-story" style={{ marginTop: 8 }}>
+              {mode === "song" ? "Lyrics (optional — paste for best results; empty = instrumental visual story)" : "Story"}
+            </label>
             <textarea
               id="dir-story"
               rows={8}
               value={story}
-              placeholder="Once upon a time… (paste the full story)"
+              placeholder={mode === "song" ? "[Verse 1]\nPaste the song lyrics here… (or leave empty for an instrumental)" : "Once upon a time… (paste the full story)"}
               onChange={(e) => setStory(e.target.value)}
             />
             <div className="grid" style={{ marginTop: 8 }}>
@@ -402,11 +535,19 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
             <div className="grid" style={{ marginTop: 8 }}>
               <div>
                 <label htmlFor="dir-target">Target duration</label>
-                <select id="dir-target" value={targetOpt} onChange={(e) => setTargetOpt(Number(e.target.value))}>
-                  {TARGETS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
-                </select>
-                {targetOpt === -1 && (
-                  <input type="number" min={15} max={3600} value={targetCustom} onChange={(e) => setTargetCustom(e.target.value)} style={{ marginTop: 6 }} />
+                {mode === "song" ? (
+                  <p className="hint" style={{ margin: "6px 0 0" }}>
+                    {song ? <>🔒 ~{song.durationSeconds}s (song length)</> : "Upload the song — the timeline locks to its length."}
+                  </p>
+                ) : (
+                  <>
+                    <select id="dir-target" value={targetOpt} onChange={(e) => setTargetOpt(Number(e.target.value))}>
+                      {TARGETS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
+                    </select>
+                    {targetOpt === -1 && (
+                      <input type="number" min={15} max={3600} value={targetCustom} onChange={(e) => setTargetCustom(e.target.value)} style={{ marginTop: 6 }} />
+                    )}
+                  </>
                 )}
               </div>
               <div>
@@ -429,9 +570,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
               onChange={(e) => setInstructions(e.target.value)}
             />
             <div className="row" style={{ marginTop: 12 }}>
-              <button className="primary" onClick={() => void doAnalyze()} disabled={busy != null || !title.trim() || story.trim().length < 20} title="Analyze the story into characters, locations, beats (no images/videos yet)">
+              <button className="primary" onClick={() => void doAnalyze()} disabled={busy != null || songUploading || !title.trim() || (mode === "song" ? !song : story.trim().length < 20)} title={mode === "song" ? "Read the song into characters, locations, beats (no images/videos yet)" : "Analyze the story into characters, locations, beats (no images/videos yet)"}>
                 {busy ? <Spinner size={13} /> : <IconSparkles size={13} />}
-                {busy ? "Directing…" : "Generate Storyboard"}
+                {busy ? "Directing…" : mode === "song" ? "Generate Song Storyboard" : "Generate Storyboard"}
               </button>
             </div>
 
@@ -501,6 +642,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
               {board.scenarioName ? <> · approved → <b>{board.scenarioName}</b></> : null}
             </p>
             {board.blueprint?.logline ? <p className="hint">{board.blueprint.logline}</p> : null}
+            {board.input.song?.file ? (
+              <div className="beat-meta-box" style={{ marginBottom: 12 }}>
+                <div className="section-label">🎵 Song · {board.input.song.fileName} · ~{board.input.song.durationSeconds}s</div>
+                <audio controls src={directorSongUrl(board.input.song.file)} style={{ width: "100%" }} />
+                <p className="hint" style={{ margin: "4px 0 0" }}>
+                  Timeline is locked to the song. After the final cut is stitched in the project
+                  workspace, mix this song over it (the approved project carries the song along).
+                </p>
+              </div>
+            ) : null}
             <div className="row" style={{ marginBottom: 8 }}>
               {board.scenes.length < board.sceneCount ? (
                 <button className="primary" onClick={() => void doScenes()} disabled={busy != null} title="Plan the remaining scenes (resumes on retry)">
@@ -638,6 +789,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
                             <input value={str(sceneDraft.emotion ?? "")} maxLength={60} onChange={(e) => setSceneDraft((d) => ({ ...d, emotion: e.target.value }))} />
                             <label style={{ marginTop: 6 }}>Duration (sec)</label>
                             <input type="number" min={1} max={30} value={Number(sceneDraft.duration_seconds ?? s.duration_seconds)} onChange={(e) => setSceneDraft((d) => ({ ...d, duration_seconds: Number(e.target.value) }))} />
+                            <label style={{ marginTop: 6 }} title="One per line as speaker: line — voiced per character (Edge-TTS Hindi) and lip-synced; the clip grows to fit the voice">Dialogue (speaker: line per line — voiced + lip-synced)</label>
+                            <textarea rows={3} value={dialogueDraft} placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"} onChange={(e) => setDialogueDraft(e.target.value)} />
                             <label style={{ marginTop: 6 }}>Image prompt</label>
                             <textarea rows={4} value={str(sceneDraft.image_prompt ?? "")} onChange={(e) => setSceneDraft((d) => ({ ...d, image_prompt: e.target.value }))} />
                             <label style={{ marginTop: 6 }}>Video prompt</label>
@@ -653,6 +806,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
                             <p className="hint" style={{ margin: "4px 0" }}>{s.action || "—"}</p>
                             <span className="muted" style={{ fontSize: 11 }}>
                               {s.camera?.shot_type ?? ""}{s.camera?.movement ? ` · ${s.camera.movement}` : ""} · {s.duration_seconds}s
+                              {Array.isArray(s.dialogue) && s.dialogue.length ? ` · 🎙 ${s.dialogue.length} line${s.dialogue.length === 1 ? "" : "s"}` : ""}
                             </span>
                             <div className="row" style={{ marginTop: 6, flexWrap: "wrap" }}>
                               <button
@@ -753,6 +907,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged }: {
                         <p>{d.image_prompt || "—"}</p>
                         <div className="shotlist-detail-label">Video prompt</div>
                         <p>{d.video_prompt || "—"}</p>
+                        <div className="shotlist-detail-label">Dialogue (voiced per character + lip-synced)</div>
+                        {Array.isArray(d.dialogue) && d.dialogue.length ? (
+                          <p>{d.dialogue.map((x, i) => (
+                            <span key={i} title={`${x.speaker} (voice: per-character Hindi TTS)`}>
+                              <b>{x.speaker || "voice"}</b>: {x.line}{i < d.dialogue.length - 1 ? <br /> : null}
+                            </span>
+                          ))}</p>
+                        ) : (
+                          <p>—</p>
+                        )}
                         <div className="row" style={{ marginTop: 8 }}>
                           <button
                             className="ghost shotlist-btn"

@@ -38,6 +38,7 @@ import {
   normalizeFormat, outDirName, prefixForDir, verticalImagePrompt, verticalMotionPrompt,
 } from "../lib/variant.mjs";
 import { runSequence, stitchSequence } from "../lib/sequence.mjs";
+import { beatTargetDuration } from "../lib/tts.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -92,7 +93,8 @@ const opts = {
     image,
     width: vertical ? VERTICAL_WAN_WIDTH : (cfg.width ?? 512),
     height: vertical ? VERTICAL_WAN_HEIGHT : (cfg.height ?? 512),
-    length,
+    // Dialogue beats grow to fit their voice audio (lib/tts.mjs).
+    length: wanFrames(beatTargetDuration({ outDir, prefix, n: i + 1, beat: cfg.sequence[i], fallback: cfg.duration ?? 3 })),
     steps: cfg.steps ?? 8,
     negative: cfg.negative,
     prefix: `${scenario}/wan_clip${i + 1}_${cfg.sequence[i].title}`,

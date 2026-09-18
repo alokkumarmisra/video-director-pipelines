@@ -53,6 +53,8 @@ import Collapse from "./Collapse";
 export type ShotType = "Cinematic" | "Lip-sync" | "Establishing" | "Close-up" | "Transition";
 
 function classifyBeat(b: Beat): ShotType {
+  if (Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim()))
+    return "Lip-sync";
   const t = `${b.title} ${b.image} ${b.motion}`.toLowerCase();
   if (/lip[\s-]?sync|lipsync|dialogue|speaking|talking|audio[\s-]?sync|mouth.*(sync|move)|sync.*(mouth|audio|voice)/.test(t))
     return "Lip-sync";
@@ -66,6 +68,22 @@ type ShotStatus = "generated" | "generating" | "failed" | "pending";
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+// Dialogue text format (one `speaker: line` per line) for the inline beat
+// editors — same shape the Director scene editor uses.
+const dialogueToText = (d: Beat["dialogue"]): string =>
+  (Array.isArray(d) ? d : []).map((x) => {
+    const sp = String(x.speaker || "").trim();
+    const ln = String(x.line || "").trim();
+    return sp ? `${sp}: ${ln}` : ln;
+  }).filter(Boolean).join("\n");
+const textToDialogue = (t: string): { speaker: string; line: string }[] =>
+  t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const c = l.indexOf(":");
+    return c > 0
+      ? { speaker: l.slice(0, c).trim(), line: l.slice(c + 1).trim() }
+      : { speaker: "", line: l };
+  }).filter((d) => d.line);
 
 interface ShotRow {
   /** 1-based scene (= beat) number. */
@@ -115,6 +133,10 @@ interface Props {
   comfyQueue: number;
   onRegen: (kind: AssetKind, index: number | null) => void;
   onStitch?: () => void;
+  /** Voice + lip-sync one scene (Story Board per-row 🎙 button). The run
+      voices + syncs just that beat's clip without rebuilding the final cut,
+      so the clip can be reviewed before merging via Stitch. */
+  onDialogue?: (index: number) => void;
   /** True while any run is active (disables regen triggers — queue is serial). */
   runBusy?: boolean;
   /** Run requests waiting behind the active run (App drains them serially).
@@ -156,6 +178,7 @@ export default function ShotList({
   comfyQueue,
   onRegen,
   onStitch,
+  onDialogue,
   runBusy,
   runQueue = [],
   isDraft,
@@ -215,12 +238,26 @@ export default function ShotList({
   // whose files already finished stay editable, so scenes and camera
   // motion can be changed any time before generation — drafts and saved
   // projects alike, even while another beat generates.
+  // Dialogue edit text (one `speaker: line` per line) for the inline form.
+  const [dialogueText, setDialogueText] = useState("");
   const mutBusy = saving || genBusy;
 
   const outDir = (folder || name) ? outScenario(folder || name, engine, format ?? "landscape") : "";
   const seq = useMemo(() => (config && Array.isArray(config.sequence) ? config.sequence : []), [config]);
   const clipDur = Number.isFinite(Number(overrides?.duration ?? config?.duration))
     ? Number(overrides?.duration ?? config?.duration) : 0;
+  // Per-scene clip length: the beat's own duration (set by the Director per
+  // scene, grown to fit the voice at generation time), else the project
+  // default. This is what each clip is actually generated at.
+  const beatDur = (b: Beat): number => {
+    const d = Number(b.duration);
+    if (Number.isFinite(d) && d > 0) return d;
+    return clipDur;
+  };
+  const hasDialogue = (b: Beat): boolean =>
+    Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim());
+  const dlgCount = (b: Beat): number =>
+    Array.isArray(b.dialogue) ? b.dialogue.filter((d) => d && String(d.line || "").trim()).length : 0;
 
   // Clamp the scene filter when the scenario changes / beats shrink.
   useEffect(() => {
@@ -425,7 +462,9 @@ export default function ShotList({
   const shotsDone = rows.filter((r) => r.imageFile && r.clipFile).length;
   const cinematicCount = rows.filter((r) => r.type !== "Lip-sync").length;
   const lipsyncCount = rows.filter((r) => r.type === "Lip-sync").length;
-  const totalDur = clipDur > 0 ? totalShots * clipDur : 0;
+  // Total runtime sums each scene's own clip length (Director per-scene
+  // durations land on the beat; otherwise the project default).
+  const totalDur = rows.reduce((s, r) => s + beatDur(r.beat), 0);
 
   const refDone = !!mainsInfo.ref;
   const kfDone = rows.filter((r) => r.imageFile).length;
@@ -483,6 +522,7 @@ export default function ShotList({
     const b = seq[n - 1];
     if (!b) return;
     setDraftBeat({ ...b });
+    setDialogueText(dialogueToText(b.dialogue));
     setSaveError("");
     setEditing(n);
     setExpanded((prev) => new Set(prev).add(n));
@@ -496,7 +536,13 @@ export default function ShotList({
     const title =
       draftBeat.title.trim() ||
       (editing === "new" ? `beat${seq.length + 1}` : (seq[editing - 1]?.title ?? `beat${editing}`));
-    const next: Beat = { ...draftBeat, title };
+    const dur = Number(draftBeat.duration);
+    const next: Beat = {
+      ...draftBeat,
+      title,
+      ...(Number.isFinite(dur) && dur > 0 ? { duration: Math.min(30, Math.max(1, Math.round(dur))) } : { duration: undefined }),
+      dialogue: textToDialogue(dialogueText),
+    };
     const nextSeq =
       editing === "new" ? [...seq, next] : seq.map((b, i) => (i === editing - 1 ? next : b));
     try {
@@ -538,6 +584,7 @@ export default function ShotList({
     // will actually use. Motion is never prefilled.
     const master = String(overrides?.referencePrompt ?? config?.referencePrompt ?? "").trim();
     setDraftBeat({ title: `beat${seq.length + 1}`, image: master, motion: "" });
+    setDialogueText("");
     setSaveError("");
     setEditing("new");
     setFilter("all");
@@ -595,6 +642,27 @@ export default function ShotList({
         value={draftBeat.motion}
         disabled={saving}
         onChange={(e) => setDraftBeat({ ...draftBeat, motion: e.target.value })}
+      />
+      <label title="Clip length for this scene in seconds — dialogue scenes grow to fit the voice automatically">Clip length (sec) — this scene</label>
+      <input
+        type="number"
+        min={1}
+        max={30}
+        value={draftBeat.duration ?? ""}
+        placeholder={String(clipDur || 3)}
+        disabled={saving}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          setDraftBeat({ ...draftBeat, duration: e.target.value === "" || !Number.isFinite(v) ? undefined : v });
+        }}
+      />
+      <label title="One per line as speaker: line — voiced per character (Hindi TTS) and lip-synced; run per scene with the row 🎙 button">Dialogue (speaker: line per line — voiced + lip-synced)</label>
+      <textarea
+        rows={3}
+        value={dialogueText}
+        placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"}
+        disabled={saving}
+        onChange={(e) => setDialogueText(e.target.value)}
       />
       {saveError && <p className="hint err-text">{saveError}</p>}
       <div className="row" style={{ marginTop: 8 }}>
@@ -727,9 +795,9 @@ export default function ShotList({
           <span className="shotlist-stat-value">{lipsyncCount}</span>
           <span className="shotlist-stat-label">Lip-sync</span>
         </div>
-        <div className="shotlist-stat" title={clipDur > 0 ? `Total runtime: ${totalDur.toFixed(1)}s (${(totalDur / 60).toFixed(2)} min) at ${clipDur}s per clip` : "Clip duration not set"}>
-          <span className="shotlist-stat-value">{clipDur > 0 ? `${totalDur.toFixed(1)}s` : "—"}</span>
-          <span className="shotlist-stat-label">{clipDur > 0 ? `${(totalDur / 60).toFixed(2)} min total` : "duration"}</span>
+        <div className="shotlist-stat" title={totalDur > 0 ? `Total runtime: ${totalDur.toFixed(1)}s (${(totalDur / 60).toFixed(2)} min) — each scene at its own clip length` : "Clip duration not set"}>
+          <span className="shotlist-stat-value">{totalDur > 0 ? `${totalDur.toFixed(1)}s` : "—"}</span>
+          <span className="shotlist-stat-label">{totalDur > 0 ? `${(totalDur / 60).toFixed(2)} min total` : "duration"}</span>
         </div>
       </div>
 
@@ -997,8 +1065,8 @@ export default function ShotList({
                       <StatusLine label="Image" status={r.imageStatus} title={r.imageError ?? imgGenLabel} pctText={r.imageStatus === "generating" && (imgPct != null || imgElapsed != null) ? imgReadout : null} />
                       <StatusLine label="Video" status={r.videoStatus} title={r.videoError ?? clipGenLabel} pctText={r.videoStatus === "generating" && (clipPct != null || clipElapsed != null) ? clipReadout : null} />
                     </span>
-                    <span className="shotlist-dur" role="cell" title={`${clipDur}s per clip (project setting)`}>
-                      {clipDur > 0 ? `${clipDur.toFixed(1)} s` : "—"}
+                    <span className="shotlist-dur" role="cell" title={Number.isFinite(Number(r.beat.duration)) && Number(r.beat.duration) > 0 ? `Scene ${r.n} clip length: ${beatDur(r.beat).toFixed(1)}s (per-scene setting)` : `Scene ${r.n} clip length: ${beatDur(r.beat).toFixed(1)}s (project default${hasDialogue(r.beat) ? " — grows to fit the voice" : ""})`}>
+                      {beatDur(r.beat) > 0 ? `${beatDur(r.beat).toFixed(1)} s` : "—"}
                     </span>
                     <span className="shotlist-actions" role="cell">
                       <button
@@ -1059,6 +1127,17 @@ export default function ShotList({
                             {clipRunning ? "Working…" : clipQueued ? "Queued" : "Regen vid"}
                           </button>
                         ))}
+                      {!isDraft && onDialogue && hasDialogue(r.beat) && (
+                        <button
+                          className="ghost shotlist-btn"
+                          disabled={localBusy || beatLocked || !!runBusy}
+                          title={beatLocked ? `Scene ${r.n} is generating right now` : runBusy ? "Another run is active — voice & lip-sync when it finishes" : `Voice Scene ${r.n} (${dlgCount(r.beat)} line${dlgCount(r.beat) === 1 ? "" : "s"}) + lip-sync its clip — final cut is NOT rebuilt, review this clip first then Stitch`}
+                          onClick={() => onDialogue(r.n)}
+                        >
+                          <span aria-hidden="true">🎙</span>
+                          {`Scene ${r.n} voice`}
+                        </button>
+                      )}
                     </span>
                   </div>
                   <Collapse open={open}>
@@ -1083,6 +1162,24 @@ export default function ShotList({
                             <div>
                               <div className="shotlist-detail-label">Motion &amp; camera — i2v</div>
                               <p>{r.beat.motion || <span className="muted">—</span>}</p>
+                            </div>
+                          </div>
+                          <div className="shotlist-detail-grid">
+                            <div>
+                              <div className="shotlist-detail-label">Clip length — this scene</div>
+                              <p>{beatDur(r.beat) > 0 ? `${beatDur(r.beat).toFixed(1)}s${Number.isFinite(Number(r.beat.duration)) && Number(r.beat.duration) > 0 ? " (per-scene)" : " (project default)"}` : "—"}</p>
+                            </div>
+                            <div>
+                              <div className="shotlist-detail-label">Dialogue — voiced + lip-synced</div>
+                              {hasDialogue(r.beat) ? (
+                                <p>{r.beat.dialogue!.filter((d) => d && String(d.line || "").trim()).map((d, i, arr) => (
+                                  <span key={i}>
+                                    <b>{d.speaker || "voice"}</b>: {d.line}{i < arr.length - 1 ? <br /> : null}
+                                  </span>
+                                ))}</p>
+                              ) : (
+                                <p><span className="muted">— silent scene —</span></p>
+                              )}
                             </div>
                           </div>
                           <div className="shotlist-detail-meta">

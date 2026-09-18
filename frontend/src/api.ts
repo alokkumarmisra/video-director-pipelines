@@ -185,15 +185,22 @@ export interface RegenSpec {
 // regen. Queued client-side and drained serially (the server — and the
 // ComfyUI queue behind it — accepts only one active run). `format` selects
 // the landscape cut (default) or the vertical Instagram Reel cut.
+// `mode: "dialogue"` runs the voice + lip-sync pass instead of generation.
 export interface RunRequest {
   stitch?: boolean;
   regen?: RegenSpec | null;
   count?: number;
   engine?: Engine;
   format?: VideoFormat;
+  mode?: "dialogue";
+  beats?: string;
+  skipTts?: boolean;
+  skipLipsync?: boolean;
+  /** Dialogue mode: voice+sync clips but leave the final cut alone (merge later). */
+  noStitch?: boolean;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -204,6 +211,11 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       format: opts.format || "landscape",
       regen: opts.regen || null,
       count: opts.count ?? 1,
+      mode: opts.mode,
+      beats: opts.beats,
+      skipTts: !!opts.skipTts,
+      skipLipsync: !!opts.skipLipsync,
+      noStitch: !!opts.noStitch,
     }),
   }).then((r) => r.json() as Promise<{ id: string; folder?: string; error?: string }>);
 
@@ -366,9 +378,9 @@ export const craftMasterPrompt = (
   });
 
 export interface AssetEvent {
-  kind: "image" | "video";
+  kind: "image" | "video" | "audio";
   file: string;
-  stage: "reference" | "keyframe" | "clip" | "final";
+  stage: "reference" | "keyframe" | "clip" | "final" | "dialogue";
   index?: number;
   /** True for pre-refresh backlog replayed once on SSE connect (reattaching
       after a refresh). Restores counts/gallery; carries no timing — the real
@@ -528,7 +540,49 @@ export interface DirectorInput {
   sceneSeconds: number;
   aspectRatio: string;
   instructions?: string;
+  // Music-video mode: uploaded song attachment (from directorUploadSong).
+  // durationSeconds drives the storyboard timeline; the story field carries
+  // the pasted lyrics (or an instrumental placeholder when hasLyrics=false).
+  song?: DirectorSong | null;
 }
+
+// Uploaded song attachment for the Director's music-video mode.
+export interface DirectorSong {
+  file: string;
+  fileName: string;
+  durationSeconds: number;
+  hasLyrics?: boolean;
+}
+
+// Upload an mp3/wav (data URL) for music-video mode. The server stores it in
+// director/ and returns the file handle + ffprobe duration (the timeline).
+export const directorUploadSong = (data: string, fileName: string) =>
+  fetch("/api/director/song-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data, fileName }),
+  }).then(
+    directorOk<{ file: string; fileName: string; durationSeconds: number; sizeBytes: number }>(
+      "song upload failed"
+    )
+  );
+
+// Preview URL for an uploaded director song.
+export const directorSongUrl = (file: string) =>
+  `/api/director/audio/${encodeURIComponent(file)}`;
+
+// Lay the board's uploaded song over an output dir's latest final cut.
+// Returns the muxed file (outputs/<dir>/<prefix>_with_song.mp4).
+export const directorMuxSong = (id: string, dir: string) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/mux-song`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dir }),
+  }).then(
+    directorOk<{ file: string; from: string; songDuration: number | null; finalDuration: number | null }>(
+      "song mix failed"
+    )
+  );
 
 export interface DirectorScene {
   scene_number: number;
@@ -547,6 +601,7 @@ export interface DirectorScene {
   environment: string;
   continuity_from_previous_scene: string;
   transition_to_next_scene: string;
+  dialogue: { speaker: string; line: string }[];
   image_prompt: string;
   video_prompt: string;
 }

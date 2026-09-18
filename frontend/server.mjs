@@ -35,7 +35,9 @@ import {
   DIRECTOR_SYSTEM,
   stripJson,
   normalizeBlueprint,
+  normalizeDialogue,
   normalizeScene,
+  sameLine,
   buildBiblePrompt,
   buildScenesPrompt,
   buildRegenPrompt,
@@ -2057,12 +2059,28 @@ function startRun(scenario, opts = {}) {
   // direct/CLI-style calls working when the DB is unreachable.
   const folder = opts.storageFolder || folderName(scenario);
   const configName = opts.configName || scenario;
-  const script = engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
+  // Dialogue mode: voice + lip-sync beats via scripts/dialogue_lipsync.mjs
+  // (local Edge-TTS + Easy-Wav2Lip, no ComfyUI queue needed but still serial
+  // with other runs since it rewrites clip mains + re-stitches the final).
+  const mode = opts.mode === "dialogue" ? "dialogue" : "generate";
+  const script = mode === "dialogue"
+    ? "scripts/dialogue_lipsync.mjs"
+    : engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
   const argv = [script, folder];
   if (configName !== folder) argv.push("--config-name", configName);
-  if (stitch) argv.push("--stitch");
-  if (regen) {
-    argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
+  if (mode === "dialogue") {
+    if (opts.beats) argv.push("--beats", String(opts.beats));
+    if (opts.skipTts) argv.push("--skip-tts");
+    if (opts.skipLipsync) argv.push("--skip-lipsync");
+    // Per-scene check flow: voice+sync the clip but leave the final cut
+    // alone (merge later with Stitch).
+    if (opts.noStitch) argv.push("--no-stitch");
+    if (engine === "wan") argv.push("--wan");
+  } else {
+    if (stitch) argv.push("--stitch");
+    if (regen) {
+      argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
+    }
   }
   if (format === "vertical") argv.push("--vertical");
   const id = Date.now().toString(36);
@@ -2071,7 +2089,7 @@ function startRun(scenario, opts = {}) {
   // reveals the active run and the SSE log endpoint replays its log + asset
   // events, letting the client rebuild progress and button state from the
   // real stream instead of guessing.
-  const run = { id, scenario, folder, engine, format, stitch, regen, count, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  const run = { id, scenario, folder, engine, format, stitch, regen, count, mode, beats: opts.beats || null, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -2560,11 +2578,26 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
     if (customRules) cfg.presetRules = customRules;
     else delete cfg.presetRules;
   }
-  cfg.sequence = cfg.sequence.map((b, i) => ({
-    title: slug(b.title) || `beat${i + 1}`,
-    image: String(b.image || ""),
-    motion: String(b.motion || ""),
-  }));
+  cfg.sequence = cfg.sequence.map((b, i) => {
+    const out = {
+      title: slug(b.title) || `beat${i + 1}`,
+      image: String(b.image || ""),
+      motion: String(b.motion || ""),
+    };
+    // Preserve per-scene dialogue + clip length when the LLM returns them
+    // (director-approved projects always carry them; dropping them here is
+    // what used to blank-or-duplicate dialogue in the Scenario Editor).
+    const dur = Number(b.duration);
+    if (Number.isFinite(dur) && dur > 0) out.duration = Math.min(30, Math.max(1, Math.round(dur)));
+    if (Array.isArray(b.dialogue)) {
+      const dlg = b.dialogue
+        .filter((x) => x && typeof x === "object")
+        .map((x) => ({ speaker: String(x.speaker || "").trim(), line: String(x.line || "").trim() }))
+        .filter((x) => x.line);
+      if (dlg.length) out.dialogue = dlg;
+    }
+    return out;
+  });
   // Master Prompt fan-out: whatever was written in Master Prompt is appended
   // to every crafted scene's keyframe image prompt (blank = untouched, so
   // only the AI prompt is sent for generation; motion is never touched).
@@ -2585,6 +2618,8 @@ async function craftNextBeat(cfg, presetContent = "") {
     title: b.title,
     image: b.image,
     motion: b.motion,
+    ...(Number.isFinite(Number(b.duration)) && Number(b.duration) > 0 ? { duration: Number(b.duration) } : {}),
+    ...(Array.isArray(b.dialogue) && b.dialogue.length ? { dialogue: b.dialogue } : {}),
   }));
   const system = [
     "You extend a ComfyUI video-generation scenario with exactly ONE next beat.",
@@ -2592,7 +2627,9 @@ async function craftNextBeat(cfg, presetContent = "") {
     "Rules: title = short snake_case_file_safe and unique among existing titles;",
     "image = static keyframe prompt for Flux t2i (reuse the character block VERBATIM, keep the same visual style, new moment/pose/setting detail);",
     "motion = 1-2 sentences of motion + camera direction for LTX image-to-video (no cuts, no new characters).",
-    "Output ONLY a JSON object { title, image, motion } — no prose, no markdown fences.",
+    "dialogue = 0-2 NEW speakable lines for THIS beat only as [{ speaker, line }] (speaker = on-screen character, each line under ~15 words) — NEVER copy a line from the existing beats; action-only beats use [].",
+    "duration = clip length in seconds for this beat (1-30, usually the project default).",
+    "Output ONLY a JSON object { title, image, motion, dialogue, duration } — no prose, no markdown fences.",
     // Same priority as craftScenario: the project's preset keeps the visual
     // language; the new beat only supplies the next story moment.
     ...(presetContent ? [`Visual language: the new beat MUST follow these preset rules:\n${presetContent}`] : []),
@@ -2628,7 +2665,30 @@ Write the next beat (beat ${existing.length + 1}).`;
   let title = slug(b.title) || `beat${existing.length + 1}`;
   const taken = new Set(existing.map((x) => x.title));
   if (taken.has(title)) title = `${title}_next`;
-  return { title, image: String(b.image), motion: String(b.motion) };
+  const out = { title, image: String(b.image), motion: String(b.motion) };
+  const dur = Number(b.duration);
+  if (Number.isFinite(dur) && dur > 0) out.duration = Math.min(30, Math.max(1, Math.round(dur)));
+  if (Array.isArray(b.dialogue)) {
+    const dlg = b.dialogue
+      .filter((x) => x && typeof x === "object")
+      .map((x) => ({ speaker: String(x.speaker || "").trim(), line: String(x.line || "").trim() }))
+      .filter((x) => x.line);
+    // Never carry a copied line forward: drop any line that already appears
+    // in an earlier beat (the "same text in every scene" defect).
+    const seen = new Set(
+      (cfg.sequence || []).flatMap((eb) => (Array.isArray(eb.dialogue) ? eb.dialogue : []))
+        .map((x) => String(x && x.line || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim())
+        .filter(Boolean)
+    );
+    const fresh = dlg.filter((x) => {
+      const k = x.line.toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim();
+      if (k && seen.has(k)) return false;
+      if (k) seen.add(k);
+      return true;
+    });
+    if (fresh.length) out.dialogue = fresh;
+  }
+  return out;
 }
 
 /** Generate `count` consecutive beats; each call continues from the previous one. */
@@ -3250,6 +3310,11 @@ const server = http.createServer(async (req, res) => {
           format: body.format ?? (body.vertical ? "vertical" : undefined),
           regen: body.regen || null,
           count: body.count,
+          mode: body.mode === "dialogue" ? "dialogue" : undefined,
+          beats: typeof body.beats === "string" ? body.beats : undefined,
+          skipTts: !!body.skipTts,
+          skipLipsync: !!body.skipLipsync,
+          noStitch: !!body.noStitch,
           storageFolder: folder,
           configName: body.scenario,
         });
@@ -3861,17 +3926,42 @@ const server = http.createServer(async (req, res) => {
     const DIRECTOR_STYLES = ["3D Preschool Animation", "3D Cinematic", "Realistic", "Anime", "Cartoon", "Indian Mythological", "Fantasy", "Custom"];
     const DIRECTOR_LANGS = ["Hindi", "English", "Hinglish"];
     const DIRECTOR_ASPECTS = ["16:9", "9:16", "1:1"];
+    const DIRECTOR_AUDIO_EXTS = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4" };
     function directorValidateInput(body) {
       const b = body && typeof body === "object" ? body : {};
       const title = String(b.title || "").trim();
-      const story = String(b.story || "").trim();
+      let story = String(b.story || "").trim();
       if (!title) throw new Error("story title is required");
-      if (story.length < 20) throw new Error("story is too short — paste the full story");
+      // Optional song attachment (uploaded via POST /api/director/song-upload):
+      // { file, fileName, durationSeconds, hasLyrics }. The song duration
+      // drives the timeline (music-video mode); lyrics ride in `story`.
+      let song = null;
+      if (b.song && typeof b.song === "object") {
+        const sf = String(b.song.file || "");
+        if (!isSafe(sf) || !/\.(mp3|wav|m4a)$/i.test(sf) || !fs.existsSync(path.join(DIRECTOR, sf)))
+          throw new Error("song file missing — re-upload the mp3");
+        const dur = Math.round(Number(b.song.durationSeconds) || 0);
+        song = {
+          file: sf,
+          fileName: String(b.song.fileName || "song.mp3").slice(0, 120),
+          durationSeconds: dur > 0 ? dur : null,
+          hasLyrics: b.song.hasLyrics !== false,
+        };
+      }
+      if (song && !song.hasLyrics && story.length < 3)
+        story = `[Instrumental song "${title}" — no lyrics provided; direct a matching visual story]`;
+      if (story.length < 20) throw new Error(song
+        ? "paste the song lyrics (20+ characters), or leave them empty for an instrumental visual story"
+        : "story is too short — paste the full story");
       const language = DIRECTOR_LANGS.includes(b.language) ? b.language : "English";
       const genre = DIRECTOR_GENRES.includes(b.genre) ? b.genre : "Kids";
       const visualStyle = DIRECTOR_STYLES.includes(b.visualStyle) ? b.visualStyle : "3D Preschool Animation";
       const aspectRatio = DIRECTOR_ASPECTS.includes(b.aspectRatio) ? b.aspectRatio : "16:9";
-      const targetSeconds = Math.max(15, Math.min(3600, Math.floor(Number(b.targetSeconds)) || 60));
+      // Song mode: the timeline IS the song length (rounded, clamped).
+      const wantedTarget = song?.durationSeconds
+        ? Math.max(15, Math.min(3600, song.durationSeconds))
+        : Math.max(15, Math.min(3600, Math.floor(Number(b.targetSeconds)) || 60));
+      const targetSeconds = wantedTarget;
       const sceneSeconds = Math.max(1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
       const sceneCount = sceneCountFor(targetSeconds, sceneSeconds);
       if (!sceneCount) throw new Error("could not derive a scene count from the durations");
@@ -3887,7 +3977,81 @@ const server = http.createServer(async (req, res) => {
         sceneSeconds,
         aspectRatio,
         instructions: String(b.instructions || "").trim(),
+        ...(song ? { song } : {}),
       };
+    }
+    // Song upload for the Director's music-video mode: base64 audio -> file
+    // in director/ + ffprobe duration (drives the storyboard timeline).
+    // No transcription here (the local LLM is text-only) — lyrics come from
+    // the pasted text field, or the board runs instrumental from the title.
+    if (p === "/api/director/song-upload" && req.method === "POST") {
+      const body = await readJson(req);
+      if (typeof body.data !== "string") return json(res, 400, { error: "data (base64) required" });
+      const m = body.data.match(/^data:(audio\/[\w.+-]+);base64,(.+)$/s);
+      if (!m) return json(res, 400, { error: "expected a data:audio/* base64 payload (mp3 or wav)" });
+      const mime = m[1].toLowerCase();
+      const ext = mime.includes("wav") ? ".wav" : mime.includes("mp4") || mime.includes("m4a") ? ".m4a"
+        : mime.includes("mpeg") || mime.includes("mp3") ? ".mp3" : null;
+      if (!ext) return json(res, 400, { error: `unsupported audio type ${mime} — upload mp3 or wav` });
+      const buf = Buffer.from(m[2], "base64");
+      if (!buf.length) return json(res, 400, { error: "empty file" });
+      if (buf.length > 30 * 1024 * 1024) return json(res, 400, { error: "song over 30MB — trim it and re-upload" });
+      const file = `song_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 6)}${ext}`;
+      fs.mkdirSync(DIRECTOR, { recursive: true });
+      fs.writeFileSync(path.join(DIRECTOR, file), buf);
+      const durationSeconds = await videoDurationSec(path.join(DIRECTOR, file));
+      if (durationSeconds == null) {
+        try { fs.unlinkSync(path.join(DIRECTOR, file)); } catch { /* already gone */ }
+        return json(res, 400, { error: "could not read audio duration — is it a valid mp3/wav?" });
+      }
+      const originalName = String(body.fileName || "song").slice(0, 120) || "song";
+      return json(res, 200, {
+        file, fileName: originalName, durationSeconds: Math.round(durationSeconds),
+        sizeBytes: buf.length,
+      });
+    }
+    // Serve uploaded director audio (preview player + mux source).
+    if (p.startsWith("/api/director/audio/") && req.method === "GET") {
+      const file = decodeURIComponent(p.split("/")[4] || "");
+      if (!isSafe(file) || !/\.(mp3|wav|m4a)$/i.test(file))
+        return json(res, 400, { error: "bad audio file" });
+      const full = path.join(DIRECTOR, file);
+      if (!fs.existsSync(full)) return json(res, 404, { error: "audio not found" });
+      const ctype = DIRECTOR_AUDIO_EXTS[path.extname(full).toLowerCase()] || "application/octet-stream";
+      res.writeHead(200, { "Content-Type": ctype, "Cache-Control": "no-store" });
+      fs.createReadStream(full).pipe(res);
+      return;
+    }
+    // Lay the board's uploaded song over an output dir's latest final cut:
+    // <prefix>_with_song.mp4 (video stream-copied, song as the audio track,
+    // -shortest so the file ends with whichever is shorter). Overwrites the
+    // same file on repeat muxes — no version sprawl.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/mux-song$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const songFile = board?.input?.song?.file;
+      if (!songFile) throw new Error("this board has no uploaded song");
+      const songFull = path.join(DIRECTOR, songFile);
+      if (!fs.existsSync(songFull)) throw new Error("song file missing — re-upload the mp3");
+      const body = await readJson(req).catch(() => ({}));
+      if (!isSafe(body.dir)) return json(res, 400, { error: "bad dir" });
+      const full = path.join(OUTPUTS, body.dir);
+      let st = null;
+      try { st = fs.statSync(full); } catch { st = null; }
+      if (!st || !st.isDirectory()) return json(res, 404, { error: "unknown outputs dir" });
+      const prefix = prefixForDir(body.dir);
+      const vm = versionMap(full, prefix, []);
+      const finals = [...(vm.final ?? [])].sort((a, b) => a.v - b.v);
+      const from = finals.length ? finals[finals.length - 1].file : vm.finalMain;
+      if (!from) return json(res, 400, { error: "no final cut yet — generate and stitch the video first" });
+      const out = `${prefix}_with_song.mp4`;
+      await runCmd("ffmpeg", ["-y", "-v", "error",
+        "-i", path.join(full, from), "-i", songFull,
+        "-c:v", "copy", "-map", "0:v:0", "-map", "1:a:0", "-shortest",
+        path.join(full, out)], 120000);
+      const songDur = await videoDurationSec(songFull);
+      const finalDur = await videoDurationSec(path.join(full, from));
+      return json(res, 200, { file: out, from, songDuration: songDur, finalDuration: finalDur });
     }
     if (p === "/api/director/boards" && req.method === "GET") {
       fs.mkdirSync(DIRECTOR, { recursive: true });
@@ -3984,11 +4148,20 @@ const server = http.createServer(async (req, res) => {
       const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
       const beats = (board.blueprint.beats || []).slice();
       const prevScene = done > 0 ? board.scenes[done - 1] : null;
+      // Prior spoken lines so the prompt can forbid verbatim repeats (late
+      // batches used to re-plan the opening and copy scene-1 dialogue).
+      const priorDialogue = [];
+      for (const s of board.scenes) {
+        for (const d of (s.dialogue || [])) {
+          if (d && d.line) priorDialogue.push(String(d.line));
+        }
+      }
       const raw = await llmChatJson({
         system: DIRECTOR_SYSTEM,
         user: buildScenesPrompt({
           input: board.input, blueprint: board.blueprint, beats, prevScene,
           startNumber: done + 1, count: n, styleLock: board.styleLock,
+          totalScenes: board.sceneCount, priorDialogue,
         }),
         maxTokens: 16000,
         temperature: 0.5,
@@ -3997,8 +4170,34 @@ const server = http.createServer(async (req, res) => {
       });
       const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
       if (!got.length) throw new Error("director returned no scenes — try again");
+      // Dedupe guard: the LLM sometimes repeats an earlier line verbatim
+      // across batches. A repeated line carries no story value and is exactly
+      // the "scene 1 copied to scene 45" report — drop the repeat so every
+      // stored scene keeps only its own actual dialogue (action-only scenes
+      // keep empty dialogue instead of filler).
+      const seen = new Set(priorDialogue.map((l) => String(l || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim()).filter(Boolean));
       for (let i = 0; i < got.length && board.scenes.length < board.sceneCount; i++) {
-        board.scenes.push(normalizeScene(got[i], board.scenes.length + 1, board.input.sceneSeconds));
+        const normed = normalizeScene(got[i], board.scenes.length + 1, board.input.sceneSeconds);
+        if (Array.isArray(normed.dialogue) && normed.dialogue.length) {
+          const fresh = [];
+          for (const d of normed.dialogue) {
+            const key = String(d.line || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim();
+            let dup = key && seen.has(key);
+            if (!dup && key) {
+              for (const s of board.scenes) {
+                for (const pd of (s.dialogue || [])) {
+                  if (pd && pd.line && sameLine(pd.line, d.line)) { dup = true; break; }
+                }
+                if (dup) break;
+              }
+            }
+            if (dup) continue;
+            fresh.push(d);
+            if (key) seen.add(key);
+          }
+          normed.dialogue = normalizeDialogue(fresh);
+        }
+        board.scenes.push(normed);
       }
       board.status = board.scenes.length >= board.sceneCount ? "ready" : "scenes-partial";
       board.error = null;

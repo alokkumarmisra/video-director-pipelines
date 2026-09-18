@@ -38,6 +38,7 @@ function hexToRgba(hex: string, alpha: number): string {
 function sameRequest(a: RunRequest, b: RunRequest): boolean {
   return (
     !!a.stitch === !!b.stitch &&
+    (a.mode ?? null) === (b.mode ?? null) &&
     (a.regen?.kind ?? null) === (b.regen?.kind ?? null) &&
     (a.regen?.index ?? null) === (b.regen?.index ?? null) &&
     (a.format ?? "landscape") === (b.format ?? "landscape") &&
@@ -230,7 +231,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     setNameOv(null);
     setCraftEpoch((e) => e + 1);
   }, []);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue"; beats?: string; noStitch?: boolean } | null>(null);
   // Reattach target for RunPanel: a run that was already active on the server
   // when this page loaded (refresh mid-generation). Restored here — not in
   // RunPanel — so the header bar, sidebar spinners and every generating
@@ -485,6 +486,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
       count: spec.count ?? 1,
       engine: spec.engine ?? engine,
       format: spec.format ?? "landscape",
+      mode: spec.mode,
+      beats: spec.beats,
+      skipTts: !!spec.skipTts,
+      skipLipsync: !!spec.skipLipsync,
+      noStitch: !!spec.noStitch,
     };
     if (runActive) {
       setRunQueue((q) => (q.some((x) => sameRequest(x, item)) ? q : [...q, item]));
@@ -1452,6 +1458,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               comfyQueue={comfyQueue}
               onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
               onStitch={() => requestRun({ stitch: true, ...cutFormatParam })}
+              onDialogue={(index) => requestRun({ mode: "dialogue", beats: String(index), noStitch: true, ...cutFormatParam })}
               runBusy={runActive}
               runQueue={runQueue}
             />

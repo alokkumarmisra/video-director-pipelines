@@ -30,6 +30,7 @@ import {
   normalizeFormat, outDirName, prefixForDir, verticalImagePrompt, verticalMotionPrompt,
 } from "../lib/variant.mjs";
 import { runSequence, stitchSequence } from "../lib/sequence.mjs";
+import { beatTargetDuration } from "../lib/tts.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -78,7 +79,9 @@ const opts = {
   buildClip: (motion, image, i) => buildLtxGraph({
     prompt: move(motion),
     image,
-    duration: cfg.duration ?? 3,
+    // Dialogue beats grow to fit their voice audio (lib/tts.mjs) instead
+    // of the fixed global duration.
+    duration: beatTargetDuration({ outDir, prefix, n: i + 1, beat: cfg.sequence[i], fallback: cfg.duration ?? 3 }),
     ratio: vertical ? VERTICAL_LTX_RATIO : "16:9 (Widescreen)",
     megapixels: vertical ? VERTICAL_LTX_MEGAPIXELS : 0.5,
     prefix: `${scenario}/clip${i + 1}_${cfg.sequence[i].title}`,

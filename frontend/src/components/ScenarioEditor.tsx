@@ -452,6 +452,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               <span className="beat-index">{i + 1}</span>
               <span className="beat-title">
                 Scene {i + 1} · {b.title || `beat${i + 1}`}
+                {Number.isFinite(Number(b.duration)) && Number(b.duration) > 0 ? ` · ${Number(b.duration)}s` : ""}
+                {Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim()) ? ` · 🎙 ${b.dialogue.filter((d) => d && String(d.line || "").trim()).length}` : ""}
               </span>
               <span className="spacer" />
               <button
@@ -508,10 +510,41 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               disabled={saving}
               onChange={(e) => updateBeat(i, { motion: e.target.value })}
             />
+            <label title="Clip length for this scene in seconds — dialogue scenes grow to fit the voice automatically; empty = project default">Clip length (sec) — this scene</label>
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={b.duration ?? ""}
+              placeholder="project default"
+              disabled={saving}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                updateBeat(i, { duration: e.target.value === "" || !Number.isFinite(v) ? undefined : Math.min(30, Math.max(1, Math.round(v))) });
+              }}
+            />
+            <label title="One per line as speaker: line — voiced per character (Hindi TTS) and lip-synced">Dialogue (speaker: line per line — voiced + lip-synced)</label>
+            <textarea
+              rows={3}
+              value={(Array.isArray(b.dialogue) ? b.dialogue : []).map((d) => {
+                const sp = String(d.speaker || "").trim();
+                const ln = String(d.line || "").trim();
+                return sp ? `${sp}: ${ln}` : ln;
+              }).filter(Boolean).join("\n")}
+              placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"}
+              disabled={saving}
+              onChange={(e) => updateBeat(i, {
+                dialogue: e.target.value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+                  const c = l.indexOf(":");
+                  return c > 0
+                    ? { speaker: l.slice(0, c).trim(), line: l.slice(c + 1).trim() }
+                    : { speaker: "", line: l };
+                }).filter((d) => d.line),
+              })}
+            />
             </Collapse>
             {hist.length > 0 && (
-              <div className="beat-versions" aria-label={`Scene ${i + 1} versions`}>
-                <span className="beat-versions-label" title="Each Save stores only changed scenes as new rows — this scene's versions">Versions</span>
+              <div className="beat-versions beat-versions-mini" aria-label={`Scene ${i + 1} versions`}>
                 <div className="beat-versions-pills">
                   {hist.map((v) => {
                     const on = selV === v;
@@ -522,11 +555,11 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                         className={`v-pill${on ? " on" : ""}${isLatest ? " latest" : ""}`}
                         disabled={busyOld}
                         onClick={() => void viewBeatVersion(i, isLatest ? null : v)}
-                        title={isLatest ? `Scene ${i + 1} latest (v${v}) — editable` : `View Scene ${i + 1} at v${v} (read-only)`}
+                        title={isLatest ? `Scene ${i + 1} latest (V${v}) — editable` : `View Scene ${i + 1} at V${v} (read-only)`}
                         aria-pressed={on}
                         aria-label={`Scene ${i + 1} version ${v}${isLatest ? " (latest)" : ""}`}
                       >
-                        {busyOld && !on ? `v${v}` : `v${v}`}
+                        {`V${v}`}
                       </button>
                     );
                   })}
@@ -545,6 +578,14 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                         <p className="beat-versions-text">{oldBeat.image || "—"}</p>
                         <label>Motion &amp; camera — v{selV}</label>
                         <p className="beat-versions-text">{oldBeat.motion || "—"}</p>
+                        <label>Clip length — v{selV}</label>
+                        <p className="beat-versions-text">{Number.isFinite(Number(oldBeat.duration)) && Number(oldBeat.duration) > 0 ? `${Number(oldBeat.duration)}s` : "project default"}</p>
+                        <label>Dialogue — v{selV}</label>
+                        <p className="beat-versions-text">{Array.isArray(oldBeat.dialogue) && oldBeat.dialogue.length ? oldBeat.dialogue.map((d) => {
+                          const sp = String(d.speaker || "").trim();
+                          const ln = String(d.line || "").trim();
+                          return sp ? `${sp}: ${ln}` : ln;
+                        }).filter(Boolean).join("\n") || "—" : "—"}</p>
                       </>
                     ) : (
                       <p className="hint">Scene {i + 1} did not exist at v{selV} (added later).</p>

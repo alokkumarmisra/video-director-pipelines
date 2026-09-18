@@ -1,0 +1,248 @@
+{
+  "description": "Rabbit and Lion — A clever and brave rabbit named Chiku uses wit and strategy to outsmart the mighty but arrogant lion, teaching him a valuable lesson about true strength.",
+  "duration": 4,
+  "referencePrompt": "A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears, standing in a lush jungle. He looks alert and intelligent., A vibrant green jungle filled with tall trees, colorful flowers, and a clear flowing river. The light is bright and the atmosphere peaceful., High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering",
+  "sequence": [
+    {
+      "title": "jungle_life",
+      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Shera’s Cave.",
+      "motion": "Shera stands tall with a look of arrogance on his face."
+    },
+    {
+      "title": "chiku_s_decision",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku stands determinedly in the middle of the jungle."
+    },
+    {
+      "title": "preparation_and_strategy",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku carefully moves leaves aside to reveal the pit."
+    },
+    {
+      "title": "the_encounter",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Sershraj steps too close to the pit and falls in. Chiku watches from a safe distance."
+    },
+    {
+      "title": "realization_of_mistake",
+      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Shera looks around with confusion and realization of his mistake."
+    },
+    {
+      "title": "chiku_s_approach",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Chiku approaches the pit cautiously."
+    },
+    {
+      "title": "shera_s_reaction",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Shera looks up at Chiku with surprise and confusion."
+    },
+    {
+      "title": "reflection_on_mistake",
+      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Shera looks around thoughtfully."
+    },
+    {
+      "title": "conversation_between_chiku_and_sershraj",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Chiku approaches Sershraj, who is sitting on the ground. They have a conversation."
+    },
+    {
+      "title": "sershraj_s_new_stance_as_leader",
+      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Shera stands tall in the jungle."
+    },
+    {
+      "title": "end_sequence",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku and Sershraj walk side by side through the jungle."
+    },
+    {
+      "title": "end_credits",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku and Sershraj stand together in the jungle."
+    },
+    {
+      "title": "chiku_s_observation",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku watches Sershraj walk through the jungle with his prideful gait."
+    },
+    {
+      "title": "chiku_s_decision",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku makes a determined decision to challenge Sershraj."
+    },
+    {
+      "title": "preparing_the_pit",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku carefully positions leaves over the pit."
+    },
+    {
+      "title": "the_encounter",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Sershraj falls into the pit, struggling to get out."
+    },
+    {
+      "title": "chiku_s_concern",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Chiku approaches the pit, calling out to Sershraj."
+    },
+    {
+      "title": "shera_s_realization",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
+      "motion": "Shera looks up at Chiku with surprise and understanding."
+    },
+    {
+      "title": "shera_s_reflection",
+      "image": "Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Shera’s Cave.",
+      "motion": "Shera sits deep in thought reflecting on the day's events."
+    },
+    {
+      "title": "chiku_s_victory",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku walks through the jungle feeling proud of himself."
+    },
+    {
+      "title": "shera_s_respect",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Shera stands in front of Chiku with respect."
+    },
+    {
+      "title": "new_harmony",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    },
+    {
+      "title": "end_credits",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    },
+    {
+      "title": "end_credits",
+      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    },
+    {
+      "title": "chiku_s_reflection",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku stands by the river reflecting in it while looking thoughtful."
+    },
+    {
+      "title": "shera_s_pride",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands tall in his cave with a smug expression on his face."
+    },
+    {
+      "title": "chiku_preparing_the_pit",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku carefully prepares a pit covered by leaves."
+    },
+    {
+      "title": "shera_approaching_the_pit",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera walks through the jungle until he stops near the pit."
+    },
+    {
+      "title": "chiku_watching",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku crouches behind bushes watching Shera suspiciously."
+    },
+    {
+      "title": "shera_falls_into_the_pit",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera falls into the pit, struggling to get out."
+    },
+    {
+      "title": "chiku_approaches",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku cautiously approaches the pit after Shera's fall."
+    },
+    {
+      "title": "reflection",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera sits in the pit reflecting deeply."
+    },
+    {
+      "title": "chiku_and_sershraj_together",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku and Sershraj walk towards each other, meeting in the middle of the jungle."
+    },
+    {
+      "title": "shera_s_pride",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands tall in his cave with a smug expression on his face."
+    },
+    {
+      "title": "chiku_s_reflection",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku stands by the river reflecting in it while looking thoughtful."
+    },
+    {
+      "title": "end_credits",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    },
+    {
+      "title": "chiku_s_decision",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku stands tall at the riverbank, looking determined."
+    },
+    {
+      "title": "preparing_the_pit",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku moves through the jungle, gathering materials for the pit."
+    },
+    {
+      "title": "shera_s_arrival",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera walks through the jungle, observing his surroundings."
+    },
+    {
+      "title": "the_pit",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Pit. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera falls into the pit filled with muddy water."
+    },
+    {
+      "title": "realization",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Pit. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands up, shaking off the mud."
+    },
+    {
+      "title": "exit_from_cave",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera walks out of his cave."
+    },
+    {
+      "title": "confrontation",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands tall in front of Chiku."
+    },
+    {
+      "title": "lion_s_pride",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands in the middle of the jungle."
+    },
+    {
+      "title": "reflection",
+      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera sits in a meditative pose."
+    },
+    {
+      "title": "change_and_respect",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Shera stands tall in front of Chiku."
+    },
+    {
+      "title": "together",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    },
+    {
+      "title": "end_credits",
+      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
+      "motion": "Chiku and Sershraj stand together watching the sunrise."
+    }
+  ],
+  "folder_name": "rabbit_and_lion"
+}
