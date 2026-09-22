@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, type AssetEvent, type RunRequest, type VideoFormat } from "../api";
+import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, getDialogueStatus, saveSceneDialogue, type AssetEvent, type RunRequest, type VideoFormat, type Engine, type DialogueBeatStatus, type DialogueLine } from "../api";
 import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
 import type { GenerationProgress } from "./GenerationProgressBar";
 import { formatLiveElapsed } from "./GenerationProgressBar";
@@ -43,6 +43,18 @@ interface Props {
   /** Jump to Scene n in the Scenario Editor (App scrolls + flashes the
       matching beat). Absent = no Edit button on the scene cards. */
   onGotoEditorScene?: (n: number) => void;
+  /** Board summary (Shots / Cinematic / Lip-sync / min total) from the open
+      project — rendered on the Keyframes → clips card, which now owns these
+      stats instead of the Story Board header. */
+  summary?: import("./ShotList").BoardSummary | null;
+  /** Project display name owning the Lip-sync stat — enables its View button
+      (dialogue viewer/editor popup). Absent = no View button. */
+  projectName?: string | null;
+  dialogueEngine?: Engine;
+  dialogueFormat?: VideoFormat;
+  /** A dialogue edit landed — parent should reload the scenario config
+      (board summary + Story Board) and re-list outputs. */
+  onDialogueSaved?: () => void;
 }
 
 type RefMode = "generate" | "upload";
@@ -53,6 +65,30 @@ const pretty = (f: string) =>
     .trim();
 
 const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0);
+
+// Dialogue text format for the Lip-sync viewer popup — one line per dialogue
+// line as `speaker: line`, with an optional per-line expression as
+// `speaker (expression): line` (same convention as the Story Board and Video
+// LipSync editors; drives TTS prosody + clip length + lip-sync).
+const dlgToText = (d: DialogueLine[] | null | undefined): string =>
+  (Array.isArray(d) ? d : []).map((x) => {
+    const sp = String(x.speaker || "").trim();
+    const ln = String(x.line || "").trim();
+    const ex = String(x.expression || "").trim();
+    const head = sp && ex ? `${sp} (${ex})` : sp;
+    return head ? `${head}: ${ln}` : ln;
+  }).filter(Boolean).join("\n");
+const textToDlg = (t: string): DialogueLine[] =>
+  t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const c = l.indexOf(":");
+    if (c <= 0) return { speaker: "", line: l };
+    const head = l.slice(0, c).trim();
+    const line = l.slice(c + 1).trim();
+    const m = head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    return m
+      ? { speaker: m[1].trim(), expression: m[2].trim(), line }
+      : { speaker: head, line };
+  }).filter((d) => d.line);
 
 // Centered loading overlay for the single generating tile in Keyframes →
 // clips: dims the frame and centers a spinner + "Generating" readout so the
@@ -75,7 +111,7 @@ function GenOverlay({ label, readout }: { label: string; readout?: string | null
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene, summary, projectName, dialogueEngine = "ltx", dialogueFormat = "landscape", onDialogueSaved }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -92,6 +128,16 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<PreviewItem | null>(null);
+  // Lip-sync View popup: dialogue beats for the workspace project
+  // (GET /api/project/:name/dialogue), each with an editable
+  // `speaker: line` textarea saved via PUT /api/project/:name/scene/:n/dialogue.
+  const [lipOpen, setLipOpen] = useState(false);
+  const [lipLoading, setLipLoading] = useState(false);
+  const [lipError, setLipError] = useState<string | null>(null);
+  const [lipBeats, setLipBeats] = useState<DialogueBeatStatus[]>([]);
+  const [lipTexts, setLipTexts] = useState<Record<number, string>>({});
+  const [lipSaving, setLipSaving] = useState<number | null>(null);
+  const [lipSaveError, setLipSaveError] = useState<Record<number, string>>({});
   // Output dir whose listing is actually on screen. Stale-while-revalidate:
   // the previous project's files stay mounted until the new listing lands —
   // clearing them first is what flashed "No outputs yet" on every click.
@@ -189,8 +235,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   useEffect(() => { setViewFinal(null); }, [scenario]);
 
   // Never show another dir's files: the moment `scenario` changes, blank
-  // the listing (a loading skeleton shows until the new one lands). Refresh
-  // polls for the SAME dir keep their data — no flashing mid-run.
+  // the listing (a loading skeleton shows until the new one lands) AND point
+  // viewScenario at the new dir immediately — otherwise the old dir's files
+  // (or its empty-state) stay on screen bound to the wrong project.
+  // Refresh polls for the SAME dir keep their data — no flashing mid-run.
   const prevScenarioRef = useRef(scenario);
   useEffect(() => {
     if (assets) return;
@@ -200,10 +248,11 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       setVersions({ ref: [], beats: {}, final: [] });
       setMains({ ref: null, beats: {}, final: null });
       setRefMeta({});
+      setLoadedFor(scenario);
     }
   }, [scenario, assets]);
 
-  // Live "Generated so far" view also tracks the dir's current mains: the
+  // Live-run view also tracks the dir's current mains: the
   // Reference tile below shows the version selected as main RIGHT NOW, so a
   // re-picked main (v3) replaces the file the last run emitted (v4) instead
   // of disagreeing with the Generate Reference card. Refetches on every
@@ -295,8 +344,78 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     const Tag = bare ? "div" : "section";
     return (
       <Tag className={bare ? undefined : "card"}>
-        {bare && <div className="section-label">Generated so far</div>}
-        {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {/* Lip-sync View popup: scenes with dialogue + editable dialogue text.
+          Saving writes a new scenario version (stale voice files are deleted
+          server-side, so the beat returns to PENDING until re-voiced). */}
+      {lipOpen && (
+        <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Lip-sync dialogues" onClick={() => { if (lipSaving == null) setLipOpen(false); }}>
+          <div className="dlg-box char-popup lip-view-box" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dlg-title">🎙 Lip-sync dialogues{(projectName || "").trim() ? ` · ${projectName}` : ""}</h3>
+            <p className="dlg-message">
+              Scenes with dialogue lines. Edit as <b>speaker: line</b> (optional{" "}
+              <b>speaker (expression): line</b>), then Save per scene. Re-run LipSync afterwards.
+            </p>
+            {lipLoading ? (
+              <p className="muted"><Spinner size={13} /> Loading dialogues…</p>
+            ) : lipError && lipBeats.length === 0 ? (
+              <p className="muted">{lipError}</p>
+            ) : (
+              <ol className="lip-view-list">
+                {lipBeats.map((b) => (
+                  <li key={b.beat} className="lip-view-item">
+                    <div className="lip-view-head">
+                      <span className="pill" title={`Scene ${b.beat}`}>{b.beat}</span>
+                      <span className="song-file" title={b.title || `Scene ${b.beat}`}>{b.title || `Scene ${b.beat}`}</span>
+                      {onGotoEditorScene && (
+                        <button
+                          type="button"
+                          className="ghost lip-view-goto"
+                          onClick={() => onGotoEditorScene(b.beat)}
+                          title={`Jump to Scene ${b.beat} in the Scenario Editor`}
+                        >
+                          Edit scene
+                        </button>
+                      )}
+                    </div>
+                    {(b.speakers ?? []).length > 0 && (
+                      <p className="muted" style={{ margin: "4px 0 0" }} title="Speakers in this scene">
+                        🎭 {(b.speakers ?? []).join(", ")}
+                      </p>
+                    )}
+                    <label style={{ marginTop: 6 }}>Dialogue · Scene {b.beat} (empty = silent scene)</label>
+                    <textarea
+                      rows={Math.min(8, Math.max(2, (lipTexts[b.beat] ?? "").split("\n").length + 1))}
+                      value={lipTexts[b.beat] ?? ""}
+                      maxLength={5000}
+                      placeholder={"chiku: नमस्ते! मैं चीकू हूँ।"}
+                      disabled={lipSaving != null}
+                      onChange={(e) => setLipTexts((p) => ({ ...p, [b.beat]: e.target.value }))}
+                    />
+                    {lipSaveError[b.beat] && <p className="err-text" role="alert">{lipSaveError[b.beat]}</p>}
+                    <div className="dlg-actions" style={{ marginTop: 8, justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => void saveLipBeat(b.beat)}
+                        disabled={lipSaving != null}
+                        title={`Save Scene ${b.beat} dialogue as a new scenario version`}
+                      >
+                        {lipSaving === b.beat ? "Saving…" : "Save dialogue"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <div className="dlg-actions" style={{ marginTop: 12 }}>
+              <button type="button" className="ghost" onClick={() => setLipOpen(false)} disabled={lipSaving != null} title="Close">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         {final && (
           <>
             <div className="section-label">Final cut</div>
@@ -326,7 +445,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             </div>
           )}
         </>
-        {liveNums.length > 0 && (
+        {/*
+          Per-scene Keyframes → clips grid. Hidden in the bare "Generated so
+          far" view (Rendered Clip card) — every scene already has its own
+          Keyframes → clips card below Generate Reference, so listing all
+          scenes here duplicates it. Final cut + Reference stay.
+        */}
+        {!bare && liveNums.length > 0 && (
           <>
             <div className="section-label">Keyframes → clips</div>
             <div className="grid grid-compact">
@@ -456,6 +581,15 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         }))
     : [];
   const hasClips = beatNums.some((n) => (versions.beats[String(n)].clip?.length ?? 0) > 0) || fallbackShots.some((s) => s.clip);
+  // Total generated assets on disk for this cut (every version counts):
+  // reference versions + keyframe versions + clip versions + final cuts
+  // (+ legacy unversioned files when versioning can't resolve them).
+  const totalAssets =
+    versions.ref.length +
+    Object.values(versions.beats).reduce(
+      (s, bv) => s + (bv.keyframe?.length ?? 0) + (bv.clip?.length ?? 0), 0) +
+    finalVersions.length +
+    fallbackShots.length + fallbackShots.filter((s) => s.clip).length;
 
   // True when the active run is generating into the output dir on screen.
   // Compared against the visible listing (viewScenario) so a mid-run project
@@ -498,6 +632,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // The Stitch final button's own run: every asset already has a version,
   // so no asset chip is blinking — the button itself spins instead.
   const stitching = generating && genTarget === null;
+  // Scene number of the tile being generated right now (kf/clip targets
+  // only — "ref" lives at the top of the card, no jump needed).
+  const genScene = (() => {
+    const m = (genTarget ?? "").match(/^(?:kf|clip):(\d+)$/);
+    return m ? Number(m[1]) : null;
+  })();
 
   // Queued regen for one versioned asset (App drains serially) — its chip
   // reads "queued" and stays clickable; only the generating chip locks.
@@ -669,6 +809,81 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
   const mediaCount = sceneNums.length + (refFile ? 1 : 0) + (shownFinal ? 1 : 0);
 
+  // Lip-sync View popup: load the dialogue beats for the workspace project,
+  // keep only scenes that actually have dialogue lines.
+  const openLipViewer = async () => {
+    const t = (projectName || "").trim();
+    if (!t || lipLoading) return;
+    setLipOpen(true);
+    setLipLoading(true);
+    setLipError(null);
+    try {
+      const st = await getDialogueStatus(t, dialogueEngine, dialogueFormat);
+      const beats = (Array.isArray(st.beats) ? st.beats : []).filter(
+        (b) => b && b.hasDialogue && Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim()),
+      );
+      setLipBeats(beats);
+      const texts: Record<number, string> = {};
+      for (const b of beats) texts[b.beat] = dlgToText(b.dialogue);
+      setLipTexts(texts);
+      setLipSaveError({});
+      if (beats.length === 0) setLipError("No scenes with dialogue in this project yet — add speaker: line dialogue to its beats first.");
+    } catch (e) {
+      setLipBeats([]);
+      setLipError(e instanceof Error ? e.message : "Could not load dialogues.");
+    } finally {
+      setLipLoading(false);
+    }
+  };
+
+  const saveLipBeat = async (beat: number) => {
+    const t = (projectName || "").trim();
+    if (!t || lipSaving != null) return;
+    const parsed = textToDlg(lipTexts[beat] ?? "");
+    if (parsed.length > 8) {
+      setLipSaveError((p) => ({ ...p, [beat]: "At most 8 dialogue lines per scene." }));
+      return;
+    }
+    for (const d of parsed) {
+      if (!d.speaker.trim()) {
+        setLipSaveError((p) => ({ ...p, [beat]: `Every line needs a speaker ("speaker: line") — got: ${d.line.slice(0, 40)}` }));
+        return;
+      }
+      if (d.line.length > 500) {
+        setLipSaveError((p) => ({ ...p, [beat]: `Line over 500 chars: ${d.line.slice(0, 40)}…` }));
+        return;
+      }
+    }
+    setLipSaving(beat);
+    setLipSaveError((p) => ({ ...p, [beat]: "" }));
+    try {
+      const r = await saveSceneDialogue(t, beat, parsed);
+      const nextDialogue = Array.isArray(r.dialogue) ? r.dialogue : parsed;
+      setLipBeats((prev) => prev.map((b) => b.beat === beat ? { ...b, dialogue: nextDialogue } : b));
+      setLipTexts((prev) => ({ ...prev, [beat]: dlgToText(nextDialogue) }));
+      onDialogueSaved?.();
+    } catch (e) {
+      setLipSaveError((p) => ({ ...p, [beat]: e instanceof Error ? e.message : "Dialogue save failed." }));
+    } finally {
+      setLipSaving(null);
+    }
+  };
+
+  // Lock background scroll + Esc to close while the Lip-sync viewer is open.
+  useEffect(() => {
+    if (!lipOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLipOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [lipOpen]);
+
   const Tag = bare || section === "reference" ? "div" : "section";
   // Full card only (embeds have no header to host the toggle): hide/show,
   // persisted like the Projects panel — one key per card. Collapsing only
@@ -681,6 +896,28 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       localStorage.setItem(isBeats ? "ss-sec-beats" : "ss-sec-outputs", c ? "open" : "closed");
       return !c;
     });
+  // Jump the viewport to the tile being generated (its .generating card),
+  // so the live work is one click away on 80-scene boards.
+  const scrollToGen = () => {
+    if (genScene == null) return;
+    document.getElementById(`shot-${genScene}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  // Auto-follow the live tile: whenever the run advances to a new scene,
+  // bring its Generating card into view — 80 scenes push it far below the
+  // fold otherwise. Skipped while collapsed, while the fullscreen preview
+  // is open, or for the reference tile (top of the card).
+  const genTileRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isBeats || collapsed || preview != null) return;
+    if (!generating || genTarget == null || genTarget === "ref") return;
+    if (genTileRef.current === genTarget) return;
+    genTileRef.current = genTarget;
+    const n = genScene;
+    window.setTimeout(() => {
+      if (n != null) document.getElementById(`shot-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+  }, [isBeats, collapsed, preview, generating, genTarget, genScene]);
+  useEffect(() => { genTileRef.current = null; }, [viewScenario]);
   // Embedded Reference gallery (Generate Reference section) gets its own
   // hide/show toggle — same persisted icon pattern as the cards.
   const [refCollapsed, setRefCollapsed] = useState(() => localStorage.getItem("ss-sec-refgallery") === "closed");
@@ -697,7 +934,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             {isBeats ? (
               <>
                 <span className="head-icon hi-beats"><IconFilm size={15} /></span>
-                Keyframes → clips
+                <span className="beats-title">Keyframes → clips</span>
               </>
             ) : (
               <>
@@ -707,19 +944,34 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             )}
           </h2>
           <span className="spacer" />
+          {isBeats && (
+            <>
+              <span className="beats-center" title="Story Board — every scene's keyframe image + video clip">Story Board</span>
+              <span className="spacer" />
+            </>
+          )}
           {switchingGallery && (
             <span className="pill running switching-pill" title="Loading the newly selected project…">
               <span className="dot pulse" /> switching…
             </span>
           )}
           {isBeats && sceneNums.length > 0 && (
-            <span className="muted" style={{ fontSize: 12 }} title={`${sceneNums.length} scenes`}>
+            <span className="beats-count" title={`${sceneNums.length} scenes`}>
               {sceneNums.length} scene{sceneNums.length === 1 ? "" : "s"}
             </span>
           )}
           {isBeats && generating && genTarget !== null && genTarget !== "ref" && (
-            <span className="pill running" title="A run is producing a keyframe or clip right now">
-              <span className="dot pulse" /> generating…
+            <span
+              className="pill running live-jump"
+              title={genScene != null
+                ? `Generating scene ${genScene} ${genTarget.startsWith("clip:") ? "clip" : "keyframe"} — click to jump to it`
+                : "A run is producing a keyframe or clip right now — click to jump to it"}
+              role="button"
+              tabIndex={0}
+              onClick={() => scrollToGen()}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); scrollToGen(); } }}
+            >
+              <span className="dot pulse" /> generating{genScene != null ? ` scene ${genScene}` : ""}…
             </span>
           )}
           {!isBeats && hasClips && (
@@ -751,6 +1003,44 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
 
       <Collapse open={!(isCard && collapsed)}>
       {error && <p className="hint err-text">{error}</p>}
+      {/* Board summary moved here from the Story Board header: Shots /
+          Cinematic / Lip-sync / min total (same numbers, same tooltips). */}
+      {isBeats && summary && summary.shots > 0 && (
+        <div className="shotlist-stats" aria-label="Project summary" style={{ marginBottom: 10 }}>
+          <div className="shotlist-stat" title={`${summary.shots} shots in this project`}>
+            <span className="shotlist-stat-value">{summary.shots}</span>
+            <span className="shotlist-stat-label">Shots</span>
+          </div>
+          <div className="shotlist-stat" title={`${summary.cinematic} cinematic shots`}>
+            <span className="shotlist-stat-value">{summary.cinematic}</span>
+            <span className="shotlist-stat-label">Cinematic</span>
+          </div>
+          <div className="shotlist-stat" title={`${summary.lipsync} lip-sync shots`}>
+            <span className="shotlist-stat-value">{summary.lipsync}</span>
+            <span className="shotlist-stat-label">Lip-sync</span>
+            {(projectName || "").trim() && summary.lipsync > 0 && (
+              <button
+                type="button"
+                className="shotlist-stat-view"
+                onClick={() => void openLipViewer()}
+                disabled={lipLoading}
+                title="View scenes with dialogue + edit dialogue text"
+                aria-label="View lip-sync dialogues"
+              >
+                {lipLoading && lipOpen ? "…" : "View"}
+              </button>
+            )}
+          </div>
+          <div className="shotlist-stat" title={summary.totalDur > 0 ? `Total runtime: ${summary.totalDur.toFixed(1)}s (${(summary.totalDur / 60).toFixed(2)} min) — each scene at its own clip length` : "Clip duration not set"}>
+            <span className="shotlist-stat-value">{summary.totalDur > 0 ? `${summary.totalDur.toFixed(1)}s` : "—"}</span>
+            <span className="shotlist-stat-label">{summary.totalDur > 0 ? `${(summary.totalDur / 60).toFixed(2)} min total` : "duration"}</span>
+          </div>
+          <div className="shotlist-stat" title={`Total generated assets on disk (all versions): ${versions.ref.length} reference + ${Object.values(versions.beats).reduce((s, bv) => s + (bv.keyframe?.length ?? 0), 0)} keyframes + ${Object.values(versions.beats).reduce((s, bv) => s + (bv.clip?.length ?? 0), 0)} clips + ${finalVersions.length} finals`}>
+            <span className="shotlist-stat-value">{totalAssets}</span>
+            <span className="shotlist-stat-label">Total Asset</span>
+          </div>
+        </div>
+      )}
       {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
 
       {(section === "all" || section === "output") && (curKf || curClip || generating || shownFinal) && (
@@ -947,7 +1237,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         <>
           {/* The Keyframes card header already carries this title. */}
           {!isBeats && <div className="section-label">Keyframes → clips</div>}
-          <div className="grid grid-compact">
+          <div className="grid grid-compact grid-5col">
             {(() => {
             const total = sceneNums.length;
             const pctFor = (kind: "image" | "video", beat: number): number | null => {
@@ -1260,7 +1550,6 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
   action?: ReactNode; // trailing right-aligned element (Edit-scene button)
 }) {
   if (versions.length === 0 && !generating && !onRegen && !action) return null;
-  const nextV = versions.length > 0 ? versions[versions.length - 1].v + 1 : 1;
   return (
     <div className="versions">
       {versions.map((v) => (
@@ -1274,12 +1563,6 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
           v{v.v}
         </button>
       ))}
-      {generating && (
-        <span className="vchip gen gen-stacked" title={pct != null ? `Generating v${nextV} — ~${Math.round(pct)}% (estimated), previous versions are kept` : `Generating v${nextV} — previous versions are kept`}>
-          <span className="gen-stack-top"><span className="dot pulse" /> <span className="gen-dots">generating</span></span>
-          <span className="gen-stack-sub">v{nextV}{pct != null ? ` ~${Math.round(pct)}%` : (elapsed ? ` ${elapsed}` : "")}</span>
-        </span>
-      )}
       {onRegen && (
         <button
           className="vchip regen"
@@ -1287,8 +1570,8 @@ function VersionRow({ versions, main, mainPinned, kind, onSelect, onRegen, gener
           onClick={onRegen}
           disabled={busy || generating}
         >
-          {generating ? <Spinner size={10} /> : <IconRefresh size={10} />}
-          {generating ? "working…" : queued ? "queued" : "regen"}
+          <IconRefresh size={10} />
+          {queued ? "queued" : "regen"}
         </button>
       )}
       {action && <span className="versions-action">{action}</span>}

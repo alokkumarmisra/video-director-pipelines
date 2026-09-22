@@ -1,4 +1,4 @@
-import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, ProjectReference, DashboardResponse, HealthResponse } from "./types";
+import type { Scenario, ScenarioInfo, Run, ComfyStatus, AuthUser, OutputsInfo, AssetKind, ProjectAsset, ProjectReference, DashboardResponse, HealthResponse, SongInfo } from "./types";
 
 // Never treat an HTTP error body as data: a 500 {error: ...} object once
 // resolved into array state and crashed the gallery (assets.filter is not a
@@ -55,7 +55,7 @@ export const getScenario = (name: string) =>
     const d = await r.json().catch(() => null);
     if (!r.ok || !d || typeof d !== "object" || !("config" in d))
       throw new Error(d?.error || `load failed (HTTP ${r.status})`);
-    return d as { name: string; config: Scenario };
+    return d as { name: string; config: Scenario; project_type?: string };
   });
 
 // Saved versions of a scenario (every explicit Save = a new version in the DB).
@@ -154,10 +154,17 @@ export const setFavorite = (name: string, on: boolean) =>
 
 // UI theme persisted server-side in data/theme.json (source of truth —
 // survives reloads, restarts and browser changes; localStorage is only a
-// cache). Shape: { mode: "dark" | "light", color: "" | "#rrggbb" }.
+// cache). Shape: { mode: "dark" | "light", color: "" | "#rrggbb" (active
+// accent, legacy), darkColor?: "" | "#rrggbb", lightColor?: "" | "#rrggbb",
+// darkBg?: "" | "#rrggbb" (dark-mode background), lightBg?: "" | "#rrggbb" }.
+// Empty = factory default (dark theme, default backgrounds, red buttons).
 export interface ThemeFile {
   mode: "dark" | "light";
   color: string;
+  darkColor?: string;
+  lightColor?: string;
+  darkBg?: string;
+  lightBg?: string;
 }
 export const getTheme = () => get<ThemeFile>("/api/theme");
 export const saveTheme = (t: ThemeFile) =>
@@ -186,21 +193,30 @@ export interface RegenSpec {
 // ComfyUI queue behind it — accepts only one active run). `format` selects
 // the landscape cut (default) or the vertical Instagram Reel cut.
 // `mode: "dialogue"` runs the voice + lip-sync pass instead of generation.
+// `mode: "song"` runs the ACE-Step lyrics-to-song pass (Create Song tab).
+// Full Generate runs voice + lip-sync automatically for dialogue beats
+// (dynamic clip lengths from the voice audio); `noDialogue` opts out.
 export interface RunRequest {
   stitch?: boolean;
   regen?: RegenSpec | null;
   count?: number;
   engine?: Engine;
   format?: VideoFormat;
-  mode?: "dialogue";
+  mode?: "dialogue" | "song";
   beats?: string;
   skipTts?: boolean;
   skipLipsync?: boolean;
+  /** Full generate: skip the automatic voice + lip-sync pass (silent clips). */
+  noDialogue?: boolean;
   /** Dialogue mode: voice+sync clips but leave the final cut alone (merge later). */
   noStitch?: boolean;
+  /** Dialogue mode: lip-sync engine for this run ("wav2lip" | "musetalk-comfy"). */
+  lipsync?: string;
+  /** Song mode: which audio model renders sung takes ("ace-step" | "minimax"). */
+  songModel?: string;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean; noDialogue?: boolean; lipsync?: string; songModel?: string } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -215,7 +231,10 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       beats: opts.beats,
       skipTts: !!opts.skipTts,
       skipLipsync: !!opts.skipLipsync,
-      noStitch: !!opts.noStitch,
+        noStitch: !!opts.noStitch,
+        noDialogue: !!opts.noDialogue,
+        lipsync: opts.lipsync,
+        songModel: opts.songModel,
     }),
   }).then((r) => r.json() as Promise<{ id: string; folder?: string; error?: string }>);
 
@@ -242,6 +261,138 @@ export const isVerticalOut = (dir: string) => String(dir || "").endsWith("_verti
 
 export const listRuns = () => get<Run[]>("/api/runs");
 export const killRun = (id: string) => fetch(`/api/runs/${id}`, { method: "DELETE" }).then((r) => r.json());
+
+// Character dialogue pipeline (lib/dialogue_pipeline.mjs via
+// /api/project/:name/dialogue). Per-beat lines + per-stage status
+// (voice/video/lipsync/final: PENDING|COMPLETED|...) so the UI shows every
+// stage independently; retry of one failed stage = startRun({ mode:
+// "dialogue", beats: "N" }) without regenerating the other stages.
+export type DialogueStage = "PENDING" | "GENERATING_AUDIO" | "GENERATING_VIDEO" | "LIP_SYNCING" | "MERGING" | "COMPLETED" | "FAILED";
+export interface DialogueLine {
+  speaker: string;
+  line: string;
+  expression?: string;
+  emotion?: string;
+  pitch?: string;
+}
+export interface DialogueBeatStatus {
+  beat: number;
+  title: string | null;
+  hasDialogue: boolean;
+  speakers: string[];
+  segmented: boolean;
+  voice: DialogueStage;
+  video: DialogueStage;
+  lipsync: DialogueStage;
+  final: DialogueStage;
+  dialogue: DialogueLine[];
+  lineDurations: (number | null)[];
+  timing?: { speaker: string; line: string; start: number; end: number; duration: number }[];
+  total?: number;
+}
+export interface DialogueStatus {
+  name: string;
+  folder: string;
+  engine: string;
+  format: string;
+  dir: string;
+  providers: { tts: string; lipsync: string; musetalkWorkflow: boolean };
+  beats: DialogueBeatStatus[];
+}
+export const getDialogueStatus = (name: string, engine = "ltx", format: VideoFormat = "landscape") =>
+  get<DialogueStatus>(`/api/project/${encodeURIComponent(name)}/dialogue?engine=${engine}&format=${format}`);
+export const saveSceneDialogue = (name: string, scene: number, dialogue: DialogueLine[], duration?: number) =>
+  fetch(`/api/project/${encodeURIComponent(name)}/scene/${scene}/dialogue`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dialogue, ...(duration != null ? { duration } : {}) }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `dialogue save failed (HTTP ${r.status})`);
+    return d as { ok: boolean; version: number | null; scene: number; dialogue: DialogueLine[]; segmented: boolean; invalidated: number };
+  });
+
+// Saved Create Song form for a project (project_songs table, one row per
+// AUDIO project). Null song = project has no saved song form yet.
+export interface SongFormData {
+  description: string | null;
+  tags: string | null;
+  lyrics: string | null;
+  duration: number | null;
+  bpm: number | null;
+  language: string | null;
+  keyscale: string | null;
+  timesignature: string | null;
+  seed: number | null;
+  steps: number | null;
+  songPreset?: string | null;
+  songVocal?: string | null;
+  cfgScale?: number | null;
+  temperature?: number | null;
+  /** Audio model for sung takes ("ace-step" | "minimax", null on old rows = ace-step). */
+  songModel?: string | null;
+  /** Stored generated take (outputs/<folder>/<file>) + playable URL. */
+  file_path: string | null;
+  file?: string;
+  url?: string;
+  project_id: number | null;
+  updated_at?: string | null;
+}
+export const getProjectSong = (name: string) =>
+  get<{ name: string; folder: string; project_type: string; song: SongFormData | null }>(
+    `/api/project/${encodeURIComponent(name)}/song`);
+// Generated songs for a project (ACE-Step mp3s, versioned takes newest-last).
+// This is what the Create Song tab's "Generated Songs" section displays.
+export const listSongs = (name: string) =>
+  get<{ folder: string; songs: SongInfo[] }>(`/api/project/${encodeURIComponent(name)}/songs`);
+// Delete one generated song take: removes the mp3 from disk and repoints
+// project_songs.file_path in the DB (next-latest take, or null).
+export const deleteSong = (name: string, file: string) =>
+  fetch(`/api/project/${encodeURIComponent(name)}/songs/${encodeURIComponent(file)}`, { method: "DELETE" }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `delete failed (HTTP ${r.status})`);
+    return d as { ok: boolean; deleted: string; file_path: string | null };
+  });
+// Ask the local LLM to read lyrics (+ song mode) and return the exact
+// singable length in seconds (plus optional bpm/key refinements). Falls back
+// to the local heuristic server-side when the LLM is offline — never rejects
+// for a missing LLM, the `source` field tells which path answered.
+export interface SongEstimate {
+  duration: number;
+  bpm?: number;
+  keyscale?: string;
+  reasoning?: string;
+  source: "llm" | "heuristic";
+}
+export const estimateSongLength = (lyrics: string, presetId?: string, language?: string) =>
+  fetch("/api/song-estimate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lyrics, presetId, language }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `estimate failed (HTTP ${r.status})`);
+    return d as SongEstimate;
+  });
+// Ask the local LLM to read a story (+ genre/language) and suggest the exact
+// video target duration in seconds. Falls back to a local heuristic
+// server-side when the LLM is offline — never rejects for a missing LLM,
+// the `source` field tells which path answered.
+export interface DirectorEstimate {
+  duration: number;
+  reasoning?: string;
+  source: "llm" | "heuristic";
+}
+export const estimateDirectorLength = (story: string, opts?: { title?: string; genre?: string; language?: string; sceneSeconds?: number }) =>
+  fetch("/api/director-estimate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ story, ...opts }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `estimate failed (HTTP ${r.status})`);
+    return d as DirectorEstimate;
+  });
 export const comfyStatus = () => get<ComfyStatus>("/api/comfy");
 export const listOutputs = (scenario: string) =>
   get<OutputsInfo>(`/api/outputs?scenario=${scenario}`);
@@ -601,7 +752,7 @@ export interface DirectorScene {
   environment: string;
   continuity_from_previous_scene: string;
   transition_to_next_scene: string;
-  dialogue: { speaker: string; line: string }[];
+  dialogue: { speaker: string; line: string; expression?: string; emotion?: string; pitch?: string }[];
   image_prompt: string;
   video_prompt: string;
 }
@@ -609,7 +760,7 @@ export interface DirectorScene {
 export interface DirectorBoard {
   id: string;
   input: DirectorInput;
-  status: "analyzed" | "scenes-partial" | "ready" | "approved";
+  status: "analyzed" | "scenes-partial" | "ready" | "approved" | "approved-partial";
   blueprint: {
     logline: string;
     analysis: Record<string, unknown>;
@@ -622,6 +773,10 @@ export interface DirectorBoard {
   sceneCount: number;
   styleLock?: string;
   scenarioName?: string | null;
+  /** Approved storyboard -> generated project link (integer projects id). */
+  project_id?: number | null;
+  // Scenes already migrated into scenarioName (partial-migration flow).
+  migratedScenes?: number | null;
   error?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -634,7 +789,17 @@ export interface DirectorBoardMeta {
   scenes: number;
   sceneCount: number;
   scenarioName?: string | null;
+  /** Approved storyboard -> generated project link (integer projects id). */
+  project_id?: number | null;
   updatedAt?: string | null;
+  /** Card fields for the Saved Storyboards grid (null on old boards). */
+  createdAt?: string | null;
+  genre?: string | null;
+  visualStyle?: string | null;
+  language?: string | null;
+  aspectRatio?: string | null;
+  targetSeconds?: number | null;
+  logline?: string | null;
 }
 
 const directorOk = <T,>(label: string) => (r: Response) =>
@@ -655,11 +820,12 @@ export const directorAnalyze = (input: DirectorInput) =>
     body: JSON.stringify(input),
   }).then(directorOk<DirectorBoard>("story analysis failed"));
 
-export const directorScenes = (id: string, count?: number) =>
+export const directorScenes = (id: string, count?: number, signal?: AbortSignal) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}/scenes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(count != null ? { count } : {}),
+    ...(signal ? { signal } : {}),
   }).then(directorOk<DirectorBoard>("scene planning failed"));
 
 export const directorUpdateBoard = (id: string, patch: Record<string, unknown>) =>
@@ -668,6 +834,28 @@ export const directorUpdateBoard = (id: string, patch: Record<string, unknown>) 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   }).then(directorOk<DirectorBoard>("board update failed"));
+
+export type DirectorEntryKind = "character" | "location" | "object";
+
+// AI append: the server re-reads the board's master input (title +
+// story/lyrics + genre/style + instructions + song) plus the already
+// generated bible and appends exactly one new entry of `kind`.
+export const directorAddEntry = (id: string, kind: DirectorEntryKind, hint?: string) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/add-entry`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, ...(hint?.trim() ? { hint: hint.trim().slice(0, 300) } : {}) }),
+  }).then(directorOk<DirectorBoard>("add failed"));
+
+// AI rewrite: regenerate the selected bible entry (character | location |
+// object) in place — the server re-reads the master input + full bible and
+// swaps in a richer rewrite, keeping the id so scenes keep working.
+export const directorRegenEntry = (id: string, kind: DirectorEntryKind, index: number) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/regen-entry`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, index }),
+  }).then(directorOk<DirectorBoard>("regenerate failed"));
 
 export const directorRegenScene = (id: string, index: number) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}/regenerate-scene`, {

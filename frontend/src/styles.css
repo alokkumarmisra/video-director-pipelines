@@ -1,7 +1,7 @@
 /* ============================================================
    Video Generator — design system
    Palette mirrors the Furian Try-On Studio app:
-   emerald accent, gray-950/gray-900 dark surfaces, #F8F9FA light bg
+   red accent, gray-950/gray-900 dark surfaces, #F8F9FA light bg
    ============================================================ */
 :root {
   /* palette — dark (default) */
@@ -15,10 +15,10 @@
   --text: #f3f4f6;                        /* gray-100 */
   --text-2: #d1d5db;                      /* gray-300 */
   --text-3: #9ca3af;                      /* gray-400 */
-  --accent: #10b981;                      /* emerald-500 */
-  --accent-2: #34d399;                    /* emerald-400 */
-  --accent-soft: rgba(16, 185, 129, 0.10); /* emerald-500/10 */
-  --accent-line: rgba(16, 185, 129, 0.35);
+  --accent: #ef4444;                      /* red-500 (default button color) */
+  --accent-2: #f87171;                    /* red-400 */
+  --accent-soft: rgba(239, 68, 68, 0.12);  /* red-500/12 */
+  --accent-line: rgba(239, 68, 68, 0.40);
   --ok: #34d399;
   --ok-soft: rgba(52, 211, 153, 0.12);
   --warn: #fbbf24;
@@ -40,9 +40,9 @@
   --scrollbar-hover: #4b5563;
   --log-bg: #060b14;
   --log-color: #b9c2d4;
-  --glow-1: rgba(16, 185, 129, 0.14);
-  --glow-2: rgba(16, 185, 129, 0.08);
-  --glow-3: rgba(52, 211, 153, 0.05);
+  --glow-1: rgba(239, 68, 68, 0.14);
+  --glow-2: rgba(239, 68, 68, 0.08);
+  --glow-3: rgba(248, 113, 113, 0.05);
   --card-glass: rgba(17, 24, 39, 0.78);
 
   /* geometry */
@@ -79,10 +79,10 @@
   --text: #2b2a26;
   --text-2: #57534e;                      /* warm gray-600 */
   --text-3: #8a8577;                      /* warm gray-400 */
-  --accent: #10b981;                      /* emerald-500 */
-  --accent-2: #059669;                    /* emerald-600 */
-  --accent-soft: rgba(16, 185, 129, 0.10); /* emerald-50 */
-  --accent-line: rgba(16, 185, 129, 0.40);
+  --accent: #dc2626;                      /* red-600 (default button color) */
+  --accent-2: #b91c1c;                    /* red-700 */
+  --accent-soft: rgba(220, 38, 38, 0.08);  /* red-600/8 */
+  --accent-line: rgba(220, 38, 38, 0.35);
   --ok: #059669;
   --ok-soft: rgba(16, 185, 129, 0.10);
   --warn: #b45309;
@@ -107,16 +107,16 @@
   --scrollbar-hover: #b3ac9d;
   --log-bg: #111827;
   --log-color: #b9c2d4;
-  --glow-1: rgba(16, 185, 129, 0.10);
-  --glow-2: rgba(16, 185, 129, 0.06);
-  --glow-3: rgba(5, 150, 105, 0.05);
+  --glow-1: rgba(220, 38, 38, 0.10);
+  --glow-2: rgba(220, 38, 38, 0.06);
+  --glow-3: rgba(185, 28, 28, 0.05);
   --card-glass: rgba(250, 248, 244, 0.82);
 
   color-scheme: light;
 }
 :root[data-theme="light"] body {
   background:
-    radial-gradient(1200px 500px at 50% -10%, rgba(16, 185, 129, 0.05), transparent 70%),
+    radial-gradient(1200px 500px at 50% -10%, rgba(220, 38, 38, 0.05), transparent 70%),
     var(--bg);
 }
 
@@ -166,7 +166,7 @@ body {
   display: grid; place-items: center;
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 .brand-name { font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
 .brand-sub {
@@ -252,6 +252,27 @@ body {
 .shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
 .shell.is-director .sidebar,
 .shell.is-director .sidebar-show { order: -1; }
+/* Create Song view: Projects panel on the left, song workspace filling the
+   middle — no right column is ever rendered there. Same DOM-order situation
+   as Resource/Director, so the same order pull-back applies. */
+.shell.is-song { grid-template-columns: 336px minmax(0, 1fr); }
+.shell.is-song.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+.shell.is-song .sidebar,
+.shell.is-song .sidebar-show { order: -1; }
+/* Video LipSync view: Projects panel on the left, lip-sync studio filling the
+   middle — no right column is ever rendered there. Same DOM-order situation
+   as Resource/Director/Song, so the same order pull-back applies. */
+.shell.is-lipsync { grid-template-columns: 336px minmax(0, 1fr); }
+.shell.is-lipsync.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+.shell.is-lipsync .sidebar,
+.shell.is-lipsync .sidebar-show { order: -1; }
+/* Components view: Projects panel on the left, component catalog filling the
+   middle — no right column is ever rendered there. Same DOM-order situation
+   as Resource/Director/Song/LipSync, so the same order pull-back applies. */
+.shell.is-components { grid-template-columns: 336px minmax(0, 1fr); }
+.shell.is-components.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+.shell.is-components .sidebar,
+.shell.is-components .sidebar-show { order: -1; }
 /* Right-column rails dock to the RIGHT edge of the window (the Projects rail
    docks left). Rails-only column stays narrow so the middle keeps the space. */
 .col.right-col.rails-only { gap: 12px; }
@@ -293,6 +314,8 @@ body {
 .head-icon.hi-craft { color: var(--craft); }
 .head-icon.hi-editor { color: var(--edit); }
 .head-icon.hi-shots { color: var(--err-2); }
+.head-icon.hi-components { color: #fb923c; }
+:root[data-theme="light"] .head-icon.hi-components { color: #c2410c; }
 /* Generate Reference follows the picked theme color exactly (the --accent
    token the swatch / primary buttons use — not the lighter --accent-2). */
 .head-icon.hi-ref { color: var(--accent); }
@@ -446,7 +469,7 @@ button.primary:hover { background: var(--accent); border-color: transparent; fil
 :root[data-theme="light"] button.primary {
   background: var(--accent);
   border-color: transparent;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 3px rgba(5, 150, 105, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 1px 3px rgba(220, 38, 38, 0.35);
 }
 :root[data-theme="light"] button.primary:hover {
   background: var(--accent);
@@ -560,6 +583,22 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   white-space: nowrap;
 }
 .pill.ok, .pill.done { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
+/* Keyframes → clips card header: every text in its own identity color —
+   title red, centered Story Board amber, scene count green (theme-aware). */
+.beats-title { color: var(--accent-2); }
+.beats-center {
+  font-size: 14px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--warn); white-space: nowrap;
+}
+.beats-count { font-size: 12px; font-weight: 700; color: var(--ok); white-space: nowrap; }
+@media (max-width: 760px) {
+  .beats-center { display: none; }
+}
+/* Pill numbers that open an editor (LipSync dialogue beats): same pill look,
+   pointer affordance on hover. */
+button.pill-btn { cursor: pointer; font: inherit; }
+button.pill-btn:hover:not(:disabled) { border-color: var(--accent-line); color: var(--accent-2); }
+button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 .pill.err, .pill.error { background: var(--err-soft); color: var(--err); border-color: rgba(248, 113, 113, 0.3); }
 .pill.running { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-line); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(251, 191, 36, 0.3); }
@@ -1022,6 +1061,13 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
 }
 .res-card textarea { margin-bottom: 4px; }
 .res-actions { flex-wrap: wrap; }
+/* View-only multi-select row (checkbox + filename) above each card's prompt.
+   The top Delete button removes checked cards from the page only — files
+   stay on disk, so this is deliberately lightweight, not danger-styled. */
+.res-select-row { align-items: center; margin: 6px 0 2px; }
+.res-select-row .beat-meta { margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res-select { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+.res-select input[type="checkbox"] { width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: var(--err); }
 .res-use {
   margin-top: 10px; padding-top: 10px;
   border-top: 1px dashed var(--line);
@@ -1041,6 +1087,38 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
 .res-build .hint { margin-bottom: 0; }
 
 /* ============================================================
+   Components catalog (LLM · ComfyUI · TTS · storage)
+   ============================================================ */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; min-width: 0; }
+/* DOM order pairs short/tall mates per row (hero|LLM, engines|voice,
+   lipsync|data) so both columns stay even; stretch equalizes each pair. */
+@media (max-width: 1100px) {
+  .cmp { grid-template-columns: 1fr; }
+}
+.cmp-overall { gap: 6px; }
+.cmp-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 2px;
+  border-top: 1px dashed var(--line);
+}
+.cmp-row:first-child { border-top: 0; padding-top: 2px; }
+.cmp-main { flex: 1; min-width: 0; }
+.cmp-name {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 13px; font-weight: 650; letter-spacing: -0.01em;
+}
+.cmp-tag {
+  font: 700 10px var(--mono); letter-spacing: 0.04em;
+  color: var(--text-3); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 1px 6px; white-space: nowrap;
+}
+.cmp-detail { margin-top: 2px; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.cmp-note { margin-top: 2px; font-size: 11.5px; color: var(--text-3); }
+/* Fixed-width status column so every row's pill lines up down the card. */
+.cmp-row .pill { flex: none; min-width: 88px; justify-content: center; margin-top: 1px; }
+
+/* ============================================================
    Log
    ============================================================ */
 .log {
@@ -1054,6 +1132,103 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   color: var(--log-color);
 }
 .log-empty { color: var(--text-3); }
+
+/* ============================================================
+   Saved Storyboards grid (AI Story Director rail)
+   ============================================================ */
+.dir-board-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.dir-board-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 15px 12px;
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.dir-board-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-2);
+}
+.dir-board-card:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.dir-board-top { display: flex; align-items: center; gap: 8px; }
+.dir-board-when { margin-left: auto; font-size: 11px; white-space: nowrap; }
+.dir-board-title { margin: 0; font-size: 15px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dir-board-logline {
+  margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: 0;
+}
+.dir-board-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dir-chip {
+  font-size: 11px; line-height: 1.5; padding: 1px 9px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--text-2);
+  border: 1px solid var(--line-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dir-board-progress { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 2px; }
+.dir-board-bar {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: var(--inset); border: 1px solid var(--line);
+  overflow: hidden;
+}
+.dir-board-bar > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.2s ease;
+}
+.dir-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dir-board-foot .pill { max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Real button affordance for the card action (blue = open/inspect). Clicks
+   bubble to the card itself, which owns the open handler + keyboard. */
+.dir-board-foot .dir-board-open { padding: 5px 14px; font-size: 12px; }
+
+/* ============================================================
+   Director two-pane layout — AI Story Director (shrinks) + Saved
+   Storyboards rail (fixed) on the right, collapsible to a slim rail.
+   ============================================================ */
+.dir-layout { display: flex; gap: 16px; align-items: start; min-width: 0; }
+/* The director card yields its width to the rail: opening the rail
+   narrows the director automatically via flex. */
+.dir-layout .dir-main { flex: 1 1 auto; min-width: 0; margin: 0; }
+.dir-rail {
+  width: 564px; flex: none;
+  position: sticky; top: 76px;
+  max-height: calc(100vh - 100px);
+  display: flex; flex-direction: column;
+  min-width: 0; overflow: hidden;
+}
+.dir-rail .card-head { flex: none; }
+.dir-rail .card-head .muted { font-variant-numeric: tabular-nums; }
+/* Rail grid: exactly 2 boards per row, independently scrollable. */
+.dir-rail .dir-board-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-y: auto; min-height: 0;
+  padding: 2px;
+}
+.dir-rail .dir-board-foot { flex-wrap: wrap; row-gap: 6px; }
+.dir-rail .dir-board-foot .pill { max-width: 100%; }
+/* The board open in the main pane gets the active tint in the rail. */
+.dir-board-card.current {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+/* Collapsed reopen rail docks at the top-RIGHT of the layout. The shell
+   pulls every .sidebar-show left (order:-1) for the Projects rail — undo
+   that here so Boards stays after the director (right side). */
+.dir-layout > .sidebar-show.rail-right { align-self: start; position: sticky; top: 76px; order: 1; }
+@media (max-width: 1100px) {
+  .dir-layout { flex-direction: column; }
+  .dir-rail { width: 100%; max-height: none; position: static; }
+  .dir-layout > .sidebar-show.rail-right { position: static; width: 100%; }
+}
+@media (max-width: 560px) {
+  .dir-rail .dir-board-grid-2 { grid-template-columns: 1fr; }
+}
 
 /* ============================================================
    Output gallery
@@ -1078,6 +1253,10 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
 }
 .img-frame img { width: 100%; display: block; border-radius: 0; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 760px) {
+  .grid-3 { grid-template-columns: 1fr; }
+}
 /* Scene group card — the keyframe image + video clip of one scene live in
    a single bordered container (with a "Scene N" header) so the pair reads
    as one group. */
@@ -1498,8 +1677,171 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   gap: 8px;
 }
 .grid-compact .shot { gap: 6px; }
+/* Keyframes → clips section: max 5 scene tiles per row (fewer scenes leave
+   the remaining columns empty — tiles keep their compact size instead of
+   stretching full-width, since they host video players). */
+.grid-compact.grid-5col { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .grid-compact.grid-5col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 760px) {
   .grid-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-compact.grid-5col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Bible grids (Characters + World locations/objects): max 5 compact cards
+   per row, fewer items stretch to fill 100% (column count is set inline to
+   min(count, 5)). Cards stay short: the identity/description text is
+   clamped instead of stretching the card tall. */
+.grid-bible {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.grid-bible .shot { gap: 4px; padding: 6px 8px; }
+/* Not-yet-planned scene boxes: muted + dashed so generated scenes stand out.
+   The box in the active batch reuses .shot.generating (red pulse). */
+.shot.is-queued { opacity: 0.6; border-style: dashed; }
+.grid-bible .shot .hint {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.4;
+  min-height: 0;
+}
+@media (max-width: 1500px) {
+  .grid-bible { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 1100px) {
+  .grid-bible { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 760px) {
+  .grid-bible { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+/* Clickable live-progress pill: jumps the viewport to the tile being
+   generated (auto-follow + click-to-jump keep long boards visible). */
+.pill.live-jump { cursor: pointer; }
+.pill.live-jump:hover { border-color: var(--accent-line); }
+
+/* Director Story Beats timeline: vertical rail + numbered gradient cards.
+   Uses theme vars only, so dark/light themes both render correctly. */
+.dir-beats {
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 8px 0 4px; padding: 2px 0 2px 2px;
+}
+.dir-beats::before {
+  content: ""; position: absolute;
+  left: 19px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-line), var(--line-2));
+  pointer-events: none;
+}
+.dir-beat {
+  position: relative;
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  padding: 10px 14px 10px 10px;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.dir-beat:hover {
+  border-color: var(--accent-line);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+.dir-beat-num {
+  flex: none; z-index: 1;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  font: 700 13px var(--mono); font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 0 3px var(--surface), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.dir-beat-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-top: 1px; }
+.dir-beat-title {
+  font-weight: 700; font-size: 13px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dir-beat-text {
+  font-size: 12.5px; line-height: 1.5; color: var(--text-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .dir-beats::before { left: 16px; }
+  .dir-beat-num { width: 28px; height: 28px; font-size: 12px; }
+}
+
+/* Character Consistency popup (per-character prompt + editable rules).
+   Reuses .dlg-overlay/.dlg-box; this widens the box into a small editor. */
+.dlg-box.char-popup {
+  max-width: 560px;
+  width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  text-align: left;
+}
+.dlg-box.char-popup label {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.dlg-box.char-popup input,
+.dlg-box.char-popup textarea {
+  margin-top: 4px;
+}
+.char-rules-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+.char-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.char-rule-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.char-rule-row input { flex: 1; min-width: 0; margin-top: 0; }
+
+/* Scene Details/Edit popup (AI Story Director scenes). Wide left-aligned
+   editor box reusing .dlg-overlay/.dlg-box; scrolls internally on small
+   screens so long breakdowns never push the backdrop. */
+.dlg-box.scene-popup {
+  max-width: 720px;
+  width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  text-align: left;
+}
+.dlg-box.scene-popup label {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.dlg-box.scene-popup input,
+.dlg-box.scene-popup textarea {
+  margin-top: 4px;
+}
+.dlg-box.scene-popup .shotlist-detail-grid p,
+.dlg-box.scene-popup > div > p,
+.dlg-box.scene-popup p {
+  overflow-wrap: break-word;
 }
 
 /* ============================================================
@@ -1508,25 +1850,119 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
 .gen-progress {
   display: flex; flex-direction: column; gap: 6px;
 }
-/* Center slot in the main menu bar (between nav and right controls).
-   Anchors the toggleable Progress Status window. */
-.topbar-center {
-  flex: 1; min-width: 0;
-  display: flex; justify-content: center;
+/* Breadcrumb lane: fills the free space between the brand and the right
+   controls. The trail truncates inside this lane and can never displace
+   the Progress Status pill. */
+.topbar-nav {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; justify-content: flex-start;
   padding: 0 12px;
-  position: relative;
+  overflow: hidden;
 }
-/* Progress Status toggle in the top menu bar — carries its own inline
-   progress bar pinned to its bottom edge. */
-.progress-toggle {
+.topbar-nav .crumbs { flex: none; }
+/* Progress Status slot: pinned to the exact horizontal center of the topbar
+   (the sticky topbar is the positioning context). Shrink-wrapped to the
+   toggle, so the popup centers directly under the toggle. */
+.topbar-center {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+}
+/* Breadcrumb trail (Home › Create Song › …) — pill container centered
+   between the brand and Progress Status. Parents are buttons, the last
+   crumb is the current page (aria-current). */
+.crumbs {
+  display: flex; align-items: center;
+  min-width: 0; max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 4px 12px;
+  overflow: hidden;
+  flex: none;
+}
+.crumb-seg { display: inline-flex; align-items: center; min-width: 0; }
+.crumb-sep {
+  margin: 0 7px;
+  color: var(--text-3);
+  font-weight: 700; font-size: 13px; line-height: 1;
+  flex: none;
+  user-select: none;
+}
+.crumbs .crumb {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-width: 0; max-width: 100%;
+  font-size: 12.5px; line-height: 1.4; white-space: nowrap;
+}
+.crumbs button.crumb-link {
+  background: transparent; border: 1px solid transparent;
+  box-shadow: none; border-radius: 99px;
+  padding: 3px 8px; gap: 6px;
+  color: var(--text-3); font-weight: 600;
+  cursor: pointer;
+}
+.crumbs button.crumb-link:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+  box-shadow: none; filter: none;
+}
+.crumb-current { color: var(--text); font-weight: 700; padding: 3px 2px; }
+.crumb-current.is-current { color: var(--text); }
+.crumb-name {
+  max-width: 190px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.crumb-ico { display: grid; place-items: center; flex: none; }
+.crumb-ico svg { display: block; }
+/* Same identity colors as the left vertical menu — same type, same color. */
+.ci-home { color: #f59e0b; }
+.ci-projects { color: #34d399; }
+.ci-resource { color: #38bdf8; }
+.ci-director { color: #c084fc; }
+.ci-song { color: #fb7185; }
+.ci-lipsync { color: #22d3ee; }
+.ci-components { color: #fb923c; }
+:root[data-theme="light"] .ci-home { color: #b45309; }
+:root[data-theme="light"] .ci-projects { color: #059669; }
+:root[data-theme="light"] .ci-resource { color: #0284c7; }
+:root[data-theme="light"] .ci-director { color: #9333ea; }
+:root[data-theme="light"] .ci-song { color: #e11d48; }
+:root[data-theme="light"] .ci-lipsync { color: #0891b2; }
+:root[data-theme="light"] .ci-components { color: #c2410c; }
+@media (max-width: 1100px) {
+  .crumb-name { max-width: 110px; }
+}
+@media (max-width: 860px) {
+  .crumbs { display: none; }
+  .topbar-nav { display: none; }
+}
+/* Progress Status toggle in the top menu bar — same pill language as the
+   minimized Projects rail on the left (.sidebar-show): surface bg, hairline
+   border, large radius, soft shadow. Carries its own inline progress bar
+   pinned to its bottom edge; expand/collapse (minimize) is unchanged. */
+.topbar-center .progress-toggle {
   display: inline-flex; align-items: center; gap: 8px;
   position: relative; overflow: hidden;
-  padding-bottom: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  color: var(--text-2);
+  padding: 8px 14px 12px;
+  flex: none;
+}
+.topbar-center .progress-toggle:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+  box-shadow: var(--shadow-1);
+  filter: none;
 }
 .progress-toggle-track {
   position: absolute; left: 0; right: 0; bottom: 0;
   height: 5px; background: var(--bar-track);
-  border-radius: 0 0 7px 7px;
+  border-radius: 0 0 15px 15px;
   overflow: hidden; pointer-events: none;
 }
 .progress-toggle-fill {
@@ -1687,7 +2123,7 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
 }
 @media (max-width: 760px) {
   .gen-compact-title { display: none; }
-  .topbar-center { padding: 0 4px; }
+  .topbar-nav { padding: 0 4px; }
 }
 .gen-progress-top {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
@@ -1762,7 +2198,7 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   border: 1px solid var(--line-2);
   border-radius: 18px;
   padding: 34px 32px 28px;
-  box-shadow: var(--shadow-2), 0 0 0 1px rgba(16, 185, 129, 0.05);
+  box-shadow: var(--shadow-2), 0 0 0 1px rgba(239, 68, 68, 0.05);
   animation: login-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
 }
 @keyframes login-in {
@@ -1893,6 +2329,31 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   border-radius: 6px;
 }
 
+/* Single theme box (one row): 1st picker = theme background color (square
+   swatch), 2nd = button colors (round swatch), then Apply ✓ + Reset ⟳
+   icon buttons on the right. Picking only stages — Apply implements,
+   Reset restores dark theme + red buttons. */
+.theme-box {
+  display: inline-flex; flex-direction: row; align-items: center; gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+}
+.theme-box .theme-color.pick-only {
+  background: transparent; border-color: transparent;
+  padding: 4px 5px; margin: 0;
+}
+.theme-box .theme-color.pick-only:hover {
+  background: var(--btn-hover-bg); border-color: transparent;
+  box-shadow: none; filter: none;
+}
+/* Round swatch = button colors, square swatch = theme background. */
+.theme-color-swatch.as-btn { border-radius: 50%; }
+.theme-apply, .theme-reset { padding: 5px; border-radius: 7px; flex: none; }
+.theme-apply svg, .theme-reset svg { display: block; }
+.theme-apply:disabled { opacity: 0.45; cursor: default; }
+
 /* topbar user chip */
 .user-chip {
   display: flex; align-items: center; gap: 8px;
@@ -1934,6 +2395,171 @@ button:focus-visible, a:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent-2); outline-offset: 2px;
 }
+
+/* ============================================================
+   Side nav (Home → VideoLipSync, vertical menu down the left)
+   ============================================================ */
+.app-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 1648px;
+  margin: 0 auto;
+  min-height: 0;
+  /* The rail is an in-flow sticky flex item (see .sidenav) with a constant
+     62px footprint, so no padding reservation is needed here in either
+     state — hover-expanding never shifts the shell. */
+  padding-left: 0;
+}
+.app-body.nav-pinned { padding-left: 0; }
+.sidenav {
+  /* Sticky flyout: in-flow 62px slot + sticks below the topbar on scroll,
+     so the menu stays fixed while the page scrolls (it used to scroll away
+     with the content). Collapsed by default (icon rail); hovering the rail
+     — or pinning it open — reveals the full menu, floating OVER the
+     right-side content instead of pushing it (see the negative margin
+     below). z-index sits above cards but below the sticky topbar, so the
+     rail slides under the topbar if the bar ever wraps taller. */
+  width: 62px;
+  flex: none;
+  position: sticky;
+  top: 65px;
+  align-self: flex-start;
+  height: calc(100vh - 65px);
+  z-index: 10;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  transition: width 0.22s ease, margin-right 0.22s ease, background-color 0.15s ease, box-shadow 0.2s ease;
+}
+.sidenav:hover,
+.sidenav.pinned { width: 204px; background: var(--surface); }
+/* Unpinned hover must not push the shell: the gained width (204 - 62 =
+   142px) is taken back out of the flex footprint with an equal negative
+   margin in the same transition, so the menu overlays content. Pinned
+   keeps its real 204px footprint. */
+.sidenav:not(.pinned):hover { margin-right: -142px; }
+.sidenav:not(.pinned):hover { box-shadow: 16px 0 40px -16px rgba(0, 0, 0, 0.5); }
+.sidenav-group { display: flex; flex-direction: column; gap: 6px; }
+.sidenav-caption {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 0 10px 6px;
+  white-space: nowrap;
+}
+.sidenav-btn {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-2); border-radius: 10px;
+  padding: 6px 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* Fixed-size icon tile: every icon sits in the same 32px box, so all rows
+   align perfectly whether the rail is collapsed or expanded. */
+.sidenav-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: grid; place-items: center; flex: none;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.sidenav-icon svg { display: block; }
+.sidenav-pin .sidenav-icon { color: var(--text-3); background: transparent; border-color: transparent; }
+.sidenav-label {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Collapsed rail: center the tile, remove label from layout entirely so the
+   icon can never be pushed left/right by hidden text or gap. Padding stays
+   identical to the expanded state (only the rail width animates), so the
+   icon's left edge never jumps when hovering in or out. */
+.sidenav:not(.pinned):not(:hover) .sidenav-btn,
+.sidenav:not(.pinned):not(:hover) .sidenav-pin {
+  justify-content: center;
+}
+.sidenav:not(.pinned):not(:hover) .sidenav-label { display: none; }
+/* The caption keeps its height while collapsed (hidden, not removed) so
+   hovering the rail never pushes the menu items down. */
+.sidenav:not(.pinned):not(:hover) .sidenav-caption { visibility: hidden; }
+/* Expanded rail (hover or pinned): labels return, caption fades in. */
+.sidenav-caption,
+.sidenav .sidenav-label {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.sidenav:hover .sidenav-caption,
+.sidenav.pinned .sidenav-caption,
+.sidenav:hover .sidenav-label,
+.sidenav.pinned .sidenav-label {
+  opacity: 1;
+  transition-delay: 0.08s;
+}
+/* One identity color per destination — same type, same color, everywhere.
+   The tile keeps its color in every state (idle / hover / active). */
+.nav-home .sidenav-icon { color: #f59e0b; background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); }
+.nav-projects .sidenav-icon { color: #34d399; background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.35); }
+.nav-resource .sidenav-icon { color: #38bdf8; background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.35); }
+.nav-director .sidenav-icon { color: #c084fc; background: rgba(192, 132, 252, 0.12); border-color: rgba(192, 132, 252, 0.38); }
+.nav-song .sidenav-icon { color: #fb7185; background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.35); }
+.nav-lipsync .sidenav-icon { color: #22d3ee; background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.35); }
+.nav-components .sidenav-icon { color: #fb923c; background: rgba(251, 146, 60, 0.12); border-color: rgba(251, 146, 60, 0.38); }
+:root[data-theme="light"] .nav-home .sidenav-icon { color: #b45309; }
+:root[data-theme="light"] .nav-projects .sidenav-icon { color: #059669; }
+:root[data-theme="light"] .nav-resource .sidenav-icon { color: #0284c7; }
+:root[data-theme="light"] .nav-director .sidenav-icon { color: #9333ea; }
+:root[data-theme="light"] .nav-song .sidenav-icon { color: #e11d48; }
+:root[data-theme="light"] .nav-lipsync .sidenav-icon { color: #0891b2; }
+:root[data-theme="light"] .nav-components .sidenav-icon { color: #c2410c; }
+.sidenav-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.sidenav-btn.on {
+  background: var(--accent-soft); color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-line) inset;
+}
+/* Active row is a single highlight — the icon drops its tile box/border and
+   inherits the active tint, so there is never a box inside a box. (Idle and
+   hover rows keep their per-type tile colors above.) */
+.sidenav .sidenav-btn.on .sidenav-icon {
+  background: transparent;
+  border-color: transparent;
+  color: inherit;
+}
+.sidenav-btn.on::before {
+  content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px;
+  width: 3px; border-radius: 3px; background: var(--accent-2);
+}
+/* Pin / collapse toggle docked at the rail bottom. Chevron points right
+   (expand) when collapsed, left (collapse to the left edge) when pinned. */
+.sidenav-pin {
+  margin-top: auto;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-3); border-radius: 10px;
+  padding: 6px 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sidenav-pin:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.sidenav-pin-chevron {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: grid; place-items: center; flex: none;
+  transform: rotate(-90deg); transition: transform 0.2s ease;
+}
+.sidenav-pin-chevron.pinned { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .sidenav, .sidenav-pin-chevron { transition: none; }
+}
+/* Content shell shares the row with the sidenav (sidenav owns the 204px). */
+.app-body .shell { flex: 1; min-width: 0; margin: 0; max-width: none; }
 
 /* ============================================================
    Home dashboard
@@ -2295,6 +2921,12 @@ select:focus-visible, textarea:focus-visible {
   .shell.is-resource.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
   .shell.is-director { grid-template-columns: 280px minmax(0, 1fr); }
   .shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+  .shell.is-song { grid-template-columns: 280px minmax(0, 1fr); }
+  .shell.is-song.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+  .shell.is-lipsync { grid-template-columns: 280px minmax(0, 1fr); }
+  .shell.is-lipsync.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+  .shell.is-components { grid-template-columns: 280px minmax(0, 1fr); }
+  .shell.is-components.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
 }
 @media (max-width: 1180px) {
   /* Service pills stay in one horizontal row — allow the bar to wrap
@@ -2312,10 +2944,43 @@ select:focus-visible, textarea:focus-visible {
   .shell.is-resource.no-sidebar { grid-template-columns: 1fr; }
   .shell.is-director { grid-template-columns: 1fr; }
   .shell.is-director.no-sidebar { grid-template-columns: 1fr; }
+  .shell.is-song { grid-template-columns: 1fr; }
+  .shell.is-song.no-sidebar { grid-template-columns: 1fr; }
+  .shell.is-lipsync { grid-template-columns: 1fr; }
+  .shell.is-lipsync.no-sidebar { grid-template-columns: 1fr; }
+  .shell.is-components { grid-template-columns: 1fr; }
+  .shell.is-components.no-sidebar { grid-template-columns: 1fr; }
   .sidebar-show { flex-direction: row; position: static; width: 100%; }
   .sidebar-show-label { writing-mode: horizontal-tb; }
   .sidebar { position: static; max-height: none; }
   .brand-sub { display: none; }
+  /* Vertical menu becomes a horizontal scroll row under the topbar. */
+  .app-body, .app-body.nav-pinned { flex-direction: column; max-width: none; padding-left: 0; }
+  .sidenav {
+    width: 100%; height: auto; position: static;
+    align-self: stretch; margin-right: 0;
+    flex-direction: row; overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-bottom: 1px solid var(--line);
+    padding: 8px 12px;
+    background: transparent; box-shadow: none;
+  }
+  .sidenav:hover, .sidenav.pinned { width: 100%; background: transparent; box-shadow: none; }
+  /* Same specificity as the desktop overlay rule above — the horizontal
+     row must never take its negative flex margin. */
+  .sidenav:not(.pinned):hover { margin-right: 0; }
+  .sidenav-group { flex-direction: row; align-items: center; width: 100%; }
+  .sidenav-caption { display: none; }
+  .sidenav-caption, .sidenav .sidenav-label { opacity: 1; transition: none; }
+  .sidenav:not(.pinned):not(:hover) .sidenav-btn,
+  .sidenav:not(.pinned):not(:hover) .sidenav-pin {
+    justify-content: flex-start;
+    padding: 6px 8px; gap: 10px;
+  }
+  .sidenav:not(.pinned):not(:hover) .sidenav-label { display: inline; opacity: 1; }
+  .sidenav:not(.pinned):not(:hover) .sidenav-caption { display: none; }
+  .sidenav-btn { width: auto; white-space: nowrap; flex: none; }
+  .sidenav-btn.on::before { display: none; }
+  .sidenav-pin { display: none; }
 }
 @media (max-width: 760px) {
   .hero { flex-direction: column; align-items: stretch; }
@@ -2395,9 +3060,10 @@ select:focus-visible, textarea:focus-visible {
 }
 .shotlist-live-pct { font: 700 12.5px var(--mono); font-variant-numeric: tabular-nums; }
 
-/* compact summary — same card language, small type */
+/* compact summary — same card language, small type (5 boxes in one row:
+   Shots / Cinematic / Lip-sync / min total / Total Asset) */
 .shotlist-stats {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;
   margin-bottom: 12px;
 }
 .shotlist-stat {
@@ -2406,17 +3072,63 @@ select:focus-visible, textarea:focus-visible {
   border-radius: var(--radius-s);
   padding: 8px 10px;
   display: flex; flex-direction: column; gap: 1px;
+  align-items: center;
+  text-align: center;
   min-width: 0;
 }
 .shotlist-stat-value {
   font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums; line-height: 1.2;
+  text-align: center;
 }
 .shotlist-stat-label {
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--text-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: center;
 }
+/* Small View button inside the Lip-sync stat — opens the dialogue viewer. */
+.shotlist-stat-view {
+  margin-top: 5px;
+  padding: 2px 12px;
+  font-size: 11px; font-weight: 700; line-height: 1.6;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.shotlist-stat-view:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+  background: var(--accent-soft);
+}
+.shotlist-stat-view:disabled { opacity: 0.6; cursor: default; }
+
+/* Lip-sync dialogue viewer popup list (one editable block per scene). */
+.lip-view-box { max-width: 620px; }
+.lip-view-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: 55vh; overflow-y: auto;
+  text-align: left;
+}
+.lip-view-item {
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+}
+.lip-view-head {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.lip-view-head .song-file {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12.5px; font-weight: 600;
+}
+.lip-view-goto { flex: 0 0 auto; padding: 2px 10px; font-size: 11.5px; }
 
 /* scene filter tabs: horizontal scroll strip (all scenes) + pinned All */
 .shotlist-scenes-wrap {
@@ -2468,7 +3180,7 @@ select:focus-visible, textarea:focus-visible {
   background: var(--accent-soft);
   border-color: var(--accent-line);
   color: var(--accent-2);
-  box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 0 1px var(--accent-line) inset, 0 0 12px rgba(239, 68, 68, 0.12);
 }
 /* Pinned All button: distinct blue treatment so it stands apart from the
    accent-tinted scene tabs. The blue comes from the theme-aware --vid tokens
@@ -3204,3 +3916,33 @@ button.rm-chip:disabled:hover { background: transparent; border-color: var(--lin
 .reel-side .img-frame .smooth-img img { height: 100%; object-fit: cover; }
 .reel-side .frame-missing,
 .grid.reel-split .reel-final .frame-missing { min-height: 0; }
+
+/* ---- Create Song (lyrics-to-song workspace) ---- */
+/* Side-by-side: Generated Songs left/center at half width, Create Song
+   form docked right at half width. Stacks vertically on narrow screens. */
+.song-page { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.song-page .song-list-card { order: 1; min-width: 0; }
+.song-page .song-form-card { order: 2; min-width: 0; }
+@media (max-width: 1000px) {
+  .song-page { grid-template-columns: 1fr; }
+  .song-page .song-form-card { order: 1; }
+  .song-page .song-list-card { order: 2; }
+}
+.song-grid { display: flex; flex-direction: column; gap: 8px; }
+.song-name-row { display: flex; gap: 8px; }
+.song-name-row input { flex: 1; min-width: 0; }
+.song-lyrics { font-family: inherit; line-height: 1.5; resize: vertical; }
+.song-params { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 4px; }
+.song-params > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.song-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.song-actions-top { margin-top: 0; margin-bottom: 12px; }
+.song-run { margin-top: 12px; }
+.song-run .run-log { max-height: 220px; overflow: auto; white-space: pre-wrap; font-size: 12px; }
+.song-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.song-item { border: 1px solid var(--line, #2a2f3a); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.song-item-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.song-file { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-player { width: 100%; }
+/* ---- AUDIO project badge on Home cards ---- */
+.proj-type-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pill.proj-type.audio { background: rgba(168, 85, 247, 0.14); color: #c084fc; border-color: rgba(168, 85, 247, 0.4); }

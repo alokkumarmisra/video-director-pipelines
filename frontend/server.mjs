@@ -28,6 +28,17 @@ import {
   resolvePresetId,
 } from "../lib/presets.mjs";
 import { applyMasterToBeats } from "../lib/master_prompt.mjs";
+import { audioDuration, dialogueWavFile } from "../lib/tts.mjs";
+import {
+  beatDialogueStatus,
+  lineWavFile,
+  planDialogueTiming,
+  dialogueTotal,
+  needsSegmentation,
+    ttsProviderName,
+    lipSyncProviderName,
+    musetalkWorkflowReady,
+  } from "../lib/dialogue_pipeline.mjs";
 import {
   SCENE_BATCH,
   sceneCountFor,
@@ -41,6 +52,11 @@ import {
   buildBiblePrompt,
   buildScenesPrompt,
   buildRegenPrompt,
+  buildAddEntryPrompt,
+  buildRegenEntryPrompt,
+  normalizeCharacter,
+  normalizeLocation,
+  normalizeObject,
   boardToScenario,
 } from "../lib/director.mjs";
 
@@ -63,17 +79,29 @@ const readFavs = () => {
   try { return JSON.parse(fs.readFileSync(FAVS, "utf8")).names; }
   catch { return []; }
 };
-// UI theme persisted in a file (data/theme.json) so the chosen mode + accent
-// color survive reloads, restarts and browsers — localStorage is only a cache.
-// Shape: { mode: "dark" | "light", color: "" | "#rrggbb" }.
+// UI theme persisted in a file (data/theme.json) so the chosen mode + button
+// colors + background colors survive reloads, restarts and browsers —
+// localStorage is only a cache.
+// Shape: { mode: "dark" | "light", color: "" | "#rrggbb" (active accent,
+// legacy), darkColor?: "" | "#rrggbb", lightColor?: "" | "#rrggbb",
+// darkBg?: "" | "#rrggbb", lightBg?: "" | "#rrggbb" }.
+// Empty = factory default (dark theme, default backgrounds, red buttons).
 const THEME_FILE = path.join(ROOT, "data", "theme.json");
+const cleanColor = (c) =>
+  typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c) ? c : "";
 const readThemeFile = () => {
   try {
     const t = JSON.parse(fs.readFileSync(THEME_FILE, "utf8"));
     const mode = t.mode === "light" ? "light" : "dark";
-    const color = typeof t.color === "string" && /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : "";
-    return { mode, color };
-  } catch { return { mode: "dark", color: "" }; }
+    const color = cleanColor(t.color);
+    // New per-mode button colors; fall back to the legacy single color so
+    // previously saved picks keep working in both modes.
+    const darkColor = cleanColor(t.darkColor) || color;
+    const lightColor = cleanColor(t.lightColor) || color;
+    const darkBg = cleanColor(t.darkBg);
+    const lightBg = cleanColor(t.lightBg);
+    return { mode, color: mode === "dark" ? darkColor : lightColor, darkColor, lightColor, darkBg, lightBg };
+  } catch { return { mode: "dark", color: "", darkColor: "", lightColor: "", darkBg: "", lightBg: "" }; }
 };
 const writeThemeFile = (t) => {
   fs.mkdirSync(path.dirname(THEME_FILE), { recursive: true });
@@ -173,6 +201,7 @@ async function pgRenameRows(oldName, newName) {
   await pgPool.query("UPDATE scenarios SET name = $2, updated_at_ms = $3 WHERE name = $1", [oldName, newName, now]);
   await pgPool.query("UPDATE scenario_versions SET name = $2 WHERE name = $1", [oldName, newName]);
   await pgPool.query("UPDATE projects SET name = $2, updated_at = now() WHERE name = $1", [oldName, newName]);
+  await pgPool.query("UPDATE project_songs SET name = $2, updated_at = now() WHERE name = $1", [oldName, newName]);
 }
 async function dbRenameScenario(oldName, newName) {
   if (USE_SQLITE) {
@@ -522,6 +551,7 @@ CREATE TABLE IF NOT EXISTS projects (
   duration INT,
   beats INT NOT NULL DEFAULT 0,
   master_prompt TEXT,
+  project_type TEXT NOT NULL DEFAULT 'VIDEO' CHECK (project_type IN ('VIDEO', 'AUDIO')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -610,7 +640,59 @@ CREATE UNIQUE INDEX IF NOT EXISTS project_references_one_main
 ALTER TABLE project_references DROP CONSTRAINT IF EXISTS project_references_video_type_check;
 ALTER TABLE project_references ADD CONSTRAINT project_references_video_type_check
   CHECK (video_type IN ('YOUTUBE', 'INSTAGRAM'));
-CREATE INDEX IF NOT EXISTS idx_project_references_project ON public.project_references(project_id);`;
+CREATE INDEX IF NOT EXISTS idx_project_references_project ON public.project_references(project_id);
+-- Lyrics-to-song form data (Create Song tab, ACE-Step). One row per AUDIO
+-- project (UNIQUE project_id, cascades with the project): the exact fields
+-- the user filled in, so re-selecting the project restores the whole form.
+-- The generated mp3s themselves stay on disk in outputs/<folder>/ and are
+-- listed via GET /api/project/:name/songs.
+CREATE TABLE IF NOT EXISTS project_songs (
+  id BIGSERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL UNIQUE REFERENCES public.projects(project_id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  folder_name TEXT,
+  description TEXT,
+  tags TEXT,
+  lyrics TEXT,
+  duration INTEGER,
+  bpm INTEGER,
+  language TEXT,
+  keyscale TEXT,
+  timesignature TEXT,
+  seed BIGINT,
+  steps INTEGER,
+  -- Latest generated take (outputs/<folder>/<file>), refreshed on every
+  -- save and the moment a song take finishes generating.
+  file_path TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_project_songs_project ON public.project_songs(project_id);
+-- AI Story Director boards (Saved Storyboards section). One row per board:
+-- the full board JSON is canonical in the board column (upserted on every
+-- write), the scalar columns are denormalized for cheap list reads.
+-- director/*.json files remain on disk as the offline fallback / debug trail.
+CREATE TABLE IF NOT EXISTS director_boards (
+  board_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT,
+  scene_count INTEGER,
+  scenes_done INTEGER,
+  scenario_name TEXT,
+  -- Approved storyboard -> generated project link. Set when the approved
+  -- project is saved (Approve only returns a name+config; the client PUT
+  -- creates the projects row, see pgLinkDirectorBoards). ON DELETE CASCADE
+  -- so deleting a project removes its storyboard with it.
+  project_id INTEGER REFERENCES projects(project_id) ON DELETE CASCADE,
+  board JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_director_boards_updated ON director_boards(updated_at DESC);`;
+/* NOTE: idx_director_boards_project is created in pgInit() AFTER the
+   project_id ADD COLUMN migration — it must NOT live in this batch: on
+   pre-existing installs the table exists without the column and the index
+   build would throw (aborting all of pgInit before the migration runs). */
 // NOTE: project_assets uses the narrow canonical DDL above (one row per
 // asset: KEYFRAME / VIDEO / FINAL (+ IMAGE for ad-hoc stills), with a
 // single status/prompt/file_path per row; scene_id is the INTEGER scene
@@ -692,6 +774,18 @@ async function syncAllToPg() {
       await pgBackfillReferences(name, folder, cfg);
     } catch (e) { console.warn(`[pg] project backfill failed for ${name}:`, e.message); }
   }
+  // Link pre-existing approved storyboards to their projects (installs that
+  // predate director_boards.project_id). Name-matched only; later
+  // saves/approves keep it exact via pgLinkDirectorBoards.
+  try {
+    const linked = await pgPool.query(
+      `UPDATE director_boards b SET project_id = p.project_id,
+         board = jsonb_set(b.board, '{project_id}', to_jsonb(p.project_id))
+       FROM projects p
+       WHERE b.scenario_name = p.name AND b.project_id IS NULL
+       RETURNING b.board_id`);
+    if (linked.rowCount) console.log(`[pg] director boards linked: ${linked.rowCount}`);
+  } catch (e) { console.warn("[pg] director board backfill failed:", e.message); }
   console.log(`[pg] projects backfilled`);
 }
 async function pgSaveScenarioMirror(name, cfg) {
@@ -717,32 +811,234 @@ async function pgProjectId(name) {
   const r = await pgPool.query("SELECT project_id FROM projects WHERE name = $1", [name]);
   return r.rows[0]?.project_id ?? null;
 }
+// Project kind (projects.project_type): VIDEO = normal video project,
+// AUDIO = saved from the Create Song tab (audio generation). New rows
+// default to VIDEO; an existing row keeps its value unless an explicit type
+// is passed (so a plain re-save never flips AUDIO back to VIDEO).
+const PROJECT_TYPES = new Set(["VIDEO", "AUDIO"]);
+const normalizeProjectType = (v) => {
+  const s = String(v ?? "").trim().toUpperCase();
+  return PROJECT_TYPES.has(s) ? s : null;
+};
+const explicitProjectType = (cfg) =>
+  cfg && typeof cfg === "object" ? normalizeProjectType(cfg.project_type) : null;
 // Upsert one row in projects and return its project_id. This is what "Craft
 // scenario saves to projects" means: the project exists from the moment it
 // is crafted, before any version/asset rows. Save Scenario later reuses the
 // same project_id for its project_assets rows (see pgSaveProject).
 // folder_name is set ONCE on INSERT and never updated on subsequent saves.
-async function pgEnsureProject(name, cfg) {
+async function pgEnsureProject(name, cfg, projectType = undefined) {
   const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
   // folder_name is minted ONCE (unique) and then frozen — re-saves and
   // renames never change it, so output dirs and DB paths stay stable.
   let fn = await getFolderNameFromRow(name);
   if (!fn) fn = await ensureUniqueFolder(name, name);
+  // Explicit type wins (Create Song saves AUDIO); otherwise a new row
+  // defaults to VIDEO and an existing row keeps whatever it already has.
+  const pt = normalizeProjectType(projectType ?? explicitProjectType(cfg));
   const proj = await pgPool.query(
-    `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, now())
+    `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, project_type, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'VIDEO'), now())
      ON CONFLICT (name) DO UPDATE SET
         folder_name = COALESCE(NULLIF(projects.folder_name, ''), EXCLUDED.folder_name),
        description = EXCLUDED.description, duration = EXCLUDED.duration, beats = EXCLUDED.beats,
        master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
+       project_type = COALESCE($7, projects.project_type, 'VIDEO'),
        updated_at = now()
      RETURNING project_id`,
     [name, fn, cfg.description ?? null,
      Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
-     cfg.referencePrompt ?? null]);
+     cfg.referencePrompt ?? null, pt]);
   const projectId = proj.rows[0]?.project_id;
   if (projectId == null) throw new Error(`pgEnsureProject: no project_id for ${name}`);
   return projectId;
+}
+// Latest generated song take in an output folder: <prefix>_song.mp3 (v1),
+// <prefix>_song_vN.mp3 (v2+) — highest version wins. Returns the stored
+// relative path (outputs/<folder>/<file>) or null when nothing rendered yet.
+function latestSongFile(folder) {
+  try {
+    const dir = path.join(OUTPUTS, folder);
+    if (!folder || !fs.existsSync(dir)) return null;
+    const prefix = prefixForDir(folder);
+    let best = null;
+    for (const f of fs.readdirSync(dir)) {
+      if (!SONG_FILE_RE.test(f)) continue;
+      const stem = f.slice(0, -".mp3".length);
+      const m = stem.match(/_song_v(\d+)$/);
+      const v = m ? Number(m[1]) : (stem === `${prefix}_song` ? 1 : 0);
+      if (!v) continue;
+      if (!best || v > best.v) best = { file: f, v };
+    }
+    return best ? `outputs/${folder}/${best.file}` : null;
+  } catch { return null; }
+}
+// Upsert the Create Song form fields into project_songs (one row per
+// project). Called on every AUDIO save carrying an `audio` block, so the
+// Lyrics-to-song workspace can restore the exact form later via
+// GET /api/project/:name/song. No-op for non-audio configs.
+async function pgUpsertProjectSong(name, cfg, projectId, folder) {
+  const a = cfg && typeof cfg === "object" && cfg.audio && typeof cfg.audio === "object" ? cfg.audio : null;
+  if (!a || projectId == null) return;
+  const num = (v, fb) => (Number.isFinite(Number(v)) ? Number(v) : fb);
+  const songFile = latestSongFile(folder);
+  await pgPool.query(
+    `INSERT INTO project_songs (project_id, name, folder_name, description, tags, lyrics,
+      duration, bpm, language, keyscale, timesignature, seed, steps, file_path,
+      song_preset, song_vocal, cfg_scale, temperature, song_model, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, now())
+     ON CONFLICT (project_id) DO UPDATE SET
+       name = EXCLUDED.name, folder_name = EXCLUDED.folder_name,
+       description = EXCLUDED.description, tags = EXCLUDED.tags, lyrics = EXCLUDED.lyrics,
+       duration = EXCLUDED.duration, bpm = EXCLUDED.bpm, language = EXCLUDED.language,
+       keyscale = EXCLUDED.keyscale, timesignature = EXCLUDED.timesignature,
+       seed = EXCLUDED.seed, steps = EXCLUDED.steps,
+       file_path = COALESCE(EXCLUDED.file_path, project_songs.file_path),
+       song_preset = EXCLUDED.song_preset, song_vocal = EXCLUDED.song_vocal,
+       cfg_scale = EXCLUDED.cfg_scale, temperature = EXCLUDED.temperature,
+       song_model = EXCLUDED.song_model,
+       updated_at = now()`,
+    [projectId, name, folder ?? null,
+     typeof cfg.description === "string" ? cfg.description : null,
+     typeof a.tags === "string" ? a.tags : null,
+     typeof a.lyrics === "string" ? a.lyrics : null,
+     num(a.duration, null), num(a.bpm, null),
+     typeof a.language === "string" ? a.language : null,
+     typeof a.keyscale === "string" ? a.keyscale : null,
+     typeof a.timesignature === "string" ? a.timesignature : null,
+     num(a.seed, null), num(a.steps, null), songFile,
+     typeof a.songPreset === "string" ? a.songPreset : null,
+     typeof a.songVocal === "string" ? a.songVocal : null,
+     num(a.cfgScale, null), num(a.temperature, null),
+     a.songModel === "ace-step" || a.songModel === "minimax" ? a.songModel : null]);
+}
+// Mirror an AI Story Director board into Postgres (director_boards, one row
+// per board). Called on every board write, so the Saved Storyboards section
+// is DB-backed; file writes continue as the offline fallback. No-op when the
+// DB is down or the board has no id.
+async function pgUpsertDirectorBoard(board) {
+  if (!pgUp || !board || typeof board !== "object" || !board.id) return;
+  const scenes = Array.isArray(board.scenes) ? board.scenes.length : 0;
+  const pid = Number.isInteger(board.project_id) ? board.project_id : null;
+  await pgPool.query(
+    `INSERT INTO director_boards (board_id, title, status, scene_count, scenes_done,
+      scenario_name, project_id, board, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), now())
+     ON CONFLICT (board_id) DO UPDATE SET
+       title = EXCLUDED.title, status = EXCLUDED.status,
+       scene_count = EXCLUDED.scene_count, scenes_done = EXCLUDED.scenes_done,
+       scenario_name = EXCLUDED.scenario_name, board = EXCLUDED.board,
+       updated_at = now(),
+       -- Never unlink via a stale board object: only a non-null incoming id
+       -- overwrites (linking flows always carry the id; plain board edits
+       -- round-trip it through the board JSON).
+       project_id = COALESCE(EXCLUDED.project_id, director_boards.project_id)`,
+    [String(board.id),
+     String((board.input && board.input.title) || board.id),
+     board.status ?? null,
+     Number.isFinite(Number(board.sceneCount)) ? Number(board.sceneCount) : null,
+     scenes,
+     board.scenarioName ?? null,
+     pid,
+     JSON.stringify(board),
+     board.createdAt ?? null]);
+}
+// Link every storyboard approved as project `name` to its projects row.
+// Approve only returns a name+config (the client PUT creates the row), so
+// the link is applied on save — plus at approve time when the row exists
+// (re-approve / migrate-remaining) and once at boot for older installs.
+// Column, DB JSON and the offline-fallback file are updated together so a
+// later board edit (which upserts the whole object) can never unlink it.
+async function pgLinkDirectorBoards(name, pid) {
+  if (!pgUp || !name || pid == null) return;
+  try {
+    await pgPool.query(
+      `UPDATE director_boards SET project_id = $2,
+         board = jsonb_set(board, '{project_id}', to_jsonb($2::int))
+       WHERE scenario_name = $1 AND (project_id IS NULL OR project_id <> $2)`,
+      [name, pid]);
+    const r = await pgPool.query(
+      "SELECT board_id FROM director_boards WHERE scenario_name = $1", [name]);
+    for (const row of r.rows) {
+      const f = path.join(DIRECTOR, `${row.board_id}.json`);
+      try {
+        if (fs.existsSync(f)) {
+          const b = JSON.parse(fs.readFileSync(f, "utf8"));
+          if (b.project_id !== pid) {
+            b.project_id = pid;
+            fs.writeFileSync(f, JSON.stringify(b, null, 2));
+          }
+        }
+      } catch { /* file patch is best-effort; the DB row is canonical */ }
+    }
+  } catch (e) { console.warn("[pg] director board link failed:", e.message); }
+}
+// Delete a director board row (called alongside the file delete).
+async function pgDeleteDirectorBoard(id) {
+  if (!pgUp) return;
+  await pgPool.query("DELETE FROM director_boards WHERE board_id = $1", [String(id)]);
+}
+// Follow a project rename on its linked storyboards (scenario_name is the
+// human label; project_id never changes since projects rows keep their id).
+async function renameDirectorBoardsForProject(oldName, newName) {
+  if (pgUp) {
+    try {
+      await pgPool.query(
+        `UPDATE director_boards SET scenario_name = $2,
+           board = jsonb_set(board, '{scenarioName}', to_jsonb($2::text))
+         WHERE scenario_name = $1 OR project_id = (SELECT project_id FROM projects WHERE name = $2)`,
+        [oldName, newName]);
+    } catch (e) { console.warn("[pg] director boards rename failed:", e.message); }
+  }
+  // Offline-fallback files (and SQLite mode, which has no director table).
+  try {
+    fs.mkdirSync(DIRECTOR, { recursive: true });
+    for (const f of fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"))) {
+      try {
+        const full = path.join(DIRECTOR, f);
+        const b = JSON.parse(fs.readFileSync(full, "utf8"));
+        if (b && typeof b === "object" && b.scenarioName === oldName) {
+          b.scenarioName = newName;
+          fs.writeFileSync(full, JSON.stringify(b, null, 2));
+          if (pgUp) pgUpsertDirectorBoard(b).catch(() => {});
+        }
+      } catch { /* skip corrupt files */ }
+    }
+  } catch { /* best-effort */ }
+}
+// Remove every storyboard tied to a deleted project: linked rows (also
+// covered by the ON DELETE CASCADE FK — this is belt-and-braces plus the
+// scenario_name-matched leftovers) and their JSON files, so a deleted
+// project can never resurrect its board through the file backfill.
+// Unapproved drafts (no scenarioName/project) are untouched.
+async function deleteDirectorBoardsForProject(name) {
+  const ids = new Set();
+  if (pgUp) {
+    try {
+      const r = await pgPool.query(
+        `SELECT board_id FROM director_boards
+          WHERE scenario_name = $1 OR project_id = (SELECT project_id FROM projects WHERE name = $1)`,
+        [name]);
+      for (const row of r.rows) ids.add(String(row.board_id));
+    } catch (e) { console.warn("[pg] director boards lookup failed:", e.message); }
+  }
+  try {
+    fs.mkdirSync(DIRECTOR, { recursive: true });
+    for (const f of fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"))) {
+      try {
+        const b = JSON.parse(fs.readFileSync(path.join(DIRECTOR, f), "utf8"));
+        if (b && b.id && (ids.has(String(b.id)) || b.scenarioName === name)) ids.add(String(b.id));
+      } catch { /* skip corrupt files */ }
+    }
+  } catch { /* best-effort */ }
+  for (const id of ids) {
+    try { fs.rmSync(path.join(DIRECTOR, `${id}.json`), { force: true }); } catch { /* keep going */ }
+  }
+  if (pgUp && ids.size) {
+    try { await pgPool.query("DELETE FROM director_boards WHERE board_id = ANY($1)", [[...ids]]); }
+    catch (e) { console.warn("[pg] director boards delete failed:", e.message); }
+  }
+  return ids.size;
 }
 // Explicit Save = new version of the same project (v1, v2, …). Never overwrites.
 async function pgSaveVersion(name, cfg) {
@@ -1003,7 +1299,7 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
 // rows never copy old file_paths, and unchanged beats get zero rows.
 // Retries/status/progress updates never call this — only an actual
 // prompt/scene change does.
-async function pgSaveVersionDelta(name, prevCfg, cfg) {
+async function pgSaveVersionDelta(name, prevCfg, cfg, projectType = undefined) {
   const client = await pgPool.connect();
   try {
     await client.query("BEGIN");
@@ -1023,17 +1319,21 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
       folder = fRow.rows[0]?.folder_name || null;
     } catch { folder = null; }
     folder ||= await ensureUniqueFolder(name, name);
+    // Same project_type rule as pgEnsureProject: explicit wins, new rows
+    // default to VIDEO, existing rows are otherwise preserved.
+    const deltaPt = normalizeProjectType(projectType ?? explicitProjectType(cfg));
     const proj = await client.query(
-      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())
+      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, project_type, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'VIDEO'), now())
        ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
          duration = EXCLUDED.duration, beats = EXCLUDED.beats,
          master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
+         project_type = COALESCE($7, projects.project_type, 'VIDEO'),
          updated_at = now()
        RETURNING project_id`,
       [name, folder, cfg.description ?? null,
         Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
-        cfg.referencePrompt ?? null]);
+        cfg.referencePrompt ?? null, deltaPt]);
     const projectId = proj.rows[0]?.project_id;
     if (projectId == null) throw new Error(`pgSaveVersionDelta: no project_id for ${name}`);
     const previousVersion = Number(version) - 1;
@@ -1147,7 +1447,7 @@ async function pgSaveVersionDelta(name, prevCfg, cfg) {
 // pgSaveVersionDelta) is the only version-creating save. History readers
 // (EFFECTIVE_ASSETS_SQL, per-scene pills) keep working: they simply resolve
 // against a version count that no longer grows on save.
-async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg) {
+async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg, projectType = undefined) {
   // Total guard: latestVersion must be a real existing version (>= 1). A
   // phantom 0/NaN (e.g. max(version) over zero rows — Number(null) is 0)
   // would violate project_assets_version_check on the first asset INSERT.
@@ -1174,17 +1474,21 @@ async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg) {
     } catch { folder = null; }
     folder ||= await ensureUniqueFolder(name, name);
     const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+    // Same project_type rule as pgEnsureProject: explicit wins, new rows
+    // default to VIDEO, existing rows are otherwise preserved.
+    const inPlacePt = normalizeProjectType(projectType ?? explicitProjectType(cfg));
     const proj = await client.query(
-      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())
+      `INSERT INTO projects (name, folder_name, description, duration, beats, master_prompt, project_type, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'VIDEO'), now())
        ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description,
          duration = EXCLUDED.duration, beats = EXCLUDED.beats,
          master_prompt = COALESCE(EXCLUDED.master_prompt, projects.master_prompt),
+         project_type = COALESCE($7, projects.project_type, 'VIDEO'),
          updated_at = now()
        RETURNING project_id`,
       [name, folder, cfg.description ?? null,
         Number.isFinite(Number(cfg.duration)) ? Number(cfg.duration) : null, seq.length,
-        cfg.referencePrompt ?? null]);
+        cfg.referencePrompt ?? null, inPlacePt]);
     const projectId = proj.rows[0]?.project_id;
     if (projectId == null) throw new Error(`pgSaveVersionInPlace: no project_id for ${name}`);
     // Refresh ONLY changed scenes at the same version (delta plan, same
@@ -1445,6 +1749,16 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
       });
       return;
     }
+    // Song take finished -> point the project's song row at the new file
+    // (scripts/generate_song.mjs emits stage "song" per finished take).
+    if (asset.stage === "song") {
+      const filePath = `outputs/${outputFolder}/${asset.file}`;
+      await pgPool.query(
+        `UPDATE project_songs SET file_path = $2, updated_at = now()
+         WHERE project_id = $1`,
+        [projectId, filePath]);
+      return;
+    }
     const facts = diskFacts(outputFolder, asset.file);
     const filePath = `outputs/${outputFolder}/${asset.file}`;
     let target = null;
@@ -1648,6 +1962,53 @@ async function pgInit() {
     await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_id SERIAL UNIQUE`);
     await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS folder_name TEXT`);
     await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS master_prompt TEXT`);
+    // Project kind: VIDEO (normal video project) vs AUDIO (saved from the
+    // Create Song tab). New column — every existing row is a video project.
+    await pgPool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_type TEXT NOT NULL DEFAULT 'VIDEO'`);
+    await pgPool.query(`UPDATE projects SET project_type = 'VIDEO' WHERE project_type IS NULL`);
+    try {
+      await pgPool.query(`ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_project_type_check`);
+      await pgPool.query(`ALTER TABLE projects ADD CONSTRAINT projects_project_type_check
+        CHECK (project_type IN ('VIDEO', 'AUDIO'))`);
+    } catch (e) { console.warn("[pg] projects project_type check migration failed:", e.message); }
+    // Director boards -> approved project link (existing installs predate the
+    // column). CASCADE so deleting a project removes its storyboard rows;
+    // the board JSON files are removed alongside (see project DELETE).
+    await pgPool.query(`ALTER TABLE director_boards ADD COLUMN IF NOT EXISTS project_id INTEGER`)
+      .catch(() => {});
+    await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_director_boards_project ON director_boards(project_id)`)
+      .catch(() => {});
+    try {
+      const fk = await pgPool.query(
+        `SELECT 1 FROM pg_constraint WHERE conrelid = 'public.director_boards'::regclass AND contype = 'f'`);
+      if (!fk.rowCount) {
+        // Backfill orphans first: a stale project_id can never survive a
+        // restore, so null it before the FK is enforced.
+        await pgPool.query(
+          `UPDATE director_boards b SET project_id = NULL
+            WHERE project_id IS NOT NULL AND NOT EXISTS
+              (SELECT 1 FROM projects p WHERE p.project_id = b.project_id)`);
+        await pgPool.query(
+          `ALTER TABLE director_boards ADD CONSTRAINT director_boards_project_fk
+            FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE`);
+      }
+    } catch (e) { console.warn("[pg] director_boards project_fk migration failed:", e.message); }
+    // Song form table + its generated-take pointer (existing installs predate both).
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS file_path TEXT`)
+      .catch(() => {});
+    // Song mode preset + advanced ACE-Step sampling (set internally per mode).
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS song_preset TEXT`)
+      .catch(() => {});
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS song_vocal TEXT`)
+      .catch(() => {});
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS cfg_scale DOUBLE PRECISION`)
+      .catch(() => {});
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS temperature DOUBLE PRECISION`)
+      .catch(() => {});
+    // Audio model for sung takes (Create Song tab dropdown): "ace-step" |
+    // "minimax". Older rows predate the column and read back as null (= ace-step).
+    await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS song_model TEXT`)
+      .catch(() => {});
     // Backfill folder_name for existing projects that don't have one.
     await pgPool.query(
       `UPDATE projects SET folder_name = substr(regexp_replace(regexp_replace(lower(name), '[^a-z0-9]+', '_', 'g'), '^_+|_+$', ''), 1, 100) WHERE folder_name IS NULL OR folder_name = ''`);
@@ -2046,6 +2407,10 @@ const readJson = (req) => new Promise((res, rej) => {
 // opts.count    -> repeat a `ref` regen this many times (each pass writes a new
 //                  _vN version to pick from); anything else always runs once.
 const runs = new Map(); // id -> { scenario, folder, status, log, startedAt, proc, subs:Set<res> }
+// Boards with a scene-planning LLM call in flight. A second POST while one
+// is running is rejected (409) so two overlapping batches can never append
+// duplicate scenes — the client retries/continues from scenes.length.
+const directorPlanning = new Set();
 
 function startRun(scenario, opts = {}) {
   const { stitch = false, regen = null, engine = "ltx" } = opts;
@@ -2062,15 +2427,23 @@ function startRun(scenario, opts = {}) {
   // Dialogue mode: voice + lip-sync beats via scripts/dialogue_lipsync.mjs
   // (local Edge-TTS + Easy-Wav2Lip, no ComfyUI queue needed but still serial
   // with other runs since it rewrites clip mains + re-stitches the final).
-  const mode = opts.mode === "dialogue" ? "dialogue" : "generate";
+  // Song mode: lyrics -> full song via scripts/generate_song.mjs (selected
+  // audio model on ComfyUI — ACE-Step 1.5 XL Turbo or MiniMax Music 3 —
+  // versioned mp3s in outputs/<folder>/).
+  const mode = opts.mode === "dialogue" ? "dialogue" : opts.mode === "song" ? "song" : "generate";
   const script = mode === "dialogue"
     ? "scripts/dialogue_lipsync.mjs"
-    : engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
+    : mode === "song"
+      ? "scripts/generate_song.mjs"
+      : engine === "wan" ? "scripts/character_sequence_wan.mjs" : "scripts/character_sequence.mjs";
   const argv = [script, folder];
   if (configName !== folder) argv.push("--config-name", configName);
-  if (mode === "dialogue") {
-    if (opts.beats) argv.push("--beats", String(opts.beats));
-    if (opts.skipTts) argv.push("--skip-tts");
+  if (mode === "song" && (opts.songModel === "ace-step" || opts.songModel === "minimax"))
+    argv.push("--song-model", opts.songModel);
+    if (mode === "dialogue") {
+      if (opts.beats) argv.push("--beats", String(opts.beats));
+      if (opts.lipsync === "wav2lip" || opts.lipsync === "musetalk-comfy") argv.push("--lipsync", opts.lipsync);
+      if (opts.skipTts) argv.push("--skip-tts");
     if (opts.skipLipsync) argv.push("--skip-lipsync");
     // Per-scene check flow: voice+sync the clip but leave the final cut
     // alone (merge later with Stitch).
@@ -2078,18 +2451,19 @@ function startRun(scenario, opts = {}) {
     if (engine === "wan") argv.push("--wan");
   } else {
     if (stitch) argv.push("--stitch");
+    if (opts.noDialogue) argv.push("--no-dialogue");
     if (regen) {
       argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
     }
   }
-  if (format === "vertical") argv.push("--vertical");
+  if (format === "vertical" && mode !== "song") argv.push("--vertical");
   const id = Date.now().toString(36);
   // Run shape (stitch/regen/count/format) is stored on the record — not just
   // the argv — so a fresh page can reattach after a refresh: GET /api/runs
   // reveals the active run and the SSE log endpoint replays its log + asset
   // events, letting the client rebuild progress and button state from the
   // real stream instead of guessing.
-  const run = { id, scenario, folder, engine, format, stitch, regen, count, mode, beats: opts.beats || null, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  const run = { id, scenario, folder, engine, format, stitch, regen, count, mode, beats: opts.beats || null, lipsync: opts.lipsync || null, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -2189,7 +2563,12 @@ async function llmStatus() {
 // services being offline never blocks project data either (health is a
 // separate endpoint). Error details stay server-side (logs), the client only
 // gets "dashboard unavailable".
-const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null });
+const newCoverage = () => ({ ref: false, kf: new Set(), clips: new Set(), final: false, thumb: null, songs: 0 });
+
+// Versioned song files written by scripts/generate_song.mjs:
+// <prefix>_song.mp3 (v1), <prefix>_song_vN.mp3 (v2+). Dialogue voice wavs
+// (<prefix>_dlg*..wav) are NOT songs and must never count here.
+const SONG_FILE_RE = /_song(?:_v\d+)?\.mp3$/i;
 
 // Disk coverage for a project's dirs (folder dirs first, legacy display-name
 // dirs after). Prefers the landscape ltx dir, then _wan, then vertical cuts;
@@ -2215,6 +2594,12 @@ function diskCoverageFor(dirs, cfg) {
       if (b.clipMain) cov.clips.add(Number(n));
     }
     if (vm.finalMain) cov.final = true;
+    // Generated songs (ACE-Step mp3s) — the completion signal for AUDIO projects.
+    try {
+      for (const f of fs.readdirSync(full)) {
+        if (SONG_FILE_RE.test(f)) cov.songs += 1;
+      }
+    } catch { /* unreadable dir — songs stay 0 */ }
     if (cov.thumb && cov.thumb.dir === dir && cov.kf.size) break; // ltx dir already has keyframes
   }
   return cov;
@@ -2232,6 +2617,7 @@ async function dashboardPayload() {
       const r = await pgPool.query(
         `SELECT COALESCE(p.name, s.name) AS name,
                 p.project_id, p.folder_name, p.description AS pdesc,
+                p.project_type,
                 p.created_at, p.updated_at AS pupdated,
                 s.config::text AS config, s.updated_at_ms
          FROM projects p FULL OUTER JOIN scenarios s ON s.name = p.name
@@ -2241,6 +2627,7 @@ async function dashboardPayload() {
         project_id: x.project_id != null ? Number(x.project_id) : null,
         folder_name: x.folder_name ?? null,
         pdesc: x.pdesc ?? null,
+        project_type: x.project_type ?? "VIDEO",
         created_at: x.created_at ? new Date(x.created_at).getTime() : null,
         pupdated: x.pupdated ? new Date(x.pupdated).getTime() : null,
         configText: x.config != null ? String(x.config) : null,
@@ -2252,6 +2639,7 @@ async function dashboardPayload() {
     try {
       rows = (await dbListScenarios()).map((r) => ({
         name: r.name, project_id: null, folder_name: null, pdesc: null,
+        project_type: "VIDEO",
         created_at: null, pupdated: null,
         configText: String(r.config), updated_at: Number(r.updated_at),
       }));
@@ -2265,7 +2653,7 @@ async function dashboardPayload() {
           try {
             rows.push({
               name: f.replace(/\.json$/, ""), project_id: null, folder_name: null,
-              pdesc: null, created_at: null, pupdated: null,
+              pdesc: null, project_type: "VIDEO", created_at: null, pupdated: null,
               configText: fs.readFileSync(full, "utf8"), updated_at: Math.round(fs.statSync(full).mtimeMs),
             });
           } catch { /* skip unreadable prompt files */ }
@@ -2334,10 +2722,15 @@ async function dashboardPayload() {
     const seq = Array.isArray(cfg?.sequence) ? cfg.sequence : [];
     const beats = seq.length;
     const c = covs.get(r.name) || newCoverage();
+    const isAudio = (r.project_type ?? "VIDEO") === "AUDIO";
     const total = 1 + 2 * beats; // reference + keyframe + clip per beat
-    const done = (c.ref ? 1 : 0) + c.kf.size + c.clips.size;
+    // AUDIO projects complete one song (not scenes): a finished song counts
+    // as the project's done unit so the card reaches 100%.
+    const done = (c.ref ? 1 : 0) + c.kf.size + c.clips.size + (c.songs > 0 ? 1 : 0);
     const progress = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
-    const status = c.final ? "completed" : (done > 0 ? "in_progress" : "draft");
+    const status = c.final || (isAudio && c.songs > 0)
+      ? "completed"
+      : (done > 0 ? "in_progress" : "draft");
     // Thumbnail: PG catalog pick, else disk pick; must exist on disk.
     // Landscape dirs win over the vertical cuts (main video is canonical).
     // Dirs are folder-based (immutable storage) with legacy name dirs after.
@@ -2355,6 +2748,8 @@ async function dashboardPayload() {
       name: r.name,
       project_id: pids.get(r.name) ?? null,
       folder_name: folderOf(r.name),
+      // Project kind: VIDEO (normal video project) vs AUDIO (Create Song).
+      project_type: r.project_type ?? "VIDEO",
       // Description from the projects TABLE first (the stored project data),
       // scenario config as fallback.
       description: pdescs.get(r.name) ?? (typeof cfg?.description === "string" ? cfg.description : ""),
@@ -2367,6 +2762,9 @@ async function dashboardPayload() {
       videoCount: c.clips.size,
       refDone: c.ref,
       hasFinal: c.final,
+      // Generated songs (ACE-Step mp3s) — the deliverable of AUDIO projects.
+      songCount: c.songs,
+      hasSong: c.songs > 0,
       thumbnailUrl: thumbFile ? `/outputs/${thumbDir}/${thumbFile}` : null,
       createdAt: created.get(r.name) ?? null,
       // Freshness: scenario save first, project-row update as fallback.
@@ -2871,7 +3269,7 @@ function toYouTubeTitle(s) {
 }
 
 // ---------------------------------------------------------------- static files
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".wav": "audio/wav", ".ico": "image/x-icon" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".m4a": "audio/mp4", ".flac": "audio/flac", ".ico": "image/x-icon" };
 function serveStatic(req, res, urlPath) {
   let file = path.normalize(path.join(DIST, urlPath));
   if (!file.startsWith(DIST)) { res.writeHead(403); return res.end(); }
@@ -3019,12 +3417,16 @@ const server = http.createServer(async (req, res) => {
       // Null in SQLite mode / pre-migration rows (callers fall back to slug).
       let pidMap = new Map();
       let folderMap = new Map();
+      let typeMap = new Map();
+      let createdMap = new Map();
       if (pgUp) {
         try {
-          const pr = await pgPool.query("SELECT name, project_id, folder_name FROM projects");
+          const pr = await pgPool.query("SELECT name, project_id, folder_name, project_type, created_at FROM projects");
           pidMap = new Map(pr.rows.map((x) => [x.name, Number(x.project_id)]));
           folderMap = new Map(pr.rows.map((x) => [x.name, x.folder_name ?? null]));
-        } catch { /* ids/folders stay null — sidebar falls back to mtime order/slug */ }
+          typeMap = new Map(pr.rows.map((x) => [x.name, x.project_type ?? null]));
+          createdMap = new Map(pr.rows.map((x) => [x.name, x.created_at ? new Date(x.created_at).getTime() : null]));
+        } catch { /* ids/folders/types stay null — sidebar falls back to mtime order/slug/VIDEO */ }
       }
       return json(res, 200, rows.map((r) => {
         const c = JSON.parse(r.config);
@@ -3040,6 +3442,8 @@ const server = http.createServer(async (req, res) => {
           favorite: favs.includes(r.name),
           project_id: pidMap.has(r.name) ? pidMap.get(r.name) : null,
           folder_name: folderMap.get(r.name) ?? null,
+          project_type: typeMap.get(r.name) ?? "VIDEO",
+          createdAt: createdMap.has(r.name) ? createdMap.get(r.name) : null,
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
     }
@@ -3056,8 +3460,14 @@ const server = http.createServer(async (req, res) => {
       try { body = await readJson(req); }
       catch { return json(res, 400, { error: "bad json" }); }
       const mode = body.mode === "light" ? "light" : "dark";
-      const color = typeof body.color === "string" && /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : "";
-      const t = { mode, color };
+      // Per-mode button colors (each picker); legacy single `color` still
+      // accepted as a fallback that applies to both modes.
+      const legacy = cleanColor(body.color);
+      const darkColor = cleanColor(body.darkColor) || legacy;
+      const lightColor = cleanColor(body.lightColor) || legacy;
+      const darkBg = cleanColor(body.darkBg);
+      const lightBg = cleanColor(body.lightBg);
+      const t = { mode, color: mode === "dark" ? darkColor : lightColor, darkColor, lightColor, darkBg, lightBg };
       writeThemeFile(t);
       return json(res, 200, t);
     }
@@ -3110,12 +3520,27 @@ const server = http.createServer(async (req, res) => {
       try { raw = await dbGetScenario(name); }
       catch (e) { return json(res, 503, { error: "database unavailable" }); }
       if (raw === null) return json(res, 404, { error: "no such scenario" });
-      return json(res, 200, { name, config: JSON.parse(raw) });
+      // Project kind for callers that preserve it across saves (duplicate).
+      let project_type = null;
+      if (pgUp) {
+        try {
+          const pr = await pgPool.query("SELECT project_type FROM projects WHERE name = $1", [name]);
+          project_type = pr.rows[0]?.project_type ?? null;
+        } catch { /* type stays null — caller falls back to VIDEO */ }
+      }
+      return json(res, 200, { name, config: JSON.parse(raw), ...(project_type ? { project_type } : {}) });
     }
     if (p.startsWith("/api/scenario/") && req.method === "PUT" && p.split("/").length === 4) {
       const name = pathName(p.split("/")[3]);
       if (!isSafe(name)) return json(res, 400, { error: "bad name" });
       const cfg = await readJson(req);
+      // project_type is a projects-TABLE column (VIDEO/AUDIO), not scenario
+      // content: extract it as the save signal, then strip it so it never
+      // lands in scenarios / versions / prompts JSON (or the no-change hash).
+      // Explicit AUDIO (Create Song saves) wins; absent = new rows default to
+      // VIDEO, existing rows keep their value.
+      const explicitType = explicitProjectType(cfg);
+      if (cfg && typeof cfg === "object") delete cfg.project_type;
       // folder_name is minted ONCE (unique) and frozen: creation stamps it
       // from the project name, edits/renames never change it — output dirs,
       // filenames and DB paths stay stable so media keeps resolving.
@@ -3151,8 +3576,15 @@ const server = http.createServer(async (req, res) => {
           try {
             const r = await pgPool.query("SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
             version = r.rows[0]?.v ?? null;
-            // No-change save still guarantees the project row exists.
-            project_id = await pgEnsureProject(name, cfg);
+            // No-change save still guarantees the project row exists (and
+            // applies an explicit type change, e.g. a type-only AUDIO save).
+            project_id = await pgEnsureProject(name, cfg, explicitType);
+            // Keep the song form row in sync even on a no-change save.
+            try { await pgUpsertProjectSong(name, cfg, project_id, folder); }
+            catch (e) { console.warn("[pg] song upsert failed:", e.message); }
+            // An approved storyboard waiting on this project links now.
+            try { await pgLinkDirectorBoards(name, project_id); }
+            catch (e) { console.warn("[pg] director board link failed:", e.message); }
           } catch (e) { console.warn("[pg] version lookup failed:", e.message); }
         }
         return json(res, 200, { ok: true, version, project_id, unchanged: true });
@@ -3192,14 +3624,20 @@ const server = http.createServer(async (req, res) => {
           // v0, violating project_assets_version_check (version > 0).
           const latest = latestVersionOf(latestRow.rows[0]?.v);
           if (latest == null) {
-            const saved = await pgSaveVersionDelta(name, prevCfg, cfg);
+            const saved = await pgSaveVersionDelta(name, prevCfg, cfg, explicitType);
             version = saved.version;
             project_id = saved.projectId;
           } else {
-            const saved = await pgSaveVersionInPlace(name, latest, prevCfg, cfg);
+            const saved = await pgSaveVersionInPlace(name, latest, prevCfg, cfg, explicitType);
             version = saved.version;
             project_id = saved.projectId;
           }
+          // Persist the Create Song form fields for AUDIO projects.
+          try { await pgUpsertProjectSong(name, cfg, project_id, folder); }
+          catch (e) { console.warn("[pg] song upsert failed:", e.message); }
+          // An approved storyboard waiting on this project links now.
+          try { await pgLinkDirectorBoards(name, project_id); }
+          catch (e) { console.warn("[pg] director board link failed:", e.message); }
         }
         catch (e) { console.warn("[pg] version save failed:", e.message); }
       }
@@ -3233,6 +3671,8 @@ const server = http.createServer(async (req, res) => {
       try {
         await dbRenameScenario(oldName, newName);
         renameScenarioFiles(oldName, newName);
+        try { await renameDirectorBoardsForProject(oldName, newName); }
+        catch (e) { console.warn("[pg] director boards rename failed:", e.message); }
         const favs = readFavs();
         if (favs.includes(oldName))
           fs.writeFileSync(FAVS, JSON.stringify({ names: favs.map((n) => (n === oldName ? newName : n)) }, null, 2));
@@ -3283,6 +3723,12 @@ const server = http.createServer(async (req, res) => {
       await dbDeleteScenario(name);
       const f = path.join(PROMPTS, name + ".json");
       if (fs.existsSync(f)) fs.unlinkSync(f);
+      // Linked storyboards go with the project (DB rows cascade via the FK;
+      // files are removed here so the file backfill can't resurrect them).
+      try {
+        const n = await deleteDirectorBoardsForProject(name);
+        if (n) console.log(`[pg] deleted ${n} director board(s) with project ${name}`);
+      } catch (e) { console.warn("[pg] director boards cleanup failed:", e.message); }
       // Storage is folder-based (immutable) — remove folder dirs plus any
       // legacy display-name dirs left from before folder-immutability.
       const delFolder = (pgUp ? await getFolderNameFromRow(name) : null) || folderName(name);
@@ -3310,11 +3756,15 @@ const server = http.createServer(async (req, res) => {
           format: body.format ?? (body.vertical ? "vertical" : undefined),
           regen: body.regen || null,
           count: body.count,
-          mode: body.mode === "dialogue" ? "dialogue" : undefined,
+          mode: body.mode === "dialogue" || body.mode === "song" ? body.mode : undefined,
           beats: typeof body.beats === "string" ? body.beats : undefined,
-          skipTts: !!body.skipTts,
-          skipLipsync: !!body.skipLipsync,
-          noStitch: !!body.noStitch,
+            skipTts: !!body.skipTts,
+            skipLipsync: !!body.skipLipsync,
+            noStitch: !!body.noStitch,
+            noDialogue: !!body.noDialogue,
+            lipsync: body.lipsync === "musetalk-comfy" || body.lipsync === "musetalk" ? "musetalk-comfy"
+              : body.lipsync === "wav2lip" ? "wav2lip" : undefined,
+          songModel: body.songModel === "ace-step" || body.songModel === "minimax" ? body.songModel : undefined,
           storageFolder: folder,
           configName: body.scenario,
         });
@@ -3911,6 +4361,9 @@ const server = http.createServer(async (req, res) => {
       fs.mkdirSync(DIRECTOR, { recursive: true });
       board.updatedAt = new Date().toISOString();
       fs.writeFileSync(directorBoardFile(board.id), JSON.stringify(board, null, 2));
+      // Mirror into Postgres — Saved Storyboards are DB-backed for the UI
+      // (fire-and-forget; the file write above already succeeded).
+      pgUpsertDirectorBoard(board).catch((e) => console.warn("[pg] director board mirror failed:", e.message));
       return board;
     };
     const directorBoardMeta = (b) => ({
@@ -3920,7 +4373,17 @@ const server = http.createServer(async (req, res) => {
       scenes: Array.isArray(b.scenes) ? b.scenes.length : 0,
       sceneCount: b.sceneCount ?? 0,
       scenarioName: b.scenarioName ?? null,
+      // Approved storyboard -> generated project link (integer projects id).
+      project_id: Number.isInteger(b.project_id) ? b.project_id : null,
       updatedAt: b.updatedAt ?? null,
+      // Card fields for the Saved Storyboards grid.
+      createdAt: b.createdAt ?? null,
+      genre: b.input?.genre ?? null,
+      visualStyle: b.input?.visualStyle ?? null,
+      language: b.input?.language ?? null,
+      aspectRatio: b.input?.aspectRatio ?? null,
+      targetSeconds: b.input?.targetSeconds ?? null,
+      logline: b.blueprint?.logline ?? null,
     });
     const DIRECTOR_GENRES = ["Kids", "Devotional", "Adventure", "Fantasy", "Horror", "Comedy", "Educational", "Custom"];
     const DIRECTOR_STYLES = ["3D Preschool Animation", "3D Cinematic", "Realistic", "Anime", "Cartoon", "Indian Mythological", "Fantasy", "Custom"];
@@ -4055,12 +4518,31 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === "/api/director/boards" && req.method === "GET") {
       fs.mkdirSync(DIRECTOR, { recursive: true });
-      const boards = fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"));
-      const list = [];
-      for (const f of boards) {
-        try { list.push(directorBoardMeta(JSON.parse(fs.readFileSync(path.join(DIRECTOR, f), "utf8")))); }
-        catch { /* skip corrupt board files */ }
+      // DB-first: every board write is mirrored into director_boards.
+      const seen = new Map();
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT board_id, board FROM director_boards");
+          for (const row of r.rows) {
+            try {
+              const b = typeof row.board === "string" ? JSON.parse(row.board) : row.board;
+              if (b && b.id) seen.set(String(b.id), directorBoardMeta(b));
+            } catch { /* skip corrupt rows */ }
+          }
+        } catch (e) { console.warn("[pg] director boards list failed:", e.message); }
       }
+      // Files fill the gaps (boards saved while the DB was down) and are
+      // backfilled into the DB on the spot.
+      for (const f of fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"))) {
+        try {
+          const b = JSON.parse(fs.readFileSync(path.join(DIRECTOR, f), "utf8"));
+          if (b && b.id && !seen.has(String(b.id))) {
+            seen.set(String(b.id), directorBoardMeta(b));
+            if (pgUp) pgUpsertDirectorBoard(b).catch((e) => console.warn("[pg] director board backfill failed:", e.message));
+          }
+        } catch { /* skip corrupt board files */ }
+      }
+      const list = [...seen.values()];
       list.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
       return json(res, 200, list);
     }
@@ -4099,10 +4581,24 @@ const server = http.createServer(async (req, res) => {
       const mBoard = p.match(/^\/api\/director\/boards\/([^/]+)$/);
       if (mBoard) {
         const id = decodeURIComponent(mBoard[1]);
-        if (req.method === "GET") return json(res, 200, readDirectorBoard(id));
+        if (req.method === "GET") {
+          // DB-first, file fallback (missing DB rows are backfilled).
+          if (pgUp) {
+            try {
+              const r = await pgPool.query("SELECT board FROM director_boards WHERE board_id = $1", [id]);
+              if (r.rows[0]?.board) {
+                const b = typeof r.rows[0].board === "string" ? JSON.parse(r.rows[0].board) : r.rows[0].board;
+                return json(res, 200, b);
+              }
+            } catch (e) { console.warn("[pg] director board read failed:", e.message); }
+          }
+          return json(res, 200, readDirectorBoard(id));
+        }
         if (req.method === "DELETE") {
           readDirectorBoard(id); // throws when missing
           fs.rmSync(directorBoardFile(id));
+          try { await pgDeleteDirectorBoard(id); }
+          catch (e) { console.warn("[pg] director board delete failed:", e.message); }
           return json(res, 200, { ok: true });
         }
         if (req.method === "PUT") {
@@ -4120,11 +4616,16 @@ const server = http.createServer(async (req, res) => {
             const nb = normalizeBlueprint({ ...board.blueprint, ...patch.blueprint });
             board.blueprint = nb;
           }
+          // Full-array replace for bible edits from the storyboard UI:
+          // the client sends the complete next array, so deletes (shorter
+          // array) and appends (longer array) both persist. Entries are
+          // re-normalized so ids/defaults never break scene references.
           for (const k of ["characters", "locations", "objects"]) {
             if (Array.isArray(patch[k])) {
-              const norm = k === "characters" ? board.blueprint.characters.map((c, i) => ({ ...c, ...(patch[k][i] || {}) }))
-                : board.blueprint[k].map((x, i) => ({ ...x, ...(patch[k][i] || {}) }));
-              board.blueprint[k] = norm;
+              board.blueprint[k] = patch[k].map((x, i) =>
+                k === "characters" ? normalizeCharacter(x, i)
+                  : k === "locations" ? normalizeLocation(x, i)
+                    : normalizeObject(x, i));
             }
           }
           if (Array.isArray(patch.scenes)) {
@@ -4139,37 +4640,45 @@ const server = http.createServer(async (req, res) => {
     }
     if (p.match(/^\/api\/director\/boards\/[^/]+\/scenes$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
-      const board = readDirectorBoard(id);
-      if (!board.blueprint) throw new Error("analyze the story first");
-      const body = await readJson(req).catch(() => ({}));
-      const done = board.scenes.length;
-      const remaining = board.sceneCount - done;
-      if (remaining <= 0) return json(res, 200, board);
-      const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
-      const beats = (board.blueprint.beats || []).slice();
-      const prevScene = done > 0 ? board.scenes[done - 1] : null;
-      // Prior spoken lines so the prompt can forbid verbatim repeats (late
-      // batches used to re-plan the opening and copy scene-1 dialogue).
-      const priorDialogue = [];
-      for (const s of board.scenes) {
-        for (const d of (s.dialogue || [])) {
-          if (d && d.line) priorDialogue.push(String(d.line));
-        }
+      if (directorPlanning.has(id)) {
+        return json(res, 409, { error: "scene planning already running for this board — wait for it to finish, then Continue" });
       }
-      const raw = await llmChatJson({
-        system: DIRECTOR_SYSTEM,
-        user: buildScenesPrompt({
-          input: board.input, blueprint: board.blueprint, beats, prevScene,
-          startNumber: done + 1, count: n, styleLock: board.styleLock,
-          totalScenes: board.sceneCount, priorDialogue,
-        }),
-        maxTokens: 16000,
-        temperature: 0.5,
-        timeoutMs: 600000,
-        rawTag: `_raw_${id}_scenes_${done + 1}.log`,
-      });
-      const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
-      if (!got.length) throw new Error("director returned no scenes — try again");
+      directorPlanning.add(id);
+      try {
+        const board = readDirectorBoard(id);
+        if (!board.blueprint) throw new Error("analyze the story first");
+        const body = await readJson(req).catch(() => ({}));
+        // Re-read inside the lock: a batch that finished while this request
+        // was queued already advanced scenes.length — continuing from the
+        // fresh count skips duplicates instead of re-planning the same range.
+        const done = board.scenes.length;
+        const remaining = board.sceneCount - done;
+        if (remaining <= 0) return json(res, 200, board);
+        const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
+        const beats = (board.blueprint.beats || []).slice();
+        const prevScene = done > 0 ? board.scenes[done - 1] : null;
+        // Prior spoken lines so the prompt can forbid verbatim repeats (late
+        // batches used to re-plan the opening and copy scene-1 dialogue).
+        const priorDialogue = [];
+        for (const s of board.scenes) {
+          for (const d of (s.dialogue || [])) {
+            if (d && d.line) priorDialogue.push(String(d.line));
+          }
+        }
+        const raw = await llmChatJson({
+          system: DIRECTOR_SYSTEM,
+          user: buildScenesPrompt({
+            input: board.input, blueprint: board.blueprint, beats, prevScene,
+            startNumber: done + 1, count: n, styleLock: board.styleLock,
+            totalScenes: board.sceneCount, priorDialogue,
+          }),
+          maxTokens: 16000,
+          temperature: 0.5,
+          timeoutMs: 600000,
+          rawTag: `_raw_${id}_scenes_${done + 1}.log`,
+        });
+        const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
+        if (!got.length) throw new Error("director returned no scenes — try again");
       // Dedupe guard: the LLM sometimes repeats an earlier line verbatim
       // across batches. A repeated line carries no story value and is exactly
       // the "scene 1 copied to scene 45" report — drop the repeat so every
@@ -4197,9 +4706,144 @@ const server = http.createServer(async (req, res) => {
           }
           normed.dialogue = normalizeDialogue(fresh);
         }
-        board.scenes.push(normed);
+          board.scenes.push(normed);
+        }
+        // Defensive dedupe: keep the first scene per scene_number and renumber
+        // sequentially, so no duplicate records can ever be stored or migrated.
+        const seenNums = new Set();
+        board.scenes = board.scenes.filter((s) => {
+          if (seenNums.has(s.scene_number)) return false;
+          seenNums.add(s.scene_number);
+          return true;
+        });
+        board.scenes.forEach((s, i) => { s.scene_number = i + 1; });
+        board.status = board.scenes.length >= board.sceneCount ? "ready" : "scenes-partial";
+        board.error = null;
+        return json(res, 200, writeDirectorBoard(board));
+      } finally {
+        directorPlanning.delete(id);
       }
-      board.status = board.scenes.length >= board.sceneCount ? "ready" : "scenes-partial";
+    }
+    // AI append: generate exactly ONE new bible entry (character | location |
+    // object) from the master input (title + story/lyrics + genre/style +
+    // instructions + song) plus the ALREADY generated bible, then append it.
+    // Nothing existing is rewritten — the client keeps its current boxes.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/add-entry$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.blueprint) throw new Error("analyze the story first");
+      const body = await readJson(req).catch(() => ({}));
+      const kind = String(body.kind || "").toLowerCase();
+      if (!["character", "location", "object"].includes(kind))
+        return json(res, 400, { error: "kind must be character, location or object" });
+      const hint = String(body.hint || "").slice(0, 300);
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM,
+        user: buildAddEntryPrompt({ input: board.input, blueprint: board.blueprint, kind, hint }),
+        maxTokens: 2000,
+        temperature: 0.7,
+        timeoutMs: 300000,
+        rawTag: `_raw_${id}_add_${kind}.log`,
+      });
+      const node = raw[kind] && typeof raw[kind] === "object" ? raw[kind] : raw;
+      if (kind === "character") {
+        const next = normalizeCharacter(node, board.blueprint.characters.length);
+        if (!next.name) throw new Error("director returned an empty character — try again");
+        // Unique ids/names: suffix when the model repeats an existing one.
+        const taken = new Set([
+          ...board.blueprint.characters.map((c) => String(c.character_id || "").toLowerCase()),
+          ...board.blueprint.characters.map((c) => String(c.name || "").toLowerCase()),
+        ]);
+        let n = 2;
+        while (taken.has(String(next.character_id || "").toLowerCase()) || taken.has(String(next.name || "").toLowerCase())) {
+          next.character_id = `${String(next.character_id || "character").replace(/_\d+$/, "")}_${n}`;
+          next.name = `${next.name} ${n}`;
+          n++;
+        }
+        board.blueprint.characters.push(next);
+      } else if (kind === "location") {
+        const next = normalizeLocation(node, board.blueprint.locations.length);
+        if (!next.name) throw new Error("director returned an empty location — try again");
+        const taken = new Set([
+          ...board.blueprint.locations.map((l) => String(l.location_id || "").toLowerCase()),
+          ...board.blueprint.locations.map((l) => String(l.name || "").toLowerCase()),
+        ]);
+        let n = 2;
+        while (taken.has(String(next.location_id || "").toLowerCase()) || taken.has(String(next.name || "").toLowerCase())) {
+          next.location_id = `${String(next.location_id || "location").replace(/_\d+$/, "")}_${n}`;
+          next.name = `${next.name} ${n}`;
+          n++;
+        }
+        board.blueprint.locations.push(next);
+      } else {
+        const next = normalizeObject(node, board.blueprint.objects.length);
+        if (!next.name) throw new Error("director returned an empty object — try again");
+        const taken = new Set([
+          ...board.blueprint.objects.map((o) => String(o.object_id || "").toLowerCase()),
+          ...board.blueprint.objects.map((o) => String(o.name || "").toLowerCase()),
+        ]);
+        let n = 2;
+        while (taken.has(String(next.object_id || "").toLowerCase()) || taken.has(String(next.name || "").toLowerCase())) {
+          next.object_id = `${String(next.object_id || "object").replace(/_\d+$/, "")}_${n}`;
+          next.name = `${next.name} ${n}`;
+          n++;
+        }
+        board.blueprint.objects.push(next);
+      }
+      board.error = null;
+      return json(res, 200, writeDirectorBoard(board));
+    }
+    // AI rewrite: regenerate exactly ONE bible entry (character | location |
+    // object) in place. The model re-reads the master input + full bible and
+    // returns a richer rewrite of the selected entry; the id is pinned
+    // server-side so scene references never break.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/regen-entry$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.blueprint) throw new Error("analyze the story first");
+      const body = await readJson(req).catch(() => ({}));
+      const kind = String(body.kind || "").toLowerCase();
+      if (!["character", "location", "object"].includes(kind))
+        return json(res, 400, { error: "kind must be character, location or object" });
+      const index = Math.floor(Number(body.index));
+      const list = kind === "character" ? board.blueprint.characters
+        : kind === "location" ? board.blueprint.locations : board.blueprint.objects;
+      if (!Array.isArray(list) || !Number.isInteger(index) || index < 0 || index >= list.length)
+        return json(res, 400, { error: "bad entry index" });
+      const current = list[index];
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM,
+        user: buildRegenEntryPrompt({ input: board.input, blueprint: board.blueprint, kind, entry: current }),
+        maxTokens: 2000,
+        temperature: 0.7,
+        timeoutMs: 300000,
+        rawTag: `_raw_${id}_regen_${kind}_${index}.log`,
+      });
+      const node = raw[kind] && typeof raw[kind] === "object" ? raw[kind] : raw;
+      if (kind === "character") {
+        const next = normalizeCharacter(node, index);
+        if (!next.name && !next.visual_identity_prompt) throw new Error("director returned an empty character — try again");
+        // Pin the id + keep the user's custom consistency rules when the
+        // model omits them, so scene references and popup edits survive.
+        next.character_id = current.character_id || next.character_id;
+        if (!node.consistency_rules && Array.isArray(current.consistency_rules)) {
+          next.consistency_rules = current.consistency_rules.map((x) => String(x ?? "")).filter(Boolean);
+        }
+        if (!next.name) next.name = current.name;
+        list[index] = next;
+      } else if (kind === "location") {
+        const next = normalizeLocation(node, index);
+        if (!next.name && !next.visual_identity_prompt) throw new Error("director returned an empty location — try again");
+        next.location_id = current.location_id || next.location_id;
+        if (!next.name) next.name = current.name;
+        list[index] = next;
+      } else {
+        const next = normalizeObject(node, index);
+        if (!next.name && !next.visual_identity_prompt) throw new Error("director returned an empty object — try again");
+        next.object_id = current.object_id || next.object_id;
+        if (!next.name) next.name = current.name;
+        list[index] = next;
+      }
       board.error = null;
       return json(res, 200, writeDirectorBoard(board));
     }
@@ -4234,26 +4878,40 @@ const server = http.createServer(async (req, res) => {
       const board = readDirectorBoard(id);
       if (!board.scenes.length) throw new Error("nothing to approve — generate scenes first");
       const config = boardToScenario(board);
-      // Project name = the story title verbatim (spaces allowed, like other
-      // display names) — never silently slugified or taken from a stale
-      // board. Same _2 suffix rule on collision.
-      let target = String(board.input.title || "").trim().slice(0, 120) || id;
-      try {
-        const taken = new Set((await dbListScenarios()).map((r) => r.name));
-        if (taken.has(target)) {
-          for (let i = 2; ; i++) {
-            if (!taken.has(`${target}_${i}`)) { target = `${target}_${i}`; break; }
+      // Partial-migration flow: the first approve claims a project name (the
+      // story title verbatim, _2-suffixed on collision); every later
+      // "migrate remaining" re-approve reuses board.scenarioName so the rest
+      // of the scenes land in the SAME project (client PUTs = overwrite, and
+      // generation is resumable, so already-built scenes are kept).
+      let target = board.scenarioName || String(board.input.title || "").trim().slice(0, 120) || id;
+      if (!board.scenarioName) {
+        try {
+          const taken = new Set((await dbListScenarios()).map((r) => r.name));
+          if (taken.has(target)) {
+            for (let i = 2; ; i++) {
+              if (!taken.has(`${target}_${i}`)) { target = `${target}_${i}`; break; }
+            }
           }
-        }
-      } catch { /* name check is best-effort; save enforces uniqueness */ }
-      board.status = "approved";
+        } catch { /* name check is best-effort; save enforces uniqueness */ }
+      }
+      const partial = board.scenes.length < board.sceneCount;
+      board.status = partial ? "approved-partial" : "approved";
       board.scenarioName = target;
+      // Re-approve / migrate-remaining: the projects row already exists, so
+      // the storyboard links to it immediately. First approve links later at
+      // PUT save (pgLinkDirectorBoards), once the client-created row exists.
+      try {
+        const pid = await pgProjectId(target);
+        board.project_id = pid;
+        if (pid != null) await pgLinkDirectorBoards(target, pid);
+      } catch { /* link is best-effort; the PUT save links too */ }
+      board.migratedScenes = board.scenes.length;
       board.error = null;
       writeDirectorBoard(board);
       // The CLIENT persists via the existing saveScenario (PUT
       // /api/scenario/:name) — identical semantics to the Scenario Editor
       // Save — then opens the workspace for standard generation.
-      return json(res, 200, { name: target, config });
+      return json(res, 200, { name: target, config, partial, migrated: board.scenes.length, sceneCount: board.sceneCount });
     }
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
@@ -4445,6 +5103,98 @@ const server = http.createServer(async (req, res) => {
         return json(res, 502, { error: String(e.message || "master prompt failed") });
       }
     }
+    // Song length estimate for the Create Song tab: the local LLM reads the
+    // lyrics + song mode and returns the exact singable seconds (plus optional
+    // bpm/key refinements). Stateless — the Create Song form fills its fields
+    // with the result; nothing is persisted. Falls back to the word-rate
+    // heuristic when the LLM is offline so the button never hard-fails.
+    if (p === "/api/song-estimate" && req.method === "POST") {
+      const body = await readJson(req);
+      const lyrics = String(body.lyrics || "").trim();
+      if (lyrics.length < 3) return json(res, 400, { error: "lyrics required" });
+      const presetId = String(body.presetId || "kids-song");
+      const SONG_WPM = {
+        "kids-song": 100, "songs-for-kids": 110, "kids-story-narration": 135,
+        "devotional-song": 90, "devotional-narration": 120,
+        "devotional-narration-music": 120,
+      };
+      const SONG_PAD = {
+        "kids-song": 12, "songs-for-kids": 10, "kids-story-narration": 6,
+        "devotional-song": 14, "devotional-narration": 10,
+        "devotional-narration-music": 10,
+      };
+      const heuristic = () => {
+        const words = lyrics.split(/\s+/).filter(Boolean).length;
+        const lines = lyrics.split("\n").map((l) => l.trim()).filter(Boolean).length;
+        const sections = (lyrics.match(/(मुखड़ा|अंतरा|कोरस|ब्रिज|pre-chorus|chorus|verse|antara|bridge|shloka|doha|मुखडा)/gi) || []).length;
+        const wpm = SONG_WPM[presetId] || 100;
+        const pad = SONG_PAD[presetId] ?? 10;
+        if (!words) return 120;
+        const raw = pad + (words * 60) / wpm + lines * 0.8 + sections * 4;
+        return Math.round(Math.min(300, Math.max(30, raw)) / 5) * 5;
+      };
+      try {
+        const raw = await llmChatJson({
+          system: "You time lyrics for an AI singing model (ACE-Step). Reply with JSON only: {\"duration_seconds\": <integer 30-300>, \"bpm\": <integer 60-140>, \"keyscale\": \"<key>\", \"reasoning\": \"<one short sentence>\"}. Estimate singable seconds from the line/word count and the song mode (kids songs are brisk, bhajans and narrations are slow with pauses).",
+          user: JSON.stringify({
+            mode: presetId,
+            language: String(body.language || "hi"),
+            lyrics: lyrics.slice(0, 6000),
+          }),
+          maxTokens: 300,
+          temperature: 0.2,
+          timeoutMs: 60000,
+        });
+        const dur = Math.round(Math.min(300, Math.max(30, Number(raw.duration_seconds) || heuristic())));
+        const out = { duration: Math.round(dur / 5) * 5, source: "llm" };
+        if (Number.isFinite(Number(raw.bpm))) out.bpm = Math.min(300, Math.max(10, Math.round(Number(raw.bpm))));
+        if (typeof raw.keyscale === "string" && raw.keyscale.trim()) out.keyscale = raw.keyscale.trim().slice(0, 24);
+        if (typeof raw.reasoning === "string" && raw.reasoning.trim()) out.reasoning = raw.reasoning.trim().slice(0, 200);
+        return json(res, 200, out);
+      } catch (e) {
+        console.warn("[song-estimate] LLM failed, heuristic fallback:", e.message);
+        return json(res, 200, { duration: heuristic(), source: "heuristic" });
+      }
+    }
+    // Story target-duration estimate for the AI Story Director: the local LLM
+    // reads the story (+ genre/language) and suggests the video length in
+    // seconds. Stateless — the director form fills its target with the
+    // result; nothing is persisted. Falls back to the word-rate heuristic
+    // when the LLM is offline so the button never hard-fails.
+    if (p === "/api/director-estimate" && req.method === "POST") {
+      const body = await readJson(req);
+      const story = String(body.story || "").trim();
+      if (story.length < 3) return json(res, 400, { error: "story required" });
+      const heuristic = () => {
+        const words = story.split(/\s+/).filter(Boolean).length;
+        const lines = story.split("\n").map((l) => l.trim()).filter(Boolean).length;
+        if (!words) return 60;
+        const raw = 20 + words * 0.45 + lines * 1.2;
+        return Math.round(Math.min(600, Math.max(30, raw)) / 5) * 5;
+      };
+      try {
+        const raw = await llmChatJson({
+          system: "You time a story for AI video generation. Reply with JSON only: {\"duration_seconds\": <integer 15-600>, \"reasoning\": \"<one short sentence>\"}. Base it on story length and complexity: short tales 30-60s, medium stories 60-180s, epics 180-600s. Assume ~3s scenes.",
+          user: JSON.stringify({
+            title: String(body.title || "").slice(0, 120),
+            genre: String(body.genre || "Kids"),
+            language: String(body.language || "English"),
+            sceneSeconds: Math.min(30, Math.max(1, Number(body.sceneSeconds) || 3)),
+            story: story.slice(0, 6000),
+          }),
+          maxTokens: 300,
+          temperature: 0.2,
+          timeoutMs: 60000,
+        });
+        const dur = Math.round(Math.min(600, Math.max(15, Number(raw.duration_seconds) || heuristic())));
+        const out = { duration: Math.round(dur / 5) * 5, source: "llm" };
+        if (typeof raw.reasoning === "string" && raw.reasoning.trim()) out.reasoning = raw.reasoning.trim().slice(0, 200);
+        return json(res, 200, out);
+      } catch (e) {
+        console.warn("[director-estimate] LLM failed, heuristic fallback:", e.message);
+        return json(res, 200, { duration: heuristic(), source: "heuristic" });
+      }
+    }
     // Predefined video-type presets (system-owned presets/*.md defaults).
     // List carries metadata only; content is fetched per id when needed
     // (craft prompt injection, View/edit-rules panel). Per-project edits are
@@ -4567,8 +5317,266 @@ const server = http.createServer(async (req, res) => {
           [pid]);
       return json(res, 200, r.rows);
     }
-    if (p === "/api/db" && req.method === "GET") {
-      if (!(await pgProbe())) return json(res, 200, { up: false });
+    // Saved Create Song form for a project (project_songs row).
+    // GET /api/project/:name/song — returns the exact fields the user filled
+    // in, so selecting the project restores the whole form. Lazy-backfills
+    // from the scenario config on first read (projects saved before the
+    // project_songs table existed, e.g. Ramya, get their row here).
+    if (p.startsWith("/api/project/") && p.endsWith("/song") && req.method === "GET") {
+      const segs = p.split("/");
+      const name = decodeURIComponent(segs[3] || "");
+      if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      if (!pgUp) return json(res, 503, { error: "database unavailable" });
+      let row = (await pgPool.query(
+        `SELECT s.*, p.folder_name AS pfolder, p.project_type
+         FROM projects p LEFT JOIN project_songs s ON s.project_id = p.project_id
+         WHERE p.name = $1`, [name])).rows[0] ?? null;
+      if (!row) return json(res, 404, { error: "no such project" });
+      if (row.id == null) {
+        // No song row yet — backfill from the saved scenario audio block.
+        try {
+          const raw = await dbGetScenario(name);
+          const cfg = raw ? JSON.parse(raw) : null;
+          if (cfg && cfg.audio && typeof cfg.audio === "object") {
+            const pid = await pgProjectId(name);
+            await pgUpsertProjectSong(name, cfg, pid, row.pfolder || folderName(name));
+            row = (await pgPool.query(
+              `SELECT s.*, p.folder_name AS pfolder, p.project_type
+               FROM projects p LEFT JOIN project_songs s ON s.project_id = p.project_id
+               WHERE p.name = $1`, [name])).rows[0] ?? row;
+          }
+        } catch (e) { console.warn("[pg] song backfill failed:", e.message); }
+      }
+      const { id, project_id, folder_name, description, tags, lyrics, duration,
+        bpm, language, keyscale, timesignature, seed, steps, file_path, updated_at,
+        song_preset, song_vocal, cfg_scale, temperature, song_model } = row ?? {};
+      const folder = folder_name ?? row?.pfolder ?? folderName(name);
+      // file_path always tracks the latest take on disk (a take rendered
+      // outside a save — or deleted since — is reconciled on read).
+      let filePath = file_path ?? null;
+      try {
+        const latest = latestSongFile(folder);
+        if (latest && latest !== filePath && id != null) {
+          await pgPool.query(`UPDATE project_songs SET file_path = $2, updated_at = now() WHERE id = $1`, [id, latest]);
+          filePath = latest;
+        }
+      } catch { /* keep the stored value */ }
+      const file = filePath ? path.basename(filePath) : null;
+      return json(res, 200, {
+        name,
+        folder,
+        project_type: row?.project_type ?? "VIDEO",
+        song: id == null ? null : {
+          description: description ?? null, tags: tags ?? null, lyrics: lyrics ?? null,
+          duration, bpm, language: language ?? null, keyscale: keyscale ?? null,
+          timesignature: timesignature ?? null, seed, steps,
+          songPreset: song_preset ?? null, songVocal: song_vocal ?? null,
+          cfgScale: cfg_scale ?? null, temperature: temperature ?? null,
+          songModel: song_model ?? null,
+          file_path: filePath,
+          ...(file ? { file, url: `/outputs/${folder}/${encodeURIComponent(file)}` } : {}),
+          project_id, updated_at,
+        },
+      });
+    }
+    // Generated songs for a project (ACE-Step mp3s in outputs/<folder>/).
+    // GET /api/project/:name/songs — versioned song takes, newest last.
+    // This is what the Create Song tab's "Generated Songs" section displays.
+    if (p.startsWith("/api/project/") && p.endsWith("/songs") && req.method === "GET") {
+      const segs = p.split("/");
+      const name = decodeURIComponent(segs[3] || "");
+      if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      const folder = (pgUp ? await getFolderNameFromRow(name) : null) || folderName(name);
+      const dir = path.join(OUTPUTS, folder);
+      const songs = [];
+      if (fs.existsSync(dir)) {
+        for (const f of fs.readdirSync(dir)) {
+          if (!SONG_FILE_RE.test(f)) continue;
+          const full = path.join(dir, f);
+          try {
+            if (!fs.statSync(full).isFile()) continue;
+            const stem = f.slice(0, -".mp3".length);
+            const m = stem.match(/_song_v(\d+)$/);
+            songs.push({
+              file: f,
+              url: `/outputs/${folder}/${encodeURIComponent(f)}`,
+              version: m ? Number(m[1]) : 1,
+              bytes: fs.statSync(full).size,
+              mtimeMs: Math.round(fs.statSync(full).mtimeMs),
+            });
+          } catch { /* skip unreadable entries */ }
+        }
+      }
+      songs.sort((a, b) => a.version - b.version || (a.file < b.file ? -1 : 1));
+      return json(res, 200, { folder, songs });
+    }
+    // Delete one generated song take (ACE-Step mp3 in outputs/<folder>/).
+    // DELETE /api/project/:name/songs/:file — removes the mp3 from disk and
+    // repoints project_songs.file_path in the DB (to the next-latest take, or
+    // null when none remain). Only *_song[_vN].mp3 files are deletable.
+    if (p.startsWith("/api/project/") && p.includes("/songs/") && req.method === "DELETE") {
+      const segs = p.split("/");
+      // [0]="" [1]="api" [2]="project" [3]=name [4]="songs" [5]=file
+      if (segs.length !== 6 || segs[4] !== "songs") return json(res, 404, { error: "unknown route" });
+      const name = pathName(segs[3]);
+      const file = pathName(segs[5]);
+      if (!isSafe(name) || !isSafe(file)) return json(res, 400, { error: "bad name" });
+      if (!SONG_FILE_RE.test(file)) return json(res, 400, { error: "not a generated song file" });
+      const folder = (pgUp ? await getFolderNameFromRow(name) : null) || folderName(name);
+      const full = path.join(OUTPUTS, folder, file);
+      if (!fs.existsSync(full) || !fs.statSync(full).isFile()) return json(res, 404, { error: "no such song" });
+      try { fs.unlinkSync(full); } catch (e) { return json(res, 500, { error: "delete failed: " + e.message }); }
+      // DB: project_songs.file_path always tracks the latest take — repoint
+      // it when the deleted file was the stored one (or reconcile anyway).
+      let filePath = null;
+      if (pgUp) {
+        try {
+          filePath = latestSongFile(folder);
+          const pid = await pgProjectId(name);
+          if (pid != null) {
+            await pgPool.query(
+              `UPDATE project_songs SET file_path = $2, updated_at = now() WHERE project_id = $1`,
+              [pid, filePath]);
+          }
+        } catch (e) { console.warn("[pg] song delete repoint failed:", e.message); }
+      }
+      return json(res, 200, { ok: true, deleted: file, file_path: filePath });
+    }
+    // Character dialogue pipeline status (disk-derived, no DB required).
+    // GET /api/project/:name/dialogue[?engine=ltx|wan&format=landscape|vertical]
+    // — per-beat dialogue lines + per-stage status (voice/video/lipsync/final)
+    // so the UI can show every stage independently and retry only the failed
+    // one (retry = POST /api/runs { mode: "dialogue", beats: "N" }).
+    if (p.startsWith("/api/project/") && p.endsWith("/dialogue") && req.method === "GET") {
+      const segs = p.split("/");
+      const name = decodeURIComponent(segs[3] || "");
+      if (!isSafe(name)) return json(res, 400, { error: "bad name" });
+      let raw;
+      try { raw = await dbGetScenario(name); }
+      catch { return json(res, 503, { error: "database unavailable" }); }
+      if (raw === null) return json(res, 404, { error: "no such scenario" });
+      let cfg;
+      try { cfg = JSON.parse(raw); }
+      catch { return json(res, 500, { error: "scenario config is corrupt" }); }
+      const engine = String(u.searchParams.get("engine") || "ltx").toLowerCase() === "wan" ? "wan" : "ltx";
+      const format = normalizeFormat(String(u.searchParams.get("format") || "landscape"));
+      const folder = (pgUp ? await getFolderNameFromRow(name).catch(() => null) : null) || folderName(name);
+      const dirName = outDirName(folder, engine, format);
+      const outDir = path.join(OUTPUTS, dirName);
+      const prefix = prefixForDir(dirName);
+      const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+      const beats = seq.map((b, i) => {
+        const n = i + 1;
+        const title = b?.title ?? `beat${n}`;
+        const dialogue = normalizeDialogue(b?.dialogue);
+        const st = beatDialogueStatus({ outDir, prefix, n, title, dialogue });
+        // Actual per-line audio lengths when the line wavs exist on disk.
+        const lineDurations = dialogue.map((_, li) => {
+          try {
+            const f = path.join(outDir, lineWavFile(prefix, n, title, li));
+            return fs.existsSync(f) ? Math.round(audioDuration(f) * 100) / 100 : null;
+          } catch { return null; }
+        });
+        const timing = lineDurations.every((d) => typeof d === "number" && d > 0)
+          ? planDialogueTiming(dialogue, lineDurations)
+          : [];
+        return {
+          ...st,
+          dialogue,
+          lineDurations,
+          ...(timing.length ? { timing, total: dialogueTotal(timing) } : {}),
+        };
+      });
+        let musetalkWorkflow = false;
+        try { musetalkWorkflow = musetalkWorkflowReady(); } catch { musetalkWorkflow = false; }
+      return json(res, 200, {
+        name, folder, engine, format, dir: dirName,
+        providers: { tts: ttsProviderName(), lipsync: lipSyncProviderName(), musetalkWorkflow },
+        beats,
+      });
+    }
+    // Update one beat's dialogue (create/edit dialogue lines).
+    // PUT /api/project/:name/scene/:n/dialogue { dialogue: [{ speaker, line }] }
+    // — validates, persists through the scenario store (scenarios + prompts
+    // JSON + in-place version, same as Save Scenario), and deletes the beat's
+    // stale voice wavs in every cut dir so the next GET honestly reports
+    // voice=PENDING (dialogue changed -> regenerate TTS -> regenerate
+    // lip-sync; the unchanged clip video is kept when still compatible).
+    if (p.startsWith("/api/project/") && p.includes("/scene/") && p.endsWith("/dialogue") && req.method === "PUT") {
+      const segs = p.split("/");
+      // [0]="" [1]="api" [2]="project" [3]=name [4]="scene" [5]=n [6]="dialogue"
+      if (segs.length !== 7 || segs[4] !== "scene") return json(res, 404, { error: "unknown route" });
+      const name = pathName(segs[3]);
+      const n = Number(segs[5]);
+      if (!isSafe(name) || !Number.isInteger(n) || n < 1) return json(res, 400, { error: "bad name or scene" });
+      const body = await readJson(req).catch(() => null);
+      if (!body || !Array.isArray(body.dialogue)) return json(res, 400, { error: "body must be { dialogue: [{ speaker, line }] }" });
+      if (body.dialogue.length > 8) return json(res, 400, { error: "at most 8 dialogue lines per scene" });
+      for (const d of body.dialogue) {
+        if (!d || typeof d !== "object" || typeof d.line !== "string" || !d.line.trim())
+          return json(res, 400, { error: "every dialogue entry needs a non-empty line" });
+        if (d.line.length > 500) return json(res, 400, { error: "dialogue line over 500 chars" });
+        if (typeof d.speaker !== "string" || !d.speaker.trim())
+          return json(res, 400, { error: "every dialogue entry needs a speaker" });
+      }
+      let prevRaw;
+      try { prevRaw = await dbGetScenario(name); }
+      catch { return json(res, 503, { error: "database unavailable" }); }
+      if (prevRaw === null) return json(res, 404, { error: "no such scenario" });
+      let cfg;
+      try { cfg = JSON.parse(prevRaw); }
+      catch { return json(res, 500, { error: "scenario config is corrupt" }); }
+      const seq = Array.isArray(cfg.sequence) ? cfg.sequence : [];
+      if (n > seq.length) return json(res, 400, { error: `scene ${n} out of range (1..${seq.length})` });
+      const dialogue = normalizeDialogue(body.dialogue);
+      const prevCfg = JSON.parse(JSON.stringify(cfg));
+      seq[n - 1] = { ...seq[n - 1], dialogue };
+      if (body.duration != null) {
+        const d = Number(body.duration);
+        if (!Number.isFinite(d) || d < 1 || d > 30) return json(res, 400, { error: "duration must be 1..30s" });
+        seq[n - 1].duration = Math.round(d);
+      }
+      if (USE_SQLITE) {
+        await dbSaveScenario(name, cfg);
+        fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
+        pgSaveScenarioMirror(name, cfg).catch((e) => console.warn("[pg] scenario mirror failed:", e.message));
+      } else {
+        if (!pgUp) return json(res, 503, { error: "database unavailable" });
+        await dbSaveScenario(name, cfg);
+        fs.writeFileSync(path.join(PROMPTS, name + ".json"), JSON.stringify(cfg, null, 2));
+      }
+      let version = null;
+      if (pgUp) {
+        try {
+          const latestRow = await pgPool.query(
+            "SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [name]);
+          const latest = latestVersionOf(latestRow.rows[0]?.v);
+          const saved = latest == null
+            ? await pgSaveVersionDelta(name, prevCfg, cfg)
+            : await pgSaveVersionInPlace(name, latest, prevCfg, cfg);
+          version = saved.version;
+        } catch (e) { console.warn("[pg] dialogue version save failed:", e.message); }
+      }
+      // Invalidate stale voice takes in every cut dir (voice must be
+      // regenerated for the new lines; clip video stays until re-synced).
+      const folder = (pgUp ? await getFolderNameFromRow(name).catch(() => null) : null)
+        || cfg.folder_name || folderName(name);
+      const title = seq[n - 1]?.title ?? `beat${n}`;
+      let invalidated = 0;
+      for (const suffix of ["", "_wan", "_vertical", "_wan_vertical"]) {
+        const dir = path.join(OUTPUTS, folder + suffix);
+        if (!fs.existsSync(dir)) continue;
+        const pfx = prefixForDir(folder + suffix);
+        const mixed = dialogueWavFile(pfx, n, title);
+        for (const f of fs.readdirSync(dir)) {
+          if (f === mixed || (f.startsWith(mixed.replace(/\.wav$/, "")) && f.endsWith(".wav"))) {
+            try { fs.unlinkSync(path.join(dir, f)); invalidated++; } catch { /* keep going */ }
+          }
+        }
+      }
+      return json(res, 200, { ok: true, version, scene: n, dialogue, segmented: needsSegmentation(dialogue), invalidated });
+    }
+    if (p === "/api/db" && req.method === "GET") {      if (!(await pgProbe())) return json(res, 200, { up: false });
       const [s, pj, pa, pr] = await Promise.all([
         pgPool.query("SELECT count(*)::int AS n FROM scenarios"),
         pgPool.query("SELECT count(*)::int AS n FROM projects").catch(() => ({ rows: [{ n: null }] })),
