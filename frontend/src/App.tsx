@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, folderOf, slugFolder, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat, type VideoType } from "./api";
 import type { Beat, Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
-import ShotList from "./components/ShotList";
+import ShotList, { summarizeBoard, type BoardSummary } from "./components/ShotList";
 import RunPanel from "./components/RunPanel";
-import GenerationProgressBar, { emptyProgress, loadPace, formatDuration, type GenerationProgress } from "./components/GenerationProgressBar";
+import GenerationProgressBar, { emptyProgress, loadPace, loadSongPace, formatDuration, type GenerationProgress } from "./components/GenerationProgressBar";
 import OutputGallery from "./components/OutputGallery";
 import InstagramCut from "./components/InstagramCut";
 import VideoMetaPanel from "./components/VideoMetaPanel";
@@ -13,14 +13,27 @@ import CraftPanel from "./components/CraftPanel";
 import HomePage from "./components/HomePage";
 import ResourcePage from "./components/ResourcePage";
 import DirectorPage from "./components/DirectorPage";
+import CreateSongPage from "./components/CreateSongPage";
+import VideoLipSyncPage from "./components/VideoLipSyncPage";
+import ComponentsPage from "./components/ComponentsPage";
+import ViewBoundary from "./components/ViewBoundary";
 import Login from "./components/Login";
 import { DialogProvider, useDialog } from "./components/Dialog";
-import { IconCheck, IconChevronDown, IconClapper, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMoon, IconPanel, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
-const THEME_COLOR_KEY = "ss-theme-color";
-const DEFAULT_ACCENT = "#10b981";
+const THEME_DARK_KEY = "ss-theme-dark-color";
+const THEME_LIGHT_KEY = "ss-theme-light-color";
+const THEME_DARK_BG_KEY = "ss-theme-dark-bg";
+const THEME_LIGHT_BG_KEY = "ss-theme-light-bg";
+// Factory default: dark theme with red buttons. Empty per-mode color/bg =
+// defaults (red buttons from the CSS tokens, default backgrounds).
+const DEFAULT_BG_DARK = "#030712";
+const DEFAULT_BG_LIGHT = "#f2efe9";
+// Default button colors per mode (match the CSS --accent tokens).
+const DEFAULT_BTN_DARK = "#ef4444";
+const DEFAULT_BTN_LIGHT = "#dc2626";
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
@@ -32,6 +45,53 @@ function hexToRgba(hex: string, alpha: number): string {
   const b = n & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+// Mix two hex colors: t = 0 → a, t = 1 → b. Used to derive a full
+// background palette (page, cards, inputs, topbar) from one picked base.
+function mixHex(a: string, b: string, t: number): string {
+  const pa = (c: string): [number, number, number] => {
+    const h = c.replace("#", "");
+    const n = parseInt(h.length === 3 ? h.split("").map((x) => x + x).join("") : h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const [r1, g1, b1] = pa(a);
+  const [r2, g2, b2] = pa(b);
+  const m = (x: number, y: number) => Math.round(x + (y - x) * t);
+  const to = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${to(m(r1, r2))}${to(m(g1, g2))}${to(m(b1, b2))}`;
+}
+
+// Background palette derived from one base color per mode. Dark mode lifts
+// surfaces toward white; light mode lifts most surfaces toward white and
+// shades one (surface-2) down so cards keep depth on any picked base.
+function bgPalette(mode: Theme, base: string): Record<string, string> {
+  if (mode === "dark") {
+    const surface = mixHex(base, "#ffffff", 0.07);
+    return {
+      "--bg": base,
+      "--bg-raise": mixHex(base, "#ffffff", 0.02),
+      "--surface": surface,
+      "--surface-2": mixHex(base, "#ffffff", 0.13),
+      "--inset": mixHex(base, "#ffffff", 0.04),
+      "--topbar-bg": base,
+      "--log-bg": mixHex(base, "#ffffff", 0.015),
+      "--card-glass": hexToRgba(surface, 0.78),
+    };
+  }
+  const surface = mixHex(base, "#ffffff", 0.55);
+  return {
+    "--bg": base,
+    "--bg-raise": mixHex(base, "#ffffff", 0.45),
+    "--surface": surface,
+    "--surface-2": mixHex(base, "#000000", 0.05),
+    "--inset": mixHex(base, "#ffffff", 0.65),
+    "--topbar-bg": mixHex(base, "#ffffff", 0.75),
+    // The run log stays a dark console in light mode by design.
+    "--log-bg": "#111827",
+    "--card-glass": hexToRgba(surface, 0.82),
+  };
+}
+const BG_VARS = ["--bg", "--bg-raise", "--surface", "--surface-2", "--inset", "--topbar-bg", "--log-bg", "--card-glass"];
 
 // Queue dedupe: same stitch flag, same regen target, same cut format (ref
 // count matters — batch sizes differ; keyframe/clip always run once).
@@ -60,13 +120,56 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(() =>
     localStorage.getItem("ss-theme") === "light" ? "light" : "dark"
   );
-  // Custom accent color (theme): any picked color is saved and reapplied as
-  // the app accent (--accent / --accent-2 / soft + line + glows). Empty =
-  // default emerald. localStorage is an instant cache; data/theme.json on the
-  // server is the source of truth (loaded on boot, written on every change).
-  const [themeColor, setThemeColor] = useState<string>(() =>
-    localStorage.getItem(THEME_COLOR_KEY) ?? ""
+  // Per-mode button colors: the Dark and Light pickers in the topbar each
+  // own one. Empty = factory-default red. localStorage is an instant cache;
+  // data/theme.json on the server is the source of truth (loaded on boot,
+  // written on every change). Legacy `ss-theme-color` (single picker) is
+  // honored once as a migration source when neither per-mode key exists.
+  const [darkColor, setDarkColor] = useState<string>(() => {
+    const d = localStorage.getItem(THEME_DARK_KEY);
+    if (d != null) return d;
+    return localStorage.getItem("ss-theme-color") ?? "";
+  });
+  const [lightColor, setLightColor] = useState<string>(() => {
+    const l = localStorage.getItem(THEME_LIGHT_KEY);
+    if (l != null) return l;
+    return localStorage.getItem("ss-theme-color") ?? "";
+  });
+  // Per-mode background base colors, owned by the Dark / Light pickers.
+  // Empty = default background (from the CSS tokens); any picked hex
+  // repaints the page + cards + topbar via bgPalette() below.
+  const [darkBg, setDarkBg] = useState<string>(() =>
+    localStorage.getItem(THEME_DARK_BG_KEY) ?? ""
   );
+  const [lightBg, setLightBg] = useState<string>(() =>
+    localStorage.getItem(THEME_LIGHT_BG_KEY) ?? ""
+  );
+  // Staged picker values for the single theme box: background + buttons for
+  // the CURRENT mode. The color inputs edit these drafts ONLY — nothing on
+  // screen changes until Apply promotes them to the active values above.
+  // Switching modes reloads the drafts from that mode's applied colors.
+  const readCache = (key: string, legacyKey?: string): string => {
+    const v = localStorage.getItem(key);
+    if (v != null) return v;
+    if (legacyKey) return localStorage.getItem(legacyKey) ?? "";
+    return "";
+  };
+  const [draftBg, setDraftBg] = useState<string>(() =>
+    readCache(theme === "dark" ? THEME_DARK_BG_KEY : THEME_LIGHT_BG_KEY));
+  const [draftBtn, setDraftBtn] = useState<string>(() =>
+    readCache(theme === "dark" ? THEME_DARK_KEY : THEME_LIGHT_KEY, "ss-theme-color"));
+  // Reload drafts whenever the active mode changes so the two pickers always
+  // show the current mode's colors.
+  useEffect(() => {
+    if (theme === "dark") {
+      setDraftBg(darkBg);
+      setDraftBtn(darkColor);
+    } else {
+      setDraftBg(lightBg);
+      setDraftBtn(lightColor);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme]);
   // True once the file-backed theme has been loaded — gates the write-back
   // below so the initial mount never overwrites the file with cached values.
   const [themeReady, setThemeReady] = useState(false);
@@ -76,7 +179,21 @@ export default function App() {
     getTheme()
       .then((t) => {
         if (t.mode === "light" || t.mode === "dark") setTheme(t.mode);
-        if (typeof t.color === "string") setThemeColor(t.color);
+        // Prefer per-mode colors; fall back to the legacy single color for
+        // files saved before the Dark/Light pickers existed.
+        const legacy = typeof t.color === "string" ? t.color : "";
+        setDarkColor(typeof t.darkColor === "string" ? t.darkColor : legacy);
+        setLightColor(typeof t.lightColor === "string" ? t.lightColor : legacy);
+        setDarkBg(typeof t.darkBg === "string" ? t.darkBg : "");
+        setLightBg(typeof t.lightBg === "string" ? t.lightBg : "");
+        // Drafts open on the applied values (file is the source of truth).
+        const fileMode = t.mode === "light" ? "light" : "dark";
+        const fileDarkBg = typeof t.darkBg === "string" ? t.darkBg : "";
+        const fileLightBg = typeof t.lightBg === "string" ? t.lightBg : "";
+        const fileDarkBtn = typeof t.darkColor === "string" ? t.darkColor : legacy;
+        const fileLightBtn = typeof t.lightColor === "string" ? t.lightColor : legacy;
+        setDraftBg(fileMode === "dark" ? fileDarkBg : fileLightBg);
+        setDraftBtn(fileMode === "dark" ? fileDarkBtn : fileLightBtn);
       })
       .catch(() => {})
       .finally(() => setThemeReady(true));
@@ -87,14 +204,17 @@ export default function App() {
     localStorage.setItem("ss-theme", theme);
   }, [theme]);
 
+  // The active button color follows the active mode's picker.
+  const themeColor = theme === "dark" ? darkColor : lightColor;
+  // The active background follows the active mode's background picker.
+  const themeBg = theme === "dark" ? darkBg : lightBg;
+
   useEffect(() => {
     const root = document.documentElement;
     if (!themeColor) {
       for (const k of ["--accent", "--accent-2", "--accent-soft", "--accent-line", "--glow-1", "--glow-2", "--glow-3"])
         root.style.removeProperty(k);
-      localStorage.removeItem(THEME_COLOR_KEY);
     } else {
-      localStorage.setItem(THEME_COLOR_KEY, themeColor);
       root.style.setProperty("--accent", themeColor);
       root.style.setProperty("--accent-2", themeColor);
       root.style.setProperty("--accent-soft", hexToRgba(themeColor, 0.10));
@@ -107,8 +227,29 @@ export default function App() {
     // re-read on every load / restart until changed again). Skipped until the
     // initial file load has landed. May 401 before login — the next change
     // after login retries the write.
-    if (themeReady) saveTheme({ mode: theme, color: themeColor }).catch(() => {});
-  }, [theme, themeColor, themeReady]);
+    if (themeReady) {
+      try {
+        localStorage.setItem(THEME_DARK_KEY, darkColor);
+        localStorage.setItem(THEME_LIGHT_KEY, lightColor);
+        localStorage.setItem(THEME_DARK_BG_KEY, darkBg);
+        localStorage.setItem(THEME_LIGHT_BG_KEY, lightBg);
+        localStorage.removeItem("ss-theme-color");
+      } catch { /* ignore */ }
+      saveTheme({ mode: theme, color: themeColor, darkColor, lightColor, darkBg, lightBg }).catch(() => {});
+    }
+  }, [theme, themeColor, darkColor, lightColor, themeReady]);
+
+  // Active-mode background: repaint the page + cards + topbar from the
+  // picked base, or remove the overrides so the CSS defaults show.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!themeBg) {
+      for (const k of BG_VARS) root.style.removeProperty(k);
+    } else {
+      const pal = bgPalette(theme, themeBg);
+      for (const [k, v] of Object.entries(pal)) root.style.setProperty(k, v);
+    }
+  }, [theme, themeBg]);
 
   useEffect(() => {
     me()
@@ -118,6 +259,36 @@ export default function App() {
   }, []);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  // Factory reset (the box's Reset button): default dark theme with red
+  // buttons and default backgrounds, applied immediately — drafts fall back
+  // to the defaults too so the inputs show what's on screen.
+  const resetThemeFactory = () => {
+    setTheme("dark");
+    setDarkColor("");
+    setLightColor("");
+    setDarkBg("");
+    setLightBg("");
+    setDraftBg("");
+    setDraftBtn("");
+  };
+
+  // Apply: promote the staged drafts to the CURRENT mode's live values
+  // (which repaint the app + persist to the server via the effects above).
+  const applyThemeBox = () => {
+    if (theme === "dark") {
+      setDarkBg(draftBg);
+      setDarkColor(draftBtn);
+    } else {
+      setLightBg(draftBg);
+      setLightColor(draftBtn);
+    }
+  };
+  // Apply is only enabled while there are unapplied changes. Fallbacks match
+  // the swatch fallbacks below (dark red / light red buttons).
+  const activeBtn = theme === "dark" ? darkColor : lightColor;
+  const activeBgForBox = theme === "dark" ? darkBg : lightBg;
+  const canApplyThemeBox = draftBg !== activeBgForBox || draftBtn !== activeBtn;
 
   const handleLogout = () => {
     logout().catch(() => {});
@@ -142,23 +313,36 @@ export default function App() {
         onLogout={handleLogout}
         theme={theme}
         onToggleTheme={toggleTheme}
-        themeColor={themeColor}
-        onThemeColor={setThemeColor}
+        draftBg={draftBg}
+        draftBtn={draftBtn}
+        onDraftBg={setDraftBg}
+        onDraftBtn={setDraftBtn}
+        onApplyThemeBox={applyThemeBox}
+        canApplyThemeBox={canApplyThemeBox}
+        onResetTheme={resetThemeFactory}
       />
     </DialogProvider>
   );
 }
 
-function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor }: {
+function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDraftBg, onDraftBtn, onApplyThemeBox, canApplyThemeBox, onResetTheme }: {
   user: string;
   onLogout: () => void;
   theme: Theme;
   onToggleTheme: () => void;
-  themeColor: string;
-  onThemeColor: (c: string) => void;
+  draftBg: string;
+  draftBtn: string;
+  onDraftBg: (c: string) => void;
+  onDraftBtn: (c: string) => void;
+  onApplyThemeBox: () => void;
+  canApplyThemeBox: boolean;
+  onResetTheme: () => void;
 }) {
+  // Swatch fallbacks for the single theme box (current mode's defaults).
+  const boxBgFallback = theme === "dark" ? DEFAULT_BG_DARK : DEFAULT_BG_LIGHT;
+  const boxBtnFallback = theme === "dark" ? DEFAULT_BTN_DARK : DEFAULT_BTN_LIGHT;
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace" | "resource" | "director">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "song" | "lipsync" | "components">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -231,7 +415,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     setNameOv(null);
     setCraftEpoch((e) => e + 1);
   }, []);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue"; beats?: string; noStitch?: boolean } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean } | null>(null);
   // Reattach target for RunPanel: a run that was already active on the server
   // when this page loaded (refresh mid-generation). Restored here — not in
   // RunPanel — so the header bar, sidebar spinners and every generating
@@ -243,6 +427,10 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // clickable so shots can be queued up.
   const [runQueue, setRunQueue] = useState<RunRequest[]>([]);
   const [genProgress, setGenProgress] = useState<GenerationProgress>(emptyProgress);
+  // AI Story Director planning progress (analyze + scene batches), lifted from
+  // DirectorPage. Feeds ONLY the menu's Progress Status — never the workspace
+  // tiles (those keep the generation-only topProgress below, unchanged).
+  const [directorProgress, setDirectorProgress] = useState<GenerationProgress>(emptyProgress);
   // Server-side fallback: a run started in another tab (or before a page
   // refresh) leaves this tab's RunPanel idle while the backend — and the
   // Home → Recent Projects card — still report generating. Poll the same
@@ -310,6 +498,16 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     const [imagesEtaMs, videosEtaMs] = splitEta(eta, remI, remV);
     return { etaMs: eta, imagesEtaMs, videosEtaMs };
   };
+  // Song-take remaining time for AUDIO (lyrics-to-song) runs: a single take
+  // has no per-asset completions to measure, so the countdown is the
+  // historical song pace minus elapsed. Null until one take has finished
+  // (menu shows dashes — truthful "estimating", never a fake zero).
+  const songEta = (elapsedMs: number): number | null => {
+    if (!(elapsedMs > 0)) return null;
+    const pace = loadSongPace();
+    if (pace == null) return null;
+    return Math.max(0, Math.round(pace - elapsedMs));
+  };
   useEffect(() => {
     if (!remoteGen || genProgress.status === "running") return;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -352,6 +550,32 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
       const startedAt = g.startedAt ?? null;
       const at = Date.now();
       const elapsedMs = startedAt != null ? Math.max(0, at - startedAt) : 0;
+      // AUDIO (song) runs render one take, not scenes: no per-asset pace
+      // exists, so the menu countdown runs off the historical song pace.
+      // Video path below is untouched.
+      if ((g.project_type ?? "VIDEO") === "AUDIO") {
+        setRemoteGen({
+          ...emptyProgress,
+          status: "running",
+          audio: true,
+          pct: g.progress,
+          completed: g.hasSong ? 1 : 0,
+          total: 1,
+          scene: null,
+          totalScenes: null,
+          imagesDone: 0,
+          imagesTotal: 0,
+          videosDone: 0,
+          videosTotal: 0,
+          etaMs: songEta(elapsedMs),
+          imagesEtaMs: null,
+          videosEtaMs: null,
+          elapsedMs,
+          startedAt,
+          scenario: g.name,
+        });
+        return;
+      }
       // Linear fallback ETA from real asset counts (no per-asset timings
       // available remotely) — estimated total minus elapsed, split across
       // the Images / Videos rows.
@@ -441,6 +665,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     ? (() => {
         if (remoteGen.startedAt == null) return remoteGen;
         const elapsedMs = Math.max(0, now - remoteGen.startedAt);
+        // Song runs tick off the song pace; video runs keep the exact
+        // existing asset-count path.
+        if (remoteGen.audio) {
+          return { ...remoteGen, elapsedMs, etaMs: songEta(elapsedMs) };
+        }
         const { etaMs, imagesEtaMs, videosEtaMs } = remoteEta(
           elapsedMs,
           remoteGen.imagesDone, remoteGen.imagesTotal,
@@ -450,11 +679,31 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     : remoteGen;
   const topProgress =
     genProgress.status === "running" ? genProgress : (liveRemoteGen ?? genProgress);
+  // Menu-only progress: live local generation first, then whatever the server
+  // reports, then Director planning — then the sticky done/error/idle state.
+  // Generation priority is exactly as before; director planning only shows
+  // when no generation is running anywhere, so Projects behavior is unchanged.
+  // The workspace tiles below keep receiving topProgress (generation-only).
+  const menuProgress =
+    genProgress.status === "running" ? genProgress
+    : liveRemoteGen && liveRemoteGen.status === "running" ? liveRemoteGen
+    : directorProgress.status === "running" ? directorProgress
+    : (liveRemoteGen ?? genProgress);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => localStorage.getItem("ss-sidebar") !== "closed");
   const toggleSidebar = () =>
     setSidebarOpen((o) => {
       localStorage.setItem("ss-sidebar", o ? "closed" : "open");
       return !o;
+    });
+  // Main vertical menu: icon rail by default, full labels on hover. Pinning
+  // keeps it expanded; the choice persists like the other panel toggles.
+  const [navPinned, setNavPinned] = useState<boolean>(() => {
+    try { return localStorage.getItem("ss-sidenav") === "pinned"; } catch { return false; }
+  });
+  const toggleNavPinned = () =>
+    setNavPinned((p) => {
+      try { localStorage.setItem("ss-sidenav", p ? "collapsed" : "pinned"); } catch { /* ignore */ }
+      return !p;
     });
   // Right-column panels (AI Craft + Scenario Editor) collapse like the
   // Projects panel, but dock to the RIGHT side. State lives here so the
@@ -618,14 +867,10 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // Home -> workspace navigation. The workspace itself is unchanged —
   // opening a project just selects it and switches the view. The nonce
   // forces a refetch even when re-clicking the already-selected project.
+  // AUDIO (Create Song) projects open in the song view instead, carrying
+  // the project name so the song form + takes load immediately.
+  const [songProject, setSongProject] = useState<{ name: string; nonce: number } | null>(null);
   const [loadNonce, setLoadNonce] = useState(0);
-  const openProject = useCallback((n: string) => {
-    setDraft(null);
-    setLoadError(null);
-    setLoadNonce((x) => x + 1);
-    setName(n);
-    setView("workspace");
-  }, []);
 
   // Delete confirmation popup for the Project bar (styled like the global
   // dialog alerts, with its own flow so the Delete button spins while the
@@ -672,10 +917,12 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [confirmDelete]);
-  // Project bar order: integer project_id descending (newest project first);
-  // rows without an id (SQLite mode) sink below, ordered by latest edit.
+  // Project bar order: create-date descending (newest project first);
+  // createdAt when the server knows it, else integer project_id descending
+  // (SERIAL creation order), else latest edit. Rows without either sink below.
   const byProjectIdDesc = (a: ScenarioInfo, b: ScenarioInfo) =>
-    (b.project_id ?? -1) - (a.project_id ?? -1) || b.mtimeMs - a.mtimeMs;
+    (b.createdAt ?? -1) - (a.createdAt ?? -1)
+    || (b.project_id ?? -1) - (a.project_id ?? -1) || b.mtimeMs - a.mtimeMs;
   const refreshScenarios = useCallback(async () => {
     const all = await listScenarios();
     const seq = all.filter((s) => s.isSequence).sort(byProjectIdDesc);
@@ -687,10 +934,32 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     return seq;
   }, []);
 
-  const handleFavorite = async (s: ScenarioInfo) => {
-    const on = !s.favorite;
+  // Home -> workspace navigation. The workspace itself is unchanged —
+  // opening a project just selects it and switches the view. The nonce
+  // forces a refetch even when re-clicking the already-selected project.
+  // AUDIO (Create Song) projects open in the song view instead, carrying
+  // the project name so the song form + takes load immediately.
+  // A background refresh runs on every open so folder/type resolution never
+  // uses a stale list (a slug fallback could otherwise point at another
+  // project's output dir and show its images/videos on a fresh project).
+  const openProject = useCallback((n: string) => {
+    const t = scenarios.find((s) => s.name === n)?.project_type;
+    if (t === "AUDIO") {
+      setSongProject({ name: n, nonce: Date.now() });
+      setView("song");
+    } else {
+      setDraft(null);
+      setLoadError(null);
+      setLoadNonce((x) => x + 1);
+      setName(n);
+      setView("workspace");
+    }
+    refreshScenarios().catch(() => {});
+  }, [scenarios, refreshScenarios]);
+
+  const handleFavorite = async (s: ScenarioInfo) => {    const on = !s.favorite;
     // Optimistic toggle; the star flips in place — row order always stays
-    // project_id descending.
+    // create-date descending.
     setScenarios((prev) =>
       prev
         .map((x) => (x.name === s.name ? { ...x, favorite: on } : x))
@@ -855,6 +1124,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   const editor = draft
     ? { name: draft.name, config: draft.config }
     : cfg && shownName ? { name: shownName, config: cfg } : null;
+  // Board summary (Shots / Cinematic / Lip-sync / min total) for the
+  // Keyframes → clips card header — the Story Board no longer shows it.
+  // Same fallback duration the Story Board uses (unsaved edit wins, else
+  // the project default), so the totals always agree.
+  const boardSummary: BoardSummary | null = useMemo(() => {
+    if (!editor || !Array.isArray(editor.config.sequence)) return null;
+    const fb = Number(overrides?.duration ?? editor.config.duration);
+    return summarizeBoard(editor.config.sequence, Number.isFinite(fb) && fb > 0 ? fb : 0);
+  }, [editor, overrides]);
   // True while the requested project differs from what's on screen (its
   // config is still flying in). Sidebar shows a spinner; content stays put.
   const switching = !draft && (!!cfgLoading || (!!name && name !== shownName));
@@ -865,10 +1143,18 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
   // Project whose content is actually on screen right now.
   const contentName = draft ? draft.name : shownName;
   // Immutable storage folder for the on-screen project (outputs/<folder>/).
-  // Display names may contain spaces — dirs never do. Drafts have no storage
-  // yet; the slug fallback keeps gallery URLs well-formed (empty listing).
-  const folderForName = (n: string | null): string =>
-    n ? folderOf(scenarios.find((s) => s.name === n) ?? null, n) : "";
+  // Display names may contain spaces — dirs never do. The server's
+  // folder_name wins; the slug fallback applies only while the project list
+  // is still loading (empty) — never guess a slug for a name the loaded
+  // list doesn't know, since a colliding slug would render ANOTHER
+  // project's images/videos on a fresh project. Unknown => "" (empty
+  // listing) until the open-triggered refresh lands with the real folder.
+  const folderForName = (n: string | null): string => {
+    if (!n) return "";
+    const hit = scenarios.find((s) => s.name === n);
+    if (hit) return folderOf(hit, n);
+    return scenarios.length === 0 ? slugFolder(n) : "";
+  };
   const contentFolder = draft ? slugFolder(draft.name) : folderForName(shownName);
   // Workspace cut from the Video dropdown: YOUTUBE = landscape main cut,
   // INSTAGRAM = vertical Reel cut. Every project section below follows it;
@@ -934,6 +1220,18 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
     ? (comfy.queue.queue_running?.length ?? 0) + (comfy.queue.queue_pending?.length ?? 0)
     : 0;
 
+  // Projects panel lists VIDEO projects only — AUDIO (Create Song) projects
+  // are opened from Home or the song view's Project picker (openProject
+  // routes them to the song view). The full `scenarios` list is kept for
+  // lookups (folder resolution, open routing).
+  const videoScenarios = scenarios.filter((s) => s.project_type !== "AUDIO");
+  const audioScenarios = scenarios.filter((s) => s.project_type === "AUDIO");
+  // The sidebar (Projects tab) follows the open view: the Create Song page
+  // lists AUDIO projects, every other view lists VIDEO projects — so a
+  // Home video card lands on Projects showing videos, and a Home audio
+  // card lands on Create Song showing songs.
+  const sideScenarios = view === "song" ? audioScenarios : videoScenarios;
+
   // True only while a reference-only regen run for the shown scenario is
   // active — the Generate Reference button spins on exactly this, not on
   // every unrelated run (full Generate, stitch, beat regen, …).
@@ -963,87 +1261,128 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           </span>
           <span className="brand-name">Sanskriti AI</span>
         </div>
-        <nav className="topnav" aria-label="Primary">
-          <button
-            className={`topnav-btn ${view === "home" ? "on" : ""}`}
-            onClick={() => setView("home")}
-            aria-current={view === "home" ? "page" : undefined}
-          >
-            <IconFolder size={13} aria-hidden="true" />
-            Home
-          </button>
-          <button
-            className={`topnav-btn ${view === "workspace" ? "on" : ""}`}
-            onClick={() => draft || name ? setView("workspace") : setView("home")}
-            aria-current={view === "workspace" ? "page" : undefined}
-            title={draft ? `Workspace: ${draft.name} (unsaved)` : name ? `Workspace: ${name}` : "Open a project from Home first"}
-          >
-            <IconClapper size={13} aria-hidden="true" />
-            Projects
-          </button>
-          <button
-            className={`topnav-btn ${view === "resource" ? "on" : ""}`}
-            onClick={() => setView("resource")}
-            aria-current={view === "resource" ? "page" : undefined}
-            title="Open the Resource page"
-          >
-            <IconDatabase size={13} aria-hidden="true" />
-            Resource
-          </button>
-          <button
-            className={`topnav-btn ${view === "director" ? "on" : ""}`}
-            onClick={() => setView("director")}
-            aria-current={view === "director" ? "page" : undefined}
-            title="Open the Director view"
-          >
-            <IconFilm size={13} aria-hidden="true" />
-            Director
-          </button>
-        </nav>
+        {/* Primary navigation lives in the left vertical menu (see .sidenav below). */}
         {/* Global generation status — a toggleable "Progress Status" window
             centered in the main menu bar (Sanskriti AI · Home · Projects).
             The Images / Videos / Overall bars live inside the popup, not
             inline in the bar; toggling shows the current progress. */}
+        {/* Breadcrumb trail (Home › Current › …) — flows in the free space
+            between the brand and the right controls and truncates there; it
+            never displaces the Progress Status, which is pinned to the exact
+            topbar center (see .topbar-center). Home / parents are clickable. */}
+        <div className="topbar-nav">
+          {(() => {
+            const goHome = () => setView("home");
+            const goWorkspace = () => { if (draft || name) setView("workspace"); else setView("home"); };
+            const goSong = () => setView("song");
+            type Crumb = { key: string; label: string; title?: string; onGo?: () => void; icon?: import("react").ReactNode; tone?: string; current?: boolean; name?: boolean };
+            const homeIcon = <IconFolder size={13} aria-hidden="true" />;
+            let crumbs: Crumb[];
+            if (view === "home") {
+              crumbs = [{ key: "home", label: "Home", icon: homeIcon, tone: "ci-home", current: true }];
+            } else if (view === "workspace") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                contentName
+                  ? { key: "proj", label: "Projects", title: "Go to Projects workspace", onGo: goWorkspace, icon: <IconClapper size={13} aria-hidden="true" />, tone: "ci-projects" }
+                  : { key: "proj", label: "Projects", icon: <IconClapper size={13} aria-hidden="true" />, tone: "ci-projects", current: true },
+              ];
+              if (contentName) crumbs.push({ key: "name", label: contentName, title: contentName, current: true, name: true });
+            } else if (view === "resource") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Resource", icon: <IconDatabase size={13} aria-hidden="true" />, tone: "ci-resource", current: true },
+              ];
+            } else if (view === "director") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Director", icon: <IconFilm size={13} aria-hidden="true" />, tone: "ci-director", current: true },
+              ];
+            } else if (view === "song") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                songProject?.name
+                  ? { key: "song", label: "Create Song", title: "Go to Create Song", onGo: goSong, icon: <IconMusic size={13} aria-hidden="true" />, tone: "ci-song" }
+                  : { key: "song", label: "Create Song", icon: <IconMusic size={13} aria-hidden="true" />, tone: "ci-song", current: true },
+              ];
+              if (songProject?.name) crumbs.push({ key: "name", label: songProject.name, title: songProject.name, current: true, name: true });
+            } else if (view === "lipsync") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "VideoLipSync", icon: <IconMic size={13} aria-hidden="true" />, tone: "ci-lipsync", current: true },
+              ];
+            } else {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Components", icon: <IconBlocks size={13} aria-hidden="true" />, tone: "ci-components", current: true },
+              ];
+            }
+            return (
+              <nav className="crumbs" aria-label="Breadcrumb">
+                {crumbs.map((c, i) => (
+                  <span key={c.key} className="crumb-seg">
+                    {i > 0 && <span className="crumb-sep" aria-hidden="true">›</span>}
+                    {c.onGo && !c.current ? (
+                      <button type="button" className="crumb crumb-link" onClick={c.onGo} title={c.title ?? c.label}>
+                        {c.icon && <span className={`crumb-ico ${c.tone ?? ""}`} aria-hidden="true">{c.icon}</span>}
+                        <span className={c.name ? "crumb-name" : undefined}>{c.label}</span>
+                      </button>
+                    ) : (
+                      <span className={`crumb crumb-current${c.current ? " is-current" : ""}`} aria-current={c.current ? "page" : undefined} title={c.title ?? c.label}>
+                        {c.icon && <span className={`crumb-ico ${c.tone ?? ""}`} aria-hidden="true">{c.icon}</span>}
+                        <span className={c.name ? "crumb-name" : undefined}>{c.label}</span>
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            );
+          })()}
+        </div>
+        {/* Progress Status — pinned to the exact horizontal center of the
+            topbar (absolute centering in CSS); the breadcrumb above only
+            uses leftover space and can never move it. Minimize (expand /
+            collapse) behavior is unchanged. */}
         <div className="topbar-center">
           <button
-            className={`topnav-btn progress-toggle ${progressOpen ? "on" : ""}${topProgress.status === "running" ? " is-running" : ""}`}
+            className={`topnav-btn progress-toggle ${progressOpen ? "on" : ""}${menuProgress.status === "running" ? " is-running" : ""}`}
             onClick={() => setProgressOpen((o) => !o)}
             aria-expanded={progressOpen}
             aria-haspopup="dialog"
-            title={topProgress.status === "running"
-              ? `Generating ${topProgress.scenario || "scenes"} — ${Math.round(topProgress.pct)}% — Remaining ${formatDuration(topProgress.etaMs)} — click to ${progressOpen ? "hide" : "show"} progress`
+            title={menuProgress.status === "running"
+              ? `Generating ${menuProgress.scenario || "scenes"} — ${Math.round(menuProgress.pct)}% — Remaining ${formatDuration(menuProgress.etaMs)} — click to ${progressOpen ? "hide" : "show"} progress`
               : `Progress Status — click to ${progressOpen ? "hide" : "show"} progress`}
           >
             <span
-              className={`dot progress-toggle-dot status-${topProgress.status}${topProgress.status === "running" ? " pulse" : ""}`}
+              className={`dot progress-toggle-dot status-${menuProgress.status}${menuProgress.status === "running" ? " pulse" : ""}`}
               aria-hidden="true"
             />
             <span>Progress Status</span>
-            {topProgress.status === "running" && (
+            {menuProgress.status === "running" && (
               <>
-                <span className="progress-toggle-pct">{Math.round(topProgress.pct)}%</span>
-                {topProgress.total > 0 && (
+                <span className="progress-toggle-pct">{Math.round(menuProgress.pct)}%</span>
+                {menuProgress.total > 0 && (
                   <span
                     className="progress-toggle-files"
-                    title={`${topProgress.completed} of ${topProgress.total} files processed, ${Math.max(0, topProgress.total - topProgress.completed)} remaining`}
+                    title={`${menuProgress.completed} of ${menuProgress.total} ${menuProgress.unit ?? "files"} processed, ${Math.max(0, menuProgress.total - menuProgress.completed)} remaining`}
                   >
-                    {topProgress.completed}/{topProgress.total} files · {Math.max(0, topProgress.total - topProgress.completed)} left
+                    {menuProgress.completed}/{menuProgress.total} {menuProgress.unit ?? "files"} · {Math.max(0, menuProgress.total - menuProgress.completed)} left
                   </span>
                 )}
                 <span
                   className="progress-toggle-eta"
-                  title={`Remaining ${formatDuration(topProgress.etaMs)}`}
+                  title={`Remaining ${formatDuration(menuProgress.etaMs)}`}
                 >
-                  ⏳ {formatDuration(topProgress.etaMs)}
+                  ⏳ {formatDuration(menuProgress.etaMs)}
                 </span>
               </>
             )}
             <span className={`progress-toggle-caret${progressOpen ? " open" : ""}`} aria-hidden="true"><IconChevronDown size={12} /></span>
-            {topProgress.status !== "idle" && (
+            {menuProgress.status !== "idle" && (
               <span className="progress-toggle-track" aria-hidden="true">
                 <span
-                  className={`progress-toggle-fill status-${topProgress.status}${topProgress.status === "running" ? " sweep" : ""}`}
-                  style={{ width: `${Math.min(100, Math.max(0, topProgress.pct))}%` }}
+                  className={`progress-toggle-fill status-${menuProgress.status}${menuProgress.status === "running" ? " sweep" : ""}`}
+                  style={{ width: `${Math.min(100, Math.max(0, menuProgress.pct))}%` }}
                 />
               </span>
             )}
@@ -1074,7 +1413,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                   </button>
                 </div>
                 <div className="progress-window-body">
-                  <GenerationProgressBar progress={topProgress} compact />
+                  <GenerationProgressBar progress={menuProgress} compact />
                 </div>
               </div>
             </>
@@ -1107,41 +1446,57 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           >
             {theme === "dark" ? <IconSun size={15} /> : <IconMoon size={15} />}
           </button>
-          <label
-            className="theme-color"
-            title={themeColor ? `Theme color ${themeColor} — pick to change, double-click to reset` : "Pick a theme color"}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              onThemeColor("");
-            }}
-          >
-            <span
-              className="theme-color-swatch"
-              aria-hidden="true"
-              style={{ background: themeColor || DEFAULT_ACCENT }}
-            />
-            <input
-              type="color"
-              value={themeColor || DEFAULT_ACCENT}
-              onChange={(e) => onThemeColor(e.target.value)}
-              aria-label="Pick a theme color"
-            />
-            {themeColor && (
-              <button
-                className="theme-color-reset"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onThemeColor("");
-                }}
-                title="Reset to default theme color"
-                aria-label="Reset to default theme color"
-                type="button"
-              >
-                ✕
-              </button>
-            )}
-          </label>
+          {/* Single theme box: 1st picker = theme background color, 2nd =
+              button colors (both for the current mode — switching modes
+              reloads them). Picking only stages — the ✓ icon implements the
+              staged colors, the ⟳ icon resets to dark theme + red buttons. */}
+          <div className="theme-box" role="group" aria-label="Theme colors">
+            <label className="theme-color pick-only" title={`Theme background (staged) ${draftBg || boxBgFallback} — Apply to implement`}>
+              <span
+                className="theme-color-swatch"
+                aria-hidden="true"
+                style={{ background: draftBg || boxBgFallback }}
+              />
+              <input
+                type="color"
+                value={draftBg || boxBgFallback}
+                onChange={(e) => onDraftBg(e.target.value)}
+                aria-label="Stage the theme background color (Apply to implement)"
+              />
+            </label>
+            <label className="theme-color pick-only" title={`Button color (staged) ${draftBtn || boxBtnFallback} — Apply to implement`}>
+              <span
+                className="theme-color-swatch as-btn"
+                aria-hidden="true"
+                style={{ background: draftBtn || boxBtnFallback }}
+              />
+              <input
+                type="color"
+                value={draftBtn || boxBtnFallback}
+                onChange={(e) => onDraftBtn(e.target.value)}
+                aria-label="Stage the button color (Apply to implement)"
+              />
+            </label>
+            <button
+              className="theme-apply"
+              onClick={onApplyThemeBox}
+              disabled={!canApplyThemeBox}
+              title={canApplyThemeBox ? "Apply the staged theme colors" : "No unapplied theme changes"}
+              aria-label="Apply the staged theme colors"
+              type="button"
+            >
+              <IconCheck size={13} aria-hidden="true" />
+            </button>
+            <button
+              className="theme-reset"
+              onClick={onResetTheme}
+              title="Reset to default — dark theme with red buttons"
+              aria-label="Reset to default dark theme with red buttons"
+              type="button"
+            >
+              <IconRefresh size={13} aria-hidden="true" />
+            </button>
+          </div>
           <div className="user-chip" title={`Signed in as ${user}`}>
             <span className="user-avatar">{user.slice(0, 1).toUpperCase()}</span>
             <span className="user-name">{user}</span>
@@ -1152,12 +1507,96 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
         </div>
       </header>
 
+      {/* App body: left vertical menu + content shell. The sidenav owns the
+          primary navigation (Home → VideoLipSync); the topbar keeps brand,
+          Progress Status and service/user controls only. */}
+      <div className={`app-body${navPinned ? " nav-pinned" : ""}`}>
+        <nav className={`sidenav${navPinned ? " pinned" : ""}`} aria-label="Primary">
+          <div className="sidenav-group">
+            <span className="sidenav-caption">Menu</span>
+            <button
+              className={`sidenav-btn nav-home ${view === "home" ? "on" : ""}`}
+              onClick={() => setView("home")}
+              aria-current={view === "home" ? "page" : undefined}
+              title="Home"
+            >
+              <span className="sidenav-icon"><IconFolder size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Home</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-projects ${view === "workspace" ? "on" : ""}`}
+              onClick={() => draft || name ? setView("workspace") : setView("home")}
+              aria-current={view === "workspace" ? "page" : undefined}
+              title={draft ? `Workspace: ${draft.name} (unsaved)` : name ? `Workspace: ${name}` : "Open a project from Home first"}
+            >
+              <span className="sidenav-icon"><IconClapper size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Projects</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-resource ${view === "resource" ? "on" : ""}`}
+              onClick={() => setView("resource")}
+              aria-current={view === "resource" ? "page" : undefined}
+              title="Open the Resource page"
+            >
+              <span className="sidenav-icon"><IconDatabase size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Resource</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-director ${view === "director" ? "on" : ""}`}
+              onClick={() => setView("director")}
+              aria-current={view === "director" ? "page" : undefined}
+              title="Open the Director view"
+            >
+              <span className="sidenav-icon"><IconFilm size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Director</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-song ${view === "song" ? "on" : ""}`}
+              onClick={() => setView("song")}
+              aria-current={view === "song" ? "page" : undefined}
+              title="Open the Create Song view"
+            >
+              <span className="sidenav-icon"><IconMusic size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Create Song</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-lipsync ${view === "lipsync" ? "on" : ""}`}
+              onClick={() => setView("lipsync")}
+              aria-current={view === "lipsync" ? "page" : undefined}
+              title="Open the Video LipSync view"
+            >
+              <span className="sidenav-icon"><IconMic size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">VideoLipSync</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-components ${view === "components" ? "on" : ""}`}
+              onClick={() => setView("components")}
+              aria-current={view === "components" ? "page" : undefined}
+              title="Open the Components view"
+            >
+              <span className="sidenav-icon"><IconBlocks size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Components</span>
+            </button>
+          </div>
+          <button
+            className="sidenav-pin"
+            onClick={toggleNavPinned}
+            title={navPinned ? "Collapse menu to icons" : "Pin menu open"}
+            aria-label={navPinned ? "Collapse menu to icons" : "Pin menu open"}
+            aria-expanded={navPinned}
+          >
+            <span className={`sidenav-pin-chevron${navPinned ? " pinned" : ""}`} aria-hidden="true">
+              <IconChevronDown size={14} />
+            </span>
+            <span className="sidenav-label">{navPinned ? "Collapse" : "Pin"}</span>
+          </button>
+        </nav>
       {/* Both views stay mounted — the inactive one is hidden, not unmounted —
           so a running generation keeps its live log, progress bar and SSE tail
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-        <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}`}>
+        <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "components" ? " is-components" : ""}`}>
         {!sidebarOpen && view !== "home" && (
           <button
             className="sidebar-show"
@@ -1184,23 +1623,56 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             Home/workspace so the top menu (and any running generation) is
             never disturbed; only the visible view swaps. */}
         <div className="col" style={view !== "resource" ? { display: "none" } : undefined}>
-          <ResourcePage onOpenProject={openProject} />
+          <ViewBoundary name="Resource">
+            <ResourcePage onOpenProject={openProject} />
+          </ViewBoundary>
         </div>
         <div className="col" style={view !== "director" ? { display: "none" } : undefined}>
-          <DirectorPage
-            onOpenProject={openProject}
-            onProjectsChanged={() => {
-              refreshScenarios();
-              refresh();
-            }}
-          />
+          <ViewBoundary name="Director">
+            <DirectorPage
+              onOpenProject={openProject}
+              onProjectsChanged={() => {
+                refreshScenarios();
+                refresh();
+              }}
+              onPlanningProgress={setDirectorProgress}
+            />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "song" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Create Song">
+            <CreateSongPage
+              onOpenProject={openProject}
+              focusProject={songProject}
+              onProjectsChanged={() => {
+                refreshScenarios();
+                refresh();
+              }}
+            />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "lipsync" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Video LipSync">
+            <VideoLipSyncPage
+              onOpenProject={openProject}
+              onProjectsChanged={() => {
+                refreshScenarios();
+                refresh();
+              }}
+            />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "components" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Components">
+            <ComponentsPage />
+          </ViewBoundary>
         </div>
         {sidebarOpen && (
         <aside className="sidebar" style={view === "home" ? { display: "none" } : undefined}>
           <div className="sidebar-head">
             <span>Projects</span>
             <span className="muted sidebar-count">
-              {scenarios.length}
+              {sideScenarios.length}
             </span>
             <span className="spacer" />
             <button
@@ -1213,31 +1685,44 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             </button>
           </div>
           <div className="sidebar-list">
-            {scenarios.length === 0 && (
+            {sideScenarios.length === 0 && (
               <div className="sidebar-empty">
-                No scenarios yet — craft one with the LLM.
+                {view === "song"
+                  ? "No songs yet — create one from Create Song."
+                  : "No scenarios yet — craft one with the LLM."}
               </div>
             )}
-            {scenarios.map((s) => {
+            {sideScenarios.map((s) => {
               const d = dashMap.get(s.name);
-              const selected = !draft && name === s.name;
+              const isAudioRow = s.project_type === "AUDIO";
+              const selected = view === "song"
+                ? songProject?.name === s.name
+                : !draft && name === s.name;
               const loadingThis = switching && name === s.name;
               const assets = d ? (d.refDone ? 1 : 0) + d.imageCount + d.videoCount : null;
               // Fully rendered = every scene's video clip exists (and at
               // least one scene). Live runs show a spinner instead of a tick.
+              // Audio rows complete on songs instead of scenes.
               const scenes = d?.sceneCount ?? 0;
               const vids = d?.videoCount ?? 0;
+              const songs = d?.songCount ?? 0;
               const running = !!d?.generating;
-              const complete = !!d && !running && scenes > 0 && vids >= scenes;
+              const complete = isAudioRow
+                ? !!d && !running && songs > 0
+                : !!d && !running && scenes > 0 && vids >= scenes;
               const tickTitle = running
                 ? "Generating…"
                 : !d
                   ? "Render status unavailable"
-                  : complete
-                    ? `Fully rendered — all ${scenes} video${scenes === 1 ? "" : "s"} done`
-                    : scenes > 0
-                      ? `${vids}/${scenes} videos rendered`
-                      : "No scenes yet";
+                  : isAudioRow
+                    ? songs > 0
+                      ? `${songs} song${songs === 1 ? "" : "s"} rendered`
+                      : "No songs yet"
+                    : complete
+                      ? `Fully rendered — all ${scenes} video${scenes === 1 ? "" : "s"} done`
+                      : scenes > 0
+                        ? `${vids}/${scenes} videos rendered`
+                        : "No scenes yet";
               return (
               <div className={`scenario-row${selected ? " selected" : ""}${loadingThis ? " loading" : ""}${running ? " generating" : ""}`} key={s.name}>
                 <button
@@ -1260,15 +1745,24 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
                   </span>
                   <span className="scenario-stats" title={
                     d
-                      ? `${assets} assets · ${d.imageCount} images · ${d.videoCount} videos · ${d.sceneCount} scenes`
+                      ? isAudioRow
+                        ? `${songs} song${songs === 1 ? "" : "s"} rendered`
+                        : `${assets} assets · ${d.imageCount} images · ${d.videoCount} videos · ${d.sceneCount} scenes`
                       : "Asset counts unavailable"
                   }>
                     {d ? (
+                      isAudioRow ? (
+                        <>
+                          <span className="stat-line">Songs: <b>{songs}</b></span>
+                          <span className="stat-line dim">🎵 AUDIO</span>
+                        </>
+                      ) : (
                       <>
                         <span className="stat-line">Assets: <b>{assets}</b></span>
                         <span className="stat-line dim">Images: <b>{d.imageCount}</b></span>
                         <span className="stat-line dim">Videos: <b>{d.videoCount}</b></span>
                       </>
+                      )
                     ) : (
                       <span className="stat-line dim">—</span>
                     )}
@@ -1397,6 +1891,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             isDraft={!!draft}
             referenceSlot={!draft && contentName ? (
               <OutputGallery
+                key={`ref:${cutDir}`}
                 // Always the selected project's own cut (cutDir) — never the
                 // live run's dir. Following the run here is what kept showing
                 // the previous project's references after switching projects
@@ -1421,6 +1916,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
               persisted hide/show toggle as every other card (ss-sec-beats).
               Follows the Video dropdown cut like the rest of the workspace. */}
           <OutputGallery
+            key={`beats:${cutDir}`}
             scenario={cutDir}
             refreshKey={refreshKey}
             section="beats"
@@ -1433,6 +1929,21 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
             progress={topProgress}
             onGotoEditorScene={(n) => gotoScene("editor", n)}
+            summary={boardSummary}
+            projectName={contentName}
+            dialogueEngine={engine}
+            dialogueFormat={cutFormat}
+            onDialogueSaved={() => {
+              // Dialogue edits write a new scenario version server-side —
+              // reload the config so the board summary + Story Board agree,
+              // then re-list outputs.
+              const t = contentName;
+              if (t && !draft) {
+                getScenario(t).then((r) => setCfg(r.config)).catch(() => {});
+                refreshScenarios().catch(() => {});
+              }
+              refresh();
+            }}
           />
           {editor && (
             <ShotList
@@ -1566,6 +2077,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, themeColor, onThemeColor
           )}
         </div>
       </div>
+      </div>{/* /.app-body */}
 
       {/* Delete confirmation popup for the Project bar — same beautiful
           dialog look as the global alerts (keeps its own flow so the Yes

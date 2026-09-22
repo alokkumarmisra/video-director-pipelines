@@ -24,6 +24,8 @@
 //   node scripts/character_sequence_wan.mjs [scenario] --regen clip <beat>
 //   node scripts/character_sequence_wan.mjs [scenario] --vertical  # 9:16 Instagram Reel cut
 //     (combines with --stitch / --regen; writes outputs/<scenario>_wan_vertical/)
+//   node scripts/character_sequence_wan.mjs [scenario] --no-dialogue  # silent clips only
+//     (skips the automatic voice + lip-sync pass even when beats carry dialogue)
 // Outputs go to outputs/<scenario>_wan/ (never clobbers the LTX run of the same scenario);
 // --vertical writes outputs/<scenario>_wan_vertical/ instead.
 import fs from "node:fs";
@@ -109,7 +111,7 @@ if (process.argv.includes("--stitch")) {
 }
 
 try {
-  await runSequence({ ...opts, regen });
+  await runSequence({ ...opts, regen, noDialogue: process.argv.includes("--no-dialogue") });
 } catch (e) {
   console.error(`[wanchar] ${e.message}`);
   process.exit(1);

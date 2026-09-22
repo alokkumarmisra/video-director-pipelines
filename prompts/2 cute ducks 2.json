@@ -1,0 +1,857 @@
+{
+  "tts": {
+    "voices": {},
+    "defaultVoice": ""
+  },
+  "duration": 3,
+  "sequence": [
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling widely, eyes sparkling with joy, excited, Energetic and happy steps",
+      "title": "dabu_and_doli_meet_in_the_flower_garden",
+      "motion": "दबू और दोली साथ मिलकर फूलों का बगीचा पहुंचते हैं। वे एक-दूसरे के साथ खुशी से दिखाई देते हैं, गुमाश्य चेहरों पर बड़े मुखों से खुशी और उत्साह., smiling broadly, waving a wing while speaking, mouth moving, clear face visible for lip-sync, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [
+        {
+          "line": "हाय दोली!",
+          "pitch": "high",
+          "emotion": "excited",
+          "speaker": "dabu_duckling",
+          "expression": "smiling broadly, waving a wing"
+        },
+        {
+          "line": "आज हमारा खेल क्या?",
+          "pitch": "medium",
+          "emotion": "happy",
+          "speaker": "doli_duckling",
+          "expression": "curious with a big smile"
+        }
+      ],
+      "duration": 3,
+      "expression": "smiling widely, eyes sparkling with joy",
+      "body_language": "Energetic and happy steps"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, joyful smiles, eyes wide with curiosity, excited, Bending down to smell flowers, giggling",
+      "title": "exploring_the_flower_garden",
+      "motion": "दबू और दोली फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "joyful smiles, eyes wide with curiosity",
+      "body_language": "Bending down to smell flowers, giggling"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide-eyed with joy, holding the flower close to his face, excited, Holding the flower gently, turning around slowly",
+      "title": "dabu_finds_a_new_flower",
+      "motion": "दबू एक नया फुल पाकर उसे देखता है।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide-eyed with joy, holding the flower close to his face",
+      "body_language": "Holding the flower gently, turning around slowly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, eyes sparkling with happiness, excited, Both ducklings dance around holding their flowers close to them",
+      "title": "doli_joins_in_the_fun",
+      "motion": "दबू और दोली एक-दूसरे के साथ फुलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, eyes sparkling with happiness",
+      "body_language": "Both ducklings dance around holding their flowers close to them"
+    },
+    {
+      "image": "मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, clouds gather and darken the sky, eyes wide with curiosity, anxious but hopeful, Clouds form slowly, gathering in the sky",
+      "title": "monsoon_cloud_appears",
+      "motion": "मोनसून की बादल फूलों का बगीचा आती है। वे अंधेरी हवा से भरी होती हैं, लेकिन खुशकाम दौड़ने वाली पैर और बड़ी चेहरे के तह से अपना उत्साह दिखाती हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "anxious but hopeful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "clouds gather and darken the sky, eyes wide with curiosity",
+      "body_language": "Clouds form slowly, gathering in the sky"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, eyes wide with curiosity, smiling despite the rain starting, excited but cautious, Running towards the tree, umbrella in hand",
+      "title": "rain_starts_to_fall",
+      "motion": "दबू और दोली एक-दूसरे के साथ फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited but cautious",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "eyes wide with curiosity, smiling despite the rain starting",
+      "body_language": "Running towards the tree, umbrella in hand"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, joyful smiles, eyes sparkling with happiness, excited, Splashing water joyfully, laughing and giggling",
+      "title": "dabu_and_doli_play_in_the_rain",
+      "motion": "दबू और दोली एक-दूसरे के साथ फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "joyful smiles, eyes sparkling with happiness",
+      "body_language": "Splashing water joyfully, laughing and giggling"
+    },
+    {
+      "image": "मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, clouds part to reveal a bright sun, eyes wide with happiness, joyful and relieved, Clouds gather slowly, then break apart revealing sunlight",
+      "title": "sun_appears_again",
+      "motion": "मोनसून की बादल फूलों का बगीचा आती है। वे अंधेरी हवा से भरी होती हैं, लेकिन खुशकाम दौड़ने वाली पैर और बड़ी चेहरे के तह से अपना उत्साह दिखाती हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful and relieved",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "clouds part to reveal a bright sun, eyes wide with happiness",
+      "body_language": "Clouds gather slowly, then break apart revealing sunlight"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, eyes sparkling with happiness, joyful, Twirling around, laughing and giggling",
+      "title": "dabu_and_doli_dance_in_the_sunlight",
+      "motion": "दबू और दोली एक-दूसरे के साथ फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, eyes sparkling with happiness",
+      "body_language": "Twirling around, laughing and giggling"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide-eyed with joy, holding the flower close to his face, excited, Holding the flower gently, turning around slowly",
+      "title": "dabu_finds_a_new_flower",
+      "motion": "दबू एक नया फुल पाकर उसे देखता है।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide-eyed with joy, holding the flower close to his face",
+      "body_language": "Holding the flower gently, turning around slowly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, eyes sparkling with happiness, excited, Both ducklings dance around holding their flowers close to them",
+      "title": "doli_joins_in_the_fun",
+      "motion": "दबू और दोली एक-दूसरे के साथ फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, eyes sparkling with happiness",
+      "body_language": "Both ducklings dance around holding their flowers close to them"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, big smiles, eyes sparkling with joy, happy, Both ducklings wave their wings in a friendly gesture",
+      "title": "the_end",
+      "motion": "दबू और दोली एक-दूसरे के साथ फूलों का बगीचा खोजते हैं। वे फूलों की गंध को रोक लेते हैं और उन्हें देखते हैं।, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "happy",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "big smiles, eyes sparkling with joy",
+      "body_language": "Both ducklings wave their wings in a friendly gesture"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, noses close to flowers, eyes wide with curiosity, excited, ducklings bend down slightly while walking",
+      "title": "exploring_flowers",
+      "motion": "Dabu and Doli walk around the garden, bending down to smell flowers., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "noses close to flowers, eyes wide with curiosity",
+      "body_language": "ducklings bend down slightly while walking"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, Dabu pointing with wide eyes; Doli's mouth open in surprise, excited, Dabu stands tall and proud; Doli steps forward slightly",
+      "title": "finding_a_new_flower",
+      "motion": "Dabu points at a new flower while Doli looks surprised., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "Dabu pointing with wide eyes; Doli's mouth open in surprise",
+      "body_language": "Dabu stands tall and proud; Doli steps forward slightly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, both ducklings are covered in snow with big smiles, joyful, ducklings flapping their wings as they playfully move through the snow",
+      "title": "playing_in_the_snow",
+      "motion": "Dabu and Doli jump into the snow leaving footprints behind., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "both ducklings are covered in snow with big smiles",
+      "body_language": "ducklings flapping their wings as they playfully move through the snow"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are covered in snow, smiling as they build the castle, excited, ducklings use their wings to shape the snow into walls of the castle",
+      "title": "building_a_snowcastle",
+      "motion": "Dabu and Doli work together to build a small snowcastle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are covered in snow, smiling as they build the castle",
+      "body_language": "ducklings use their wings to shape the snow into walls of the castle"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are holding the flowers with big smiles, excited, ducklings walk around picking flowers, then place them on the castle",
+      "title": "snowcastle_decorations",
+      "motion": "Dabu and Doli pick flowers to decorate their snowcastle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are holding the flowers with big smiles",
+      "body_language": "ducklings walk around picking flowers, then place them on the castle"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are standing tall with big smiles on their faces, proud, ducklings stand side by side, looking at the castle",
+      "title": "snowcastle_inspection",
+      "motion": "Dabu and Doli stand in front of their snowcastle, admiring it., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "proud",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are standing tall with big smiles on their faces",
+      "body_language": "ducklings stand side by side, looking at the castle"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings tilt their heads upwards with wide eyes; monsoon_cloud's face looks anxious but hopeful, curious, ducklings stand still, looking up at the sky; monsoon_cloud floats slowly towards them",
+      "title": "monsoon_cloud_s_arrival",
+      "motion": "Dabu and Doli look up at the sky as monsoon_cloud approaches., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "curious",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings tilt their heads upwards with wide eyes; monsoon_cloud's face looks anxious but hopeful",
+      "body_language": "ducklings stand still, looking up at the sky; monsoon_cloud floats slowly towards them"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are looking at each other with thoughtful expressions, heads tilted slightly, thoughtful, ducklings stand side by side, hands on hips, thinking deeply",
+      "title": "planning_for_rain",
+      "motion": "Dabu and Doli discuss moving their snowcastle inside., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "thoughtful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are looking at each other with thoughtful expressions, heads tilted slightly",
+      "body_language": "ducklings stand side by side, hands on hips, thinking deeply"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are moving slowly, with focused expressions, careful, ducklings use their wings to lift the castle, taking care not to damage it",
+      "title": "moving_the_snowcastle_inside",
+      "motion": "Dabu and Doli carefully move their snowcastle into a safer location., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "careful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are moving slowly, with focused expressions",
+      "body_language": "ducklings use their wings to lift the castle, taking care not to damage it"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance as it starts to rain. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, monsoon_cloud's face lights up with relief; ducklings smile at each other, relieved, ducklings stand together watching the rain; monsoon_cloud floats calmly in place",
+      "title": "monsoon_cloud_s_relief",
+      "motion": "Dabu and Doli watch the rain start while monsoon_cloud looks relieved., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "relieved",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "monsoon_cloud's face lights up with relief; ducklings smile at each other",
+      "body_language": "ducklings stand together watching the rain; monsoon_cloud floats calmly in place"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance as it starts to rain. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are covered in water, laughing and splashing joyfully, joyful, ducklings flapping their wings as they splash through puddles",
+      "title": "enjoying_the_rain",
+      "motion": "Dabu and Doli splash in puddles formed by the rain., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are covered in water, laughing and splashing joyfully",
+      "body_language": "ducklings flapping their wings as they splash through puddles"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance as it starts to rain and then clear up. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling widely as they look at the rainbow, happy, ducklings walk side by side, looking up at the sky with big smiles",
+      "title": "the_end_of_the_rainstorm",
+      "motion": "Dabu and Doli walk around the garden, admiring the rainbow., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "happy",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling widely as they look at the rainbow",
+      "body_language": "ducklings walk side by side, looking up at the sky with big smiles"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling widely with open mouths, excited, ducklings walk energetically side by side, occasionally stopping to look back at their footprints",
+      "title": "dabu_and_doli_explore_the_shore",
+      "motion": "Dabu and Doli walk energetically towards the seashore leaving footprints behind., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling widely with open mouths",
+      "body_language": "ducklings walk energetically side by side, occasionally stopping to look back at their footprints"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are holding the seashells with wide smiles, excited, ducklings squat down to examine the shells closely, occasionally passing them back and forth",
+      "title": "discovering_seashells",
+      "motion": "Dabu and Doli squat down to examine colorful seashells., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are holding the seashells with wide smiles",
+      "body_language": "ducklings squat down to examine the shells closely, occasionally passing them back and forth"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are splashing with big smiles, joyful, ducklings waddle into the water, making small splashes and laughing",
+      "title": "playing_with_seawater",
+      "motion": "Dabu and Doli splash playfully in seawater creating small waves., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are splashing with big smiles",
+      "body_language": "ducklings waddle into the water, making small splashes and laughing"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling warmly at each other, friendly, ducklings approach the new friend, greeting them with chirps and small bows",
+      "title": "meeting_a_new_friend",
+      "motion": "Dabu, Doli, and their new friend approach each other with chirps., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling warmly at each other",
+      "body_language": "ducklings approach the new friend, greeting them with chirps and small bows"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling warmly while gesturing, friendly, ducklings stand side by side, gently touching their beaks in a friendly gesture",
+      "title": "new_friend_introductions",
+      "motion": "Dabu and Doli stand side by side, gently touching their beaks., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling warmly while gesturing",
+      "body_language": "ducklings stand side by side, gently touching their beaks in a friendly gesture"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are chirping happily while exploring, excited, ducklings waddle around, occasionally stopping to examine something interesting",
+      "title": "exploring_together",
+      "motion": "Dabu, Doli, and their new friend waddle around exploring., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are chirping happily while exploring",
+      "body_language": "ducklings waddle around, occasionally stopping to examine something interesting"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are chirping excitedly as they find the cave, excited, ducklings waddle towards the cave with curiosity, occasionally turning back to look at each other",
+      "title": "finding_a_hidden_cave",
+      "motion": "Dabu, Doli, and their new friend waddle towards the hidden cave., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are chirping excitedly as they find the cave",
+      "body_language": "ducklings waddle towards the cave with curiosity, occasionally turning back to look at each other"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. बारिश से लेकर समुद्र तक पार्क: Two cute yellow ducklings, chubby and round-eyed with rosy cheeks and wide smiles. One has purple and blue wing-like flaps while the other has blue and green. They stand side by side on a patch of green grass lightly dusted with snow in a vibrant meadow filled with brightly colored flowers, pink, blue, yellow, and orange. Behind them are lush green trees, and soft glowing sunlight filters through, casting a warm dreamy ambiance with sparkling particles floating in the air. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are looking around with wide eyes, curious, ducklings walk carefully through the cave, occasionally stopping to examine something interesting",
+      "title": "inside_the_cave",
+      "motion": "Dabu, Doli, and their new friend walk carefully inside the cave., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "curious",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are looking around with wide eyes",
+      "body_language": "ducklings walk carefully through the cave, occasionally stopping to examine something interesting"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. बारिश से लेकर समुद्र तक पार्क: Two cute yellow ducklings, chubby and round-eyed with rosy cheeks and wide smiles. One has purple and blue wing-like flaps while the other has blue and green. They stand side by side on a patch of green grass lightly dusted with snow in a vibrant meadow filled with brightly colored flowers, pink, blue, yellow, and orange. Behind them are lush green trees, and soft glowing sunlight filters through, casting a warm dreamy ambiance with sparkling particles floating in the air. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are chirping excitedly as they discover the treasure, excited, ducklings waddle towards the shiny objects with curiosity, occasionally stopping to pick them up",
+      "title": "finding_treasure",
+      "motion": "Dabu, Doli, and their new friend waddle towards shiny objects., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are chirping excitedly as they discover the treasure",
+      "body_language": "ducklings waddle towards the shiny objects with curiosity, occasionally stopping to pick them up"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling widely as they build the sandcastle, excited, ducklings use their beaks to shape the sand into towers and walls, occasionally standing back to admire their work",
+      "title": "building_a_sandcastle",
+      "motion": "Dabu, Doli, and their new friend use their beaks to shape sand into towers., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling widely as they build the sandcastle",
+      "body_language": "ducklings use their beaks to shape the sand into towers and walls, occasionally standing back to admire their work"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are smiling widely as they look at the completed sandcastle, happy, ducklings stand side by side in front of the sandcastle, occasionally turning to see different angles",
+      "title": "the_sandcastle_is_ready",
+      "motion": "Dabu, Doli, and their new friend stand side by side admiring the sandcastle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "happy",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are smiling widely as they look at the completed sandcastle",
+      "body_language": "ducklings stand side by side in front of the sandcastle, occasionally turning to see different angles"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, ducklings are looking down with lowered heads, sad, ducklings stand side by side, occasionally glancing at each other",
+      "title": "playtime_ends",
+      "motion": "Dabu, Doli, and their new friend stand side by side looking down., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "sad",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "ducklings are looking down with lowered heads",
+      "body_language": "ducklings stand side by side, occasionally glancing at each other"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, joyful smiles, wide eyes, excited, energetic steps, tails flapping slightly",
+      "title": "dabu_and_doli_at_flower_garden",
+      "motion": "Dabu and Doli walk energetically towards the flower garden., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "joyful smiles, wide eyes",
+      "body_language": "energetic steps, tails flapping slightly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, sniffing noses, wide eyes, curious, bending down to inspect flowers closely",
+      "title": "exploring_flowers",
+      "motion": "Dabu and Doli waddle around sniffing and pecking at different flowers., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "curious",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "sniffing noses, wide eyes",
+      "body_language": "bending down to inspect flowers closely"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, surprised, wide smiles, excited, leaning in closely to inspect the flower",
+      "title": "discovering_a_new_flower",
+      "motion": "Dabu and Doli examine a peculiar flower with wide eyes., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "surprised, wide smiles",
+      "body_language": "leaning in closely to inspect the flower"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling, wide eyes, excited, energetic running steps, wings flapping",
+      "title": "chasing_butterflies",
+      "motion": "Dabu and Doli run energetically after colorful butterflies., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "smiling, wide eyes",
+      "body_language": "energetic running steps, wings flapping"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, closed eyes, peaceful smiles, relaxed, lying down with legs stretched out, wings slightly spread",
+      "title": "resting_in_the_sun",
+      "motion": "Dabu and Doli lie down under a tree closing their eyes to relax., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "relaxed",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "closed eyes, peaceful smiles",
+      "body_language": "lying down with legs stretched out, wings slightly spread"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहर��� ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, tilted heads looking upwards, curious, standing still with slightly open beaks",
+      "title": "meeting_monsoon_cloud",
+      "motion": "The cloud hovers over Dabu and Doli causing them to look up curiously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "curious",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, tilted heads looking upwards",
+      "body_language": "standing still with slightly open beaks"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling, waving its arms, friendly, floating gently in the air, arms spread wide",
+      "title": "monsoon_cloud_s_introduction",
+      "motion": "Monsoon Cloud introduces itself to Dabu and Doli., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "smiling, waving its arms",
+      "body_language": "floating gently in the air, arms spread wide"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, wide eyes, excited, waddling with heads tilted to look around",
+      "title": "exploring_the_jungle",
+      "motion": "Dabu and Doli waddle into the jungle, looking around curiously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, wide eyes",
+      "body_language": "waddling with heads tilted to look around"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, wide eyes, excited, waddling with heads tilted to look around",
+      "title": "discovering_a_new_path",
+      "motion": "Dabu and Doli walk down a new path, pecking at the ground curiously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, wide eyes",
+      "body_language": "waddling with heads tilted to look around"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling, waving, friendly, waddling towards the animals with open beaks",
+      "title": "meeting_new_friends_in_jungle",
+      "motion": "Dabu and Doli greet a squirrel and a rabbit they meet in the jungle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "smiling, waving",
+      "body_language": "waddling towards the animals with open beaks"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, wide eyes, excited, waddling with heads tilted to look around",
+      "title": "the_ducks_adventure_continues",
+      "motion": "Dabu and Doli waddle around curiously exploring further into the jungle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, wide eyes",
+      "body_language": "waddling with heads tilted to look around"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारा: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling, wide eyes, joyful, waddling with heads tilted up to look at their surroundings",
+      "title": "returning_home",
+      "motion": "Dabu and Doli waddle back to the seashore looking around happily., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "smiling, wide eyes",
+      "body_language": "waddling with heads tilted up to look at their surroundings"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in surprise, excited, waddling with heads tilted to see all around them",
+      "title": "exploring_the_jungle",
+      "motion": "Dabu and Doli waddle into the jungle looking around curiously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in surprise",
+      "body_language": "waddling with heads tilted to see all around them"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, beak open in curiosity, excited, waddling forward with head tilted down",
+      "title": "discovering_a_new_flower",
+      "motion": "Dabu waddles closer to the new flower examining it closely., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "beak open in curiosity",
+      "body_language": "waddling forward with head tilted down"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beak open in excitement, excited, waddling with head tilted up and pointing",
+      "title": "sharing_the_discovery",
+      "motion": "Dabu waddles back to Doli pointing at the flower., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beak open in excitement",
+      "body_language": "waddling with head tilted up and pointing"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. जंगल: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling quickly with heads tilted up and flapping their wings",
+      "title": "chasing_a_fluttering_butterfly",
+      "motion": "Dabu and Doli chase after a fluttering butterfly waddling with heads tilted up., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling quickly with heads tilted up and flapping their wings"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. पेड़: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in breathlessness, tired, sitting down with heads lowered and wings flapping slowly",
+      "title": "resting_under_a_tree",
+      "motion": "Dabu and Doli stop to rest under a tree panting heavily., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "tired",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in breathlessness",
+      "body_language": "sitting down with heads lowered and wings flapping slowly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बैंडेल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, eyes widened, beaks open in surprise, surprised, standing with heads tilted up to see the cloud",
+      "title": "a_cloudy_surprise",
+      "motion": "A large cloud looms over Dabu and Doli., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "surprised",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "eyes widened, beaks open in surprise",
+      "body_language": "standing with heads tilted up to see the cloud"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling with heads tilted up to see the cloud move",
+      "title": "the_cloud_s_journey",
+      "motion": "Dabu and Doli follow the cloud as it moves across the sky., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted up to see the cloud move"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling with heads tilted up following the cloud",
+      "title": "the_cloud_s_path_leads_to_the_seashore",
+      "motion": "Dabu and Doli follow the cloud's path back to the seashore., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted up following the cloud"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in surprise, joyful, waddling with heads tilted up to look at their surroundings",
+      "title": "reaching_the_seashore",
+      "motion": "Dabu and Doli waddle onto the seashore looking around., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in surprise",
+      "body_language": "waddling with heads tilted up to look at their surroundings"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स, wide eyes, beaks open in greeting, friendly, waddling towards the water with heads tilted up",
+      "title": "a_friendly_greeting",
+      "motion": "Dabu and Doli meet a friendly fish who swims up to them., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in greeting",
+      "body_language": "waddling towards the water with heads tilted up"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in conversation, friendly, standing side by side with heads tilted up talking",
+      "title": "a_friendly_chat",
+      "motion": "Dabu and Doli talk to the fish sharing stories., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in conversation",
+      "body_language": "standing side by side with heads tilted up talking"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. समुद्र किनारे: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling side by side with heads tilted up and tails moving happily",
+      "title": "returning_home_with_a_new_friend",
+      "motion": "Dabu and Doli waddle back to the seashore with their new friend., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling side by side with heads tilted up and tails moving happily"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling with heads tilted forward, tails moving excitedly",
+      "title": "the_ducks_in_the_field",
+      "motion": "Dabu and Doli waddle into a new field full of flowers., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling with heads tilted forward, tails moving excitedly as they peck at flowers",
+      "title": "exploring_the_flowers",
+      "motion": "Dabu and Doli waddle closer to each flower, pecking gently., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they peck at flowers"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling with heads tilted forward, tails moving excitedly as they chase the butterfly",
+      "title": "a_new_friend_in_the_meadow",
+      "motion": "A butterfly flutters into the field, and Dabu and Doli follow it., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they chase the butterfly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, standing still with heads tilted forward, watching the butterfly dance",
+      "title": "the_butterfly_dance",
+      "motion": "The butterflies dance in the meadow, and Dabu and Doli watch., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "standing still with heads tilted forward, watching the butterfly dance"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling and running with heads tilted forward, tails moving excitedly as they chase the butterfly",
+      "title": "chasing_the_butterfly",
+      "motion": "Dabu and Doli waddle and run after the butterfly., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling and running with heads tilted forward, tails moving excitedly as they chase the butterfly"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. पेड़: Two chubby yellow ducklings with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. They are surrounded by vibrant meadow flowers and standing on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, closed beaks, heads tilted back, eyes half-closed, calm, sitting side by side with legs stretched out, tails slightly lowered",
+      "title": "the_ducks_rest_in_peace",
+      "motion": "Dabu and Doli sit under the tree, resting after their chase., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "calm",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "closed beaks, heads tilted back, eyes half-closed",
+      "body_language": "sitting side by side with legs stretched out, tails slightly lowered"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling with heads tilted forward, tails moving excitedly as they greet the new friend",
+      "title": "a_new_friend_joins_them",
+      "motion": "Another duckling waddles into the field and joins Dabu and Doli., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they greet the new friend"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, waddling and playing together with heads tilted forward, tails moving excitedly as they engage in playful activities",
+      "title": "the_ducks_play_together",
+      "motion": "Dabu, Doli, and their new friend play in the meadow., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling and playing together with heads tilted forward, tails moving excitedly as they engage in playful activities"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling with heads tilted forward, tails moving excitedly as they explore further",
+      "title": "the_ducks_explore_further",
+      "motion": "Dabu and Doli waddle deeper into the meadow, discovering new parts., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they explore further"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling with heads tilted forward, tails moving excitedly as they follow the path",
+      "title": "the_ducks_find_a_hidden_path",
+      "motion": "Dabu and Doli discover a narrow path hidden among the flowers., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they follow the path"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, excited, waddling with heads tilted forward, tails moving excitedly as they follow the hidden path",
+      "title": "the_ducks_explore_the_hidden_path",
+      "motion": "Dabu and Doli waddle down the narrow path, following it to its end., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "waddling with heads tilted forward, tails moving excitedly as they follow the hidden path"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in excitement, joyful, standing still with heads tilted forward, watching the new discovery",
+      "title": "the_ducks_find_a_secret_garden",
+      "motion": "Dabu and Doli discover a secret garden at the end of the hidden path., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in excitement",
+      "body_language": "standing still with heads tilted forward, watching the new discovery"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide eyes, beaks open in curiosity, excited, waddling slowly with heads tilted to see all sides",
+      "title": "the_ducks_explore_the_garden",
+      "motion": "Dabu and Doli waddle into the garden, looking around curiously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide eyes, beaks open in curiosity",
+      "body_language": "waddling slowly with heads tilted to see all sides"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, waddling with heads tilted forward, eyes wide open in excitement, excited, waddling along the path with curiosity",
+      "title": "finding_a_secret_path",
+      "motion": "Dabu and Doli follow a hidden path leading deeper into the garden., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "waddling with heads tilted forward, eyes wide open in excitement",
+      "body_language": "waddling along the path with curiosity"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, beaks open wide with joy, eyes sparkling with excitement, excited, splashing around in the water, wings flapping happily",
+      "title": "discovering_a_hidden_waterfall",
+      "motion": "Dabu and Doli discover a hidden waterfall, splashing in the water., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "excited",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "beaks open wide with joy, eyes sparkling with excitement",
+      "body_language": "splashing around in the water, wings flapping happily"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling widely with wings spread out in joy, joyful, waddling around the waterfall, wings flapping energetically",
+      "title": "playing_by_the_waterfall",
+      "motion": "Dabu and Doli play together near the waterfall, having fun., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "smiling widely with wings spread out in joy",
+      "body_language": "waddling around the waterfall, wings flapping energetically"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, Monsoon Cloud's eyes widen with surprise; Dabu and Doli tilt their heads in curiosity, surprised, Monsoon Cloud floats down slowly, Dabu and Doli waddle up to meet him",
+      "title": "a_surprise_visitor",
+      "motion": "Monsoon Cloud floats down slowly to join Dabu and Doli at the waterfall., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "surprised",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "Monsoon Cloud's eyes widen with surprise; Dabu and Doli tilt their heads in curiosity",
+      "body_language": "Monsoon Cloud floats down slowly, Dabu and Doli waddle up to meet him"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, smiling widely with wings spread out in joy; Monsoon Cloud's eyes are warm and inviting, friendly, standing side by side near the waterfall, heads tilted forward to speak",
+      "title": "a_friendly_chat_by_the_waterfall",
+      "motion": "Dabu and Doli greet Monsoon Cloud with joy., smiling warmly, beak open in greeting while speaking, mouth moving, clear face visible for lip-sync, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "friendly",
+      "dialogue": [
+        {
+          "line": "हाय मोनसून!",
+          "pitch": "medium",
+          "emotion": "friendly",
+          "speaker": "dabu_duckling",
+          "expression": "smiling warmly, beak open in greeting"
+        },
+        {
+          "line": "हाय दबू! हाय दोली!",
+          "pitch": "medium",
+          "emotion": "friendly",
+          "speaker": "monsoon_cloud",
+          "expression": "smiling warmly, eyes twinkling with friendliness"
+        }
+      ],
+      "duration": 3,
+      "expression": "smiling widely with wings spread out in joy; Monsoon Cloud's eyes are warm and inviting",
+      "body_language": "standing side by side near the waterfall, heads tilted forward to speak"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. मोनसून की बादल: बड़े-बड़े बैंगनी-नीले गोल बादल, प्रेम्प्लाइट काले रंग से, अंधेरा हवा से भरा, खुशकाम दौड़ने वाले बड़े नीले पैर, गोल चेहरे के तह के पीले-सिंदूरी रंग की नुमासी, खोखले-खोखले अंधेरे भरी बड़ी चेहरे ग्राफिक्स. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, teary eyes; Monsoon Cloud's face has a warm smile with a hint of sadness, sad but hopeful, standing side by side near the waterfall, heads tilted forward in farewell",
+      "title": "the_ducks_say_goodbye_to_their_new_friend",
+      "motion": "Dabu and Doli say goodbye to Monsoon Cloud as he prepares to leave., teary eyes, smiling warmly while speaking, mouth moving, clear face visible for lip-sync, Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "sad but hopeful",
+      "dialogue": [
+        {
+          "line": "आज तुम्हारा साथ खेलना मेरा बहुत अच्छा दिन रहा है!",
+          "pitch": "medium",
+          "emotion": "sad but hopeful",
+          "speaker": "dabu_duckling",
+          "expression": "teary eyes, smiling warmly"
+        },
+        {
+          "line": "आज भी तुम्हारा साथ खेलना मेरा बहुत अच्छा दिन रहा है! अगली बार फिर से मिलें!",
+          "pitch": "medium",
+          "emotion": "sad but hopeful",
+          "speaker": "monsoon_cloud",
+          "expression": "teary eyes, warm smile"
+        }
+      ],
+      "duration": 3,
+      "expression": "teary eyes; Monsoon Cloud's face has a warm smile with a hint of sadness",
+      "body_language": "standing side by side near the waterfall, heads tilted forward in farewell"
+    },
+    {
+      "image": "दबू: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. दोली: A chubby yellow duckling with orange feet and rosy cheeks, wide round eyes, small tuft of yellow down on head, soft yellow fur. फूलों का बगीचा: A vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange with two chubby yellow ducklings standing side by side on a patch of green grass lightly dusted with snow. Soft, glowing sunlight filters through lush green trees in the background casting a warm, dreamy ambiance. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering, wide smiles, beaks open in excitement; waddling energetically around the garden, joyful, waddling energetically with heads tilted forward to explore new areas of the garden",
+      "title": "the_ducks_continue_their_playful_adventure",
+      "motion": "Dabu and Doli continue their playful adventure in the garden., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "emotion": "joyful",
+      "dialogue": [],
+      "duration": 3,
+      "expression": "wide smiles, beaks open in excitement; waddling energetically around the garden",
+      "body_language": "waddling energetically with heads tilted forward to explore new areas of the garden"
+    }
+  ],
+  "description": "2 cute ducks 2 — दो नन्ही चूज़ियाँ एक संग-संग में खेलती हुईं, फूलों के बगीचे में, समुद्र किनारे, जंगल में और खेतों पर घूमकर नाचती हैं।",
+  "folder_name": "2_cute_ducks_2",
+  "referencePrompt": "Two adorable, chubby yellow ducklings with oversized round eyes, rosy cheeks, and wide joyful smiles, standing side by side on a patch of green grass lightly dusted with snow. Each duckling has small orange feet, a tiny tuft of yellow down on their heads, and colorful wing-like flaps—purple and blue on one, blue and green on the other. They are surrounded by a vibrant meadow of brightly colored flowers in pink, blue, yellow, and orange, with lush green trees in the background. Soft, glowing sunlight filters through the trees, casting a warm, dreamy ambiance with sparkling particles floating in the air. The scene is rendered in a whimsical, 3D cartoon style with smooth, saturated colors and high detail, suitable for a high-resolution digital illustration.\n"
+}

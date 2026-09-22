@@ -19,6 +19,8 @@
 //   node scripts/character_sequence.mjs [scenario] --regen clip <beat>
 //   node scripts/character_sequence.mjs [scenario] --vertical  # 9:16 Instagram Reel cut
 //     (combines with --stitch / --regen; writes outputs/<scenario>_vertical/)
+//   node scripts/character_sequence.mjs [scenario] --no-dialogue  # silent clips only
+//     (skips the automatic voice + lip-sync pass even when beats carry dialogue)
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,7 +98,7 @@ if (process.argv.includes("--stitch")) {
 }
 
 try {
-  await runSequence({ ...opts, regen });
+  await runSequence({ ...opts, regen, noDialogue: process.argv.includes("--no-dialogue") });
 } catch (e) {
   console.error(`[char] ${e.message}`);
   process.exit(1);

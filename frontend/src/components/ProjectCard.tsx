@@ -73,6 +73,7 @@ export default function ProjectCard({
   }, [menuOpen]);
 
   const busy = busyAction != null;
+  const isAudio = project.project_type === "AUDIO";
   const clipBusy = busyAction === `clip:${project.name}`;
   const dlBusy = busyAction === `download:${project.name}`;
   const editDisabled = busy || project.generating;
@@ -80,7 +81,7 @@ export default function ProjectCard({
   // the workspace so the live progress is visible ("View progress").
   const clipDisabled = busy;
   const delDisabled = busy || project.generating;
-  const clipLabel = clipBusy ? "Making…" : project.generating ? "View progress" : "Make a clip";
+  const clipLabel = clipBusy ? "Making…" : project.generating ? "View progress" : isAudio ? "Make a song" : "Make a clip";
   const dlLabel = dlBusy ? "Preparing…" : "Download";
   const item = (label: string, fn: () => void, opts: { danger?: boolean; disabled?: boolean } = {}) => (
     <button
@@ -140,6 +141,18 @@ export default function ProjectCard({
           {project.name}
         </button>
         {project.description && <p className="proj-desc">{project.description}</p>}
+        {(project.project_type === "AUDIO" || project.hasSong) && (
+          <div className="proj-type-row">
+            {project.project_type === "AUDIO" && (
+              <span className="pill proj-type audio" title="Audio project (Create Song)">🎵 AUDIO</span>
+            )}
+            {(project.songCount ?? 0) > 0 && (
+              <span className="muted" title="Generated song takes">
+                {project.songCount} song{(project.songCount ?? 0) === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* While a run is active the card reports Generating (pulsing) instead
             of the coverage status — a fresh project still says Draft

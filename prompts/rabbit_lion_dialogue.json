@@ -1,0 +1,30 @@
+{
+  "description": "Rabbit and Lion become friends in a colorful forest — dialogue E2E test (Hindi voices + lip-sync)",
+  "duration": 5,
+  "referencePrompt": "Cute white rabbit with round face, large expressive eyes, pink nose, wearing a small blue shirt, standing in a colorful magical forest, 3D preschool animation style",
+  "tts": {
+    "defaultVoice": "hi-IN-SwaraNeural",
+    "voices": {
+      "rabbit": "hi-IN-SwaraNeural",
+      "lion": "hi-IN-MadhurNeural"
+    }
+  },
+  "sequence": [
+    {
+      "title": "forest_meeting",
+      "image": "Cute white rabbit with round face, large expressive eyes, pink nose, wearing a small blue shirt, standing next to a friendly lion in a colorful magical forest, rabbit looking toward the lion, medium shot, 3D preschool animation style",
+      "motion": "The rabbit looks toward the lion with a slightly surprised but adorable expression, slowly steps forward and raises one hand while speaking emotionally, natural facial expressions, subtle head movement, expressive hand gesture, medium shot, stable camera, animate natural motion only",
+      "duration": 5,
+      "dialogue": [
+        {
+          "speaker": "rabbit",
+          "line": "शेर जी, आप यहाँ क्यों आए हैं?"
+        },
+        {
+          "speaker": "lion",
+          "line": "मैं तुम्हारी मदद करने आया हूँ।"
+        }
+      ]
+    }
+  ]
+}

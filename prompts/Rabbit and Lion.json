@@ -1,248 +1,736 @@
 {
-  "description": "Rabbit and Lion — A clever and brave rabbit named Chiku uses wit and strategy to outsmart the mighty but arrogant lion, teaching him a valuable lesson about true strength.",
-  "duration": 4,
-  "referencePrompt": "A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears, standing in a lush jungle. He looks alert and intelligent., A vibrant green jungle filled with tall trees, colorful flowers, and a clear flowing river. The light is bright and the atmosphere peaceful., High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering",
+  "tts": {
+    "voices": {},
+    "defaultVoice": ""
+  },
+  "duration": 3,
   "sequence": [
     {
-      "title": "jungle_life",
-      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Shera’s Cave.",
-      "motion": "Shera stands tall with a look of arrogance on his face."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_territory",
+      "motion": "Static shot of Sheraraj standing tall and muscular in the middle of the jungle. He raises his paw as if to strike., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [
+        {
+          "speaker": "chiku",
+          "line": "waah maja aa rha hai"
+        },
+        {
+          "speaker": "shera",
+          "line": "abhi mai tumko kha jaunga."
+        }
+      ],
+      "duration": 3
     },
     {
-      "title": "chiku_s_decision",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku stands determinedly in the middle of the jungle."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_approaches",
+      "motion": "Chiki hops cautiously towards the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "preparation_and_strategy",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku carefully moves leaves aside to reveal the pit."
+      "image": "हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "hiran_approaches",
+      "motion": "Hiran gracefully approaches the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "the_encounter",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Sershraj steps too close to the pit and falls in. Chiku watches from a safe distance."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass) and हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_and_hiran_together",
+      "motion": "Chiki and Hiran stand together., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "realization_of_mistake",
-      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Shera looks around with confusion and realization of his mistake."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_reaction",
+      "motion": "Sheraraj lowers his head in surprise., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [
+        {
+          "line": "मेरा यहाँ नहीं जाना होगा",
+          "speaker": ""
+        }
+      ],
+      "duration": 3
     },
     {
-      "title": "chiku_s_approach",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Chiku approaches the pit cautiously."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_speaks_up",
+      "motion": "Chiki stands tall and determined., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_reaction",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Shera looks up at Chiku with surprise and confusion."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_challenge",
+      "motion": "Sheraraj steps closer to Chiki., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "reflection_on_mistake",
-      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Shera looks around thoughtfully."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_response",
+      "motion": "Chiki stands firm., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "conversation_between_chiku_and_sershraj",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Chiku approaches Sershraj, who is sitting on the ground. They have a conversation."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass) and हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_and_hiran_facing_sheraraj",
+      "motion": "Chiki and Hiran stand together., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "sershraj_s_new_stance_as_leader",
-      "image": "Sheraaj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Shera stands tall in the jungle."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass), हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears) and बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_joins_them",
+      "motion": "Bandar joins Chiki and Hiran., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_sequence",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku and Sershraj walk side by side through the jungle."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass) and बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_plan_unfolds",
+      "motion": "Chiki and Bandar work together., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_credits",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku and Sershraj stand together in the jungle."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_distracted",
+      "motion": "Sheraraj is distracted by Bandar and Chiki., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_observation",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku watches Sershraj walk through the jungle with his prideful gait."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_claim",
+      "motion": "Sheraraj stands tall and powerful, looking around with sharp eyes., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_decision",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku makes a determined decision to challenge Sershraj."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_thought",
+      "motion": "Chiki sits on the ground, thinking deeply with a determined look., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "preparing_the_pit",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku carefully positions leaves over the pit."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_plan",
+      "motion": "Chiki stands up, smiling confidently., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "the_encounter",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Sershraj falls into the pit, struggling to get out."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_runs",
+      "motion": "Chiki runs quickly through the jungle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_concern",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Chiku approaches the pit, calling out to Sershraj."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_reaction",
+      "motion": "Sheraraj sees Chiki approaching, his eyes widening in surprise., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_realization",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Pit.",
-      "motion": "Shera looks up at Chiku with surprise and understanding."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_confidence",
+      "motion": "Chiki stands confidently next to Sheraraj., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_reflection",
-      "image": "Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Shera’s Cave.",
-      "motion": "Shera sits deep in thought reflecting on the day's events."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_anger",
+      "motion": "Sheraraj tightens his fists, lowering his head in anger., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [
+        {
+          "line": "तुम यहाँ से चला जाओ",
+          "speaker": ""
+        }
+      ],
+      "duration": 3
     },
     {
-      "title": "chiku_s_victory",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku walks through the jungle feeling proud of himself."
+      "image": "चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_reply",
+      "motion": "Chiki stands tall, smiling confidently at Sheraraj., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_respect",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Shera stands in front of Chiku with respect."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_challenge",
+      "motion": "Sheraraj lowers his head, narrowing his eyes., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "new_harmony",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_counter",
+      "motion": "Chiki takes a step forward., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_credits",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_retreat",
+      "motion": "Sheraraj steps back, lowering his head in surprise., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_credits",
-      "image": "Chiku: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering. Location: Jungle.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_victory",
+      "motion": "Chiki stands tall, smiling confidently at Sheraraj., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_reflection",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku stands by the river reflecting in it while looking thoughtful."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_strategy",
+      "motion": "Chiki ponders with a determined look, tapping the grass thoughtfully., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_pride",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands tall in his cave with a smug expression on his face."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_idea",
+      "motion": "Chiki jumps up with a big smile, pointing towards the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_preparing_the_pit",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku carefully prepares a pit covered by leaves."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_doubt",
+      "motion": "Sheraraj shakes his head, eyes wide with disbelief., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_approaching_the_pit",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera walks through the jungle until he stops near the pit."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_assurance",
+      "motion": "Chiki places a reassuring hand on Sheraraj's shoulder, smiling brightly., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_watching",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku crouches behind bushes watching Shera suspiciously."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_water_pit",
+      "motion": "Chiki and Sheraraj approach the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_falls_into_the_pit",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera falls into the pit, struggling to get out."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_plan_in_action",
+      "motion": "Chiki starts to move pebbles from the edge of the water pit, creating a small slope., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_approaches",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku cautiously approaches the pit after Shera's fall."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_curiosity",
+      "motion": "Sheraraj watches Chiki's actions with a curious look., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "reflection",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera sits in the pit reflecting deeply."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_slope_complete",
+      "motion": "The slope is complete., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_and_sershraj_together",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku and Sershraj walk towards each other, meeting in the middle of the jungle."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_skepticism",
+      "motion": "Sheraraj shakes his head, eyes wide with disbelief., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_pride",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands tall in his cave with a smug expression on his face."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_confidence",
+      "motion": "Chiki places a reassuring hand on Sheraraj's shoulder, smiling brightly., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_reflection",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku stands by the river reflecting in it while looking thoughtful."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_water_flow",
+      "motion": "Water starts flowing down the slope., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_credits",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_triumph",
+      "motion": "Chiki stands proudly at the edge of the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "chiku_s_decision",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku stands tall at the riverbank, looking determined."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_reflection",
+      "motion": "Chiki stands thoughtfully by the water pit, looking at his reflection in the water., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "preparing_the_pit",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku moves through the jungle, gathering materials for the pit."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "devising_a_new_plan",
+      "motion": "Chiki bouncing lightly on the spot, thinking hard with his ears twitching., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "shera_s_arrival",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera walks through the jungle, observing his surroundings."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_plan_takes_shape",
+      "motion": "Chiki placing a large rock at the edge of the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "the_pit",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Pit. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera falls into the pit filled with muddy water."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "waiting_for_sheraraj",
+      "motion": "Chiki standing by the water pit, ears perked up and eyes alert., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "realization",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Pit. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands up, shaking off the mud."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_approaches",
+      "motion": "Sheraraj walking towards the water pit, sniffing the air., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "exit_from_cave",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera walks out of his cave."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_reaction",
+      "motion": "Chiki standing still, watching Sheraraj with wide eyes., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "confrontation",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands tall in front of Chiku."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_investigates",
+      "motion": "Sheraraj sniffing the rock and looking around suspiciously., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "lion_s_pride",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands in the middle of the jungle."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_trick",
+      "motion": "Chiki jumping into the water pit, making a splash., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "reflection",
-      "image": "शेर: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Shera’s Cave. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera sits in a meditative pose."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_surprise",
+      "motion": "Sheraraj looking at the water pit, eyes wide with surprise., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "change_and_respect",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Shera stands tall in front of Chiku."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_triumph",
+      "motion": "Chiki standing in the water pit, looking satisfied and victorious., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "together",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_realization",
+      "motion": "Sheraraj looking at Chiki in the water pit, eyes narrowing in realization., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     },
     {
-      "title": "end_credits",
-      "image": "चीकू: A young rabbit with creamy white fur and brown patches, large expressive eyes, long ears. He looks alert and intelligent. Sheraj: A majestic lion with golden fur, a dark brown mane, and sharp eyes. He stands tall in the jungle, looking powerful and intimidating. Location: Jungle. High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering.",
-      "motion": "Chiku and Sershraj stand together watching the sunrise."
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_end_of_the_conflict",
+      "motion": "Chiki and Sheraraj standing side by side at the edge of the water pit, looking at each other., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_surprise",
+      "motion": "Chiki jumps into the water pit, creating a splash. Sheraraj looks surprised., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_reaction",
+      "motion": "Sheraraj steps back, lowering his head. Chiki stands at the edge of the pit looking up., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_explains",
+      "motion": "Chiki points to the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_acknowledges",
+      "motion": "Sheraraj nods his head. Chiki smiles back., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_and_sheraraj_walk_together",
+      "motion": "Chiki and Sheraraj walk side by side out of the jungle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_and_hiran_watch",
+      "motion": "Bandar and Hiran watch Chiki and Sheraraj from a distance., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "approaching_friends",
+      "motion": "Bandar and Hiran walk towards Chiki and Sheraraj., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sitting_together",
+      "motion": "All four characters sit together in the jungle., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_confidence",
+      "motion": "Chiki stands tall with hands on hips., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_praise",
+      "motion": "Sheraraj pats Chiki on the back., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_and_hiran_join",
+      "motion": "Bandar and Hiran join the group., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_end_of_the_celebration",
+      "motion": "Everyone sits together in the jungle enjoying the peaceful moment., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_anger",
+      "motion": "Sheraraj clenches his fists. Chiki bounces on one foot., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_warning",
+      "motion": "Chiki points to the water pit. Sheraraj looks at it., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_leap",
+      "motion": "Sheraraj leaps into the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "falling_into_water",
+      "motion": "Sheraraj falls into the water pit, causing a splash., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_s_reaction",
+      "motion": "Chiki watches Sheraraj fall into the water pit. Grinning., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_s_surprise",
+      "motion": "Bandar looks at the splash., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "hiran_s_concern",
+      "motion": "Hiran looks at Sheraraj in the water., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_s_rescue_attempt",
+      "motion": "Bandar climbs down the pit. He tries to pull Sheraraj out., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_realization",
+      "motion": "Sheraraj laughs, floating on his back., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_s_success",
+      "motion": "Bandar pulls Sheraraj out. Sheraraj coughs water out., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "everyone_s_laughter",
+      "motion": "Everyone laughs at the scene., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_end_of_the_conflict",
+      "motion": "Chiki and Sheraraj shake hands., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_prideful_leap",
+      "motion": "Sheraraj leaps into the air and slips, falling into the water with a splash., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "water_splash",
+      "motion": "Water splashes up around Sheraraj's falling body., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_approaches_curiously",
+      "motion": "Chiki hops cautiously to the edge of the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "bandar_and_hiran_join",
+      "motion": "Bandar and Hiran join Chiki at the edge of the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_looks_up",
+      "motion": "Sheraraj looks up from the water, realizing his fall., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "discussion_at_the_pit",
+      "motion": "Chiki and friends discuss Sheraraj's mistake., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_realization",
+      "motion": "Sheraraj sits quietly on the edge of the pit, deep in thought., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "celebration_of_peace",
+      "motion": "The animals celebrate peace by dancing and laughing., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_leads_the_celebration",
+      "motion": "Chiki dances energetically around the pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "friends_gather_around",
+      "motion": "Friends gather around Chiki for the celebration., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_reflects_on_his_mistake",
+      "motion": "Sheraraj reflects on his mistake and nods with understanding., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "the_end_of_the_story",
+      "motion": "The animals continue their celebration with laughter and joy., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_reflects",
+      "motion": "Sheraraj stands by the water pit, deep in thought., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_encourages_sheraraj",
+      "motion": "Chiki approaches Sheraraj and speaks gently., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_learns",
+      "motion": "Sheraraj listens attentively to Chiki., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_transformation",
+      "motion": "Sheraraj sits by the water pit, thinking deeply., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "animals_gather",
+      "motion": "The animals gather around the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "celebration_begins",
+      "motion": "The animals start dancing and playing around the water pit., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_joins_in",
+      "motion": "Sheraraj starts dancing with the animals., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "animals_hug_sheraraj",
+      "motion": "The animals hug Sheraraj warmly., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "peace_restored",
+      "motion": "The animals continue their celebration with laughter and joy., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_s_new_leadership",
+      "motion": "Sheraraj leads the animals in a new way., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "end_of_the_story",
+      "motion": "The animals continue their celebration with laughter and joy., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "peace_restored",
+      "motion": "The animals continue their celebration with laughter and joy., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_reflects",
+      "motion": "Sheraraj sits quietly by the water pit while Chiki plays with a stick nearby., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "chiki_explains",
+      "motion": "Chiki points to the water and explains about balance., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [
+        {
+          "line": "बर्तन को बल देना होता है।",
+          "speaker": ""
+        }
+      ],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "sheraraj_learns",
+      "motion": "Sheraraj nods in agreement with Chiki., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
+    },
+    {
+      "image": "शेरारज (powerful, arrogant, fierce, antagonist) with tall and muscular body, golden brown fur, sharp intimidating eyes, pointed ears. चीकू (rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass). बंदर (monkey with nimble and agile body, golden fur, bright mischievous eyes, pointed ears). हिरण (deer with graceful and strong body, brown fur with white spots, big expressive eyes, pointed ears). पानी भरे कुएँ (large circular pit filled with clear blue water, surrounded by lush greenery and tall trees). जंगल (tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy). Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering.",
+      "title": "peace_celebrated",
+      "motion": "All animals gather around the water pit celebrating peace., Keep the exact character, face, clothing, colors, lighting and background from the input image — do not redesign, restyle or change anything; animate natural motion only",
+      "dialogue": [],
+      "duration": 3
     }
   ],
-  "folder_name": "rabbit_and_lion"
+  "description": "Rabbit and Lion — A clever but small rabbit named Chiki challenges a powerful lion, Sheraraj, to prove his intelligence and save the jungle from fear.",
+  "folder_name": "rabbit_and_lion",
+  "referencePrompt": "rabbit with small and agile body, brownish white fur, bright intelligent eyes, large floppy ears, shorts made of grass, tall trees with green leaves, colorful flowers, a serene water-filled pit in the middle of lush greenery, golden brown sunlight filtering through the canopy, Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering"
 }

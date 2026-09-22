@@ -9,6 +9,8 @@ import {
   sceneCountFor,
   styleLockFor,
   styleKeyFor,
+  MOTION_FIDELITY_LOCK,
+  motionKeyFor,
   stripJson,
   normalizeBlueprint,
   normalizeScene,
@@ -175,7 +177,10 @@ describe("boardToScenario", () => {
     assert.ok(cfg.sequence[0].image.toLowerCase().includes("anime"));
     // Already-locked prompts are not doubled.
     assert.equal((cfg.sequence[1].image.match(/anime/gi) || []).length, 1);
-    assert.equal(cfg.sequence[0].motion, "mouse stretches");
+    // Motion keeps the action and carries the fidelity lock (motion-only clips).
+    assert.ok(cfg.sequence[0].motion.includes("mouse stretches"));
+    assert.ok(cfg.sequence[0].motion.includes("animate natural motion only"));
+    assert.equal((cfg.sequence[0].motion.match(/animate natural motion only/gi) || []).length, 1);
   });
   it("anchors the reference on the main character + lock", () => {
     const cfg = boardToScenario(board);
@@ -205,5 +210,21 @@ describe("boardToScenario", () => {
     assert.ok(cfg.sequence[0].image.includes("orange tabby cat"));
     assert.ok(cfg.sequence[0].image.includes("small grey mouse"));
     assert.ok(!cfg.sequence[0].motion.includes("(cat)"));
+    // Motion carries the fidelity lock so the clip only animates the keyframe.
+    assert.ok(cfg.sequence[0].motion.includes("Whiskers"));
+    assert.ok(cfg.sequence[0].motion.includes("animate natural motion only"));
+  });
+  it("motion-only fidelity: empty motion becomes the lock, locked motion is not doubled", () => {
+    const mk = (video_prompt) => boardToScenario({
+      input: { title: "M", visualStyle: "Anime", sceneSeconds: 5 },
+      blueprint: { characters: [], locations: [] },
+      scenes: [{ title: "S", image_prompt: "x", video_prompt }],
+    }).sequence[0].motion;
+    assert.equal(mk(""), MOTION_FIDELITY_LOCK);
+    const once = mk("waves hand");
+    assert.ok(once.includes("waves hand"));
+    assert.equal((once.match(/animate natural motion only/gi) || []).length, 1);
+    const twice = mk("waves hand, animate natural motion only");
+    assert.equal((twice.match(/animate natural motion only/gi) || []).length, 1);
   });
 });

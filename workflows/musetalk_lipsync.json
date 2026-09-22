@@ -1,0 +1,6 @@
+{
+  "template": true,
+  "instructions": "PLACEHOLDER — replace this entire file with your ComfyUI MuseTalk API-format workflow JSON. Steps: (1) install the ComfyUI-MuseTalk custom nodes + MuseTalk models on the ComfyUI host (COMFY_BASE), (2) build a video+audio lip-sync workflow in ComfyUI, (3) export it as API format, (4) put the two input filename fields where your Load Video / Load Audio nodes read them as the literal tokens {{VIDEO}} and {{AUDIO}}, (5) save over this file (or point MUSETALK_WORKFLOW at your file). The driver uploads each beat's silent clip + dialogue wav to ComfyUI's input folder, substitutes the tokens with those filenames, queues the graph, and downloads the result as the talking video. Until this file holds a real workflow, the Video LipSync section keeps the MuseTalk engine option disabled and runs use Easy-Wav2Lip.",
+  "requires_tokens": ["{{VIDEO}}", "{{AUDIO}}"],
+  "used_by": "lib/dialogue_pipeline.mjs lipSyncViaMuseTalkComfy (LIPSYNC_PROVIDER=musetalk-comfy, or the LipSync section engine dropdown)"
+}

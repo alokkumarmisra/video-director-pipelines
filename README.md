@@ -61,6 +61,10 @@ COMFY_BASE="https://YOUR-COMFYUI-HOST"
 |-----|---------|---------|
 | `COMFY_BASE` | *(required, from `.env`)* | ComfyUI API base (tunnel/proxy or host:port) |
 | `WORKFLOWS_DIR` | `workflows/` (inside video_test) | where the base workflow JSONs live |
+| `TTS_PROVIDER` | `edge-tts` | TTS engine for dialogue (`edge-tts` = local Edge-TTS Hindi voices) |
+| `LIPSYNC_PROVIDER` | `wav2lip` | lip-sync engine (`wav2lip` = local Easy-Wav2Lip, `musetalk-comfy` = ComfyUI workflow) |
+| `MUSETALK_WORKFLOW` | `workflows/musetalk_lipsync.json` | MuseTalk workflow JSON (must contain `{{VIDEO}}`/`{{AUDIO}}` tokens) |
+| `EASY_WAV2LIP_DIR` / `EASY_WAV2LIP_PYTHON` | install paths | local Easy-Wav2Lip checkout + venv python |
 
 `lib/comfy.mjs` loads `.env` automatically (tiny built-in parser, no deps; real
 environment variables always win). No API keys needed. Node ≥ 18 (uses global
@@ -93,6 +97,33 @@ on an input-folder image, not an in-graph tensor from another model.
 - `ratio` — any `ResolutionSelector` option, e.g. `"9:16 (Portrait Widescreen)"`
 - `fluxPrompt` / `ltxPrompt` — the LTX prompt should describe **motion + camera**,
   the Flux prompt the **static key frame**; keep them consistent
+
+## Character dialogue + lip-sync
+
+Beats carry `dialogue: [{ speaker, line }]` (+ optional `tts.voices` per-character
+casting). After clips exist, run the voice + lip-sync pass:
+
+```bash
+node scripts/dialogue_lipsync.mjs rabbit_lion_dialogue   # all dialogue beats
+node scripts/dialogue_lipsync.mjs rabbit_lion_dialogue --beats 1 --no-stitch
+```
+
+Per beat: Edge-TTS Hindi voice → clip loop-extended to the voice length →
+lip-sync → new clip version + re-stitched final. Beats with **2+ speakers are
+segmented automatically** (`lib/dialogue_pipeline.mjs`): one clip window per
+line from the line's actual audio length, each synced to its own speaker's
+voice, then merged — Rabbit's mouth never moves to Lion's voice.
+
+Dialogue APIs (see the Video LipSync page for the 🎙/🎬/👄/🎞 status pills):
+
+```bash
+GET /api/project/<name>/dialogue              # per-beat lines + stage status
+PUT /api/project/<name>/scene/<n>/dialogue    # edit lines (stale voice wavs
+                                              #   are invalidated; retry via
+                                              #   POST /api/runs {mode:"dialogue",beats:"N"})
+```
+
+Test scenario: `prompts/rabbit_lion_dialogue.json` (Rabbit + Lion, Hindi).
 
 ## Typical timings (RTX 3080 Ti, 960×512, 3s)
 

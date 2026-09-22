@@ -20,7 +20,7 @@ interface Props {
   // refGenerating spins it — other runs must not light up this button.
   refGenerating?: boolean;
   isDraft: boolean;
-  // Reference gallery rendered just below the Generate Reference button.
+  // Reference gallery rendered on top of the reference prompt.
   referenceSlot?: ReactNode;
 }
 
@@ -66,6 +66,7 @@ export default function GenerateReference({
         </button>
       </div>
       <Collapse open={!collapsed}>
+      {referenceSlot}
       <label>Reference prompt — Flux t2i key visual</label>
       <textarea
         rows={3}
@@ -98,9 +99,8 @@ export default function GenerateReference({
       {isDraft ? (
         <p className="hint">Save the scenario first — reference generation runs from the saved prompt.</p>
       ) : (
-        <p className="hint">Generate saves the prompt above first, then renders — each image becomes a new reference version; pick the best one below.</p>
+        <p className="hint">Generate saves the prompt above first, then renders — each image becomes a new reference version; pick the best one above.</p>
       )}
-      {referenceSlot}
       </Collapse>
     </section>
   );

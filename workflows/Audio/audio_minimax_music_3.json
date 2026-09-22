@@ -1,0 +1,1187 @@
+{
+  "id": "08882d3e-437d-43da-b498-083de04a60a6",
+  "revision": 0,
+  "last_node_id": 43,
+  "last_link_id": 63,
+  "nodes": [
+    {
+      "id": 35,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        2150,
+        630
+      ],
+      "size": [
+        750,
+        160
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": [
+        "audio/audio_minimax_music3",
+        "mp3",
+        "V0"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "audio/audio_minimax_music3",
+        "format": "mp3",
+        "format.quality": "V0"
+      }
+    },
+    {
+      "id": 37,
+      "type": "ac99f841-a3de-4329-9564-953b81cf9e16",
+      "pos": [
+        1620,
+        630
+      ],
+      "size": [
+        490,
+        540
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "tiled_decode",
+          "name": "switch",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "switch"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            42
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "previewExposures": []
+      },
+      "widgets_values": [
+        "cinematic devotional narration, slow dramatic pacing, epic temple ambience with a mysterious calm opening and gradual tension build, deep clear male bass narrator with powerful delivery, emotional pauses and occasional whispered intensity, deep pakhawaj, large temple drums, damru rhythms, tanpura drone, bansuri, conch shell and temple bells, Sanskrit-inspired chanting textures, massive low brass, cinematic strings, deep atmospheric drones, Himalayan wind ambience, thunderous impacts, building to a massive crescendo at the third eye and Tandava",
+        "**महादेव...**\n\nएक ऐसा नाम, जिसे सुनते ही मन में एक साथ कई भाव जाग उठते हैं।\n\nशांति भी...\nभय भी...\nकरुणा भी...\nऔर अनंत शक्ति का एहसास भी।\n\nवे देवों के देव हैं...\nमहादेव हैं।\n\nन उनका कोई आदि दिखाई देता है...\nन कोई अंत।\n\nजब सृष्टि का अस्तित्व भी नहीं था...\nजब समय ने चलना शुरू नहीं किया था...\nतब भी जो तत्व विद्यमान था—\nवही शिव था।\n\nऔर जब एक दिन यह संपूर्ण सृष्टि अपने अंतिम क्षण में प्रवेश करेगी...\nजब आकाश, पृथ्वी, अग्नि, जल और वायु अपने मूल में विलीन हो जाएंगे...\nतब भी जो शेष रहेगा—\nवही शिव होगा।\n\n**कैलाश पर्वत की ऊंचाइयों पर...**\nजहां बर्फीली हवाएं निरंतर बहती हैं...\nजहां आकाश धरती को छूता हुआ प्रतीत होता है...\nवहां विराजमान हैं—\nभगवान शिव।\n\nउनका शरीर भस्म से विभूषित है।\n\nयह भस्म केवल राख नहीं है।\n\nयह संसार को याद दिलाती है कि—\nजिस शरीर पर मनुष्य इतना गर्व करता है...\nएक दिन वही शरीर पंचतत्व में विलीन हो जाएगा।\n\nमहादेव अपने शरीर पर भस्म लगाकर संसार को बताते हैं—\n\n**\"अहंकार मत करो...\nक्योंकि अंत में सब कुछ मिट्टी और भस्म ही है।\"**\n\nउनका शरीर तपस्या से स्थिर है।\n\nमांसल शक्ति का प्रदर्शन नहीं...\nबल्कि योग से जन्मी ऐसी शक्ति,\nजिसके सामने स्वयं प्रकृति भी नतमस्तक हो जाए।\n\nउनकी छाती विशाल है...\nभुजाएं शक्तिशाली हैं...\nऔर उनका शरीर एक ऐसे योगी का प्रतीक है,\nजिसने अपनी इंद्रियों और मन पर विजय प्राप्त कर ली है।\n\nउनकी आंखें...\nविशेष रूप से उनकी तीन आंखें...\n\nदो आंखें संसार को देखती हैं।\n\nलेकिन तीसरी आंख—\nसत्य को देखती है।\n\nउनके मस्तक के मध्य स्थित तीसरा नेत्र\nकेवल एक आंख नहीं है।\n\nयह दिव्य चेतना और प्रलयंकारी शक्ति का प्रतीक है।\n\nजब यह नेत्र खुलता है...\nतो अधर्म, अहंकार और अज्ञान का विनाश होता है।\n\nइसीलिए शिव की तीसरी आंख को\nसृष्टि की सबसे भयंकर शक्तियों में से एक माना जाता है।\n\nउनके माथे पर चंद्रमा सुशोभित है।\n\nशीतल...\nशांत...\nऔर प्रकाशमान।\n\nजिसके भीतर स्वयं समय के चक्र का प्रतीक छिपा है।\n\nऔर उनकी जटाएं...\n\nघनी...\nविशाल...\nऔर आकाश की तरह स्वतंत्र।\n\nउन जटाओं में विराजमान हैं—\n**मां गंगा।**\n\nजब गंगा स्वर्ग से पृथ्वी की ओर उतरने लगीं,\nतो उनके प्रचंड वेग को रोकने के लिए\nमहादेव ने उन्हें अपनी जटाओं में धारण किया।\n\nइसीलिए शिव केवल संहार के देव नहीं हैं।\n\nवे जीवन के रक्षक भी हैं।\n\nउनकी जटाओं में बहती गंगा\nकरुणा और शुद्धि का प्रतीक है।\n\nऔर उनकी जटाओं के बीच...\nएक और अद्भुत शक्ति का प्रतीक दिखाई देता है—\n\n**अर्धचंद्र।**\n\nउनके गले में है—\nएक विशाल नाग।\n\n**वासुकि।**\n\nजहां सामान्य मनुष्य सर्प को देखकर भयभीत हो जाता है,\nवहीं महादेव सर्प को अपने गले का आभूषण बना लेते हैं।\n\nयह संदेश है—\n\nजिस भय से संसार डरता है,\nमहादेव उस भय को भी अपने नियंत्रण में रखते हैं।\n\nउनका वाहन है—\n**नंदी।**\n\nशांत...\nशक्तिशाली...\nऔर सदैव अपने स्वामी की ओर देखने वाला।\n\nनंदी केवल वाहन नहीं,\nशिव के प्रति पूर्ण समर्पण का प्रतीक हैं।\n\nमहादेव के हाथ में रहता है—\n**त्रिशूल।**\n\nतीन शूल वाला यह दिव्य अस्त्र\nतीन शक्तियों का प्रतीक माना जाता है—\n\nसृष्टि...\nस्थिति...\nऔर संहार।\n\nऔर शिव के हाथ में है—\n**डमरू।**\n\nजब महादेव डमरू बजाते हैं,\nतो उसकी ध्वनि केवल संगीत नहीं होती।\n\nवह सृष्टि की लय का प्रतीक बन जाती है।\n\nएक ओर डमरू—\nसृजन की ध्वनि।\n\nदूसरी ओर त्रिशूल—\nसंहार की शक्ति।\n\nऔर इनके मध्य खड़े हैं—\nमहादेव।\n\nसृजन और विनाश के बीच संतुलन।\n\nउनका वस्त्र?\n\nएक साधारण योगी की तरह—\nव्याघ्रचर्म।\n\nन राजसी मुकुट...\nन सोने के वस्त्र...\nन सांसारिक वैभव।\n\nमहादेव को संसार के धन की आवश्यकता नहीं।\n\nउनका वैभव स्वयं कैलाश है।\n\nउनका आभूषण प्रकृति है।\n\nउनका सिंहासन ध्यान है।\n\nऔर उनका साम्राज्य—\nसमस्त ब्रह्मांड।\n\nमहादेव के एक हाथ में त्रिशूल है...\nदूसरे में डमरू...\n\nउनकी जटाएं हवाओं में लहरा रही हैं...\nगले में नाग है...\nमस्तक पर चंद्रमा है...\nजटाओं में गंगा है...\nऔर पूरे शरीर पर भस्म।\n\nलेकिन उनके चेहरे पर?\n\nअद्भुत शांति।\n\nयही तो महादेव हैं।\n\n**रौद्र भी...\nऔर शांत भी।**\n\n**संहारक भी...\nऔर रक्षक भी।**\n\n**योगी भी...\nऔर गृहस्थ भी।**\n\nउनके पास बैठती हैं—\nमां पार्वती।\n\nउनके पुत्र हैं—\nश्री गणेश और भगवान कार्तिकेय।\n\nऔर उनके परिवार की यही छवि बताती है कि\nमहादेव केवल प्रलय के देव नहीं,\nबल्कि प्रेम और परिवार के भी प्रतीक हैं।\n\nलेकिन जब अधर्म अपनी सीमा पार कर देता है...\n\nजब संसार का संतुलन बिगड़ने लगता है...\n\nजब अत्याचार अपनी चरम सीमा पर पहुंच जाता है...\n\nतब शांत बैठे महादेव का रौद्र रूप जाग उठता है।\n\nउनका तांडव प्रारंभ होता है।\n\nडमरू की ध्वनि गूंजती है...\n\nआकाश कांप उठता है...\n\nपर्वतों की स्थिरता डगमगाने लगती है...\n\nऔर महादेव का प्रत्येक कदम\nमानो समय के पहिए को गति देने लगता है।\n\nयही है—\n**नटराज।**\n\nसृष्टि की लय...\nजीवन का चक्र...\nऔर विनाश के बाद नए सृजन का संकेत।\n\nमहादेव की शक्तियां केवल अस्त्रों में नहीं हैं।\n\nउनकी सबसे बड़ी शक्ति है—\n**उनका स्वयं पर नियंत्रण।**\n\nउन्होंने काम पर विजय पाई।\n\nक्रोध को नियंत्रित किया।\n\nमोह से ऊपर उठे।\n\nअहंकार का त्याग किया।\n\nऔर ध्यान में ऐसी अवस्था प्राप्त की,\nजहां मनुष्य की सीमाएं समाप्त हो जाती हैं।\n\nइसीलिए उन्हें कहा जाता है—\n\n**आदि योगी।**\n\nयोग के प्रथम गुरु।\n\nज्ञान के प्रथम गुरु।\n\nऔर उस चेतना के प्रतीक,\nजो शरीर से कहीं अधिक विशाल है।\n\nमहादेव को प्रसन्न करने के लिए\nभव्य महलों की आवश्यकता नहीं।\n\nएक बेलपत्र...\nएक लोटा जल...\nऔर सच्ची श्रद्धा...\n\nइतना ही पर्याप्त माना जाता है।\n\nक्योंकि महादेव को दिखावा नहीं चाहिए।\n\nउन्हें चाहिए—\n**भक्ति।**\n\nऔर शायद यही कारण है कि\nउनका एक नाम है—\n\n**भोलेनाथ।**\n\nजो जल्दी प्रसन्न होते हैं।\n\nजो अपने भक्त की पुकार सुनते हैं।\n\nजो शरण में आए व्यक्ति को स्वीकार करते हैं।\n\nलेकिन यही भोलेनाथ\nजब रौद्र रूप धारण करते हैं,\nतो तीनों लोकों की शक्तियां भी उनके",
+        60,
+        108492196473004,
+        "minimax_music3_dit_fp16.safetensors",
+        "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+        "minimax_music3_dav.safetensors",
+        true
+      ],
+      "widgets_values_named": {
+        "caption": "cinematic devotional narration, slow dramatic pacing, epic temple ambience with a mysterious calm opening and gradual tension build, deep clear male bass narrator with powerful delivery, emotional pauses and occasional whispered intensity, deep pakhawaj, large temple drums, damru rhythms, tanpura drone, bansuri, conch shell and temple bells, Sanskrit-inspired chanting textures, massive low brass, cinematic strings, deep atmospheric drones, Himalayan wind ambience, thunderous impacts, building to a massive crescendo at the third eye and Tandava",
+        "lyrics": "**महादेव...**\n\nएक ऐसा नाम, जिसे सुनते ही मन में एक साथ कई भाव जाग उठते हैं।\n\nशांति भी...\nभय भी...\nकरुणा भी...\nऔर अनंत शक्ति का एहसास भी।\n\nवे देवों के देव हैं...\nमहादेव हैं।\n\nन उनका कोई आदि दिखाई देता है...\nन कोई अंत।\n\nजब सृष्टि का अस्तित्व भी नहीं था...\nजब समय ने चलना शुरू नहीं किया था...\nतब भी जो तत्व विद्यमान था—\nवही शिव था।\n\nऔर जब एक दिन यह संपूर्ण सृष्टि अपने अंतिम क्षण में प्रवेश करेगी...\nजब आकाश, पृथ्वी, अग्नि, जल और वायु अपने मूल में विलीन हो जाएंगे...\nतब भी जो शेष रहेगा—\nवही शिव होगा।\n\n**कैलाश पर्वत की ऊंचाइयों पर...**\nजहां बर्फीली हवाएं निरंतर बहती हैं...\nजहां आकाश धरती को छूता हुआ प्रतीत होता है...\nवहां विराजमान हैं—\nभगवान शिव।\n\nउनका शरीर भस्म से विभूषित है।\n\nयह भस्म केवल राख नहीं है।\n\nयह संसार को याद दिलाती है कि—\nजिस शरीर पर मनुष्य इतना गर्व करता है...\nएक दिन वही शरीर पंचतत्व में विलीन हो जाएगा।\n\nमहादेव अपने शरीर पर भस्म लगाकर संसार को बताते हैं—\n\n**\"अहंकार मत करो...\nक्योंकि अंत में सब कुछ मिट्टी और भस्म ही है।\"**\n\nउनका शरीर तपस्या से स्थिर है।\n\nमांसल शक्ति का प्रदर्शन नहीं...\nबल्कि योग से जन्मी ऐसी शक्ति,\nजिसके सामने स्वयं प्रकृति भी नतमस्तक हो जाए।\n\nउनकी छाती विशाल है...\nभुजाएं शक्तिशाली हैं...\nऔर उनका शरीर एक ऐसे योगी का प्रतीक है,\nजिसने अपनी इंद्रियों और मन पर विजय प्राप्त कर ली है।\n\nउनकी आंखें...\nविशेष रूप से उनकी तीन आंखें...\n\nदो आंखें संसार को देखती हैं।\n\nलेकिन तीसरी आंख—\nसत्य को देखती है।\n\nउनके मस्तक के मध्य स्थित तीसरा नेत्र\nकेवल एक आंख नहीं है।\n\nयह दिव्य चेतना और प्रलयंकारी शक्ति का प्रतीक है।\n\nजब यह नेत्र खुलता है...\nतो अधर्म, अहंकार और अज्ञान का विनाश होता है।\n\nइसीलिए शिव की तीसरी आंख को\nसृष्टि की सबसे भयंकर शक्तियों में से एक माना जाता है।\n\nउनके माथे पर चंद्रमा सुशोभित है।\n\nशीतल...\nशांत...\nऔर प्रकाशमान।\n\nजिसके भीतर स्वयं समय के चक्र का प्रतीक छिपा है।\n\nऔर उनकी जटाएं...\n\nघनी...\nविशाल...\nऔर आकाश की तरह स्वतंत्र।\n\nउन जटाओं में विराजमान हैं—\n**मां गंगा।**\n\nजब गंगा स्वर्ग से पृथ्वी की ओर उतरने लगीं,\nतो उनके प्रचंड वेग को रोकने के लिए\nमहादेव ने उन्हें अपनी जटाओं में धारण किया।\n\nइसीलिए शिव केवल संहार के देव नहीं हैं।\n\nवे जीवन के रक्षक भी हैं।\n\nउनकी जटाओं में बहती गंगा\nकरुणा और शुद्धि का प्रतीक है।\n\nऔर उनकी जटाओं के बीच...\nएक और अद्भुत शक्ति का प्रतीक दिखाई देता है—\n\n**अर्धचंद्र।**\n\nउनके गले में है—\nएक विशाल नाग।\n\n**वासुकि।**\n\nजहां सामान्य मनुष्य सर्प को देखकर भयभीत हो जाता है,\nवहीं महादेव सर्प को अपने गले का आभूषण बना लेते हैं।\n\nयह संदेश है—\n\nजिस भय से संसार डरता है,\nमहादेव उस भय को भी अपने नियंत्रण में रखते हैं।\n\nउनका वाहन है—\n**नंदी।**\n\nशांत...\nशक्तिशाली...\nऔर सदैव अपने स्वामी की ओर देखने वाला।\n\nनंदी केवल वाहन नहीं,\nशिव के प्रति पूर्ण समर्पण का प्रतीक हैं।\n\nमहादेव के हाथ में रहता है—\n**त्रिशूल।**\n\nतीन शूल वाला यह दिव्य अस्त्र\nतीन शक्तियों का प्रतीक माना जाता है—\n\nसृष्टि...\nस्थिति...\nऔर संहार।\n\nऔर शिव के हाथ में है—\n**डमरू।**\n\nजब महादेव डमरू बजाते हैं,\nतो उसकी ध्वनि केवल संगीत नहीं होती।\n\nवह सृष्टि की लय का प्रतीक बन जाती है।\n\nएक ओर डमरू—\nसृजन की ध्वनि।\n\nदूसरी ओर त्रिशूल—\nसंहार की शक्ति।\n\nऔर इनके मध्य खड़े हैं—\nमहादेव।\n\nसृजन और विनाश के बीच संतुलन।\n\nउनका वस्त्र?\n\nएक साधारण योगी की तरह—\nव्याघ्रचर्म।\n\nन राजसी मुकुट...\nन सोने के वस्त्र...\nन सांसारिक वैभव।\n\nमहादेव को संसार के धन की आवश्यकता नहीं।\n\nउनका वैभव स्वयं कैलाश है।\n\nउनका आभूषण प्रकृति है।\n\nउनका सिंहासन ध्यान है।\n\nऔर उनका साम्राज्य—\nसमस्त ब्रह्मांड।\n\nमहादेव के एक हाथ में त्रिशूल है...\nदूसरे में डमरू...\n\nउनकी जटाएं हवाओं में लहरा रही हैं...\nगले में नाग है...\nमस्तक पर चंद्रमा है...\nजटाओं में गंगा है...\nऔर पूरे शरीर पर भस्म।\n\nलेकिन उनके चेहरे पर?\n\nअद्भुत शांति।\n\nयही तो महादेव हैं।\n\n**रौद्र भी...\nऔर शांत भी।**\n\n**संहारक भी...\nऔर रक्षक भी।**\n\n**योगी भी...\nऔर गृहस्थ भी।**\n\nउनके पास बैठती हैं—\nमां पार्वती।\n\nउनके पुत्र हैं—\nश्री गणेश और भगवान कार्तिकेय।\n\nऔर उनके परिवार की यही छवि बताती है कि\nमहादेव केवल प्रलय के देव नहीं,\nबल्कि प्रेम और परिवार के भी प्रतीक हैं।\n\nलेकिन जब अधर्म अपनी सीमा पार कर देता है...\n\nजब संसार का संतुलन बिगड़ने लगता है...\n\nजब अत्याचार अपनी चरम सीमा पर पहुंच जाता है...\n\nतब शांत बैठे महादेव का रौद्र रूप जाग उठता है।\n\nउनका तांडव प्रारंभ होता है।\n\nडमरू की ध्वनि गूंजती है...\n\nआकाश कांप उठता है...\n\nपर्वतों की स्थिरता डगमगाने लगती है...\n\nऔर महादेव का प्रत्येक कदम\nमानो समय के पहिए को गति देने लगता है।\n\nयही है—\n**नटराज।**\n\nसृष्टि की लय...\nजीवन का चक्र...\nऔर विनाश के बाद नए सृजन का संकेत।\n\nमहादेव की शक्तियां केवल अस्त्रों में नहीं हैं।\n\nउनकी सबसे बड़ी शक्ति है—\n**उनका स्वयं पर नियंत्रण।**\n\nउन्होंने काम पर विजय पाई।\n\nक्रोध को नियंत्रित किया।\n\nमोह से ऊपर उठे।\n\nअहंकार का त्याग किया।\n\nऔर ध्यान में ऐसी अवस्था प्राप्त की,\nजहां मनुष्य की सीमाएं समाप्त हो जाती हैं।\n\nइसीलिए उन्हें कहा जाता है—\n\n**आदि योगी।**\n\nयोग के प्रथम गुरु।\n\nज्ञान के प्रथम गुरु।\n\nऔर उस चेतना के प्रतीक,\nजो शरीर से कहीं अधिक विशाल है।\n\nमहादेव को प्रसन्न करने के लिए\nभव्य महलों की आवश्यकता नहीं।\n\nएक बेलपत्र...\nएक लोटा जल...\nऔर सच्ची श्रद्धा...\n\nइतना ही पर्याप्त माना जाता है।\n\nक्योंकि महादेव को दिखावा नहीं चाहिए।\n\nउन्हें चाहिए—\n**भक्ति।**\n\nऔर शायद यही कारण है कि\nउनका एक नाम है—\n\n**भोलेनाथ।**\n\nजो जल्दी प्रसन्न होते हैं।\n\nजो अपने भक्त की पुकार सुनते हैं।\n\nजो शरण में आए व्यक्ति को स्वीकार करते हैं।\n\nलेकिन यही भोलेनाथ\nजब रौद्र रूप धारण करते हैं,\nतो तीनों लोकों की शक्तियां भी उनके",
+        "max_duration": 60,
+        "seed": 108492196473004,
+        "unet_name": "minimax_music3_dit_fp16.safetensors",
+        "clip_name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+        "vae_name": "minimax_music3_dav.safetensors",
+        "switch": true
+      }
+    },
+    {
+      "id": 39,
+      "type": "MarkdownNote",
+      "pos": [
+        1050,
+        630
+      ],
+      "size": [
+        520,
+        660
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "Note: MiniMax Music 3",
+      "properties": {},
+      "widgets_values": [
+        "## MiniMax Music 3\n\nA music generation model by MiniMax that creates complete songs up to 5 minutes long with stable structure and high audio quality. Two inputs drive it: **Caption** (structured music description: style, mood, vocals, arrangement) and **Lyrics** (with `[intro]` `[verse]` `[chorus]` `[bridge]` `[outro]` tags controlling song structure).\n\n### Parameters\n\n| Parameter | Description |\n|---|---|\n| Caption | Music description. Write it in three sections — Global Metadata → Vocal Details → Arrangement. The more specific, the closer the result. |\n| Lyrics | Song lyrics + section tags. Tags are the only executable structural instructions; the lyric text itself only conveys mood. |\n| max_duration | Target song length in seconds (default 120 = 2 minutes; the model supports up to ~300 s / 5 minutes). Longer songs take more time and VRAM. |\n| seed | Random seed for the generation. Keep it fixed to reproduce the same song; change it to get a different take. |\n| Model files | diffusion model / text encoder / VAE.|\n| Tiled decode | Decode the audio VAE in overlapping tiles to drastically cut VRAM usage — helpful for long songs on low-VRAM GPUs. Slightly slower, with a small risk of seams at tile boundaries; turn it off on high-VRAM GPUs for the best quality. |\n\n### Prompt Writing Guide\n\nYou can find an official [Music Caption Rewriter Skill here](https://github.com/MiniMax-AI/MiniMax-Music3)"
+      ],
+      "widgets_values_named": {
+        "text": "## MiniMax Music 3\n\nA music generation model by MiniMax that creates complete songs up to 5 minutes long with stable structure and high audio quality. Two inputs drive it: **Caption** (structured music description: style, mood, vocals, arrangement) and **Lyrics** (with `[intro]` `[verse]` `[chorus]` `[bridge]` `[outro]` tags controlling song structure).\n\n### Parameters\n\n| Parameter | Description |\n|---|---|\n| Caption | Music description. Write it in three sections — Global Metadata → Vocal Details → Arrangement. The more specific, the closer the result. |\n| Lyrics | Song lyrics + section tags. Tags are the only executable structural instructions; the lyric text itself only conveys mood. |\n| max_duration | Target song length in seconds (default 120 = 2 minutes; the model supports up to ~300 s / 5 minutes). Longer songs take more time and VRAM. |\n| seed | Random seed for the generation. Keep it fixed to reproduce the same song; change it to get a different take. |\n| Model files | diffusion model / text encoder / VAE.|\n| Tiled decode | Decode the audio VAE in overlapping tiles to drastically cut VRAM usage — helpful for long songs on low-VRAM GPUs. Slightly slower, with a small risk of seams at tile boundaries; turn it off on high-VRAM GPUs for the best quality. |\n\n### Prompt Writing Guide\n\nYou can find an official [Music Caption Rewriter Skill here](https://github.com/MiniMax-AI/MiniMax-Music3)"
+      },
+      "color": "#222",
+      "bgcolor": "#000"
+    },
+    {
+      "id": 40,
+      "type": "MarkdownNote",
+      "pos": [
+        560,
+        630
+      ],
+      "size": [
+        440,
+        680
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "## Model Links\n\n**diffusion_models**\n- [minimax_music3_dit_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_int8_convrot.safetensors) # For low VRAM\n- [minimax_music3_dit_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_fp16.safetensors)\n\n**text_encoders**\n\n- [minimax_music3_text_encoder_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors)\n\n**vae**\n\n- [minimax_music3_dav.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/vae/minimax_music3_dav.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 diffusion_models/\n│   │   ├── minimax_music3_dit_int8_convrot.safetensors # For low VRAM\n│   │   └── minimax_music3_dit_fp16.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── minimax_music3_text_encoder_pruned_int8_convrot.safetensors\n│   └── 📂 vae/\n│       └── minimax_music3_dav.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
+      ],
+      "widgets_values_named": {
+        "text": "## Model Links\n\n**diffusion_models**\n- [minimax_music3_dit_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_int8_convrot.safetensors) # For low VRAM\n- [minimax_music3_dit_fp16.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_fp16.safetensors)\n\n**text_encoders**\n\n- [minimax_music3_text_encoder_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors)\n\n**vae**\n\n- [minimax_music3_dav.safetensors](https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/vae/minimax_music3_dav.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 diffusion_models/\n│   │   ├── minimax_music3_dit_int8_convrot.safetensors # For low VRAM\n│   │   └── minimax_music3_dit_fp16.safetensors\n│   ├── 📂 text_encoders/\n│   │   └── minimax_music3_text_encoder_pruned_int8_convrot.safetensors\n│   └── 📂 vae/\n│       └── minimax_music3_dav.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
+      },
+      "color": "#222",
+      "bgcolor": "#000"
+    }
+  ],
+  "links": [
+    [
+      42,
+      37,
+      0,
+      35,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "definitions": {
+    "subgraphs": [
+      {
+        "id": "ac99f841-a3de-4329-9564-953b81cf9e16",
+        "version": 1,
+        "state": {
+          "lastGroupId": 0,
+          "lastNodeId": 43,
+          "lastLinkId": 63,
+          "lastRerouteId": 0
+        },
+        "revision": 0,
+        "config": {},
+        "name": "Text to Music (MiniMax Music 3)",
+        "inputNode": {
+          "id": -10,
+          "bounding": [
+            320,
+            820,
+            128,
+            208
+          ]
+        },
+        "outputNode": {
+          "id": -20,
+          "bounding": [
+            3210,
+            380,
+            128,
+            68
+          ]
+        },
+        "inputs": [
+          {
+            "id": "9f92b5c5-dadc-4b0f-84d9-b5ed2b3a0842",
+            "name": "caption",
+            "type": "STRING",
+            "linkIds": [
+              45
+            ],
+            "pos": [
+              424,
+              844
+            ]
+          },
+          {
+            "id": "bb9d2920-ba98-4c51-be7d-4b5736b14407",
+            "name": "lyrics",
+            "type": "STRING",
+            "linkIds": [
+              46
+            ],
+            "pos": [
+              424,
+              864
+            ]
+          },
+          {
+            "id": "be60d2f1-fc99-4ed6-a057-130a7b83945f",
+            "name": "max_duration",
+            "type": "FLOAT",
+            "linkIds": [
+              47
+            ],
+            "pos": [
+              424,
+              884
+            ]
+          },
+          {
+            "id": "a7f66596-0413-4906-a08f-475af0521252",
+            "name": "seed",
+            "type": "INT",
+            "linkIds": [
+              54
+            ],
+            "pos": [
+              424,
+              904
+            ]
+          },
+          {
+            "id": "cbfb7b7b-357f-44ab-80cb-8748020a9880",
+            "name": "unet_name",
+            "type": "COMBO",
+            "linkIds": [
+              55
+            ],
+            "pos": [
+              424,
+              924
+            ]
+          },
+          {
+            "id": "ec2e20dc-2e7b-4147-922f-5f5f26ac9854",
+            "name": "clip_name",
+            "type": "COMBO",
+            "linkIds": [
+              56
+            ],
+            "pos": [
+              424,
+              944
+            ]
+          },
+          {
+            "id": "eeefaa94-f342-415e-96e7-eb13dcccbac0",
+            "name": "vae_name",
+            "type": "COMBO",
+            "linkIds": [
+              57
+            ],
+            "pos": [
+              424,
+              964
+            ]
+          },
+          {
+            "id": "6da74b03-27d0-487e-b8d6-f94018b2ca9a",
+            "name": "switch",
+            "type": "BOOLEAN",
+            "linkIds": [
+              63
+            ],
+            "label": "tiled_decode",
+            "pos": [
+              424,
+              984
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "82bef6fd-2dee-4579-b4ed-7d679d18279f",
+            "name": "AUDIO",
+            "type": "AUDIO",
+            "linkIds": [
+              62
+            ],
+            "localized_name": "AUDIO",
+            "pos": [
+              3234,
+              404
+            ]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 6,
+            "type": "UNETLoader",
+            "pos": [
+              700,
+              380
+            ],
+            "size": [
+              480,
+              90
+            ],
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "showAdvanced": false,
+            "inputs": [
+              {
+                "localized_name": "unet_name",
+                "name": "unet_name",
+                "type": "COMBO",
+                "widget": {
+                  "name": "unet_name"
+                },
+                "link": 55
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "MODEL",
+                "name": "MODEL",
+                "type": "MODEL",
+                "links": [
+                  6
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "UNETLoader",
+              "models": [
+                {
+                  "name": "minimax_music3_dit_fp16.safetensors",
+                  "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_fp16.safetensors",
+                  "directory": "diffusion_models"
+                }
+              ]
+            },
+            "widgets_values": [
+              "minimax_music3_dit_fp16.safetensors",
+              "default"
+            ],
+            "widgets_values_named": {
+              "unet_name": "minimax_music3_dit_fp16.safetensors",
+              "weight_dtype": "default"
+            }
+          },
+          {
+            "id": 13,
+            "type": "MiniMaxMusic3TextEncode",
+            "pos": [
+              1230,
+              380
+            ],
+            "size": [
+              500,
+              750
+            ],
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "showAdvanced": true,
+            "inputs": [
+              {
+                "localized_name": "clip",
+                "name": "clip",
+                "type": "CLIP",
+                "link": 18
+              },
+              {
+                "localized_name": "caption",
+                "name": "caption",
+                "type": "STRING",
+                "widget": {
+                  "name": "caption"
+                },
+                "link": 45
+              },
+              {
+                "localized_name": "lyrics",
+                "name": "lyrics",
+                "type": "STRING",
+                "widget": {
+                  "name": "lyrics"
+                },
+                "link": 46
+              },
+              {
+                "localized_name": "seed",
+                "name": "seed",
+                "type": "INT",
+                "widget": {
+                  "name": "seed"
+                },
+                "link": 52
+              },
+              {
+                "localized_name": "max_duration",
+                "name": "max_duration",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "max_duration"
+                },
+                "link": 47
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "CONDITIONING",
+                "name": "CONDITIONING",
+                "type": "CONDITIONING",
+                "links": [
+                  15,
+                  16
+                ]
+              },
+              {
+                "localized_name": "seconds",
+                "name": "seconds",
+                "type": "FLOAT",
+                "links": [
+                  20
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "MiniMaxMusic3TextEncode"
+            },
+            "widgets_values": [
+              "",
+              "",
+              222,
+              "fixed",
+              60,
+              1.7,
+              50
+            ],
+            "widgets_values_named": {
+              "caption": "",
+              "lyrics": "",
+              "seed": 222,
+              "control_after_generate": "fixed",
+              "max_duration": 60,
+              "cfg_scale": 1.7,
+              "top_k": 50
+            }
+          },
+          {
+            "id": 3,
+            "type": "CLIPLoader",
+            "pos": [
+              700,
+              550
+            ],
+            "size": [
+              480,
+              120
+            ],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "clip_name",
+                "name": "clip_name",
+                "type": "COMBO",
+                "widget": {
+                  "name": "clip_name"
+                },
+                "link": 56
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "CLIP",
+                "name": "CLIP",
+                "type": "CLIP",
+                "links": [
+                  18
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "CLIPLoader",
+              "models": [
+                {
+                  "name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+                  "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+                  "directory": "text_encoders"
+                }
+              ]
+            },
+            "widgets_values": [
+              "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+              "minimax",
+              "default"
+            ],
+            "widgets_values_named": {
+              "clip_name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+              "type": "minimax",
+              "device": "default"
+            }
+          },
+          {
+            "id": 7,
+            "type": "VAELoader",
+            "pos": [
+              700,
+              750
+            ],
+            "size": [
+              480,
+              70
+            ],
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "vae_name",
+                "name": "vae_name",
+                "type": "COMBO",
+                "widget": {
+                  "name": "vae_name"
+                },
+                "link": 57
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "VAE",
+                "name": "VAE",
+                "type": "VAE",
+                "links": [
+                  13,
+                  59
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "VAELoader",
+              "models": [
+                {
+                  "name": "minimax_music3_dav.safetensors",
+                  "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/vae/minimax_music3_dav.safetensors",
+                  "directory": "vae"
+                }
+              ]
+            },
+            "widgets_values": [
+              "minimax_music3_dav.safetensors"
+            ],
+            "widgets_values_named": {
+              "vae_name": "minimax_music3_dav.safetensors"
+            }
+          },
+          {
+            "id": 10,
+            "type": "ConditioningZeroOut",
+            "pos": [
+              1820,
+              540
+            ],
+            "size": [
+              230,
+              40
+            ],
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "conditioning",
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": 16
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "CONDITIONING",
+                "name": "CONDITIONING",
+                "type": "CONDITIONING",
+                "links": [
+                  8
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "ConditioningZeroOut"
+            }
+          },
+          {
+            "id": 15,
+            "type": "EmptyMiniMaxMusic3LatentAudio",
+            "pos": [
+              1780,
+              380
+            ],
+            "size": [
+              350,
+              90
+            ],
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "seconds",
+                "name": "seconds",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "seconds"
+                },
+                "link": 20
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [
+                  21
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "EmptyMiniMaxMusic3LatentAudio"
+            },
+            "widgets_values": [
+              120,
+              1
+            ],
+            "widgets_values_named": {
+              "seconds": 120,
+              "batch_size": 1
+            }
+          },
+          {
+            "id": 9,
+            "type": "KSampler",
+            "pos": [
+              2170,
+              380
+            ],
+            "size": [
+              370,
+              270
+            ],
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "model",
+                "name": "model",
+                "type": "MODEL",
+                "link": 6
+              },
+              {
+                "localized_name": "positive",
+                "name": "positive",
+                "type": "CONDITIONING",
+                "link": 15
+              },
+              {
+                "localized_name": "negative",
+                "name": "negative",
+                "type": "CONDITIONING",
+                "link": 8
+              },
+              {
+                "localized_name": "latent_image",
+                "name": "latent_image",
+                "type": "LATENT",
+                "link": 21
+              },
+              {
+                "localized_name": "seed",
+                "name": "seed",
+                "type": "INT",
+                "widget": {
+                  "name": "seed"
+                },
+                "link": 53
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [
+                  12,
+                  58
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "KSampler"
+            },
+            "widgets_values": [
+              1111111112,
+              "fixed",
+              30,
+              1.7,
+              "euler",
+              "simple",
+              1
+            ],
+            "widgets_values_named": {
+              "seed": 1111111112,
+              "control_after_generate": "fixed",
+              "steps": 30,
+              "cfg": 1.7,
+              "sampler_name": "euler",
+              "scheduler": "simple",
+              "denoise": 1
+            }
+          },
+          {
+            "id": 12,
+            "type": "VAEDecodeAudio",
+            "pos": [
+              2590,
+              380
+            ],
+            "size": [
+              230,
+              60
+            ],
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "samples",
+                "name": "samples",
+                "type": "LATENT",
+                "link": 12
+              },
+              {
+                "localized_name": "vae",
+                "name": "vae",
+                "type": "VAE",
+                "link": 13
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "AUDIO",
+                "name": "AUDIO",
+                "type": "AUDIO",
+                "links": [
+                  60
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "VAEDecodeAudio"
+            }
+          },
+          {
+            "id": 38,
+            "type": "SeedNode",
+            "pos": [
+              890,
+              970
+            ],
+            "size": [
+              270,
+              90
+            ],
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "seed",
+                "name": "seed",
+                "type": "INT",
+                "widget": {
+                  "name": "seed"
+                },
+                "link": 54
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "seed",
+                "name": "seed",
+                "type": "INT",
+                "links": [
+                  52,
+                  53
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "SeedNode"
+            },
+            "widgets_values": [
+              0,
+              "randomize"
+            ],
+            "widgets_values_named": {
+              "seed": 0,
+              "fixed": "randomize"
+            }
+          },
+          {
+            "id": 42,
+            "type": "VAEDecodeAudioTiled",
+            "pos": [
+              2580,
+              500
+            ],
+            "size": [
+              280,
+              110
+            ],
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "samples",
+                "name": "samples",
+                "type": "LATENT",
+                "link": 58
+              },
+              {
+                "localized_name": "vae",
+                "name": "vae",
+                "type": "VAE",
+                "link": 59
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "AUDIO",
+                "name": "AUDIO",
+                "type": "AUDIO",
+                "links": [
+                  61
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "VAEDecodeAudioTiled"
+            },
+            "widgets_values": [
+              1536,
+              64
+            ],
+            "widgets_values_named": {
+              "tile_size": 1536,
+              "overlap": 64
+            }
+          },
+          {
+            "id": 43,
+            "type": "ComfySwitchNode",
+            "pos": [
+              2600,
+              690
+            ],
+            "size": [
+              270,
+              110
+            ],
+            "flags": {},
+            "order": 10,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "on_false",
+                "name": "on_false",
+                "type": "AUDIO",
+                "link": 60
+              },
+              {
+                "localized_name": "on_true",
+                "name": "on_true",
+                "type": "AUDIO",
+                "link": 61
+              },
+              {
+                "localized_name": "switch",
+                "name": "switch",
+                "type": "BOOLEAN",
+                "widget": {
+                  "name": "switch"
+                },
+                "link": 63
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "output",
+                "name": "output",
+                "type": "AUDIO",
+                "links": [
+                  62
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "ver": "0.31.0",
+              "Node name for S&R": "ComfySwitchNode"
+            },
+            "widgets_values": [
+              false
+            ],
+            "widgets_values_named": {
+              "switch": false
+            }
+          }
+        ],
+        "groups": [],
+        "links": [
+          {
+            "id": 18,
+            "origin_id": 3,
+            "origin_slot": 0,
+            "target_id": 13,
+            "target_slot": 0,
+            "type": "CLIP"
+          },
+          {
+            "id": 16,
+            "origin_id": 13,
+            "origin_slot": 0,
+            "target_id": 10,
+            "target_slot": 0,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 20,
+            "origin_id": 13,
+            "origin_slot": 1,
+            "target_id": 15,
+            "target_slot": 0,
+            "type": "FLOAT"
+          },
+          {
+            "id": 6,
+            "origin_id": 6,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 0,
+            "type": "MODEL"
+          },
+          {
+            "id": 15,
+            "origin_id": 13,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 1,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 8,
+            "origin_id": 10,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 2,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 21,
+            "origin_id": 15,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 3,
+            "type": "LATENT"
+          },
+          {
+            "id": 12,
+            "origin_id": 9,
+            "origin_slot": 0,
+            "target_id": 12,
+            "target_slot": 0,
+            "type": "LATENT"
+          },
+          {
+            "id": 13,
+            "origin_id": 7,
+            "origin_slot": 0,
+            "target_id": 12,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 45,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 13,
+            "target_slot": 1,
+            "type": "STRING"
+          },
+          {
+            "id": 46,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 13,
+            "target_slot": 2,
+            "type": "STRING"
+          },
+          {
+            "id": 47,
+            "origin_id": -10,
+            "origin_slot": 2,
+            "target_id": 13,
+            "target_slot": 4,
+            "type": "FLOAT"
+          },
+          {
+            "id": 52,
+            "origin_id": 38,
+            "origin_slot": 0,
+            "target_id": 13,
+            "target_slot": 3,
+            "type": "INT"
+          },
+          {
+            "id": 53,
+            "origin_id": 38,
+            "origin_slot": 0,
+            "target_id": 9,
+            "target_slot": 4,
+            "type": "INT"
+          },
+          {
+            "id": 54,
+            "origin_id": -10,
+            "origin_slot": 3,
+            "target_id": 38,
+            "target_slot": 0,
+            "type": "INT"
+          },
+          {
+            "id": 55,
+            "origin_id": -10,
+            "origin_slot": 4,
+            "target_id": 6,
+            "target_slot": 0,
+            "type": "COMBO"
+          },
+          {
+            "id": 56,
+            "origin_id": -10,
+            "origin_slot": 5,
+            "target_id": 3,
+            "target_slot": 0,
+            "type": "COMBO"
+          },
+          {
+            "id": 57,
+            "origin_id": -10,
+            "origin_slot": 6,
+            "target_id": 7,
+            "target_slot": 0,
+            "type": "COMBO"
+          },
+          {
+            "id": 58,
+            "origin_id": 9,
+            "origin_slot": 0,
+            "target_id": 42,
+            "target_slot": 0,
+            "type": "LATENT"
+          },
+          {
+            "id": 59,
+            "origin_id": 7,
+            "origin_slot": 0,
+            "target_id": 42,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 60,
+            "origin_id": 12,
+            "origin_slot": 0,
+            "target_id": 43,
+            "target_slot": 0,
+            "type": "AUDIO"
+          },
+          {
+            "id": 61,
+            "origin_id": 42,
+            "origin_slot": 0,
+            "target_id": 43,
+            "target_slot": 1,
+            "type": "AUDIO"
+          },
+          {
+            "id": 62,
+            "origin_id": 43,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "AUDIO"
+          },
+          {
+            "id": 63,
+            "origin_id": -10,
+            "origin_slot": 7,
+            "target_id": 43,
+            "target_slot": 2,
+            "type": "BOOLEAN"
+          }
+        ],
+        "extra": {}
+      }
+    ]
+  },
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.1890476962619843,
+      "offset": [
+        -1289.9698520861316,
+        -492.9816106495587
+      ]
+    },
+    "frontendVersion": "1.51.9",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

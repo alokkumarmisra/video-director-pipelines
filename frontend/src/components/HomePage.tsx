@@ -118,7 +118,11 @@ export default function HomePage({
       try {
         const src = await getScenario(name);
         const target = uniqueName(`${name}_copy`, new Set(data.projects.map((p) => p.name)));
-        await saveScenario(target, src.config);
+        // Preserve the project kind (VIDEO/AUDIO) on the copy.
+        await saveScenario(target, {
+          ...src.config,
+          ...(src.project_type ? { project_type: src.project_type } : {}),
+        });
         onProjectsChanged();
         await load();
       } catch (e) {
@@ -159,6 +163,7 @@ export default function HomePage({
 
   // Start a full generation run for the project (reference + keyframes +
   // clips + final stitch) and open the workspace so progress is visible.
+  // AUDIO projects (Create Song) render a song instead (ACE-Step mp3).
   // The server (and the ComfyUI queue behind it) accepts only one active
   // run — a second click while anything generates reports the error.
   const handleMakeClip = useCallback(
@@ -172,7 +177,7 @@ export default function HomePage({
       }
       setBusyAction(`clip:${name}`);
       try {
-        const d = await startRun(name, { engine: "ltx" });
+        const d = await startRun(name, proj?.project_type === "AUDIO" ? { mode: "song" } : { engine: "ltx" });
         if (d.error) throw new Error(d.error);
         if (!d.id) throw new Error("server did not start a run");
         onProjectsChanged();
@@ -188,15 +193,23 @@ export default function HomePage({
   );
 
   // Download the project's best finished file: the stitched final cut when
-  // present, else any clip, else a still image. Dirs are folder-based
+  // present, else any clip, else a still image. AUDIO projects download
+  // their latest generated song (mp3). Dirs are folder-based
   // (immutable storage) with the legacy _wan variant alongside.
   const handleDownload = useCallback(async (name: string) => {
     if (busyAction) return;
     setBusyAction(`download:${name}`);
     try {
       const base = data?.projects.find((p) => p.name === name)?.folder_name || name;
+      const isAudio = data?.projects.find((p) => p.name === name)?.project_type === "AUDIO";
+      const pickSong = (info: OutputsInfo | null): string | null => {
+        if (!info) return null;
+        const songs = info.files.filter((f) => /_song(?:_v\d+)?\.mp3$/i.test(f));
+        return songs.length ? songs[songs.length - 1] : null;
+      };
       const pick = (info: OutputsInfo | null): string | null => {
         if (!info) return null;
+        if (isAudio) return pickSong(info);
         if (info.mains?.final) return info.mains.final;
         const finals = (info.versions?.final ?? []).map((v) => v.file);
         if (finals.length) return finals[finals.length - 1];
@@ -249,6 +262,9 @@ export default function HomePage({
     const q = query.trim().toLowerCase();
     let list = (data?.projects ?? []).filter(
       (p) =>
+        // Home lists every project: VIDEO cards render the video pipeline,
+        // AUDIO (Create Song) cards show the 🎵 AUDIO pill + song takes
+        // (see ProjectCard) and open in the song view.
         // A live run counts as In Progress for filtering even before its
         // first asset lands (coverage status would still say Draft).
         (filter === "all" || p.status === filter || (filter === "in_progress" && p.generating)) &&

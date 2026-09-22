@@ -45,6 +45,12 @@ export default function ResourcePage({ onOpenProject }: {
   const [projectName, setProjectName] = useState("");
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const dialog = useDialog();
+  // View-only selection: checked cards + a top Delete button that hides them
+  // from this page (client-side only — files stay on disk, refresh shows them
+  // again). Never calls the delete API.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [removing, setRemoving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveNote, setSaveNote] = useState("");
@@ -71,6 +77,47 @@ export default function ResourcePage({ onOpenProject }: {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Cards visible on the page (hidden ones stay on disk, only out of view).
+  const visibleItems = items.filter((r) => !hiddenIds.has(r.id));
+  const selectedCount = items.filter((r) => selected.has(r.id) && !hiddenIds.has(r.id)).length;
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Remove the checked cards from this view (files kept on disk).
+  const doRemoveSelected = async () => {
+    const ids = items
+      .filter((r) => selected.has(r.id) && !hiddenIds.has(r.id))
+      .map((r) => r.id);
+    if (ids.length === 0 || removing) return;
+    const ok = await dialog.confirm(
+      "They stay on disk — only hidden from this page. Refresh (or Show again below) brings them back.",
+      {
+        title: `Remove ${ids.length} selected resource${ids.length === 1 ? "" : "s"} from view?`,
+        tone: "warning",
+        okText: "Remove",
+        cancelText: "Keep",
+      },
+    );
+    if (!ok) return;
+    setRemoving(true);
+    try {
+      setHiddenIds((prev) => new Set([...prev, ...ids]));
+      setSelected(new Set());
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const showHiddenAgain = () => {
+    setHiddenIds(new Set());
+  };
 
   const setCardBusy = (id: string, op: string | null) =>
     setBusy((prev) => {
@@ -138,7 +185,7 @@ export default function ResourcePage({ onOpenProject }: {
   // with a thumbnail) that has no AI prompt yet, one by one. Stops early
   // with the reason shown when no vision model is loaded.
   const processAll = async () => {
-    const targets = items.filter(
+    const targets = visibleItems.filter(
       (r) => !r.prompt && (r.kind === "image" || (r.kind === "video" && r.thumb)));
     if (targets.length === 0) {
       setProcessMsg("Nothing to process — every image/video already has an AI prompt.");
@@ -264,11 +311,10 @@ export default function ResourcePage({ onOpenProject }: {
       setSaveError("Enter a project name first.");
       return;
     }
-    if (items.length === 0) {
+    if (visibleItems.length === 0) {
       setSaveError("No resources yet — upload images/videos first.");
       return;
-    }
-    if (scenarios.some((s) => s.name === name)) {
+    }    if (scenarios.some((s) => s.name === name)) {
       setSaveError(`A project named "${name}" already exists — pick another name.`);
       return;
     }
@@ -277,8 +323,9 @@ export default function ResourcePage({ onOpenProject }: {
     setSaveNote("");
     try {
       // Persist any unsaved prompt edits first so the beats carry exactly
-      // what the textboxes show (the build reads stored prompts).
-      for (const r of items) {
+      // what the textboxes show (the build reads stored prompts). Only the
+      // cards currently on the page are considered here.
+      for (const r of visibleItems) {
         const d = drafts[r.id] ?? "";
         if (d === (r.prompt ?? "")) continue;
         try {
@@ -334,13 +381,32 @@ export default function ResourcePage({ onOpenProject }: {
         <button
           className="btn-green"
           onClick={() => void processAll()}
-          disabled={uploading > 0 || processingAll || loading || items.length === 0}
+          disabled={uploading > 0 || processingAll || loading || visibleItems.length === 0}
           title="Run the vision model over every image/video that has no AI prompt yet (one by one — needs a VL model loaded in LM Studio)"
         >
           {processingAll ? <Spinner size={13} /> : <IconSparkles size={13} />}
           {processingAll ? "Processing…" : "Process All"}
         </button>
+        <button
+          className="danger"
+          onClick={() => void doRemoveSelected()}
+          disabled={selectedCount === 0 || removing || loading}
+          title={selectedCount === 0
+            ? "Tick the checkbox on one or more cards first — this only hides them from the page, files stay on disk"
+            : `Remove ${selectedCount} selected resource${selectedCount === 1 ? "" : "s"} from this view (files stay on disk)`}
+        >
+          {removing ? <Spinner size={13} /> : <IconTrash size={13} />}
+          {removing ? "Removing…" : `Delete${selectedCount > 0 ? ` (${selectedCount})` : ""}`}
+        </button>
       </div>
+      {hiddenIds.size > 0 && (
+        <p className="hint">
+          {hiddenIds.size} resource{hiddenIds.size === 1 ? "" : "s"} hidden from this view (files kept on disk).{" "}
+          <button type="button" className="ghost" onClick={showHiddenAgain}>
+            Show again
+          </button>
+        </p>
+      )}
       {processMsg && <p className="hint">{processMsg}</p>}
       <p className="card-desc">
         Your own images and videos, ready for processing. The vision model reads
@@ -362,7 +428,7 @@ export default function ResourcePage({ onOpenProject }: {
           <button
             className="primary"
             onClick={() => void doSaveProject()}
-            disabled={saving || loading || !projectName.trim() || items.length === 0}
+            disabled={saving || loading || !projectName.trim() || visibleItems.length === 0}
             title="Save all library items as one project — one scene per resource, then open it"
           >
             {saving ? <Spinner size={12} /> : <IconClapper size={12} />}
@@ -388,11 +454,11 @@ export default function ResourcePage({ onOpenProject }: {
       >
         {loading ? (
           <p className="hint"><Spinner size={13} /> Loading resources…</p>
-        ) : items.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <p className="hint">No resources yet — Upload images/videos, or drop them here.</p>
         ) : (
           <div className="res-grid">
-            {items.map((r) => {
+            {visibleItems.map((r) => {
               const op = busy[r.id] ?? null;
               const draft = drafts[r.id] ?? "";
               const dirty = draft !== (r.prompt ?? "");
@@ -420,7 +486,21 @@ export default function ResourcePage({ onOpenProject }: {
                     )}
                     <span className={`res-kind ${r.kind}`}>{r.kind}</span>
                   </div>
-                  <p className="beat-meta">{r.file}</p>
+                  <div className="row res-select-row">
+                    <label
+                      className="res-select"
+                      title="Tick to select this resource — the Delete button on top removes selected cards from this view (files stay on disk)"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleSelect(r.id)}
+                        aria-label={`Select ${r.file}`}
+                      />
+                      Select
+                    </label>
+                    <p className="beat-meta">{r.file}</p>
+                  </div>
                   <label>AI prompt {r.kind === "video" ? "(from middle frame)" : ""}</label>
                   <textarea
                     rows={3}

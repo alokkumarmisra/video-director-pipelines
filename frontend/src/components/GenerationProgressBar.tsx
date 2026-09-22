@@ -24,8 +24,18 @@ export interface GenerationProgress {
   elapsedMs: number;
   /** ms epoch when the run started (null when unknown, e.g. old payloads). */
   startedAt: number | null;
+  /** True for lyrics-to-song runs (single ACE-Step take). The Images/Videos
+      rows stay hidden (their totals are 0) and the Overall row carries the
+      song countdown. Additive flag — video paths never set it. */
+  audio?: boolean;
   /** Scenario (output dir) being generated. */
   scenario: string;
+  /**
+   * Unit noun for the completed/total counts in the menu ("files" for
+   * generations, "scenes" for director planning). Absent = "files", so all
+   * existing callers render exactly as before.
+   */
+  unit?: string;
   /**
    * In-flight asset estimate (null when idle / unknown). ComfyUI only reports
    * completion via /history polling, so intra-asset progress is ESTIMATED:
@@ -179,6 +189,76 @@ export function recordPaceDuration(image: boolean, ms: number): void {
     localStorage.setItem(PACE_KEY, JSON.stringify({ ...d, [slot]: { n, mean } }));
   } catch {
     // Storage unavailable (private mode etc.) — pace just stays unknown.
+  }
+}
+
+// ---- Historical song-take pace (localStorage, separate key) ----
+// Running-mean full-take durations for lyrics-to-song runs (ACE-Step takes
+// minutes each), so the menu's Time Remaining can count down from the first
+// second of a song run. Deliberately a SEPARATE key from the image/video
+// pace above — song takes and video tasks have nothing in common, and the
+// existing pace storage is left byte-identical.
+const SONG_PACE_KEY = "ss-song-pace-v1";
+
+export function loadSongPace(): number | null {
+  try {
+    const raw = localStorage.getItem(SONG_PACE_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as { n?: number; mean?: number };
+    const n = d.n ?? 0;
+    const mean = d.mean ?? NaN;
+    return n > 0 && Number.isFinite(mean) && mean >= MIN_TASK_MS ? mean : null;
+  } catch {
+    return null;
+  }
+}
+
+export function recordSongPaceDuration(ms: number): void {
+  // Sub-threshold intervals are instant skips/failures, not generations.
+  if (!Number.isFinite(ms) || ms < MIN_TASK_MS) return;
+  try {
+    const raw = localStorage.getItem(SONG_PACE_KEY);
+    const d = (raw ? JSON.parse(raw) : {}) as { n?: number; mean?: number };
+    const n = Math.min((d.n || 0) + 1, PACE_CAP);
+    const mean = (d.mean || 0) + (ms - (d.mean || 0)) / n;
+    localStorage.setItem(SONG_PACE_KEY, JSON.stringify({ n, mean }));
+  } catch {
+    // Storage unavailable — pace just stays unknown.
+  }
+}
+
+// ---- Historical director scene-planning pace (localStorage, separate key) ----
+// Running-mean MILLISECONDS PER SCENE for AI Story Director planning batches
+// (LLM calls planning up to 12 scenes each), so the Director's Time Remaining
+// can count down from the first second. Deliberately a SEPARATE key — LLM
+// planning batches and ComfyUI generations have nothing in common, and the
+// existing image/video/song pace storage is left byte-identical.
+const DIRECTOR_PACE_KEY = "ss-director-pace-v1";
+
+export function loadDirectorPace(): number | null {
+  try {
+    const raw = localStorage.getItem(DIRECTOR_PACE_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as { n?: number; mean?: number };
+    const n = d.n ?? 0;
+    const mean = d.mean ?? NaN;
+    return n > 0 && Number.isFinite(mean) && mean >= MIN_TASK_MS ? mean : null;
+  } catch {
+    return null;
+  }
+}
+
+export function recordDirectorPaceDuration(msPerScene: number): void {
+  // Sub-threshold samples are instant no-ops, not planning batches.
+  if (!Number.isFinite(msPerScene) || msPerScene < MIN_TASK_MS) return;
+  try {
+    const raw = localStorage.getItem(DIRECTOR_PACE_KEY);
+    const d = (raw ? JSON.parse(raw) : {}) as { n?: number; mean?: number };
+    const n = Math.min((d.n || 0) + 1, PACE_CAP);
+    const mean = (d.mean || 0) + (msPerScene - (d.mean || 0)) / n;
+    localStorage.setItem(DIRECTOR_PACE_KEY, JSON.stringify({ n, mean }));
+  } catch {
+    // Storage unavailable — pace just stays unknown.
   }
 }
 

@@ -3,11 +3,18 @@ export interface Beat {
   image: string;
   motion: string;
   // Per-beat clip length (dialogue beats grow to fit their voice audio —
-  // see beatTargetDuration in lib/tts.mjs). Absent = scenario.duration.
+  // see beatTargetDuration/estimateDialogueDuration in lib/tts.mjs; the
+  // system analyzes dialogue text + pitch + expression to size each clip).
+  // Absent = scenario.duration.
   duration?: number;
+  // Scene delivery inherited from the Director board (shapes TTS prosody +
+  // lip-sync staging when a line carries no explicit expression).
+  emotion?: string;
+  expression?: string;
+  body_language?: string;
   // Spoken lines for this beat (voiced per character via Edge-TTS Hindi,
   // lip-synced via Easy-Wav2Lip). Absent/empty = silent beat.
-  dialogue?: { speaker: string; line: string }[];
+  dialogue?: { speaker: string; line: string; expression?: string; emotion?: string; pitch?: string }[];
 }
 
 export interface Scenario {
@@ -37,6 +44,35 @@ export interface Scenario {
     fileName?: string;
     durationSeconds?: number | null;
   };
+  // Lyrics-to-song config (Create Song tab, sung via the selected audio model
+  // — ACE-Step 1.5 XL Turbo or MiniMax Music 3 — through scripts/generate_song.mjs).
+  // Stored on the scenario so the CLI runner and
+  // the UI generate from the same saved data; the project row keeps
+  // projects.project_type = 'AUDIO'.
+  audio?: {
+    tags?: string;
+    lyrics?: string;
+    duration?: number;
+    bpm?: number;
+    language?: string;
+    keyscale?: string;
+    timesignature?: string;
+    seed?: number;
+    steps?: number;
+    cfgScale?: number;
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+    minP?: number;
+    // Audio model that renders sung takes: "ace-step" (default) | "minimax".
+    // Narration presets ignore it (Edge-TTS voices, never a music model).
+    songModel?: string;
+    // Song mode that tuned the values above (kids-song, songs-for-kids,
+    // kids-story-narration, devotional-song, devotional-narration).
+    songPreset?: string;
+    // Singer/narrator voice (female | male | duet) — baked into tags.
+    songVocal?: string;
+  };
   // Voice casting per character id (Edge-TTS voice names). Empty/absent =
   // auto-cast in lib/tts.mjs (e.g. rabbit -> hi-IN-SwaraNeural female,
   // lion -> hi-IN-MadhurNeural male). Edit to recast a character.
@@ -44,6 +80,9 @@ export interface Scenario {
     defaultVoice?: string;
     voices?: Record<string, string>;
   };
+  // PUT-only save signal for the projects.project_type column (VIDEO/AUDIO).
+  // Stripped server-side — never persisted in scenarios/versions/prompts JSON.
+  project_type?: string;
 }
 
 export interface ScenarioInfo {
@@ -53,8 +92,12 @@ export interface ScenarioInfo {
   favorite?: boolean;
   /** Integer id from the projects table (null in SQLite mode / unknown). */
   project_id?: number | null;
+  /** ms epoch when the project row was created (null when unknown — falls back to project_id/mtime). */
+  createdAt?: number | null;
   /** Immutable folder name derived from project name on creation (snake_case, <=100 chars). */
   folder_name?: string | null;
+  /** Project kind from the projects table: VIDEO (default) or AUDIO (Create Song). */
+  project_type?: string | null;
 }
 
 export interface Run {
@@ -65,6 +108,8 @@ export interface Run {
   status: "running" | "done" | "error";
   log: string;
   startedAt: number;
+  /** What the run does: "generate" (default), "dialogue" or "song". */
+  mode?: string;
   /** Engine the run was started with (present on runs started after Re-Design-V2). */
   engine?: string;
   /** Cut the run generates: "landscape" (main video) or "vertical" (9:16
@@ -201,6 +246,8 @@ export interface DashboardProject {
   project_id: number | null;
   /** Immutable storage folder (null when unknown — fall back to the slug). */
   folder_name: string | null;
+  /** Project kind from the projects table: VIDEO (default) or AUDIO (Create Song). */
+  project_type: string;
   description: string;
   status: DashboardStatus;
   generating: boolean;
@@ -210,11 +257,23 @@ export interface DashboardProject {
   videoCount: number;
   refDone: boolean;
   hasFinal: boolean;
+  /** Generated songs (ACE-Step mp3s) — the deliverable of AUDIO projects. */
+  songCount?: number;
+  hasSong?: boolean;
   /** ms epoch when the active run started (null when not generating). */
   startedAt: number | null;
   thumbnailUrl: string | null;
   createdAt: number | null;
   updatedAt: number | null;
+}
+
+// One generated song take (GET /api/project/:name/songs).
+export interface SongInfo {
+  file: string;
+  url: string;
+  version: number;
+  bytes: number;
+  mtimeMs: number;
 }
 
 export interface DashboardStatistics {

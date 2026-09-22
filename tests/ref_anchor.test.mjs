@@ -75,6 +75,19 @@ describe("sequence wiring", () => {
     assert.match(src, /ref main is now/);
   });
 
+  it("locks one reference for the whole run (mid-run switches can't split anchors)", () => {
+    const src = read("lib/sequence.mjs");
+    // Snapshot variable shared by every keyframe in the run...
+    assert.match(src, /let runRef = null/);
+    assert.match(src, /runRef \?\? resolveRefForRun\(outDir, prefix\)/);
+    // ...resolved once, AFTER genRef (so a freshly generated ref is locked in).
+    const genRefAt = src.indexOf("await genRef()");
+    const lockAt = src.indexOf("runRef = resolveRefForRun(outDir, prefix)");
+    assert.ok(genRefAt >= 0 && lockAt > genRefAt, "runRef must snapshot after await genRef()");
+    // Visible in the run log so a wrong anchor is diagnosable per beat.
+    assert.match(src, /reference lock: every keyframe anchors on/);
+  });
+
   it("a freshly generated version becomes main (regen v4 beats picked v1/v2/v3)", () => {
     const src = read("lib/sequence.mjs");
     // Each generator records the just-written file and prefers it over the

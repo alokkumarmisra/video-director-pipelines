@@ -68,12 +68,12 @@ interface Props {
   // Generate Reference from the scenario editor; count batches ref regens).
   // Queued requests carry the engine + format they were asked for (they may
   // have been switched since they were queued).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue"; beats?: string; noStitch?: boolean } | null;
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean } | null;
   // Reattach target: a run that was already active on the server when this
   // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
   // server replays the full log + asset events — so progress, the header bar
   // and every generating button pick up the live run instead of idling.
-  attachRun?: { id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; mode?: "dialogue"; beats?: string | null; startedAt?: number; format?: VideoFormat } | null;
+  attachRun?: { id: string; scenario: string; folder?: string; stitch?: boolean; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string | null; startedAt?: number; format?: VideoFormat } | null;
   // Run the server reports as active (from GET /api/runs, polled by App) —
   // independent of this panel's own run. While set and this panel is idle,
   // the backend rejects new runs, so the panel names the blocker and offers
@@ -211,7 +211,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // start/end timestamps, and per-asset completion times for the ETA.
   const [totalBeats, setTotalBeats] = useState<number | null>(null);
   const [dlgBeats, setDlgBeats] = useState<number | null>(null);
-  const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number; mode?: "dialogue" }>({ stitch: false, regen: null, count: 1 });
+  const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number; mode?: "dialogue" | "song" }>({ stitch: false, regen: null, count: 1 });
   const [startedAt, setStartedAt] = useState<number | null>(null);
   // Anchor of the per-asset interval chain (see the ETA memo below). Fresh
   // runs anchor at start; reattached runs anchor at reattach time — the real
@@ -283,7 +283,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     return () => clearInterval(t);
   }, [status, serverRun]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "dialogue" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape", mode?: "dialogue", beats?: string, noStitch?: boolean) => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "dialogue" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape", mode?: "dialogue" | "song", beats?: string, noStitch?: boolean) => {
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
@@ -655,7 +655,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         </div>
         <div className="run-head-controls">
         <div className="run-head-actions" role="group" aria-label="Run controls">
-          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation" : "Start a full generation"}>
+          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation — dialogue beats are voiced + lip-synced automatically, clips sized to the voice" : "Start a full generation — dialogue beats are voiced (per-character Hindi TTS) + lip-synced automatically, each clip sized to its dialogue"}>
             {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
             {starting === "run" ? "Starting…" : "Generate"}
           </button>
@@ -663,7 +663,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
             {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
             {starting === "stitch" ? "Starting…" : "Stitch only"}
           </button>
-          <button className="run-head-btn" onClick={() => begin(false, null, 1, "dialogue", engine, idleFormat, "dialogue")} disabled={status === "running" || starting !== null || !scenario || !dlgBeats} title={!scenario ? "Select or save a scenario first" : !dlgBeats ? "No dialogue lines in this project — add speaker: line dialogue in the Director or editor first" : `Voice ${dlgBeats} dialogue beat${dlgBeats === 1 ? "" : "s"} (per-character Hindi TTS) + lip-sync each clip with Easy-Wav2Lip, then re-stitch`}>
+          <button className="run-head-btn" onClick={() => begin(false, null, 1, "dialogue", engine, idleFormat, "dialogue")} disabled={status === "running" || starting !== null || !scenario || !dlgBeats} title={!scenario ? "Select or save a scenario first" : !dlgBeats ? "No dialogue lines in this project — add speaker: line dialogue in the Director or editor first" : `Re-voice ${dlgBeats} dialogue beat${dlgBeats === 1 ? "" : "s"} + re-lip-sync (Generate already does this automatically — use this only to retry voice/sync without rebuilding images)`}>
             {starting === "dialogue" ? <Spinner size={12} /> : <span aria-hidden="true">🎙</span>}
             {starting === "dialogue" ? "Starting…" : `Dialogue${dlgBeats ? ` (${dlgBeats})` : ""}`}
           </button>
@@ -787,6 +787,9 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
               pin={pin}
               onPin={setPin}
             />
+            {/* Render keeps its KEYFRAMES / CLIPS scene-status chips (the
+                numbered boxes) — showKfClips must stay enabled here, it is
+                the switch that renders those chips. */}
             {/* Run history belongs to the cut that produced it: while running
                 the panel follows the run, but an idle panel on the other cut
                 hides it (the monitors above already show that cut from disk). */}

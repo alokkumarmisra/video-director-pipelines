@@ -9,6 +9,64 @@ import { useDialog } from "./Dialog";
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
+// Dialogue text format — one line per dialogue line as `speaker: line`,
+// with an optional per-line expression as `speaker (expression): line`
+// (same convention as the Story Board / LipSync editors).
+const dialogueToText = (d: Beat["dialogue"]): string =>
+  (Array.isArray(d) ? d : []).map((x) => {
+    const sp = String(x.speaker || "").trim();
+    const ln = String(x.line || "").trim();
+    const ex = String((x as { expression?: string }).expression || "").trim();
+    const head = sp && ex ? `${sp} (${ex})` : sp;
+    return head ? `${head}: ${ln}` : ln;
+  }).filter(Boolean).join("\n");
+const textToDialogue = (t: string): NonNullable<Beat["dialogue"]> =>
+  t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const c = l.indexOf(":");
+    if (c <= 0) return { speaker: "", line: l };
+    const head = l.slice(0, c).trim();
+    const line = l.slice(c + 1).trim();
+    const m = head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    return m
+      ? { speaker: m[1].trim(), expression: m[2].trim(), line }
+      : { speaker: head, line };
+  }).filter((d) => d.speaker || d.line);
+
+// Per-scene dialogue field. Holds the raw text locally and only commits
+// the parsed `[{ speaker, line }]` to the parent — so in-progress typing
+// (trailing spaces, blank lines, mid-word pauses such as "; " at end of
+// line) is never stripped or reformatted under the cursor. External
+// changes (version switch, Shot List saves) still resync the text.
+function BeatDialogueField({ value, disabled, onChange }: {
+  value: Beat["dialogue"];
+  disabled?: boolean;
+  onChange: (d: NonNullable<Beat["dialogue"]>) => void;
+}) {
+  const [text, setText] = useState(() => dialogueToText(value));
+  const lastExt = useRef(dialogueToText(value));
+  useEffect(() => {
+    const ext = dialogueToText(value);
+    if (ext !== lastExt.current) {
+      lastExt.current = ext;
+      setText(ext);
+    }
+  }, [value]);
+  return (
+    <textarea
+      rows={3}
+      value={text}
+      placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"}
+      disabled={disabled}
+      onChange={(e) => {
+        setText(e.target.value);
+        const parsed = textToDialogue(e.target.value);
+        lastExt.current = dialogueToText(parsed);
+        onChange(parsed);
+      }}
+    />
+  );
+}
+
 interface Props {
   name: string;
   config: Scenario;
@@ -524,23 +582,10 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               }}
             />
             <label title="One per line as speaker: line — voiced per character (Hindi TTS) and lip-synced">Dialogue (speaker: line per line — voiced + lip-synced)</label>
-            <textarea
-              rows={3}
-              value={(Array.isArray(b.dialogue) ? b.dialogue : []).map((d) => {
-                const sp = String(d.speaker || "").trim();
-                const ln = String(d.line || "").trim();
-                return sp ? `${sp}: ${ln}` : ln;
-              }).filter(Boolean).join("\n")}
-              placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"}
+            <BeatDialogueField
+              value={b.dialogue}
               disabled={saving}
-              onChange={(e) => updateBeat(i, {
-                dialogue: e.target.value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
-                  const c = l.indexOf(":");
-                  return c > 0
-                    ? { speaker: l.slice(0, c).trim(), line: l.slice(c + 1).trim() }
-                    : { speaker: "", line: l };
-                }).filter((d) => d.line),
-              })}
+              onChange={(d) => updateBeat(i, { dialogue: d })}
             />
             </Collapse>
             {hist.length > 0 && (

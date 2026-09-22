@@ -66,23 +66,49 @@ function classifyBeat(b: Beat): ShotType {
 
 type ShotStatus = "generated" | "generating" | "failed" | "pending";
 
+// Board summary shared with the Keyframes → clips card (which now owns the
+// Shots / Cinematic / Lip-sync / min-total stats — the Story Board header no
+// longer shows them). Classification matches the per-row badges exactly:
+// Lip-sync = dialogue beats, everything else counts as cinematic.
+export interface BoardSummary { shots: number; cinematic: number; lipsync: number; totalDur: number }
+export function summarizeBoard(beats: Beat[], defaultDur: number): BoardSummary {
+  const list = Array.isArray(beats) ? beats : [];
+  const fb = Number.isFinite(Number(defaultDur)) && Number(defaultDur) > 0 ? Number(defaultDur) : 0;
+  let lipsync = 0;
+  let totalDur = 0;
+  for (const b of list) {
+    if (classifyBeat(b) === "Lip-sync") lipsync++;
+    const d = Number((b as Beat).duration);
+    totalDur += Number.isFinite(d) && d > 0 ? d : fb;
+  }
+  return { shots: list.length, cinematic: list.length - lipsync, lipsync, totalDur };
+}
+
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 
-// Dialogue text format (one `speaker: line` per line) for the inline beat
-// editors — same shape the Director scene editor uses.
+// Dialogue text format for the inline beat editors — one line per dialogue
+// line as `speaker: line` (same shape the Director scene editor uses), with
+// an optional per-line expression as `speaker (expression): line` (parsed
+// back on save; drives TTS prosody + clip length + lip-sync staging).
 const dialogueToText = (d: Beat["dialogue"]): string =>
   (Array.isArray(d) ? d : []).map((x) => {
     const sp = String(x.speaker || "").trim();
     const ln = String(x.line || "").trim();
-    return sp ? `${sp}: ${ln}` : ln;
+    const ex = String((x as { expression?: string }).expression || "").trim();
+    const head = sp && ex ? `${sp} (${ex})` : sp;
+    return head ? `${head}: ${ln}` : ln;
   }).filter(Boolean).join("\n");
-const textToDialogue = (t: string): { speaker: string; line: string }[] =>
+const textToDialogue = (t: string): { speaker: string; line: string; expression?: string }[] =>
   t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
     const c = l.indexOf(":");
-    return c > 0
-      ? { speaker: l.slice(0, c).trim(), line: l.slice(c + 1).trim() }
-      : { speaker: "", line: l };
+    if (c <= 0) return { speaker: "", line: l };
+    const head = l.slice(0, c).trim();
+    const line = l.slice(c + 1).trim();
+    const m = head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    return m
+      ? { speaker: m[1].trim(), expression: m[2].trim(), line }
+      : { speaker: head, line };
   }).filter((d) => d.line);
 
 interface ShotRow {
@@ -460,11 +486,6 @@ export default function ShotList({
   // ---- header / summary numbers (all derived, never hard-coded) ----
   const totalShots = rows.length;
   const shotsDone = rows.filter((r) => r.imageFile && r.clipFile).length;
-  const cinematicCount = rows.filter((r) => r.type !== "Lip-sync").length;
-  const lipsyncCount = rows.filter((r) => r.type === "Lip-sync").length;
-  // Total runtime sums each scene's own clip length (Director per-scene
-  // durations land on the beat; otherwise the project default).
-  const totalDur = rows.reduce((s, r) => s + beatDur(r.beat), 0);
 
   const refDone = !!mainsInfo.ref;
   const kfDone = rows.filter((r) => r.imageFile).length;
@@ -656,7 +677,7 @@ export default function ShotList({
           setDraftBeat({ ...draftBeat, duration: e.target.value === "" || !Number.isFinite(v) ? undefined : v });
         }}
       />
-      <label title="One per line as speaker: line — voiced per character (Hindi TTS) and lip-synced; run per scene with the row 🎙 button">Dialogue (speaker: line per line — voiced + lip-synced)</label>
+      <label title="One per line as speaker: line (or speaker (expression): line) — voiced per character (Hindi TTS, expression shapes pitch/rate) and lip-synced; clip length grows to fit the voice; run per scene with the row 🎙 button">Dialogue (speaker: line per line — voiced + lip-synced, auto clip length)</label>
       <textarea
         rows={3}
         value={dialogueText}
@@ -781,28 +802,10 @@ export default function ShotList({
         </div>
       </div>
 
-      {/* Compact summary (real counts) */}
-      <div className="shotlist-stats" aria-label="Project summary">
-        <div className="shotlist-stat" title={`${totalShots} shots in this project`}>
-          <span className="shotlist-stat-value">{totalShots}</span>
-          <span className="shotlist-stat-label">Shots</span>
-        </div>
-        <div className="shotlist-stat" title={`${cinematicCount} cinematic shots`}>
-          <span className="shotlist-stat-value">{cinematicCount}</span>
-          <span className="shotlist-stat-label">Cinematic</span>
-        </div>
-        <div className="shotlist-stat" title={`${lipsyncCount} lip-sync shots`}>
-          <span className="shotlist-stat-value">{lipsyncCount}</span>
-          <span className="shotlist-stat-label">Lip-sync</span>
-        </div>
-        <div className="shotlist-stat" title={totalDur > 0 ? `Total runtime: ${totalDur.toFixed(1)}s (${(totalDur / 60).toFixed(2)} min) — each scene at its own clip length` : "Clip duration not set"}>
-          <span className="shotlist-stat-value">{totalDur > 0 ? `${totalDur.toFixed(1)}s` : "—"}</span>
-          <span className="shotlist-stat-label">{totalDur > 0 ? `${(totalDur / 60).toFixed(2)} min total` : "duration"}</span>
-        </div>
-      </div>
-
       {/* Scene filter tabs: number-only tabs in a scroll strip with step
-          arrows ([<] left of scene 1, [>] just before All) + pinned All */}
+          arrows ([<] left of scene 1, [>] just before All) + pinned All.
+          (The Shots / Cinematic / Lip-sync / min-total summary now lives on
+          the Keyframes → clips card — see summarizeBoard.) */}
       {totalShots > 0 && (
         <div className="shotlist-scenes-wrap">
           <button

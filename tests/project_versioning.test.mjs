@@ -285,8 +285,10 @@ describe("delta versioning", () => {
     const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
     // Regression: approve slugified the frozen analyze-time title, so "Rat
     // story" became minku_story. The project must take the board title
-    // verbatim (spaces allowed, like other display names).
-    assert.match(srv, /let target = String\(board\.input\.title/);
+    // verbatim (spaces allowed, like other display names). Re-migrates
+    // (partial flow) reuse board.scenarioName so the rest lands in the SAME
+    // project — the verbatim-title rule still governs the first approve.
+    assert.match(srv, /board\.scenarioName \|\| String\(board\.input\.title/);
     assert.ok(!srv.includes("slug(board.input.title)"), "must not slugify the story title");
     // Boards are renamable before approve.
     assert.match(srv, /board\.input\.title = nt/);

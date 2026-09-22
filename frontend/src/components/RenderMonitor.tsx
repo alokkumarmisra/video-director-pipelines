@@ -25,6 +25,11 @@ interface Props {
   showScreen?: boolean;
   /** Render the frame-status grids block. Default true. */
   showFrames?: boolean;
+  /** Render the KEYFRAMES → CLIPS scene-status chips (numbered boxes) inside
+      the frames block. Default true. NOTE: these chips ARE the scene status
+      buttons — passing false removes every per-scene box from Render, leaving
+      only REF + CUT. Keep enabled on the Rendered Clip card. */
+  showKfClips?: boolean;
   /** Controlled pin (shared across split instances so chips drive the viewport). */
   pin?: RmPin | null;
   onPin?: (p: RmPin | null) => void;
@@ -55,7 +60,7 @@ type Stage = "image" | "video" | "cut";
 export default function RenderMonitor({
   scenario, outDir, engine, status, progress,
   assets, log, totalBeats, runMeta, startedAt, now, comfyQueue,
-  showScreen, showFrames, pin, onPin,
+  showScreen, showFrames, showKfClips, pin, onPin,
 }: Props) {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const running = status === "running";
@@ -420,6 +425,8 @@ export default function RenderMonitor({
                 </button>
               </span>
             </div>
+            {showKfClips !== false && (
+            <>
             <div className="rm-col-label">KEYFRAMES · IMAGE</div>
             <div className="rm-chips rm-chips-tabular">
               {nums.length === 0 && <span className="rm-empty-note">—</span>}
@@ -437,6 +444,8 @@ export default function RenderMonitor({
                 </button>
               ))}
             </div>
+            </>
+            )}
           </div>
           <div className="rm-col rm-col-wide">
             <div className="rm-above rm-above-right" aria-label="Final">
@@ -453,6 +462,8 @@ export default function RenderMonitor({
                 </button>
               </span>
             </div>
+            {showKfClips !== false && (
+            <>
             <div className="rm-col-label">CLIPS · VIDEO</div>
             <div className="rm-chips rm-chips-tabular">
               {nums.length === 0 && <span className="rm-empty-note">—</span>}
@@ -469,6 +480,8 @@ export default function RenderMonitor({
                 </button>
               ))}
             </div>
+            </>
+            )}
           </div>
         </div>
         <div className="rm-counts muted" title={running ? "Real asset counts from this run's stream" : "On-disk renders for this project"}>

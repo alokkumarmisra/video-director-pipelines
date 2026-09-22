@@ -2,14 +2,19 @@
 
 ## AI Story Director (Story-to-Video)
 Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
-`lib/director.mjs`, `director/<slug>.json` board files — no new DB tables).
+`lib/director.mjs`). Boards are DB-backed (`director_boards` table, mirrored on
+every write; `director/<slug>.json` files remain as the offline fallback).
 Two LLM calls via the shared llama-server convention (`llmChatJson` in
 `server.mjs`): (1) bible (analysis + character/location/object bibles + beats),
 (2) scene batches of ≤12 (`SCENE_BATCH`) with identity-string context only.
 `APPROVE` returns a standard scenario config; the client persists it through
 the existing `saveScenario` PUT and opens the workspace — image/video/merge/
 progress/resume are 100% the existing pipeline. Style lock is appended
-server-side (`boardToScenario`) so scenes can't drift off-style.
+server-side (`boardToScenario`) so scenes can't drift off-style. Approved boards
+link to their project (`director_boards.project_id` FK → `projects`, set on
+save/approve, `ON DELETE CASCADE` + board-file cleanup — deleting a project
+removes its storyboard; renames follow `scenario_name`). Unapproved drafts have
+no link and survive project deletion.
 
 ## What this is
 Repo root is the folder `comfyui-video-pipelines-frontend/` (all paths below are
@@ -66,6 +71,42 @@ Generic runners (a new scenario = one new `prompts/<scenario>.json`):
   the Story Board's per-row 🎙 button runs one scene (`{ mode: "dialogue", beats: "N",
   noStitch: true }`). Fresh clips are generated AT the
   voice length (`beatTargetDuration` in both sequence runners reads the wav).
+  Multi-speaker beats are segmented AUTOMATICALLY (`lib/dialogue_pipeline.mjs`:
+  per-line timing from actual line-audio lengths via `planDialogueTiming`, one clip
+  window per line synced to its own speaker's voice via `lipSyncBeatSegmented`, then
+  merged as a new clip version; single-speaker beats keep the whole-beat path).
+  Provider seams: `TTS_PROVIDER` (default `edge-tts`) and `LIPSYNC_PROVIDER`
+  (`wav2lip` default, `musetalk-comfy` = `MUSETALK_WORKFLOW` JSON with
+  `{{VIDEO}}`/`{{AUDIO}}` tokens on ComfyUI). The LipSync section selects the
+  engine per run (`POST /api/runs` `{ mode: "dialogue", lipsync }` →
+  `--lipsync` flag, recorded on the run); every beat (single- and
+  multi-speaker) routes through it. Beats with no clip get a silent
+  keyframe→i2v clip generated in-dialogue (LTX/Wan, 3–5s dialogue-fitted) so
+  the section runs standalone from Character Image to Final Scene.
+  `workflows/musetalk_lipsync.json` is a placeholder template until replaced
+  with a real exported workflow — `musetalkWorkflowReady()` gates the UI
+  option on actual tokens, never bare file existence. Dialogue APIs:
+  `GET /api/project/:name/dialogue` (per-beat lines + voice/video/lipsync/final
+  status, served by `beatDialogueStatus` from disk) and
+  `PUT /api/project/:name/scene/:n/dialogue` (edit lines; stale voice wavs are
+  deleted so status honestly returns to PENDING — TTS + lip-sync regen, clip kept).
+  The Video LipSync page shows 🎙/🎬/👄/🎞 pills + SEG badge from that endpoint.
+  Test scenario: `prompts/rabbit_lion_dialogue.json` (Rabbit+Lion Hindi E2E).
+- `generate_song.mjs [folder]` — Create Song tab renderer (triggered via
+  `POST /api/runs` with `{ mode: "song" }`). Two engines by `audio.songPreset`:
+  song presets render **sung** via the selected audio model (`audio.songModel`:
+  `"ace-step"` = ACE-Step 1.5 XL Turbo via `buildAceSongGraph`, `"minimax"` =
+  MiniMax Music 3 via `buildMinimaxSongGraph`, `--song-model` CLI override;
+  reference workflows in `workflows/Audio/`; lyrics auto-sanitized +
+  `[verse]/[chorus]`-structured in `lib/songtext.mjs` —
+  raw markdown/emoji/`...` lyrics come back as mumble/noise without this);
+  narration presets (`kids-story-narration`, `devotional-narration`,
+  `devotional-narration-music`) render
+  **spoken** via Edge-TTS Hindi voices (`hi-IN-SwaraNeural`/`hi-IN-MadhurNeural`,
+  duet alternates per paragraph); the music variant additionally renders an
+  ACE-Step instrumental bed sized to the narration and mixes voice-over-bed
+  (bed at 22% volume). Both write versioned
+  `<prefix>_song[_vN].mp3` + `[asset]` events, so the UI needs no branching.
 - Either runner takes **`--vertical`** for the 9:16 Instagram Reel cut: every asset is
   regenerated vertical (Flux 360×640, LTX `9:16 (Portrait Widescreen)` at 0.125MP, Wan 240×416,
   prompts gain a portrait-framing suffix) into `outputs/<scenario>[_wan]_vertical/`

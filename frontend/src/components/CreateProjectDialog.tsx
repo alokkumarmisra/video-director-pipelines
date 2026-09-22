@@ -93,8 +93,10 @@ export default function CreateProjectDialog({
       sequence: [],
     };
     try {
-      await saveScenario(n, { 
-        ...config, 
+      await saveScenario(n, {
+        ...config,
+        // Normal project creation = video project (projects.project_type).
+        project_type: "VIDEO",
         // Immutable storage folder hint (server is authoritative: it mints a
         // unique folder on creation and freezes it — same rule as
         // lib/variant.mjs folderSlug, kept byte-identical here).
