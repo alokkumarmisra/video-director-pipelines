@@ -1,0 +1,303 @@
+{
+  "tts": {
+    "voices": {},
+    "defaultVoice": "hi-IN-MadhurNeural"
+  },
+  "quality": "devotional-ultra-realistic",
+  "duration": 10,
+  "sequence": [
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, slow cinematic push-in, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s01_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Static, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s01_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s01_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s01_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s02_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s02_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s02_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, introduction moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c01_s02_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — परिचय — दिव्य स्वरूप की झलक। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Static, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s01_shot_1",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s01_shot_2",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s01_shot_3",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s01_shot_4",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s02_shot_1",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s02_shot_2",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s02_shot_3",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, buildup moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c02_s02_shot_4",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — उत्पत्ति और पृष्ठभूमि। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s01_shot_1",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s01_shot_2",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s01_shot_3",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s01_shot_4",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह स्थापना खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s02_shot_1",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 1)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s02_shot_2",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 2)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s02_shot_3",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 3)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, explanation moment of Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark",
+      "title": "c03_s02_shot_4",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+      "dialogue": [
+        {
+          "line": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace — दिव्य व्यक्तित्व और स्वरूप। यह विस्तार खंड है, जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी में प्रस्तुत किया गया है। (भाग 4)",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 13
+    }
+  ],
+  "fluxSteps": 14,
+  "description": "महादेव — शिव के दिव्य स्वरूप की यात्रा — Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace",
+  "folder_name": "project",
+  "chainContinuity": true,
+  "referencePrompt": "Lord Shiva, serene divine face of Lord Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, sacred Mount Kailash, Himalayan divine realm at dawn, Cinematic devotional documentary, photorealistic mythological India, 16:9, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no blur, no watermark"
+}

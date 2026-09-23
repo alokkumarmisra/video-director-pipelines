@@ -26,6 +26,9 @@
 //     (combines with --stitch / --regen; writes outputs/<scenario>_wan_vertical/)
 //   node scripts/character_sequence_wan.mjs [scenario] --no-dialogue  # silent clips only
 //     (skips the automatic voice + lip-sync pass even when beats carry dialogue)
+//   node scripts/character_sequence_wan.mjs [scenario] --chain  # connected movie:
+//     beat N>1's clip starts from beat N-1's last frame (devotional Shiv/Ram/
+//     Krishna docs). Also auto-enabled by cfg.chainContinuity.
 // Outputs go to outputs/<scenario>_wan/ (never clobbers the LTX run of the same scenario);
 // --vertical writes outputs/<scenario>_wan_vertical/ instead.
 import fs from "node:fs";
@@ -79,6 +82,12 @@ const length = cfg.length ?? wanFrames(cfg.duration ?? 3);
 const fluxSize = vertical ? { width: VERTICAL_FLUX_WIDTH, height: VERTICAL_FLUX_HEIGHT } : {};
 const frame = (prompt) => (vertical ? verticalImagePrompt(prompt) : prompt);
 const move = (motion) => (vertical ? verticalMotionPrompt(motion) : motion);
+// Flux quality: scenario may request higher steps for photoreal detail
+// (documentary devotional boards set fluxSteps=14; default 4 stays fast).
+const fluxStepsIdx = args.indexOf("--flux-steps");
+const fluxSteps = fluxStepsIdx >= 0 && Number(args[fluxStepsIdx + 1])
+  ? Math.min(20, Math.max(1, Math.round(Number(args[fluxStepsIdx + 1]))))
+  : (Number.isFinite(Number(cfg.fluxSteps)) ? Math.min(20, Math.max(1, Math.round(Number(cfg.fluxSteps)))) : 4);
 
 const opts = {
   scenario,
@@ -86,10 +95,10 @@ const opts = {
   prefix,
   tag: `[wanchar:${scenario}${vertical ? "/vertical" : ""}]`,
   cfg,
-  buildRef: (prompt) => buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_ref` }),
+  buildRef: (prompt) => buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_ref`, steps: fluxSteps }),
   buildKeyframe: (prompt, i, refImage) => refImage
-    ? buildFluxImg2ImgGraph({ prompt: frame(prompt), image: refImage, ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}` })
-    : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}` }),
+    ? buildFluxImg2ImgGraph({ prompt: frame(prompt), image: refImage, ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}`, steps: fluxSteps })
+    : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/wan_seq${i + 1}`, steps: fluxSteps }),
   buildClip: (motion, image, i) => buildWanGraph({
     prompt: move(motion),
     image,
@@ -111,7 +120,7 @@ if (process.argv.includes("--stitch")) {
 }
 
 try {
-  await runSequence({ ...opts, regen, noDialogue: process.argv.includes("--no-dialogue") });
+  await runSequence({ ...opts, regen, noDialogue: process.argv.includes("--no-dialogue"), chain: process.argv.includes("--chain") });
 } catch (e) {
   console.error(`[wanchar] ${e.message}`);
   process.exit(1);

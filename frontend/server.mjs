@@ -59,6 +59,39 @@ import {
   normalizeObject,
   boardToScenario,
 } from "../lib/director.mjs";
+import {
+  newRefaceId,
+  REFACE_ID_RE,
+  refaceSummary,
+  refaceDetail,
+  readRefaceMeta,
+  writeRefaceMeta,
+} from "../lib/reface.mjs";
+import {
+  DOC_STATUSES,
+  validateDocBrief,
+  normalizeDocCharacter,
+  normalizeDocLocation,
+  normalizeDocShot,
+  normalizeDocSequence,
+  normalizeDocChapter,
+  reindexBoardShots,
+  countBoardShots,
+  boardNarrationSeconds,
+  DOCUMENTARY_DIRECTOR_SYSTEM,
+  buildDocBiblePrompt,
+  buildDocShotsPrompt,
+  heuristicPlan,
+  boardToScenario as docBoardToScenario,
+  buildTimeline as docBuildTimeline,
+  subtitlesFromBoard as docSubtitles,
+  buildExportManifest as docExportManifest,
+  boardStats as docBoardStats,
+  chaptersForDuration as docChaptersFor,
+  shotsForDuration as docShotsFor,
+  withDevotionalRealism,
+  isDevotionalBrief,
+} from "../lib/documentary.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -688,7 +721,26 @@ CREATE TABLE IF NOT EXISTS director_boards (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_director_boards_updated ON director_boards(updated_at DESC);`;
+CREATE INDEX IF NOT EXISTS idx_director_boards_updated ON director_boards(updated_at DESC);
+-- Documentary Mode boards (separate from storyboards: chapters -> sequences
+-- -> shots + narration + bibles). One row per documentary; the full board
+-- JSON is canonical in the board column (upserted on every write), scalars
+-- are denormalized for cheap list reads. documentary/*.json files remain as
+-- the offline fallback / debug trail (same pattern as director_boards).
+CREATE TABLE IF NOT EXISTS documentary_boards (
+  board_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  status TEXT,
+  target_seconds INTEGER,
+  shots_done INTEGER,
+  shots_total INTEGER,
+  scenario_name TEXT,
+  project_id INTEGER REFERENCES projects(project_id) ON DELETE CASCADE,
+  board JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_documentary_boards_updated ON documentary_boards(updated_at DESC);`;
 /* NOTE: idx_director_boards_project is created in pgInit() AFTER the
    project_id ADD COLUMN migration — it must NOT live in this batch: on
    pre-existing installs the table exists without the column and the index
@@ -1039,6 +1091,49 @@ async function deleteDirectorBoardsForProject(name) {
     catch (e) { console.warn("[pg] director boards delete failed:", e.message); }
   }
   return ids.size;
+}
+// ---- Documentary Mode mirrors (documentary_boards, one row per board) ----
+// Same pattern as pgUpsertDirectorBoard: every board write upserts the full
+// JSON (canonical) plus scalar columns for cheap list reads. Files in
+// documentary/*.json remain the offline fallback.
+async function pgUpsertDocBoard(board) {
+  if (!pgUp || !board || typeof board !== "object" || !board.id) return;
+  const total = countBoardShots(board);
+  const pid = Number.isInteger(board.project_id) ? board.project_id : null;
+  await pgPool.query(
+    `INSERT INTO documentary_boards (board_id, title, status, target_seconds, shots_done, shots_total,
+      scenario_name, project_id, board, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, COALESCE($10::timestamptz, now()), now())
+     ON CONFLICT (board_id) DO UPDATE SET
+       title = EXCLUDED.title, status = EXCLUDED.status,
+       target_seconds = EXCLUDED.target_seconds, shots_done = EXCLUDED.shots_done,
+       shots_total = EXCLUDED.shots_total, scenario_name = EXCLUDED.scenario_name,
+       board = EXCLUDED.board, updated_at = now(),
+       project_id = COALESCE(EXCLUDED.project_id, documentary_boards.project_id)`,
+    [String(board.id),
+     String((board.brief && board.brief.title) || board.id),
+     board.status ?? null,
+     Number.isFinite(Number(board.brief && board.brief.targetSeconds)) ? Number(board.brief.targetSeconds) : null,
+     Array.isArray(board.chapters) ? board.chapters.reduce((a, c) => a + (Array.isArray(c.sequences) ? c.sequences.reduce((x, q) => x + (Array.isArray(q.shots) ? q.shots.length : 0), 0) : 0), 0) : 0,
+     total,
+     board.scenarioName ?? null,
+     pid,
+     JSON.stringify(board),
+     board.createdAt ?? null]);
+}
+async function pgLinkDocBoards(name, pid) {
+  if (!pgUp || !name || pid == null) return;
+  try {
+    await pgPool.query(
+      `UPDATE documentary_boards SET project_id = $2,
+         board = jsonb_set(board, '{project_id}', to_jsonb($2::int))
+       WHERE scenario_name = $1 AND (project_id IS NULL OR project_id <> $2)`,
+      [name, pid]);
+  } catch (e) { console.warn("[pg] documentary board link failed:", e.message); }
+}
+async function pgDeleteDocBoard(id) {
+  if (!pgUp) return;
+  await pgPool.query("DELETE FROM documentary_boards WHERE board_id = $1", [String(id)]);
 }
 // Explicit Save = new version of the same project (v1, v2, …). Never overwrites.
 async function pgSaveVersion(name, cfg) {
@@ -1993,6 +2088,9 @@ async function pgInit() {
             FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE`);
       }
     } catch (e) { console.warn("[pg] director_boards project_fk migration failed:", e.message); }
+    // Documentary boards index (table itself is created in PG_SCHEMA above).
+    await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_documentary_boards_project ON documentary_boards(project_id)`)
+      .catch(() => {});
     // Song form table + its generated-take pointer (existing installs predate both).
     await pgPool.query(`ALTER TABLE project_songs ADD COLUMN IF NOT EXISTS file_path TEXT`)
       .catch(() => {});
@@ -2197,6 +2295,9 @@ const RES_META = path.join(RESOURCES, "meta.json");
 // AI Story Director boards (file-persisted JSON, one per story — resumable,
 // debuggable, works with or without Postgres like prompts/*.json).
 const DIRECTOR = path.join(ROOT, "director");
+// Documentary Mode boards (same pattern: documentary/*.json offline fallback,
+// documentary_boards table canonical when Postgres is up).
+const DOCUMENTARY = path.join(ROOT, "documentary");
 const resReadMeta = () => {
   try {
     const m = JSON.parse(fs.readFileSync(RES_META, "utf8"));
@@ -2335,6 +2436,131 @@ function serveResource(res, file) {
   fs.createReadStream(p).pipe(res);
 }
 
+// ---------------------------------------------------------------- reface
+// Face-swap studio: upload a minutes-long video, auto-detect + cluster every
+// face identity, upload one reference face image, swap the chosen identity.
+// Jobs live in reface/<id>/ (gitignored working storage, like resources/);
+// scripts/reface.py (local insightface, CPU) does analyze + swap in
+// background workers tracked in refaceProcs (one at a time — the box's CPU
+// is the bottleneck, same serial discipline as the ComfyUI queue).
+const REFACE = path.join(ROOT, "reface");
+const REFACE_MAX_VIDEO = 500 * 1024 * 1024; // 500MB raw upload cap
+const REFACE_VIDEO_EXT = {
+  "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov",
+  "video/x-matroska": ".mkv",
+};
+const refaceProcs = new Map(); // id -> ChildProcess (analyze or swap)
+const refaceBusy = () => {
+  for (const pr of refaceProcs.values()) {
+    if (!pr.killed && pr.exitCode == null) return true;
+  }
+  return false;
+};
+async function probeVideo(full) {
+  try {
+    const out = await runCmd("ffprobe",
+      ["-v", "error", "-show_entries",
+       "format=duration:stream=width,height,avg_frame_rate,codec_type",
+       "-of", "json", full], 30000);
+    const j = JSON.parse(String(out));
+    let duration = null;
+    const d = Number(j?.format?.duration);
+    if (Number.isFinite(d) && d > 0) duration = d;
+    let fps = 24, width = 0, height = 0, hasAudio = false;
+    for (const s of j?.streams || []) {
+      if (s.codec_type === "video" && !width) {
+        width = Number(s.width) || 0;
+        height = Number(s.height) || 0;
+        const fr = String(s.avg_frame_rate || "24/1");
+        const m = fr.match(/^([\d.]+)\/([\d.]+)$/);
+        if (m && Number(m[2])) fps = Number(m[1]) / Number(m[2]);
+        else if (Number(fr)) fps = Number(fr);
+      }
+      if (s.codec_type === "audio") hasAudio = true;
+    }
+    return { duration, fps, width, height, hasAudio };
+  } catch { return { duration: null, fps: null, width: 0, height: 0, hasAudio: false }; }
+}
+function spawnRefaceWorker(id, args) {
+  const dir = path.join(REFACE, id);
+  const py = process.env.REFACE_PYTHON || "python";
+  const logStream = fs.createWriteStream(path.join(dir, "job.log"), { flags: "a" });
+  const proc = spawn(py, [path.join(ROOT, "scripts", "reface.py"), ...args, dir], {
+    cwd: ROOT, windowsHide: true,
+  });
+  refaceProcs.set(id, proc);
+  proc.stdout.on("data", (c) => { try { logStream.write(c); } catch { /* closing */ } });
+  proc.stderr.on("data", (c) => { try { logStream.write(c); } catch { /* closing */ } });
+  proc.on("error", (e) => { try { logStream.write(`spawn failed: ${e.message}\n`); } catch { /* ignore */ } });
+  proc.on("close", (code) => {
+    refaceProcs.delete(id);
+    try { logStream.end(); } catch { /* ignore */ }
+    const kind = args[0]; // analyze | swap
+    try {
+      const meta = readRefaceMeta(dir);
+      if (!meta) return;
+      if (code === 0) {
+        if (kind === "analyze") {
+          meta.status = "analyzed";
+        } else {
+          meta.status = "done";
+          try {
+            if (fs.existsSync(path.join(dir, "result.mp4"))) meta.result = "result.mp4";
+            else { meta.status = "swap_error"; meta.error = "worker finished without writing result.mp4"; }
+          } catch { meta.status = "swap_error"; meta.error = "worker finished without writing result.mp4"; }
+        }
+        if (meta.status === "analyzed" || meta.status === "done") meta.error = null;
+      } else {
+        meta.status = kind === "analyze" ? "analyze_error" : "swap_error";
+        try {
+          const tail = fs.readFileSync(path.join(dir, "job.log"), "utf8").slice(-800);
+          const m = tail.match(/\[reface\] FAILED: ([^\n]*)/);
+          meta.error = (m ? m[1] : `worker exited with code ${code}`).slice(0, 300);
+        } catch { meta.error = `worker exited with code ${code}`; }
+      }
+      writeRefaceMeta(dir, meta);
+    } catch (e) { console.warn("[reface] close handler failed:", e.message); }
+  });
+  return proc;
+}
+// Static file serving for a job dir, with single-range support so result
+// videos seek in the browser (serveOutput has no ranges — added here only).
+function serveReface(req, res, id, rel) {
+  if (!REFACE_ID_RE.test(String(id || ""))) { res.writeHead(404); return res.end(); }
+  const segs = String(rel || "").split("/").filter((s) => s && s !== ".");
+  if (!segs.length || segs.some((s) => s === ".." || s.includes("\\"))) { res.writeHead(404); return res.end(); }
+  const dir = path.join(REFACE, id);
+  const p = path.normalize(path.join(dir, ...segs));
+  if (!p.startsWith(dir + path.sep)) { res.writeHead(403); return res.end(); }
+  if (!fs.existsSync(p) || !fs.statSync(p).isFile()) { res.writeHead(404); return res.end(); }
+  const st = fs.statSync(p);
+  const type = MIME[path.extname(p).toLowerCase()] || "application/octet-stream";
+  const range = req.headers.range;
+  if (range) {
+    const m = String(range).match(/^bytes=(\d*)-(\d*)$/);
+    if (m) {
+      let start = m[1] === "" ? 0 : Number(m[1]);
+      let end = m[2] === "" ? st.size - 1 : Number(m[2]);
+      if (!Number.isFinite(start) || start < 0) start = 0;
+      if (!Number.isFinite(end) || end >= st.size) end = st.size - 1;
+      if (start <= end) {
+        res.writeHead(206, {
+          "Content-Type": type, "Accept-Ranges": "bytes", "Cache-Control": "no-store",
+          "Content-Range": `bytes ${start}-${end}/${st.size}`,
+          "Content-Length": end - start + 1,
+        });
+        fs.createReadStream(p, { start, end }).pipe(res);
+        return;
+      }
+    }
+  }
+  res.writeHead(200, {
+    "Content-Type": type, "Accept-Ranges": "bytes", "Cache-Control": "no-store",
+    "Content-Length": st.size,
+  });
+  fs.createReadStream(p).pipe(res);
+}
+
 // ---------------------------------------------------------------- auth
 // Single-user login. Credentials come from env (video_test/.env or real env);
 // defaults are admin / admin — override for anything non-local.
@@ -2390,6 +2616,26 @@ const readJson = (req) => new Promise((res, rej) => {
   let b = "";
   req.on("data", (c) => (b += c));
   req.on("end", () => { try { res(JSON.parse(b)); } catch { rej(new Error("bad json")); } });
+});
+// Raw binary body reader (video uploads — base64 JSON would bloat a
+// minutes-long clip by 4/3 and hold two copies in memory). Rejects 413 past
+// maxBytes; the socket is destroyed so the client stops sending.
+const readRaw = (req, maxBytes) => new Promise((res, rej) => {
+  const chunks = [];
+  let n = 0, settled = false;
+  req.on("data", (c) => {
+    if (settled) return;
+    n += c.length;
+    if (n > maxBytes) {
+      settled = true;
+      try { req.destroy(); } catch { /* already closing */ }
+      rej(Object.assign(new Error("file too large"), { code: 413 }));
+      return;
+    }
+    chunks.push(c);
+  });
+  req.on("end", () => { if (!settled) { settled = true; res(Buffer.concat(chunks)); } });
+  req.on("error", (e) => { if (!settled) { settled = true; rej(e); } });
 });
 
 // ---------------------------------------------------------------- runs
@@ -2452,6 +2698,10 @@ function startRun(scenario, opts = {}) {
   } else {
     if (stitch) argv.push("--stitch");
     if (opts.noDialogue) argv.push("--no-dialogue");
+    // Connected movie: beat N>1 starts from beat N-1's last frame
+    // (devotional Shiv/Ram/Krishna docs). Devotional boards also set
+    // cfg.chainContinuity, so the flag is only needed to force it on.
+    if (opts.chain) argv.push("--chain");
     if (regen) {
       argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
     }
@@ -2463,7 +2713,7 @@ function startRun(scenario, opts = {}) {
   // reveals the active run and the SSE log endpoint replays its log + asset
   // events, letting the client rebuild progress and button state from the
   // real stream instead of guessing.
-  const run = { id, scenario, folder, engine, format, stitch, regen, count, mode, beats: opts.beats || null, lipsync: opts.lipsync || null, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
+  const run = { id, scenario, folder, engine, format, stitch, regen, count, mode, beats: opts.beats || null, lipsync: opts.lipsync || null, chain: !!opts.chain, status: "running", log: "", assets: [], startedAt: Date.now(), proc: null, subs: new Set(), cancelled: false, total: count, pass: 0 };
   runs.set(id, run);
   let lineBuf = "";
   const push = (chunk) => {
@@ -3403,7 +3653,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Everything below (API + generated outputs) requires a session.
-    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/")) && !authedUser(req))
+    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/") || p.startsWith("/reface/")) && !authedUser(req))
       return json(res, 401, { error: "unauthorized" });
 
     if (p === "/api/scenarios" && req.method === "GET") {
@@ -3585,6 +3835,9 @@ const server = http.createServer(async (req, res) => {
             // An approved storyboard waiting on this project links now.
             try { await pgLinkDirectorBoards(name, project_id); }
             catch (e) { console.warn("[pg] director board link failed:", e.message); }
+            // An approved documentary waiting on this project links now.
+            try { await pgLinkDocBoards(name, project_id); }
+            catch (e) { console.warn("[pg] documentary board link failed:", e.message); }
           } catch (e) { console.warn("[pg] version lookup failed:", e.message); }
         }
         return json(res, 200, { ok: true, version, project_id, unchanged: true });
@@ -3638,6 +3891,9 @@ const server = http.createServer(async (req, res) => {
           // An approved storyboard waiting on this project links now.
           try { await pgLinkDirectorBoards(name, project_id); }
           catch (e) { console.warn("[pg] director board link failed:", e.message); }
+          // An approved documentary waiting on this project links now.
+          try { await pgLinkDocBoards(name, project_id); }
+          catch (e) { console.warn("[pg] documentary board link failed:", e.message); }
         }
         catch (e) { console.warn("[pg] version save failed:", e.message); }
       }
@@ -3762,6 +4018,7 @@ const server = http.createServer(async (req, res) => {
             skipLipsync: !!body.skipLipsync,
             noStitch: !!body.noStitch,
             noDialogue: !!body.noDialogue,
+            chain: !!body.chain,
             lipsync: body.lipsync === "musetalk-comfy" || body.lipsync === "musetalk" ? "musetalk-comfy"
               : body.lipsync === "wav2lip" ? "wav2lip" : undefined,
           songModel: body.songModel === "ace-step" || body.songModel === "minimax" ? body.songModel : undefined,
@@ -4249,6 +4506,171 @@ const server = http.createServer(async (req, res) => {
         ok: true, name, folder, scenes: entries.length,
         version, project_id, warnings,
       });
+    }
+    // ------------------------------------------------------- reface studio
+    if (p === "/api/reface" && req.method === "GET") {
+      // Newest first (created_at desc); unreadable dirs are skipped.
+      let rows = [];
+      try {
+        rows = fs.readdirSync(REFACE)
+          .map((id) => {
+            try { return refaceSummary(path.join(REFACE, id)); }
+            catch { return null; }
+          })
+          .filter(Boolean)
+          .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
+      } catch { rows = []; }
+      return json(res, 200, rows);
+    }
+    if (p === "/api/reface/upload" && req.method === "POST") {
+      // Raw binary video body (Content-Type: video/*, original name in
+      // X-Filename). Creates the job dir + meta + thumbnail; the client then
+      // POSTs /analyze to detect faces.
+      const ctype = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+      const ext = REFACE_VIDEO_EXT[ctype];
+      if (!ext) return json(res, 400, { error: `unsupported video type ${ctype || "(none)"} — upload mp4/webm/mov/mkv` });
+      let buf;
+      try { buf = await readRaw(req, REFACE_MAX_VIDEO); }
+      catch (e) {
+        if (e?.code === 413) return json(res, 413, { error: "video over 500MB — trim it and re-upload" });
+        return json(res, 400, { error: "upload read failed" });
+      }
+      if (!buf.length) return json(res, 400, { error: "empty file" });
+      const rawName = String(req.headers["x-filename"] || "video").slice(0, 120);
+      const id = newRefaceId();
+      const dir = path.join(REFACE, id);
+      fs.mkdirSync(dir, { recursive: true });
+      const file = `source${ext}`;
+      fs.writeFileSync(path.join(dir, file), buf);
+      const probe = await probeVideo(path.join(dir, file));
+      if (probe.duration == null) {
+        fs.rmSync(dir, { recursive: true, force: true });
+        return json(res, 400, { error: "not a readable video file — re-export as mp4 and retry" });
+      }
+      try {
+        await extractMiddleFrame(path.join(dir, file), path.join(dir, "source_thumb.jpg"));
+      } catch { /* thumbnail is best-effort */ }
+      const meta = {
+        id, created_at: new Date().toISOString(),
+        filename: rawName.replace(/[\\/:*?"<>|]/g, "_") || "video",
+        source: file, bytes: buf.length,
+        duration: probe.duration, fps: probe.fps,
+        width: probe.width, height: probe.height, hasAudio: probe.hasAudio,
+        status: "uploaded", error: null,
+        reference: null, targetFace: null, result: null,
+      };
+      writeRefaceMeta(dir, meta);
+      return json(res, 200, refaceDetail(dir));
+    }
+    if (p.startsWith("/api/reface/") && p.split("/").length === 4 && req.method === "GET") {
+      // GET /api/reface/:id — detail (faces + live progress inline).
+      const id = pathName(p.split("/")[3]);
+      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
+      const dir = path.join(REFACE, id);
+      if (!fs.existsSync(path.join(dir, "meta.json"))) return json(res, 404, { error: "no such reface job" });
+      return json(res, 200, refaceDetail(dir));
+    }
+    if (p.startsWith("/api/reface/") && p.endsWith("/reference") && req.method === "POST") {
+      // The NEW face to put onto the video: small base64 image payload
+      // (same data-URL convention as /api/upload/ref).
+      const id = pathName(p.split("/")[3]);
+      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
+      const dir = path.join(REFACE, id);
+      const meta = readRefaceMeta(dir);
+      if (!meta) return json(res, 404, { error: "no such reface job" });
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      if (typeof body.data !== "string") return json(res, 400, { error: "data (base64) required" });
+      const m = body.data.match(/^data:image\/(\w+);base64,(.+)$/s);
+      if (!m) return json(res, 400, { error: "expected a data:image base64 payload" });
+      const buf = Buffer.from(m[2], "base64");
+      if (!buf.length) return json(res, 400, { error: "empty image" });
+      if (buf.length > 15 * 1024 * 1024) return json(res, 413, { error: "image over 15MB — downscale and retry" });
+      const ext = { png: ".png", jpeg: ".jpg", jpg: ".jpg", webp: ".webp" }[m[1].toLowerCase()] || ".png";
+      for (const f of fs.readdirSync(dir)) {
+        if (f.startsWith("reference.") && fs.statSync(path.join(dir, f)).isFile()) {
+          try { fs.unlinkSync(path.join(dir, f)); } catch { /* keep going */ }
+        }
+      }
+      const file = `reference${ext}`;
+      fs.writeFileSync(path.join(dir, file), buf);
+      meta.reference = file;
+      // A new reference invalidates a finished swap (it was rendered with the
+      // old face) — status falls back to analyzed so Swap runs again.
+      if (meta.status === "done" || meta.status === "swap_error") meta.status = "analyzed";
+      meta.error = null;
+      writeRefaceMeta(dir, meta);
+      return json(res, 200, refaceDetail(dir));
+    }
+    if (p.startsWith("/api/reface/") && p.endsWith("/analyze") && req.method === "POST") {
+      const id = pathName(p.split("/")[3]);
+      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
+      const dir = path.join(REFACE, id);
+      const meta = readRefaceMeta(dir);
+      if (!meta) return json(res, 404, { error: "no such reface job" });
+      if (refaceProcs.has(id)) return json(res, 409, { error: "this job already has a worker running" });
+      if (refaceBusy()) return json(res, 409, { error: "another reface job is running — wait for it to finish" });
+      if (!meta.source || !fs.existsSync(path.join(dir, meta.source)))
+        return json(res, 400, { error: "source video missing — re-upload it" });
+      meta.status = "analyzing";
+      meta.error = null;
+      writeRefaceMeta(dir, meta);
+      try { fs.unlinkSync(path.join(dir, "progress.json")); } catch { /* first run */ }
+      try {
+        spawnRefaceWorker(id, ["analyze"]);
+      } catch (e) {
+        meta.status = "analyze_error";
+        meta.error = String(e.message || e).slice(0, 200);
+        writeRefaceMeta(dir, meta);
+        return json(res, 500, { error: meta.error });
+      }
+      return json(res, 200, { started: true, id });
+    }
+    if (p.startsWith("/api/reface/") && p.endsWith("/swap") && req.method === "POST") {
+      const id = pathName(p.split("/")[3]);
+      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
+      const dir = path.join(REFACE, id);
+      const meta = readRefaceMeta(dir);
+      if (!meta) return json(res, 404, { error: "no such reface job" });
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const faceId = String(body.faceId || "");
+      if (!/^face\d+$/.test(faceId)) return json(res, 400, { error: "pick a face from the panel first" });
+      if (refaceProcs.has(id)) return json(res, 409, { error: "this job already has a worker running" });
+      if (refaceBusy()) return json(res, 409, { error: "another reface job is running — wait for it to finish" });
+      let faces = [];
+      try { faces = JSON.parse(fs.readFileSync(path.join(dir, "faces.json"), "utf8")); } catch { faces = []; }
+      if (!faces.some((f) => f.id === faceId))
+        return json(res, 400, { error: "unknown face — analyze the video first" });
+      if (!meta.reference || !fs.existsSync(path.join(dir, meta.reference)))
+        return json(res, 400, { error: "upload a reference face image first" });
+      meta.status = "swapping";
+      meta.targetFace = faceId;
+      meta.result = null;
+      meta.error = null;
+      writeRefaceMeta(dir, meta);
+      try {
+        spawnRefaceWorker(id, ["swap", "--face", faceId]);
+      } catch (e) {
+        meta.status = "swap_error";
+        meta.error = String(e.message || e).slice(0, 200);
+        writeRefaceMeta(dir, meta);
+        return json(res, 500, { error: meta.error });
+      }
+      return json(res, 200, { started: true, id, faceId });
+    }
+    if (p.startsWith("/api/reface/") && p.split("/").length === 4 && req.method === "DELETE") {
+      const id = pathName(p.split("/")[3]);
+      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
+      const proc = refaceProcs.get(id);
+      if (proc && !proc.killed && proc.exitCode == null) {
+        try { proc.kill(); } catch { /* already dead */ }
+        refaceProcs.delete(id);
+      }
+      fs.rmSync(path.join(REFACE, id), { recursive: true, force: true });
+      return json(res, 200, { ok: true, id });
     }
     if (p === "/api/upload/keyframe" && req.method === "POST") {
       // Upload an image as beat N's keyframe. Stored as the next keyframe
@@ -4912,6 +5334,345 @@ const server = http.createServer(async (req, res) => {
       // /api/scenario/:name) — identical semantics to the Scenario Editor
       // Save — then opens the workspace for standard generation.
       return json(res, 200, { name: target, config, partial, migrated: board.scenes.length, sceneCount: board.sceneCount });
+    }
+    // ------------------------------------------------- Documentary Mode
+    // Orchestration layer on top of the EXISTING pipeline (never a parallel
+    // renderer): brief -> chapters -> sequences -> shots + Hindi narration +
+    // character/location bibles via the shared llmChatJson convention, with a
+    // deterministic heuristic fallback when the LLM is offline. APPROVE hands
+    // a standard scenario config to the existing saveScenario/workspace
+    // pipeline (client PUTs, then opens the workspace) — Flux/LTX/Wan, TTS,
+    // ACE-Step, lip-sync, SSE, versioning, resume and FFmpeg assembly are all
+    // reused unchanged. Boards persist to documentary/*.json (offline
+    // fallback) mirrored into documentary_boards (DB-backed list).
+    const docBoardFile = (id) => path.join(DOCUMENTARY, `${id}.json`);
+    const readDocBoard = (id) => {
+      if (!isSafe(id)) throw new Error("bad documentary id");
+      const f = docBoardFile(id);
+      if (!fs.existsSync(f)) throw new Error("documentary not found");
+      return JSON.parse(fs.readFileSync(f, "utf8"));
+    };
+    const writeDocBoard = (board) => {
+      fs.mkdirSync(DOCUMENTARY, { recursive: true });
+      board.updatedAt = new Date().toISOString();
+      fs.writeFileSync(docBoardFile(board.id), JSON.stringify(board, null, 2));
+      pgUpsertDocBoard(board).catch((e) => console.warn("[pg] documentary board mirror failed:", e.message));
+      return board;
+    };
+    const docBoardMeta = (b) => ({
+      id: b.id,
+      title: (b.brief && b.brief.title) || b.id,
+      status: b.status,
+      targetSeconds: (b.brief && b.brief.targetSeconds) || null,
+      shots: countBoardShots(b),
+      shotsTotal: countBoardShots(b),
+      scenarioName: b.scenarioName ?? null,
+      project_id: Number.isInteger(b.project_id) ? b.project_id : null,
+      updatedAt: b.updatedAt ?? null,
+      createdAt: b.createdAt ?? null,
+    });
+    const docSlug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || `doc_${Date.now().toString(36)}`;
+    if (p === "/api/documentary/boards" && req.method === "POST") {
+      const brief = validateDocBrief(await readJson(req));
+      const id = docSlug(brief.title);
+      const now = new Date().toISOString();
+      const board = writeDocBoard({
+        id, brief, status: "brief",
+        chapters: [], characters: [], locations: [], musicBeds: [],
+        styleLock: brief.visualStyle,
+        sceneCount: 0, shotCount: 0,
+        scenarioName: null, project_id: null,
+        error: null, createdAt: now, updatedAt: now,
+      });
+      return json(res, 200, board);
+    }
+    if (p === "/api/documentary/boards" && req.method === "GET") {
+      fs.mkdirSync(DOCUMENTARY, { recursive: true });
+      const seen = new Map();
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT board_id, board FROM documentary_boards");
+          for (const row of r.rows) {
+            try {
+              const b = typeof row.board === "string" ? JSON.parse(row.board) : row.board;
+              if (b && b.id) seen.set(String(b.id), docBoardMeta(b));
+            } catch { /* skip corrupt rows */ }
+          }
+        } catch (e) { console.warn("[pg] documentary boards list failed:", e.message); }
+      }
+      for (const f of fs.readdirSync(DOCUMENTARY).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"))) {
+        try {
+          const b = JSON.parse(fs.readFileSync(path.join(DOCUMENTARY, f), "utf8"));
+          if (b && b.id && !seen.has(String(b.id))) {
+            seen.set(String(b.id), docBoardMeta(b));
+            if (pgUp) pgUpsertDocBoard(b).catch((e) => console.warn("[pg] documentary board backfill failed:", e.message));
+          }
+        } catch { /* skip corrupt board files */ }
+      }
+      const list = [...seen.values()];
+      list.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+      return json(res, 200, list);
+    }
+    {
+      const mDoc = p.match(/^\/api\/documentary\/boards\/([^/]+)$/);
+      if (mDoc) {
+        const id = decodeURIComponent(mDoc[1]);
+        if (req.method === "GET") {
+          if (pgUp) {
+            try {
+              const r = await pgPool.query("SELECT board FROM documentary_boards WHERE board_id = $1", [id]);
+              if (r.rows[0]?.board) {
+                const b = typeof r.rows[0].board === "string" ? JSON.parse(r.rows[0].board) : r.rows[0].board;
+                return json(res, 200, b);
+              }
+            } catch (e) { console.warn("[pg] documentary board read failed:", e.message); }
+          }
+          return json(res, 200, readDocBoard(id));
+        }
+        if (req.method === "PUT") {
+          const board = readDocBoard(id);
+          const patch = await readJson(req);
+          // Editable fields: brief bits, narration, bibles, shot
+          // approve/skip flags and prompt edits. Narration/character changes
+          // mark dependent shots stale (status back to WAITING, approved
+          // cleared) — images/videos of unrelated shots are never touched.
+          if (patch.brief && typeof patch.brief === "object") {
+            for (const k of ["audience", "tone", "visualStyle", "narrationStyle", "narrationVoice", "musicStyle", "instructions", "sourceType"]) {
+              if (typeof patch.brief[k] === "string" && patch.brief[k].trim()) board.brief[k] = patch.brief[k].trim().slice(0, 2000);
+            }
+            board.styleLock = board.brief.visualStyle;
+          }
+          if (Array.isArray(patch.characters)) board.characters = patch.characters.map(normalizeDocCharacter);
+          if (Array.isArray(patch.locations)) board.locations = patch.locations.map(normalizeDocLocation);
+          if (patch.shot && typeof patch.shot === "object") {
+            const { shot_id, ...fields } = patch.shot;
+            let found = null;
+            for (const c of board.chapters) for (const q of c.sequences) for (const s of q.shots) {
+              if (s.shot_id === shot_id) found = s;
+            }
+            if (!found) throw new Error("shot not found");
+            if (typeof fields.flux_prompt === "string") found.flux_prompt = fields.flux_prompt.slice(0, 4000);
+            if (typeof fields.ltx_prompt === "string") { found.ltx_prompt = fields.ltx_prompt.slice(0, 2000); found.motion = found.ltx_prompt; }
+            if (typeof fields.title === "string") found.title = fields.title.slice(0, 200);
+            if (Array.isArray(fields.narration_lines)) {
+              found.narration_lines = fields.narration_lines.map((x) => String(x)).filter(Boolean).slice(0, 8);
+              // Narration change -> timing/audio may be stale: reopen the shot.
+              found.status = "WAITING"; found.approved = false;
+            }
+            if (typeof fields.approved === "boolean") found.approved = fields.approved;
+            if (typeof fields.status === "string" && ["WAITING", "SKIPPED", "FAILED"].includes(fields.status)) found.status = fields.status;
+          }
+          if (patch.characterRefChanged) {
+            const cid = String(patch.characterRefChanged);
+            for (const c of board.chapters) for (const q of c.sequences) for (const s of q.shots) {
+              if (Array.isArray(s.characters) && s.characters.includes(cid)) { s.status = "WAITING"; s.approved = false; }
+            }
+          }
+          board.error = null;
+          return json(res, 200, writeDocBoard(board));
+        }
+        if (req.method === "DELETE") {
+          readDocBoard(id);
+          fs.rmSync(docBoardFile(id), { force: true });
+          await pgDeleteDocBoard(id).catch((e) => console.warn("[pg] documentary board delete failed:", e.message));
+          return json(res, 200, { ok: true });
+        }
+      }
+    }
+    // Plan: bible + chapters + sequences first (LLM, else heuristic), then
+    // shots per chapter (LLM batches, else heuristic). Fully resumable: a
+    // planned board replans only what is missing.
+    if (p.match(/^\/api\/documentary\/boards\/[^/]+\/plan$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDocBoard(id);
+      board.status = "planning";
+      writeDocBoard(board);
+      let blueprint = null;
+      try {
+        const raw = await llmChatJson({
+          system: DOCUMENTARY_DIRECTOR_SYSTEM,
+          user: buildDocBiblePrompt(board.brief),
+          maxTokens: 8000, temperature: 0.7, timeoutMs: 300000,
+          rawTag: `_raw_doc_${id}_bible.log`,
+        });
+        blueprint = raw && typeof raw === "object" ? raw : null;
+      } catch (e) {
+        console.warn(`[documentary] bible LLM failed, heuristic fallback: ${e.message}`);
+      }
+      if (blueprint && Array.isArray(blueprint.chapters) && blueprint.chapters.length) {
+        board.characters = Array.isArray(blueprint.characters) ? blueprint.characters.map(normalizeDocCharacter) : board.characters;
+        board.locations = Array.isArray(blueprint.locations) ? blueprint.locations.map(normalizeDocLocation) : board.locations;
+        board.musicBeds = Array.isArray(blueprint.music_beds) ? blueprint.music_beds : board.musicBeds;
+        board.chapters = blueprint.chapters.map((c, i) => normalizeDocChapter({ ...c, __globalOffset: 0 }, i + 1));
+        board.status = "narration";
+        // Per-chapter shot batches via the LLM; a failed chapter falls back
+        // to heuristic shots for that chapter only (never aborts the board).
+        let global = 0;
+        for (const c of board.chapters) {
+          try {
+            const raw = await llmChatJson({
+              system: DOCUMENTARY_DIRECTOR_SYSTEM,
+              user: buildDocShotsPrompt({ brief: board.brief, board, chapter: c, startGlobal: global }),
+              maxTokens: 8000, temperature: 0.7, timeoutMs: 300000,
+              rawTag: `_raw_doc_${id}_ch${c.chapter_number}.log`,
+            });
+            const seqs = raw && Array.isArray(raw.sequences) ? raw.sequences : null;
+            if (seqs && seqs.length) {
+              c.sequences = seqs.map((q, i) => {
+                const prev = c.sequences[i] || {};
+                return normalizeDocSequence({ ...prev, ...q }, c.chapter_number, Number(q.seq) || i + 1, global + c.sequences.slice(0, i).reduce((a, x) => a + (Array.isArray(x.shots) ? x.shots.length : 0), 0));
+              });
+            }
+          } catch (e) {
+            console.warn(`[documentary] chapter ${c.chapter_number} shots LLM failed, heuristic fill: ${e.message}`);
+          }
+          // Any sequence still shot-less gets heuristic shots sized to its duration.
+          for (const q of c.sequences) {
+            if (!Array.isArray(q.shots) || !q.shots.length) {
+              const nShots = Math.min(12, Math.max(2, Math.round((q.duration_seconds || 40) / 12)));
+              const d = Math.max(6, Math.min(15, Math.round((q.duration_seconds || 40) / nShots)));
+              const main = board.characters[0];
+              const loc = board.locations[0];
+              const devotionalFill = isDevotionalBrief(board.brief);
+              q.shots = Array.from({ length: nShots }, (_, hi) => normalizeDocShot({
+                title: `${q.title} — shot ${hi + 1}`,
+                duration_seconds: d,
+                narration_lines: q.narration ? [`${q.narration} (भाग ${hi + 1})`] : [],
+                visual_type: hi === 0 ? "establishing" : "character",
+                characters: main ? [main.character_id] : [],
+                location: loc ? loc.location_id : "",
+                flux_prompt: devotionalFill
+                  ? withDevotionalRealism([board.brief.visualStyle, main ? (main.identity_prompt || main.name) : "", loc ? (loc.description || loc.name) : "", `${q.visual_goal || q.title}, cinematic ${["wide", "medium", "close-up"][hi % 3]} framing`].filter(Boolean).join(", "))
+                  : [board.brief.visualStyle, main ? (main.identity_prompt || main.name) : "", loc ? (loc.description || loc.name) : "", `${q.visual_goal || q.title}, cinematic ${["wide", "medium", "close-up"][hi % 3]} framing`].filter(Boolean).join(", "),
+                ltx_prompt: "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+                camera: { shot_type: ["Wide Shot", "Medium Shot", "Close-Up"][hi % 3], angle: "Eye Level", movement: "slow cinematic push-in" },
+                audio: { music: true, sfx: false },
+              }, c.chapter_number, q.seq, hi + 1, 0, d));
+            }
+          }
+          global += c.sequences.reduce((a, q) => a + q.shots.length, 0);
+        }
+        reindexBoardShots(board.chapters);
+        board.status = "ready";
+      } else {
+        // Full heuristic fallback (LLM offline): deterministic plan sized to
+        // the target duration — the same path the 5-minute test uses.
+        const h = heuristicPlan(board.brief);
+        board.chapters = h.chapters;
+        board.characters = h.characters;
+        board.locations = h.locations;
+        board.musicBeds = h.musicBeds;
+        board.status = "ready";
+      }
+      board.shotCount = countBoardShots(board);
+      board.error = null;
+      return json(res, 200, writeDocBoard(board));
+    }
+    // Approve: flatten to a standard scenario config; the CLIENT persists via
+    // the existing saveScenario PUT then opens the workspace — generation,
+    // progress, resume and assembly are 100% the existing pipeline.
+    if (p.match(/^\/api\/documentary\/boards\/[^/]+\/approve$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDocBoard(id);
+      if (!countBoardShots(board)) throw new Error("nothing to approve — plan the documentary first");
+      const config = docBoardToScenario(board);
+      let target = board.scenarioName || String(board.brief.title || "").trim().slice(0, 120) || id;
+      if (!board.scenarioName) {
+        try {
+          const taken = new Set((await dbListScenarios()).map((r) => r.name));
+          if (taken.has(target)) {
+            for (let i = 2; ; i++) {
+              if (!taken.has(`${target}_${i}`)) { target = `${target}_${i}`; break; }
+            }
+          }
+        } catch { /* name check is best-effort; save enforces uniqueness */ }
+      }
+      board.status = "approved";
+      board.scenarioName = target;
+      try {
+        const pid = await pgProjectId(target);
+        board.project_id = pid;
+        if (pid != null) await pgLinkDocBoards(target, pid);
+      } catch { /* link is best-effort; the PUT save links too */ }
+      board.error = null;
+      writeDocBoard(board);
+      return json(res, 200, { name: target, config, shots: countBoardShots(board), narrationSeconds: boardNarrationSeconds(board) });
+    }
+    // Timeline: totals per chapter/sequence/shot with cumulative offsets.
+    if (p.match(/^\/api\/documentary\/boards\/[^/]+\/timeline$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      return json(res, 200, docBuildTimeline(readDocBoard(id)));
+    }
+    // Status: planning progress + per-shot WAITING/IMAGE/VIDEO/AUDIO/READY/
+    // FAILED. When linked to a project, shot states derive from the existing
+    // project_assets catalog + outputs dir (one failed shot never blocks the
+    // rest — the serial queue keeps going per existing behavior); otherwise
+    // plan counts. Resume = read this state and continue from the last
+    // incomplete shot (the existing runners already skip assets on disk).
+    if (p.match(/^\/api\/documentary\/boards\/[^/]+\/status$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDocBoard(id);
+      const stats = docBoardStats(board);
+      let linked = null;
+      if (board.scenarioName && pgUp) {
+        try {
+          const pid = await pgProjectId(board.scenarioName);
+          if (pid != null) {
+            const r = await pgPool.query(
+              "SELECT beat_index, asset_type, status, file_path FROM project_assets WHERE project_id = $1 AND version = (SELECT max(version) FROM project_assets WHERE project_id = $1)",
+              [pid]);
+            linked = { project_id: pid, rows: r.rows.length };
+            // Overlay catalog states onto plan shots by global index (= beat).
+            const shotByBeat = new Map();
+            for (const c of board.chapters) for (const q of c.sequences) for (const s of q.shots) shotByBeat.set(s.global_index, s);
+            for (const row of r.rows) {
+              const s = shotByBeat.get(Number(row.beat_index));
+              if (!s) continue;
+              if (row.asset_type === "VIDEO" && row.status === "COMPLETED") s.status = "READY";
+              else if (row.status === "FAILED" && s.status !== "READY") s.status = "FAILED";
+              else if (row.asset_type === "KEYFRAME" && row.status === "COMPLETED" && s.status === "WAITING") s.status = "IMAGE";
+            }
+          }
+        } catch (e) { console.warn("[pg] documentary status link failed:", e.message); }
+      }
+      const shots = countBoardShots(board);
+      const ready = stats.byStatus.READY || 0;
+      return json(res, 200, {
+        id: board.id, status: board.status,
+        shots, ready,
+        pct: shots ? Math.round((ready / shots) * 100) : 0,
+        stages: ["Planning", "Writing narration", "Creating Bible", "Generating images", "Generating videos", "Generating narration", "Generating music", "Assembling", "Completed"],
+        byStatus: stats.byStatus,
+        narrationSeconds: stats.narrationSeconds,
+        targetSeconds: board.brief.targetSeconds,
+        scenarioName: board.scenarioName,
+        linked,
+      });
+    }
+    // Export manifest: final MP4 + chapter MP4s + narration wav + music dir +
+    // subtitles.srt (from exact narration timing) + documentary.json, using
+    // existing storage conventions. Assembly itself reuses the existing
+    // FFmpeg stitch (client triggers via the workspace); this endpoint writes
+    // the portable manifest + subtitles next to the outputs dir when it exists.
+    if (p.match(/^\/api\/documentary\/boards\/[^/]+\/export$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDocBoard(id);
+      const body = await readJson(req).catch(() => ({}));
+      const dir = isSafe(body.dir) ? body.dir : null;
+      const manifest = docExportManifest(board, dir || board.scenarioName);
+      const srt = docSubtitles(board);
+      let wrote = [];
+      if (dir) {
+        const full = path.join(OUTPUTS, dir);
+        try {
+          if (fs.existsSync(full) && fs.statSync(full).isDirectory()) {
+            fs.writeFileSync(path.join(full, "subtitles.srt"), srt);
+            fs.writeFileSync(path.join(full, "documentary.json"), JSON.stringify({ title: board.brief.title, brief: board.brief, timeline: docBuildTimeline(board), manifest }, null, 2));
+            wrote = ["subtitles.srt", "documentary.json"];
+          }
+        } catch (e) { console.warn("[documentary] export write failed:", e.message); }
+      }
+      return json(res, 200, { ...manifest, subtitles: srt.slice(0, 2000), wrote });
     }
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
@@ -5592,6 +6353,16 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith("/resources/")) {
       const [, , file] = p.split("/");
       return serveResource(res, decodeURIComponent(file));
+    }
+    if (p.startsWith("/reface/")) {
+      // /reface/<id>/file/<path...> — job media (source, thumbs, result).
+      // Anything else under /reface/ falls through to the SPA.
+      const parts = p.split("/");
+      if (parts.length >= 5 && parts[3] === "file") {
+        const id = decodeURIComponent(parts[2]);
+        const rel = parts.slice(4).map((s) => { try { return decodeURIComponent(s); } catch { return ""; } }).join("/");
+        return serveReface(req, res, id, rel);
+      }
     }
     if (p.startsWith("/api/")) return json(res, 404, { error: "unknown route" });
     serveStatic(req, res, p === "/" ? "/index.html" : p);

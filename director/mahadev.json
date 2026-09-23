@@ -1,0 +1,200 @@
+{
+  "id": "mahadev",
+  "input": {
+    "title": "Mahadev",
+    "story": "Shiv ji ne Trishool ka use kab kiya",
+    "language": "Hindi",
+    "genre": "Devotional",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 300,
+    "sceneSeconds": 10,
+    "aspectRatio": "16:9",
+    "instructions": "Hindi devotional documentary about Shiv ji ne Trishool ka use kab kiya. Audience: परिवार सहित सभी आयु के भक्त. Tone: Spiritual + cinematic + informative. Narration: Hindi documentary narration, calm reverent male voice, slow measured pace."
+  },
+  "status": "analyzed",
+  "blueprint": {
+    "logline": "Devotional documentary on Shiva's use of the Trishul, emphasizing spiritual lessons and reverence.",
+    "analysis": {
+      "plot": "The story is a devotional narrative focusing on Lord Shiva using his Trishul (trident) in various instances across Hindu mythology, illustrating its symbolic significance and spiritual teachings.",
+      "beginning": "Introduce Shiv Ji as the central figure of Hindu mythology through serene visuals and narration. Set the tone for reverence and spirituality by showcasing his peaceful abode, Mount Kailash.",
+      "middle": "Detail instances where Shiva uses his Trishul, emphasizing its role in destroying evil forces like Apasmara, the demon of ego, and other negative energies. Each use is narrated with a focus on the moral lesson imparted to society.",
+      "climax": "The climax highlights Shiva's battle against Nandhini, where he uses his Trishul effectively to restore order and peace in the universe. This scene is visually striking but maintains a reverent tone.",
+      "ending": "Conclude with reflections on the spiritual significance of the Trishul, emphasizing its use for good and the power of dharma (righteousness).",
+      "main_character": "Lord Shiva as the central character driving the narrative through his actions and uses of the Trishul.",
+      "supporting_characters": [
+        "Apasmara",
+        "Nandhini"
+      ],
+      "antagonist": "null",
+      "objects": [
+        "Trishul"
+      ],
+      "locations": [
+        "Mount Kailash",
+        "various battlefields"
+      ],
+      "events": [
+        "Shiva using Trishul to destroy ego (Apasmara)",
+        "Battle with Nandhini, where he uses the Trishul effectively"
+      ],
+      "relationships": "Shiva's relationship with evil forces, and his role as a protector of dharma.",
+      "emotional_progression": "Reverence and awe for Shiva increase throughout the narrative, climaxing at the battle with Nandhini.",
+      "timeline": "Chronologically follows Hindu mythology to illustrate instances where Shiva uses Trishul.",
+      "visual_moments": [
+        "Peaceful Mount Kailash",
+        "Vivid battles showcasing the use of Trishul"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "shiv_ji",
+        "name": "Lord Shiva",
+        "role": "main_character",
+        "species": "Human (Deity)",
+        "age": "Eternal",
+        "appearance": {
+          "body": "Sculptured, muscled body with a third eye in the middle of his forehead.",
+          "fur": "Long flowing hair tied into a topknot, adorned with jewels and flowers.",
+          "eyes": "Dark, piercing eyes filled with wisdom and tranquility.",
+          "ears": "Large, pointed ears."
+        },
+        "clothing": {
+          "top": "White dhoti",
+          "bottom": "Red and white striped dhoti"
+        },
+        "personality": [
+          "Serene",
+          "Powerful",
+          "Wise"
+        ],
+        "visual_identity_prompt": "Lord Shiva: Sculptured, muscled body with a third eye in the middle of his forehead, long flowing hair tied into a topknot adorned with jewels and flowers, dark piercing eyes filled with wisdom and tranquility, large pointed ears, white dhoti, red and white striped dhoti",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "apasmara",
+        "name": "Apasmara (Demon of Ego)",
+        "role": "supporting_character",
+        "species": "Demon",
+        "age": "Eternal",
+        "appearance": {
+          "body": "Tall, muscular demon with a large head.",
+          "fur": "Dark red skin with scales.",
+          "eyes": "Red, bloodshot eyes.",
+          "ears": "Long, pointed ears."
+        },
+        "clothing": {},
+        "personality": [
+          "Evil",
+          "Powerful"
+        ],
+        "visual_identity_prompt": "Apasmara: Tall, muscular demon with a large head and dark red skin with scales, red bloodshot eyes, long pointed ears",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "nandin",
+        "name": "Nandhini (Demoness)",
+        "role": "supporting_character",
+        "species": "Demoness",
+        "age": "Eternal",
+        "appearance": {
+          "body": "Attractive demoness with long, flowing hair and sharp features.",
+          "fur": "Dark red skin with a few scars.",
+          "eyes": "Red, glowing eyes.",
+          "ears": "Pointed ears."
+        },
+        "clothing": {},
+        "personality": [
+          "Evil",
+          "Powerful"
+        ],
+        "visual_identity_prompt": "Nandhini: Attractive demoness with long flowing hair and sharp features, dark red skin with a few scars, red glowing eyes, pointed ears",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "mount_kailash",
+        "name": "Mount Kailash",
+        "description": "The abode of Lord Shiva, serene and tranquil, surrounded by snow-capped peaks.",
+        "visual_identity_prompt": "Mountainous region with a peak that is the home of Lord Shiva, covered in snow with serenity around it",
+        "time_of_day": "Morning",
+        "lighting": "Soft morning sunlight",
+        "color_palette": "Snow white, sky blue, green trees"
+      },
+      {
+        "location_id": "battlefield",
+        "name": "Various battlefields",
+        "description": "War-torn areas where Lord Shiva uses his Trishul to destroy evil forces.",
+        "visual_identity_prompt": "A war-torn area with a large trident used by the deity, blood and destruction around it",
+        "time_of_day": "Afternoon or evening",
+        "lighting": "Dim light with some smoke in the air",
+        "color_palette": "Red, black, grey"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "trishul",
+        "name": "Trishul",
+        "description": "The three-pronged divine weapon of Lord Shiva.",
+        "visual_identity_prompt": "A large trident with three prongs, a weapon made of silver"
+      }
+    ],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Introduction to Lord Shiva",
+        "summary": "Lord Shiva is introduced in his abode on Mount Kailash."
+      },
+      {
+        "n": 2,
+        "title": "First Use of Trishul: Destruction of Apasmara",
+        "summary": "Shiva uses the Trishul to destroy Apasmara, the demon of ego, teaching a lesson about humility and self-control."
+      },
+      {
+        "n": 3,
+        "title": "Reflection on the Power of Dharma",
+        "summary": "After destroying Apasmara, Shiva reflects on the importance of dharma in his teachings."
+      },
+      {
+        "n": 4,
+        "title": "Use of Trishul in Battle with Nandhini",
+        "summary": "Shiva uses the Trishul to restore order and peace by defeating Nandhini, a powerful demoness who challenges dharma."
+      },
+      {
+        "n": 5,
+        "title": "Conclusion: Spiritual Significance of Trishul",
+        "summary": "The documentary concludes with a reflection on the spiritual lessons learned from Shiva's use of the Trishul."
+      }
+    ]
+  },
+  "scenes": [],
+  "sceneCount": 30,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": null,
+  "error": null,
+  "createdAt": "2026-09-22T14:52:59.546Z",
+  "updatedAt": "2026-09-22T14:52:59.546Z"
+}

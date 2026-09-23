@@ -47,7 +47,7 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
   const [mainFinal, setMainFinal] = useState<string | null>(null);
   const [vVersions, setVVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [vMains, setVMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
-  const [preview, setPreview] = useState<PreviewItem | null>(null);
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
   // Short-cut picker: Entire video (the full final, nothing written) or a
   // 30/60/90s trim of it, cut on select and played in the panel below.
   // The choice persists per output dir; the trimmed file is
@@ -95,6 +95,20 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
     if (cl) curClip = cl;
   }
   const canCreate = !!scenario && !!mainFinal && !runBusy;
+
+  // Every vertical preview in panel order — the Lightbox steps through it
+  // with ←/→ + ‹ › buttons.
+  const previewItems: PreviewItem[] = [
+    ...(curKf ? [{ src: outputUrl(vDir, curKf), kind: "image" as const, alt: "vertical keyframe" }] : []),
+    ...(curClip ? [{ src: outputUrl(vDir, curClip), kind: "video" as const, alt: "vertical clip" }] : []),
+    ...(vFinal ? [{ src: `${outputUrl(vDir, vFinal)}?v=${encodeURIComponent(vFinal)}`, kind: "video" as const, alt: "vertical final cut" }] : []),
+    ...(cutFile ? [{ src: `${outputUrl(vDir, cutFile)}?v=${encodeURIComponent(cutFile)}`, kind: "video" as const, alt: "short cut" }] : []),
+  ];
+  const preview = previewIdx != null ? (previewItems[previewIdx] ?? null) : null;
+  const openPreview = (src: string) => {
+    const i = previewItems.findIndex((x) => x.src === src);
+    if (i >= 0) setPreviewIdx(i);
+  };
 
   // Never show another project/engine dir's renders: the moment the viewed
   // dirs change, blank the listing until the new one lands (same-dir
@@ -232,7 +246,7 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
       </div>
 
       <Collapse open={!collapsed}>
-          {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+          {preview && previewIdx != null && <Lightbox item={preview} items={previewItems} index={previewIdx} onIndexChange={setPreviewIdx} onClose={() => setPreviewIdx(null)} />}
           {!mainFinal && (
             <p className="hint">
               Finish the main video first — the <b>Create Instagram video</b> button unlocks once the main
@@ -266,11 +280,11 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
                   <SceneBadge label="9:16" title="Vertical keyframe image" />
                   {curKf ? (
                     <>
-                      <ExpandButton title="Fullscreen preview of vertical keyframe" onOpen={() => setPreview({ src: outputUrl(vDir, curKf!), kind: "image", alt: "vertical keyframe" })} />
+                      <ExpandButton title="Fullscreen preview of vertical keyframe" onOpen={() => openPreview(outputUrl(vDir, curKf!))} />
                       <SmoothImage
                         src={outputUrl(vDir, curKf)}
                         alt="vertical keyframe"
-                        onClick={() => setPreview({ src: outputUrl(vDir, curKf!), kind: "image", alt: "vertical keyframe" })}
+                        onClick={() => openPreview(outputUrl(vDir, curKf!))}
                       />
                     </>
                   ) : (
@@ -285,7 +299,7 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
                   <SceneBadge small label="REEL" title="Vertical clip" />
                   {curClip ? (
                     <>
-                      <ExpandButton title="Fullscreen preview of vertical clip" onOpen={() => setPreview({ src: outputUrl(vDir, curClip!), kind: "video", alt: "vertical clip" })} />
+                      <ExpandButton title="Fullscreen preview of vertical clip" onOpen={() => openPreview(outputUrl(vDir, curClip!))} />
                       <video controls preload="metadata" src={outputUrl(vDir, curClip)} />
                     </>
                   ) : (
@@ -301,7 +315,7 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
                   <SceneBadge label="FINAL" title="Stitched vertical final cut" />
                   {vFinal ? (
                     <>
-                      <ExpandButton title="Fullscreen preview of vertical final cut" onOpen={() => setPreview({ src: `${outputUrl(vDir, vFinal!)}?v=${encodeURIComponent(vFinal!)}`, kind: "video", alt: "vertical final cut" })} />
+                      <ExpandButton title="Fullscreen preview of vertical final cut" onOpen={() => openPreview(`${outputUrl(vDir, vFinal!)}?v=${encodeURIComponent(vFinal!)}`)} />
                       <video
                         key={vFinal}
                         controls
@@ -357,7 +371,7 @@ export default function InstagramCut({ scenario, engine, refreshKey, totalScenes
                     <SceneBadge label="SHORT" title="Trimmed short version for Reels/Shorts" />
                     {cutFile ? (
                       <>
-                        <ExpandButton title="Fullscreen preview of short cut" onOpen={() => setPreview({ src: `${outputUrl(vDir, cutFile!)}?v=${encodeURIComponent(cutFile!)}`, kind: "video", alt: "short cut" })} />
+                        <ExpandButton title="Fullscreen preview of short cut" onOpen={() => openPreview(`${outputUrl(vDir, cutFile!)}?v=${encodeURIComponent(cutFile!)}`)} />
                         <video
                           key={cutFile}
                           controls

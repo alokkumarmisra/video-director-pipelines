@@ -208,6 +208,8 @@ export interface RunRequest {
   skipLipsync?: boolean;
   /** Full generate: skip the automatic voice + lip-sync pass (silent clips). */
   noDialogue?: boolean;
+  /** Full generate: chain scenes — beat N>1 starts from beat N-1's last frame (connected movie). */
+  chain?: boolean;
   /** Dialogue mode: voice+sync clips but leave the final cut alone (merge later). */
   noStitch?: boolean;
   /** Dialogue mode: lip-sync engine for this run ("wav2lip" | "musetalk-comfy"). */
@@ -216,7 +218,7 @@ export interface RunRequest {
   songModel?: string;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean; noDialogue?: boolean; lipsync?: string; songModel?: string } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean; noDialogue?: boolean; chain?: boolean; lipsync?: string; songModel?: string } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -233,6 +235,7 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
       skipLipsync: !!opts.skipLipsync,
         noStitch: !!opts.noStitch,
         noDialogue: !!opts.noDialogue,
+        chain: !!opts.chain,
         lipsync: opts.lipsync,
         songModel: opts.songModel,
     }),
@@ -873,3 +876,245 @@ export const directorDeleteBoard = (id: string) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
     method: "DELETE",
   }).then(directorOk<{ ok: boolean }>("delete failed"));
+
+// ---------------------------------------------------------------- Documentary Mode
+// Orchestration layer on the EXISTING pipeline (Documentary tab only).
+// The board authors chapters/sequences/shots + narration + bibles; APPROVE
+// hands a standard Scenario to the existing saveScenario/workspace flow.
+export interface DocBrief {
+  title: string;
+  topic?: string;
+  language?: string;
+  targetMinutes?: number;
+  targetSeconds?: number;
+  aspectRatio?: string;
+  audience?: string;
+  tone?: string;
+  visualStyle?: string;
+  narrationStyle?: string;
+  narrationVoice?: string;
+  musicStyle?: string;
+  sourceMaterial?: string;
+  sourceType?: string;
+  characters?: string;
+  events?: string;
+  locations?: string;
+  instructions?: string;
+}
+
+export interface DocShot {
+  shot_id: string;
+  global_index: number;
+  chapter: number;
+  sequence: number;
+  title: string;
+  duration_seconds: number;
+  narration_lines: string[];
+  visual_type: string;
+  characters: string[];
+  location: string;
+  flux_prompt: string;
+  ltx_prompt: string;
+  camera: { shot_type: string; angle: string; movement: string };
+  motion: string;
+  lighting: string;
+  audio: { music: boolean; sfx: boolean; sfx_kind: string };
+  pacing: string;
+  status: string;
+  approved: boolean;
+  version: number;
+}
+
+export interface DocSequence {
+  sequence_id: string;
+  chapter: number;
+  seq: number;
+  title: string;
+  purpose: string;
+  narration: string;
+  duration_seconds: number;
+  visual_goal: string;
+  pacing: string;
+  shots: DocShot[];
+}
+
+export interface DocChapter {
+  chapter_number: number;
+  title: string;
+  purpose: string;
+  target_duration_seconds: number;
+  sequences: DocSequence[];
+}
+
+export interface DocBoard {
+  id: string;
+  brief: DocBrief & { targetSeconds: number; targetMinutes: number };
+  status: string;
+  chapters: DocChapter[];
+  characters: Record<string, unknown>[];
+  locations: Record<string, unknown>[];
+  musicBeds: Record<string, unknown>[];
+  styleLock?: string;
+  scenarioName?: string | null;
+  project_id?: number | null;
+  error?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface DocBoardMeta {
+  id: string;
+  title: string;
+  status: string;
+  targetSeconds: number | null;
+  shots: number;
+  shotsTotal: number;
+  scenarioName?: string | null;
+  project_id?: number | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+
+export const docBoards = () =>
+  get<DocBoardMeta[]>("/api/documentary/boards");
+export const docBoard = (id: string) =>
+  get<DocBoard>(`/api/documentary/boards/${encodeURIComponent(id)}`);
+export const docCreate = (brief: DocBrief) =>
+  fetch("/api/documentary/boards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(brief),
+  }).then(directorOk<DocBoard>("documentary creation failed"));
+export const docPlan = (id: string) =>
+  fetch(`/api/documentary/boards/${encodeURIComponent(id)}/plan`, {
+    method: "POST",
+  }).then(directorOk<DocBoard>("documentary planning failed"));
+export const docUpdate = (id: string, patch: Record<string, unknown>) =>
+  fetch(`/api/documentary/boards/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  }).then(directorOk<DocBoard>("documentary update failed"));
+export const docApprove = (id: string) =>
+  fetch(`/api/documentary/boards/${encodeURIComponent(id)}/approve`, {
+    method: "POST",
+  }).then(directorOk<{ name: string; config: Scenario; shots: number; narrationSeconds: number }>("approve failed"));
+export const docDelete = (id: string) =>
+  fetch(`/api/documentary/boards/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  }).then(directorOk<{ ok: boolean }>("delete failed"));
+export const docTimeline = (id: string) =>
+  get<{ title: string; total_seconds: number; target_seconds: number; chapters: { chapter_number: number; title: string; duration_seconds: number; start_seconds: number; end_seconds: number; sequences: { sequence_id: string; title: string; duration_seconds: number; shots: { shot_id: string; global_index: number; title: string; duration_seconds: number; status: string; approved: boolean }[] }[] }[] }>(
+    `/api/documentary/boards/${encodeURIComponent(id)}/timeline`);
+export const docStatus = (id: string) =>
+  get<{ id: string; status: string; shots: number; ready: number; pct: number; stages: string[]; byStatus: Record<string, number>; narrationSeconds: number; targetSeconds: number; scenarioName: string | null }>(
+    `/api/documentary/boards/${encodeURIComponent(id)}/status`);
+export const docExport = (id: string, dir?: string) =>
+  fetch(`/api/documentary/boards/${encodeURIComponent(id)}/export`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dir ? { dir } : {}),
+  }).then(directorOk<{ documentary_final: string; chapters: string[]; narration_audio: string; music_dir: string; subtitles: string; metadata: string; total_seconds: number; wrote: string[] }>("export failed"));
+
+// ---------------------------------------------------------------- reface
+// Face-swap studio: upload a video, detect + cluster every face identity,
+// upload one reference face, swap the chosen identity. Files stream under
+// /reface/<id>/file/<path> (same session cookie as /outputs).
+export interface RefaceFace {
+  id: string;
+  thumb: string;
+  count: number;
+  firstSeen: number;
+}
+export interface RefaceProgress {
+  stage: string;
+  pct: number;
+  detail?: string;
+  frame?: number;
+  total?: number;
+  result?: string;
+}
+export interface RefaceJob {
+  id: string;
+  created_at?: string | null;
+  filename?: string | null;
+  source?: string | null;
+  bytes?: number | null;
+  duration?: number | null;
+  fps?: number | null;
+  width?: number;
+  height?: number;
+  hasAudio?: boolean;
+  status: string;
+  error?: string | null;
+  reference?: string | null;
+  targetFace?: string | null;
+  result?: string | null;
+  faces: RefaceFace[];
+  progress?: RefaceProgress | null;
+}
+export interface RefaceSummary {
+  id: string;
+  created_at?: string | null;
+  filename?: string | null;
+  duration?: number | null;
+  status: string;
+  faces: number;
+  hasReference: boolean;
+  hasResult: boolean;
+  error?: string | null;
+}
+export const refaceFile = (id: string, rel: string) =>
+  `/reface/${encodeURIComponent(id)}/file/${rel.split("/").map(encodeURIComponent).join("/")}`;
+const refaceOk = <T,>(label: string) => (r: Response) =>
+  r.ok
+    ? r.json() as Promise<T>
+    : r.json().then((d) => Promise.reject(new Error(d?.error || label)));
+export const refaceJobs = () => get<RefaceSummary[]>("/api/reface");
+export const refaceJob = (id: string) =>
+  get<RefaceJob>(`/api/reface/${encodeURIComponent(id)}`);
+// Raw binary upload (no base64 bloat for minutes-long clips). onProgress
+// reports 0..1 via XHR since fetch has no upload progress.
+export const refaceUpload = (file: File, onProgress?: (frac: number) => void) =>
+  new Promise<RefaceJob>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/reface/upload");
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    xhr.setRequestHeader("X-Filename", file.name || "video");
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) onProgress(e.loaded / e.total);
+      };
+    }
+    xhr.onload = () => {
+      try {
+        const d = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300) resolve(d as RefaceJob);
+        else reject(new Error(d?.error || `upload failed (HTTP ${xhr.status})`));
+      } catch {
+        reject(new Error(`upload failed (HTTP ${xhr.status})`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("upload failed (network error)"));
+    xhr.send(file);
+  });
+export const refaceReference = (id: string, dataUrl: string) =>
+  fetch(`/api/reface/${encodeURIComponent(id)}/reference`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: dataUrl }),
+  }).then(refaceOk<RefaceJob>("reference upload failed"));
+export const refaceAnalyze = (id: string) =>
+  fetch(`/api/reface/${encodeURIComponent(id)}/analyze`, {
+    method: "POST",
+  }).then(refaceOk<{ started: boolean; id: string }>("analyze failed to start"));
+export const refaceSwap = (id: string, faceId: string) =>
+  fetch(`/api/reface/${encodeURIComponent(id)}/swap`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ faceId }),
+  }).then(refaceOk<{ started: boolean; id: string; faceId: string }>("swap failed to start"));
+export const refaceDelete = (id: string) =>
+  fetch(`/api/reface/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  }).then(refaceOk<{ ok: boolean; id: string }>("delete failed"));

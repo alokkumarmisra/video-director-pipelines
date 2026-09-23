@@ -213,66 +213,39 @@ body {
 .shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 336px minmax(0, 1fr) minmax(380px, 460px);
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
   gap: 20px;
   max-width: 1648px;
   width: 100%;
   margin: 0 auto;
   padding: 20px;
   align-items: start;
-  /* Showing/hiding the Projects / right rails reflows the columns —
-     ease the width shift instead of jumping. */
+  /* Showing/hiding the right rails reflows the columns —
+     ease the width shift instead of jumping. (The Projects panel and Scene
+     Tools are fixed overlay docks now, so toggling them never reflows.) */
   transition: grid-template-columns 0.3s ease;
 }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* Project switch keeps the old content mounted until the new config lands
    (see App `shown`), so no global dimming — the incoming row alone spins. */
-.shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(380px, 460px); }
 /* Right column collapsed (AI Craft + Scenario Editor both hidden): the right
-   column shrinks to rail width and the middle section expands. Mirrors the
-   Projects panel collapsing to the left. */
-.shell.no-right { grid-template-columns: 336px minmax(0, 1fr) auto; }
-.shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
-/* Resource view: same Projects panel on the left, library fills the rest —
-   no right column is ever rendered there. */
-.shell.is-resource { grid-template-columns: 336px minmax(0, 1fr); }
-.shell.is-resource.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-/* The Resource library column comes before the Projects <aside> in DOM order,
-   so without help the library auto-places into the narrow 1st column and the
-   Projects panel lands maximized in the wide 2nd column (right side). Pull the
-   panel / its reopen rail back to the left via order — the library then fills
-   the remaining width as intended. */
-.shell.is-resource .sidebar,
-.shell.is-resource .sidebar-show { order: -1; }
-/* Director view: Projects panel on the left, AI Story Director filling the
-   middle — no right column is ever rendered there. Same DOM-order situation
-   as Resource (director column comes after the <aside>), so the same
-   order pull-back applies. */
-.shell.is-director { grid-template-columns: 336px minmax(0, 1fr); }
-.shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-.shell.is-director .sidebar,
-.shell.is-director .sidebar-show { order: -1; }
-/* Create Song view: Projects panel on the left, song workspace filling the
-   middle — no right column is ever rendered there. Same DOM-order situation
-   as Resource/Director, so the same order pull-back applies. */
-.shell.is-song { grid-template-columns: 336px minmax(0, 1fr); }
-.shell.is-song.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-.shell.is-song .sidebar,
-.shell.is-song .sidebar-show { order: -1; }
-/* Video LipSync view: Projects panel on the left, lip-sync studio filling the
-   middle — no right column is ever rendered there. Same DOM-order situation
-   as Resource/Director/Song, so the same order pull-back applies. */
-.shell.is-lipsync { grid-template-columns: 336px minmax(0, 1fr); }
-.shell.is-lipsync.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-.shell.is-lipsync .sidebar,
-.shell.is-lipsync .sidebar-show { order: -1; }
-/* Components view: Projects panel on the left, component catalog filling the
-   middle — no right column is ever rendered there. Same DOM-order situation
-   as Resource/Director/Song/LipSync, so the same order pull-back applies. */
-.shell.is-components { grid-template-columns: 336px minmax(0, 1fr); }
-.shell.is-components.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-.shell.is-components .sidebar,
-.shell.is-components .sidebar-show { order: -1; }
+   column shrinks to rail width and the middle section expands. */
+.shell.no-right { grid-template-columns: minmax(0, 1fr) auto; }
+/* Resource view: library fills the content (the Projects dock floats over it
+   from its fixed left slot) — no right column is ever rendered there. */
+.shell.is-resource { grid-template-columns: minmax(0, 1fr); }
+/* Director view: AI Story Director fills the content — no right column. */
+.shell.is-director { grid-template-columns: minmax(0, 1fr); }
+/* Create Song view: song workspace fills the content — no right column. */
+.shell.is-song { grid-template-columns: minmax(0, 1fr); }
+/* Video LipSync view: lip-sync studio fills the content — no right column. */
+.shell.is-lipsync { grid-template-columns: minmax(0, 1fr); }
+/* Components view: component catalog fills the content — no right column. */
+.shell.is-components { grid-template-columns: minmax(0, 1fr); }
+/* Documentary view: same single-column layout as Components. */
+.shell.is-documentary { grid-template-columns: minmax(0, 1fr); }
+/* Reface view: same single-column layout as Components. */
+.shell.is-reface { grid-template-columns: minmax(0, 1fr); }
 /* Right-column rails dock to the RIGHT edge of the window (the Projects rail
    docks left). Rails-only column stays narrow so the middle keeps the space. */
 .col.right-col.rails-only { gap: 12px; }
@@ -316,6 +289,10 @@ body {
 .head-icon.hi-shots { color: var(--err-2); }
 .head-icon.hi-components { color: #fb923c; }
 :root[data-theme="light"] .head-icon.hi-components { color: #c2410c; }
+.head-icon.hi-documentary { color: #a3e635; }
+:root[data-theme="light"] .head-icon.hi-documentary { color: #4d7c0f; }
+.head-icon.hi-reface { color: #f472b6; }
+:root[data-theme="light"] .head-icon.hi-reface { color: #db2777; }
 /* Generate Reference follows the picked theme color exactly (the --accent
    token the swatch / primary buttons use — not the lighter --accent-2). */
 .head-icon.hi-ref { color: var(--accent); }
@@ -591,8 +568,50 @@ button.btn-blue:disabled:hover, button.btn-green:disabled:hover, button.btn-purp
   text-transform: uppercase; color: var(--warn); white-space: nowrap;
 }
 .beats-count { font-size: 12px; font-weight: 700; color: var(--ok); white-space: nowrap; }
+/* Bulk-regenerate controls: sit between the Story Board label and the scene
+   count in the Keyframes → clips card header. */
+.beats-bulk { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.beats-bulk-all { font-size: 11px; padding: 2px 8px; }
+.beats-bulk-kind {
+  font-size: 11px; padding: 2px 4px;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px;
+}
+.beats-bulk-go { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 3px 12px; }
+@media (max-width: 900px) {
+  .beats-bulk-all { display: none; }
+}
 @media (max-width: 760px) {
   .beats-center { display: none; }
+  .beats-bulk-kind { display: none; }
+}
+/* Per-scene checkbox in the Keyframes → clips grid + highlight for checked tiles. */
+.shot-check { width: 14px; height: 14px; flex: none; accent-color: var(--accent); cursor: pointer; }
+.shot.selected { border-color: var(--accent-line); box-shadow: inset 0 0 0 1px var(--accent-line); }
+/* Scene Tools card (right column): find / replace / add-text across scenes. */
+.tools-sec { margin-top: 4px; }
+.tools-sec + .tools-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.tools-sec-title {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-2); margin-bottom: 6px;
+}
+.tools-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.tools-check, .tools-scope label {
+  display: inline-flex; gap: 4px; align-items: center;
+  font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+}
+.tools-check input, .tools-scope input { accent-color: var(--accent); }
+.tools-scope { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.tools-matches {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  max-height: 220px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tools-match { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; }
+.tools-match-field { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--warn); flex: none; }
+.tools-match-text {
+  font-size: 12px; color: var(--text-2); flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* Pill numbers that open an editor (LipSync dialogue beats): same pill look,
    pointer affordance on hover. */
@@ -664,6 +683,50 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 .sidebar-show-label {
   writing-mode: vertical-rl;
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+/* Projects fixed dock (desktop): the rail tab is fixed at the left edge
+   (after the Main menu rail) and the container slides out to the right OVER
+   the content — opening/closing never shrinks the workspace, AI Craft, or
+   anything else (same pattern as the Scene Tools dock on the right). The
+   tab stays visible in both states; clicking it toggles the container. */
+@media (min-width: 1021px) {
+  /* Rail order left→right: Main menu (0-62px), Projects tab (62-124px),
+     then workspace content. The container slides out right of its tab,
+     over the content — toggling never shrinks anything. */
+  .shell > .sidebar-show {
+    position: fixed;
+    left: 62px; top: 65px; bottom: 0;
+    z-index: 10;
+    width: 62px;
+    margin: 0;
+    border-radius: 0;
+    border-top: none; border-bottom: none; border-left: none;
+    justify-content: center;
+    transition: left 0.22s ease, color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .shell > .sidebar-show[aria-expanded="true"] {
+    color: var(--accent-2); border-color: var(--accent-line); background: var(--accent-soft);
+  }
+  .shell > .sidebar {
+    position: fixed;
+    left: 124px; top: 65px; bottom: 0;
+    z-index: 10;
+    width: 336px;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    border-top: none; border-bottom: none; border-left: none;
+    box-shadow: 16px 0 40px -16px rgba(0, 0, 0, 0.5);
+    animation: projSlideIn 0.22s ease;
+    transition: left 0.22s ease;
+  }
+  /* Pinned Main menu owns 0-204px: shift the tab + container right with it. */
+  .app-body.nav-pinned .shell > .sidebar-show { left: 204px; }
+  .app-body.nav-pinned .shell > .sidebar { left: 266px; }
+}
+@keyframes projSlideIn {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 .sidebar-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
 .scenario-row {
@@ -1611,6 +1674,24 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
   color: #fff; cursor: pointer;
 }
 .lightbox-close:hover { background: rgba(255, 255, 255, 0.22); }
+.lightbox-nav {
+  position: fixed; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: 44px; height: 64px; padding: 0;
+  border-radius: 12px; font-size: 30px; line-height: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff; cursor: pointer; z-index: 101;
+}
+.lightbox-nav:hover { background: rgba(255, 255, 255, 0.22); }
+.lightbox-prev { left: 14px; }
+.lightbox-next { right: 14px; }
+.lightbox-count {
+  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; color: #fff; background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px;
+  padding: 3px 12px; pointer-events: none;
+}
 
 /* empty states */
 .empty {
@@ -1922,6 +2003,8 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 .ci-director { color: #c084fc; }
 .ci-song { color: #fb7185; }
 .ci-lipsync { color: #22d3ee; }
+.ci-documentary { color: #a3e635; }
+.ci-reface { color: #f472b6; }
 .ci-components { color: #fb923c; }
 :root[data-theme="light"] .ci-home { color: #b45309; }
 :root[data-theme="light"] .ci-projects { color: #059669; }
@@ -1929,6 +2012,8 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 :root[data-theme="light"] .ci-director { color: #9333ea; }
 :root[data-theme="light"] .ci-song { color: #e11d48; }
 :root[data-theme="light"] .ci-lipsync { color: #0891b2; }
+:root[data-theme="light"] .ci-documentary { color: #4d7c0f; }
+:root[data-theme="light"] .ci-reface { color: #db2777; }
 :root[data-theme="light"] .ci-components { color: #c2410c; }
 @media (max-width: 1100px) {
   .crumb-name { max-width: 110px; }
@@ -2511,6 +2596,8 @@ select:focus-visible, textarea:focus-visible {
 .nav-director .sidenav-icon { color: #c084fc; background: rgba(192, 132, 252, 0.12); border-color: rgba(192, 132, 252, 0.38); }
 .nav-song .sidenav-icon { color: #fb7185; background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.35); }
 .nav-lipsync .sidenav-icon { color: #22d3ee; background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.35); }
+.nav-documentary .sidenav-icon { color: #a3e635; background: rgba(163, 230, 53, 0.12); border-color: rgba(163, 230, 53, 0.38); }
+.nav-reface .sidenav-icon { color: #f472b6; background: rgba(244, 114, 182, 0.12); border-color: rgba(244, 114, 182, 0.38); }
 .nav-components .sidenav-icon { color: #fb923c; background: rgba(251, 146, 60, 0.12); border-color: rgba(251, 146, 60, 0.38); }
 :root[data-theme="light"] .nav-home .sidenav-icon { color: #b45309; }
 :root[data-theme="light"] .nav-projects .sidenav-icon { color: #059669; }
@@ -2518,6 +2605,8 @@ select:focus-visible, textarea:focus-visible {
 :root[data-theme="light"] .nav-director .sidenav-icon { color: #9333ea; }
 :root[data-theme="light"] .nav-song .sidenav-icon { color: #e11d48; }
 :root[data-theme="light"] .nav-lipsync .sidenav-icon { color: #0891b2; }
+:root[data-theme="light"] .nav-documentary .sidenav-icon { color: #4d7c0f; }
+:root[data-theme="light"] .nav-reface .sidenav-icon { color: #db2777; }
 :root[data-theme="light"] .nav-components .sidenav-icon { color: #c2410c; }
 .sidenav-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
 .sidenav-btn.on {
@@ -2557,9 +2646,77 @@ select:focus-visible, textarea:focus-visible {
 .sidenav-pin-chevron.pinned { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) {
   .sidenav, .sidenav-pin-chevron { transition: none; }
+  .shell > .sidebar { animation: none; }
+  .toolsnav-panel { transition: none; }
 }
 /* Content shell shares the row with the sidenav (sidenav owns the 204px). */
 .app-body .shell { flex: 1; min-width: 0; margin: 0; max-width: none; }
+/* Scene Tools fixed dock on the RIGHT edge — mirrors the left Main menu
+   rail: a constant 62px sticky slot (never shifts layout) with an always-
+   visible rail tab; clicking the tab slides only the container out to the
+   left over the content, clicking again collapses it. z-index sits above
+   cards but below the sticky topbar, like the sidenav. */
+.toolsnav {
+  width: 62px;
+  flex: none;
+  position: sticky;
+  top: 65px;
+  align-self: flex-start;
+  height: calc(100vh - 65px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-left: 1px solid var(--line);
+  background: transparent;
+}
+.toolsnav-tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  background: transparent; border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 12px 0;
+}
+.toolsnav-tab:hover { color: var(--accent-2); }
+.toolsnav.open .toolsnav-tab { color: var(--accent-2); }
+.toolsnav-tab-label {
+  writing-mode: vertical-rl;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+/* Slide-out container: absolutely positioned left of the rail tab so only
+   the container moves — the rail, the left panel, AI Craft and everything
+   else never shift or shrink. */
+.toolsnav-panel {
+  position: absolute;
+  top: 0; bottom: 0; right: 62px;
+  width: 322px;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: -16px 0 40px -16px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  padding: 16px 12px;
+  transform: translateX(24px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.22s ease, opacity 0.18s ease, visibility 0s linear 0.22s;
+}
+.toolsnav.open .toolsnav-panel {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.22s ease, opacity 0.18s ease;
+}
+/* The panel brings its own surface — drop the card chrome inside the dock. */
+.toolsnav-panel .card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
 
 /* ============================================================
    Home dashboard
@@ -2913,20 +3070,15 @@ select:focus-visible, textarea:focus-visible {
    Responsive
    ============================================================ */
 @media (max-width: 1280px) {
-  .shell { grid-template-columns: 280px minmax(0, 1fr) minmax(340px, 400px); }
-  .shell.no-sidebar { grid-template-columns: auto minmax(0, 1fr) minmax(340px, 400px); }
-  .shell.no-right { grid-template-columns: 280px minmax(0, 1fr) auto; }
-  .shell.no-sidebar.no-right { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .shell.is-resource { grid-template-columns: 280px minmax(0, 1fr); }
-  .shell.is-resource.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-  .shell.is-director { grid-template-columns: 280px minmax(0, 1fr); }
-  .shell.is-director.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-  .shell.is-song { grid-template-columns: 280px minmax(0, 1fr); }
-  .shell.is-song.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-  .shell.is-lipsync { grid-template-columns: 280px minmax(0, 1fr); }
-  .shell.is-lipsync.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
-  .shell.is-components { grid-template-columns: 280px minmax(0, 1fr); }
-  .shell.is-components.no-sidebar { grid-template-columns: auto minmax(0, 1fr); }
+  .shell { grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); }
+  .shell.no-right { grid-template-columns: minmax(0, 1fr) auto; }
+  .shell.is-resource { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-director { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-song { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-lipsync { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-components { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-documentary { grid-template-columns: minmax(0, 1fr); }
+  .shell.is-reface { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1180px) {
   /* Service pills stay in one horizontal row — allow the bar to wrap
@@ -2937,22 +3089,32 @@ select:focus-visible, textarea:focus-visible {
 }
 @media (max-width: 1020px) {
   .shell { grid-template-columns: 1fr; }
-  .shell.no-sidebar { grid-template-columns: 1fr; }
   .shell.no-right { grid-template-columns: 1fr; }
-  .shell.no-sidebar.no-right { grid-template-columns: 1fr; }
   .shell.is-resource { grid-template-columns: 1fr; }
-  .shell.is-resource.no-sidebar { grid-template-columns: 1fr; }
   .shell.is-director { grid-template-columns: 1fr; }
-  .shell.is-director.no-sidebar { grid-template-columns: 1fr; }
   .shell.is-song { grid-template-columns: 1fr; }
-  .shell.is-song.no-sidebar { grid-template-columns: 1fr; }
   .shell.is-lipsync { grid-template-columns: 1fr; }
-  .shell.is-lipsync.no-sidebar { grid-template-columns: 1fr; }
   .shell.is-components { grid-template-columns: 1fr; }
-  .shell.is-components.no-sidebar { grid-template-columns: 1fr; }
+  .shell.is-documentary { grid-template-columns: 1fr; }
+  .shell.is-reface { grid-template-columns: 1fr; }
+  /* Narrow windows: both docks fall back to the stacked in-flow layout
+     (tab on top, container below) instead of the fixed overlay. */
   .sidebar-show { flex-direction: row; position: static; width: 100%; }
   .sidebar-show-label { writing-mode: horizontal-tb; }
   .sidebar { position: static; max-height: none; }
+  .toolsnav {
+    position: static; width: auto; height: auto;
+    flex-direction: column; align-items: stretch;
+    border-left: none; border-top: 1px solid var(--line);
+  }
+  .toolsnav-tab { flex-direction: row; padding: 10px 12px; justify-content: flex-start; }
+  .toolsnav-tab-label { writing-mode: horizontal-tb; }
+  .toolsnav-panel {
+    position: static; width: auto; max-height: 60vh;
+    transform: none; box-shadow: none; border-left: none;
+    border-top: 1px solid var(--line);
+  }
+  .toolsnav:not(.open) .toolsnav-panel { display: none; }
   .brand-sub { display: none; }
   /* Vertical menu becomes a horizontal scroll row under the topbar. */
   .app-body, .app-body.nav-pinned { flex-direction: column; max-width: none; padding-left: 0; }
@@ -3946,3 +4108,50 @@ button.rm-chip:disabled:hover { background: transparent; border-color: var(--lin
 /* ---- AUDIO project badge on Home cards ---- */
 .proj-type-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .pill.proj-type.audio { background: rgba(168, 85, 247, 0.14); color: #c084fc; border-color: rgba(168, 85, 247, 0.4); }
+
+/* ============================================================
+   Global beautified tooltip (.tip-float)
+   One shared bubble driven by src/tooltips.ts for every native
+   `title` app-wide. Theme-aware via the design tokens above, so it
+   follows the picked button/background colors in both modes.
+   ============================================================ */
+.tip-float {
+  position: fixed;
+  z-index: 9999;
+  max-width: 280px;
+  padding: 7px 11px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2, var(--line));
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  animation: tip-in 0.13s ease-out;
+}
+.tip-float[hidden] { display: none; }
+/* Caret pointing at the anchor (position follows --tip-caret from JS). */
+.tip-float::after {
+  content: "";
+  position: absolute;
+  left: var(--tip-caret, 50%);
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border-right: 1px solid var(--line-2, var(--line));
+  border-bottom: 1px solid var(--line-2, var(--line));
+  transform: translateX(-50%) rotate(45deg);
+}
+.tip-float.tip-top::after { bottom: -5px; }
+.tip-float.tip-bottom::after { top: -5px; transform: translateX(-50%) rotate(225deg); }
+@keyframes tip-in {
+  from { opacity: 0; transform: translateY(3px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tip-float { animation: none; }
+}

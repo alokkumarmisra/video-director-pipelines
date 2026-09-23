@@ -10,16 +10,19 @@ import OutputGallery from "./components/OutputGallery";
 import InstagramCut from "./components/InstagramCut";
 import VideoMetaPanel from "./components/VideoMetaPanel";
 import CraftPanel from "./components/CraftPanel";
+import SceneTools from "./components/SceneTools";
 import HomePage from "./components/HomePage";
 import ResourcePage from "./components/ResourcePage";
 import DirectorPage from "./components/DirectorPage";
 import CreateSongPage from "./components/CreateSongPage";
 import VideoLipSyncPage from "./components/VideoLipSyncPage";
+import DocumentaryPage from "./components/DocumentaryPage";
+import RefacePage from "./components/RefacePage";
 import ComponentsPage from "./components/ComponentsPage";
 import ViewBoundary from "./components/ViewBoundary";
 import Login from "./components/Login";
 import { DialogProvider, useDialog } from "./components/Dialog";
-import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSparkles, IconStar, IconSun, IconTrash, Spinner } from "./components/Icons";
+import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconClipboard, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSearch, IconSparkles, IconStar, IconSun, IconTrash, IconUser, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
@@ -342,7 +345,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   const boxBgFallback = theme === "dark" ? DEFAULT_BG_DARK : DEFAULT_BG_LIGHT;
   const boxBtnFallback = theme === "dark" ? DEFAULT_BTN_DARK : DEFAULT_BTN_LIGHT;
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "song" | "lipsync" | "components">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "song" | "lipsync" | "documentary" | "reface" | "components">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -721,6 +724,14 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
       localStorage.setItem("ss-sec-editor", o ? "closed" : "open");
       return !o;
     });
+  // Scene Tools fixed dock (find / replace / add-text across all scenes) —
+  // mirrors the left Main menu rail: collapsed icon rail, open panel.
+  const [toolsOpen, setToolsOpen] = useState<boolean>(() => localStorage.getItem("ss-sec-tools") === "open");
+  const toggleTools = () =>
+    setToolsOpen((o) => {
+      localStorage.setItem("ss-sec-tools", o ? "closed" : "open");
+      return !o;
+    });
   const rightCollapsed = !craftOpen && !editorOpen;
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
@@ -764,6 +775,42 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   // a vertical regen renders into the _vertical dir; default = main cut).
   const handleRegen = (kind: AssetKind, index: number | null, format?: VideoFormat) =>
     requestRun({ regen: { kind, index: index ?? undefined }, ...(format ? { format } : {}) });
+
+  // Bulk regenerate checked Keyframes → clips scenes: one queued run per
+  // asset (serial drain, old versions kept). "both" queues keyframe + clip
+  // per scene in story order so each clip rebuilds from its fresh keyframe.
+  const handleBulkRegen = (kind: "keyframe" | "clip" | "both", indices: number[], format?: VideoFormat) => {
+    const scenes = [...new Set(indices.filter((n) => Number.isFinite(n) && (n as number) > 0))].sort((a, b) => a - b);
+    if (scenes.length === 0) return;
+    const items: RunRequest[] = [];
+    for (const n of scenes) {
+      if (kind === "both") {
+        items.push({ regen: { kind: "keyframe", index: n }, ...(format ? { format } : {}) });
+        items.push({ regen: { kind: "clip", index: n }, ...(format ? { format } : {}) });
+      } else {
+        items.push({ regen: { kind, index: n }, ...(format ? { format } : {}) });
+      }
+    }
+    if (runActive) {
+      setRunQueue((q) => {
+        const next = [...q];
+        for (const item of items) {
+          if (!next.some((x) => sameRequest(x, item))) next.push(item);
+        }
+        return next;
+      });
+    } else {
+      const [first, ...rest] = items;
+      setRunQueue((q) => {
+        const next = [...q];
+        for (const item of rest) {
+          if (!next.some((x) => sameRequest(x, item))) next.push(item);
+        }
+        return next;
+      });
+      setPendingRun({ nonce: Date.now(), ...first });
+    }
+  };
 
   // Cross-navigation between Keyframes → clips and the Scenario Editor:
   // scrolls to the matching scene container and flashes it once so it is
@@ -821,6 +868,32 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
     await saveScenario(editor.name, { ...base, sequence: next });
     // The save folded the card overrides in — drop them so the cards fall
     // back to the freshly saved config.
+    dropEdits();
+    const sc = await getScenario(editor.name);
+    setCfg(sc.config);
+    refreshScenarios().catch(() => {});
+    refresh();
+    return { applied, saved: true };
+  };
+
+  // Scene Tools bulk text edit: persist an edited sequence (built by the
+  // pure sceneText helpers). Same versioning as Apply to All Scene — drafts
+  // update locally and persist on the next explicit Save, saved projects
+  // persist immediately as a new version.
+  const applySceneSequenceEdit = async (next: Beat[]): Promise<{ applied: number; saved: boolean }> => {
+    if (!editor) return { applied: 0, saved: false };
+    const base: Scenario = draft ? draft.config : { ...editor.config, ...overrides };
+    const before = Array.isArray(base.sequence) ? base.sequence : [];
+    let applied = 0;
+    next.forEach((b, i) => {
+      if (JSON.stringify(b ?? null) !== JSON.stringify(before[i] ?? null)) applied++;
+    });
+    if (applied === 0) return { applied: 0, saved: false };
+    if (draft) {
+      setDraft({ ...draft, config: { ...base, sequence: next } });
+      return { applied, saved: false };
+    }
+    await saveScenario(editor.name, { ...base, sequence: next });
     dropEdits();
     const sc = await getScenario(editor.name);
     setCfg(sc.config);
@@ -1311,6 +1384,16 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
                 { key: "cur", label: "VideoLipSync", icon: <IconMic size={13} aria-hidden="true" />, tone: "ci-lipsync", current: true },
               ];
+            } else if (view === "documentary") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Documentary", icon: <IconClipboard size={13} aria-hidden="true" />, tone: "ci-documentary", current: true },
+              ];
+            } else if (view === "reface") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Reface", icon: <IconUser size={13} aria-hidden="true" />, tone: "ci-reface", current: true },
+              ];
             } else {
               crumbs = [
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
@@ -1569,6 +1652,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               <span className="sidenav-label">VideoLipSync</span>
             </button>
             <button
+              className={`sidenav-btn nav-documentary ${view === "documentary" ? "on" : ""}`}
+              onClick={() => setView("documentary")}
+              aria-current={view === "documentary" ? "page" : undefined}
+              title="Open the Documentary view"
+            >
+              <span className="sidenav-icon"><IconClipboard size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Documentary</span>
+            </button>
+            <button
               className={`sidenav-btn nav-components ${view === "components" ? "on" : ""}`}
               onClick={() => setView("components")}
               aria-current={view === "components" ? "page" : undefined}
@@ -1576,6 +1668,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             >
               <span className="sidenav-icon"><IconBlocks size={16} aria-hidden="true" /></span>
               <span className="sidenav-label">Components</span>
+            </button>
+            <button
+              className={`sidenav-btn nav-reface ${view === "reface" ? "on" : ""}`}
+              onClick={() => setView("reface")}
+              aria-current={view === "reface" ? "page" : undefined}
+              title="Open the Reface view"
+            >
+              <span className="sidenav-icon"><IconUser size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Reface</span>
             </button>
           </div>
           <button
@@ -1596,13 +1697,17 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-        <div className={`shell ${sidebarOpen ? "" : "no-sidebar"}${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "components" ? " is-components" : ""}`}>
-        {!sidebarOpen && view !== "home" && (
+        <div className={`shell${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "documentary" ? " is-documentary" : ""}${view === "reface" ? " is-reface" : ""}${view === "components" ? " is-components" : ""}`}>
+        {/* Projects rail tab — always visible (except Home): clicking slides
+            only the container out over the content, clicking again collapses
+            it. Nothing ever shrinks (same pattern as the Scene Tools dock). */}
+        {view !== "home" && (
           <button
             className="sidebar-show"
             onClick={toggleSidebar}
-            title="Show projects panel"
-            aria-label="Show projects panel"
+            aria-expanded={sidebarOpen}
+            title={sidebarOpen ? "Collapse Projects" : "Show projects panel"}
+            aria-label={sidebarOpen ? "Collapse Projects" : "Show projects panel"}
           >
             <IconPanel size={15} />
             <span className="sidebar-show-label">Projects</span>
@@ -1662,9 +1767,25 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             />
           </ViewBoundary>
         </div>
+        <div className="col" style={view !== "documentary" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Documentary">
+            <DocumentaryPage
+              onOpenProject={openProject}
+              onProjectsChanged={() => {
+                refreshScenarios();
+                refresh();
+              }}
+            />
+          </ViewBoundary>
+        </div>
         <div className="col" style={view !== "components" ? { display: "none" } : undefined}>
           <ViewBoundary name="Components">
             <ComponentsPage />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "reface" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Reface">
+            <RefacePage onOpenProject={openProject} />
           </ViewBoundary>
         </div>
         {sidebarOpen && (
@@ -1925,6 +2046,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             regenTarget={runActive ? regenTarget : null}
             runQueue={runQueue}
             onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
+            onBulkRegen={(kind, indices) => handleBulkRegen(kind, indices, cutFormat === "vertical" ? "vertical" : undefined)}
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
             progress={topProgress}
@@ -2077,6 +2199,36 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
           )}
         </div>
       </div>
+      {/* Scene Tools fixed dock on the RIGHT edge — mirrors the left Main
+          menu rail. The rail tab is always visible; clicking it slides only
+          the container out to the left (over content, nothing shrinks) and
+          clicking it again collapses it back. Workspace-only: the tools
+          operate on the open project's beats. Hidden while switching
+          projects so stale beats never show. */}
+      {view === "workspace" && editor && !switchingProject && (
+        <aside className={`toolsnav${toolsOpen ? " open" : ""}`} aria-label="Scene Tools">
+          <div className="toolsnav-panel" aria-hidden={!toolsOpen}>
+            <SceneTools
+              open={true}
+              onToggle={toggleTools}
+              hideToggle
+              beats={Array.isArray(editor.config.sequence) ? editor.config.sequence : []}
+              onApplySequence={applySceneSequenceEdit}
+              onGotoScene={(n) => gotoScene("editor", n)}
+            />
+          </div>
+          <button
+            className="toolsnav-tab"
+            onClick={toggleTools}
+            aria-expanded={toolsOpen}
+            title={toolsOpen ? "Collapse Scene Tools" : "Open Scene Tools"}
+            aria-label={toolsOpen ? "Collapse Scene Tools" : "Open Scene Tools"}
+          >
+            <IconSearch size={16} aria-hidden="true" />
+            <span className="toolsnav-tab-label" aria-hidden="true">Tools</span>
+          </button>
+        </aside>
+      )}
       </div>{/* /.app-body */}
 
       {/* Delete confirmation popup for the Project bar — same beautiful

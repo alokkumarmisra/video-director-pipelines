@@ -115,6 +115,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // pendingRun, or idle). Shows the spinner on the clicked button during
   // the startRun round-trip, before status flips to "running".
   const [starting, setStarting] = useState<"run" | "stitch" | "dialogue" | null>(null);
+  // Connected movie: beat N>1 starts from beat N-1's last frame (devotional
+  // Shiv/Ram/Krishna docs). Persisted per browser. Devotional boards also set
+  // cfg.chainContinuity server-side, so this only forces it on for others.
+  const [chain, setChain] = useState(() => localStorage.getItem("ss-chain") === "on");
+  const toggleChain = () =>
+    setChain((c) => {
+      localStorage.setItem("ss-chain", c ? "off" : "on");
+      return !c;
+    });
   const [stopping, setStopping] = useState(false);
   // Stopping a FOREIGN server run (the banner below) — separate from stopping
   // this panel's own run. Resets once the server stops reporting it.
@@ -287,7 +296,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
-      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count, mode, beats, noStitch });
+      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count, mode, beats, noStitch, chain });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
@@ -626,7 +635,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     running: (
       <span className="pill running">
         <Spinner size={11} />
-        running{runFormat === "vertical" ? " · 9:16 reel" : ""}{runScenario && runScenario !== scenario ? ` · ${runScenario}` : ""}
+        running{runFormat === "vertical" ? " · 9:16 reel" : ""}{chain ? " · 🔗 chained" : ""}{runScenario && runScenario !== scenario ? ` · ${runScenario}` : ""}
       </span>
     ),
     done: <span className="pill done">done</span>,
@@ -655,6 +664,10 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         </div>
         <div className="run-head-controls">
         <div className="run-head-actions" role="group" aria-label="Run controls">
+          <label className="vt-select" title="Chain scenes: beat N>1 starts from beat N-1's last frame, so the movie plays as one connected shot instead of merged clips. Devotional (Shiv/Ram/Krishna) projects chain automatically; tick this to force it on.">
+            <input type="checkbox" checked={chain} onChange={toggleChain} disabled={status === "running"} aria-label="Chain scenes for a connected movie" />
+            <span className="vt-label">🔗 Chain</span>
+          </label>
           <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation — dialogue beats are voiced + lip-synced automatically, clips sized to the voice" : "Start a full generation — dialogue beats are voiced (per-character Hindi TTS) + lip-synced automatically, each clip sized to its dialogue"}>
             {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
             {starting === "run" ? "Starting…" : "Generate"}

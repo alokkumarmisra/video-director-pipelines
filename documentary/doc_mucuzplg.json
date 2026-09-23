@@ -1,0 +1,1212 @@
+{
+  "id": "doc_mucuzplg",
+  "brief": {
+    "title": "महादेव — शिव के दिव्य स्वरूप की यात्रा",
+    "topic": "Lord Shiva — a Hindi devotional documentary on his origin, form, leelas, symbolism and grace",
+    "language": "Hindi",
+    "targetMinutes": 5,
+    "targetSeconds": 300,
+    "aspectRatio": "16:9",
+    "audience": "Family devotional audience",
+    "tone": "Spiritual + cinematic + informative",
+    "visualStyle": "Cinematic devotional documentary, photorealistic mythological India, 16:9",
+    "narrationStyle": "Hindi documentary narration",
+    "narrationVoice": "hi-IN-MadhurNeural",
+    "musicStyle": "Devotional ambient, temple bells, soft drone",
+    "sourceMaterial": "",
+    "sourceType": "mixed",
+    "characters": "Lord Shiva, Parvati, Nandi, Narada",
+    "events": "Samudra manthan, marriage with Parvati, Tandava, blessing of devotees",
+    "locations": "Mount Kailash, Himalayas, Kailash cave, temple, River Ganga",
+    "instructions": ""
+  },
+  "status": "approved",
+  "chapters": [
+    {
+      "chapter_number": 1,
+      "title": "Mahadev: Aadi Yogi ka Swaroop",
+      "purpose": "Introduction to Lord Shiva's cosmic form, Mount Kailash, and his identity as the first yogi.",
+      "target_duration_seconds": 120,
+      "sequences": [
+        {
+          "sequence_id": "C01-S01",
+          "chapter": 1,
+          "seq": 1,
+          "title": "The Cosmic Presence",
+          "purpose": "Establishing the setting of Mount Kailash and Shiva's meditative state.",
+          "narration": "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai.",
+          "duration_seconds": 60,
+          "visual_goal": "Wide shots of snow-capped peaks, misty valleys, and serene meditative figures.",
+          "pacing": "INTRODUCTION",
+          "shots": [
+            {
+              "shot_id": "C01-S01-SH01",
+              "global_index": 1,
+              "chapter": 1,
+              "sequence": 1,
+              "title": "The Cosmic Presence — shot 1",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Wide shots of snow-capped peaks, misty valleys, and serene meditative figures., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S01-SH02",
+              "global_index": 2,
+              "chapter": 1,
+              "sequence": 1,
+              "title": "The Cosmic Presence — shot 2",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Wide shots of snow-capped peaks, misty valleys, and serene meditative figures., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S01-SH03",
+              "global_index": 3,
+              "chapter": 1,
+              "sequence": 1,
+              "title": "The Cosmic Presence — shot 3",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Wide shots of snow-capped peaks, misty valleys, and serene meditative figures., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S01-SH04",
+              "global_index": 4,
+              "chapter": 1,
+              "sequence": 1,
+              "title": "The Cosmic Presence — shot 4",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Wide shots of snow-capped peaks, misty valleys, and serene meditative figures., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S01-SH05",
+              "global_index": 5,
+              "chapter": 1,
+              "sequence": 1,
+              "title": "The Cosmic Presence — shot 5",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Namaskar. Is yatra ki shuruat hum karte hain Himalayan ke uttaristh dharaon se, jahan Swaroop Mahadev ka aasana hai. Yahaan Ganga ki reeti mein nadiyan ghumti hain aur barf peeli hui hoti hai. Kailash par ek aisa shanti ka sthan hai jahan yog aur samadhi ke swarup se mahadev ka prapti ho gaya hai. (भाग 5)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Wide shots of snow-capped peaks, misty valleys, and serene meditative figures., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        },
+        {
+          "sequence_id": "C01-S02",
+          "chapter": 1,
+          "seq": 2,
+          "title": "The Trinity of Form",
+          "purpose": "Explaining the symbolism of Trishul, Damru, and Rudraksha beads.",
+          "narration": "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai.",
+          "duration_seconds": 60,
+          "visual_goal": "Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads.",
+          "pacing": "EXPLANATION",
+          "shots": [
+            {
+              "shot_id": "C01-S02-SH01",
+              "global_index": 6,
+              "chapter": 1,
+              "sequence": 2,
+              "title": "The Trinity of Form — shot 1",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S02-SH02",
+              "global_index": 7,
+              "chapter": 1,
+              "sequence": 2,
+              "title": "The Trinity of Form — shot 2",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S02-SH03",
+              "global_index": 8,
+              "chapter": 1,
+              "sequence": 2,
+              "title": "The Trinity of Form — shot 3",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S02-SH04",
+              "global_index": 9,
+              "chapter": 1,
+              "sequence": 2,
+              "title": "The Trinity of Form — shot 4",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C01-S02-SH05",
+              "global_index": 10,
+              "chapter": 1,
+              "sequence": 2,
+              "title": "The Trinity of Form — shot 5",
+              "duration_seconds": 12,
+              "narration_lines": [
+                "Unke swaroop mein pratyek bhaav ek samvedana hai. Tri-shakti unka aadharm, damru unki surati, aur rudrakshon ki mala unki shanti ka lakshan hai. Ash ke rang ne unhe dusharon se alag karta hai, kyunki yeh ash hi hai jo saar ko chhupaata hai. (भाग 5)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Close-ups of trishul, damru, and ash body texture. Macro shots of rudraksha beads., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_number": 2,
+      "title": "Prabhuvaat aur Leelas",
+      "purpose": "Covering Samudra Manthan, Tandava, and the descent of Ganga.",
+      "target_duration_seconds": 90,
+      "sequences": [
+        {
+          "sequence_id": "C02-S01",
+          "chapter": 2,
+          "seq": 1,
+          "title": "Samudra Manthan ki Gatha",
+          "purpose": "Narrating the churning of the ocean and Neelkanth form.",
+          "narration": "Samudra manthan ke samay jab toxins ban gaye, toh Mahadev ne apne hon ko khatam karke toxin ko gale mein liya. Isliye unhe Neelkanth ka naam diya gaya hai. Yeh leela dikhata hai ki prabhuvaat mein koi kamzor nahi hoti, balki sabhi dukhon ko swaagat kiya jata hai.",
+          "duration_seconds": 45,
+          "visual_goal": "Dynamic shots of ocean waves, poison rising, and the blue throat glow.",
+          "pacing": "BUILDUP",
+          "shots": [
+            {
+              "shot_id": "C02-S01-SH01",
+              "global_index": 11,
+              "chapter": 2,
+              "sequence": 1,
+              "title": "Samudra Manthan ki Gatha — shot 1",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Samudra manthan ke samay jab toxins ban gaye, toh Mahadev ne apne hon ko khatam karke toxin ko gale mein liya. Isliye unhe Neelkanth ka naam diya gaya hai. Yeh leela dikhata hai ki prabhuvaat mein koi kamzor nahi hoti, balki sabhi dukhon ko swaagat kiya jata hai. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Dynamic shots of ocean waves, poison rising, and the blue throat glow., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S01-SH02",
+              "global_index": 12,
+              "chapter": 2,
+              "sequence": 1,
+              "title": "Samudra Manthan ki Gatha — shot 2",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Samudra manthan ke samay jab toxins ban gaye, toh Mahadev ne apne hon ko khatam karke toxin ko gale mein liya. Isliye unhe Neelkanth ka naam diya gaya hai. Yeh leela dikhata hai ki prabhuvaat mein koi kamzor nahi hoti, balki sabhi dukhon ko swaagat kiya jata hai. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Dynamic shots of ocean waves, poison rising, and the blue throat glow., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S01-SH03",
+              "global_index": 13,
+              "chapter": 2,
+              "sequence": 1,
+              "title": "Samudra Manthan ki Gatha — shot 3",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Samudra manthan ke samay jab toxins ban gaye, toh Mahadev ne apne hon ko khatam karke toxin ko gale mein liya. Isliye unhe Neelkanth ka naam diya gaya hai. Yeh leela dikhata hai ki prabhuvaat mein koi kamzor nahi hoti, balki sabhi dukhon ko swaagat kiya jata hai. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Dynamic shots of ocean waves, poison rising, and the blue throat glow., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S01-SH04",
+              "global_index": 14,
+              "chapter": 2,
+              "sequence": 1,
+              "title": "Samudra Manthan ki Gatha — shot 4",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Samudra manthan ke samay jab toxins ban gaye, toh Mahadev ne apne hon ko khatam karke toxin ko gale mein liya. Isliye unhe Neelkanth ka naam diya gaya hai. Yeh leela dikhata hai ki prabhuvaat mein koi kamzor nahi hoti, balki sabhi dukhon ko swaagat kiya jata hai. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Dynamic shots of ocean waves, poison rising, and the blue throat glow., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        },
+        {
+          "sequence_id": "C02-S02",
+          "chapter": 2,
+          "seq": 2,
+          "title": "Tandava Natch",
+          "purpose": "Explaining the cosmic dance of creation and destruction.",
+          "narration": "Drishti mein unka Tandava natch hai jo duniya ki srishti aur vinash ko chalta hai. Yeh naach sirf ashish nahi, balki samay ka aayaman hai. Har kadam mein ek prabhuvaat chali jaati hai, jo hamare hriday mein shanti lekar aati hai.",
+          "duration_seconds": 45,
+          "visual_goal": "Medium shots of cosmic fire ring, dynamic movement blur, divine light flares.",
+          "pacing": "CLIMAX",
+          "shots": [
+            {
+              "shot_id": "C02-S02-SH01",
+              "global_index": 15,
+              "chapter": 2,
+              "sequence": 2,
+              "title": "Tandava Natch — shot 1",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Drishti mein unka Tandava natch hai jo duniya ki srishti aur vinash ko chalta hai. Yeh naach sirf ashish nahi, balki samay ka aayaman hai. Har kadam mein ek prabhuvaat chali jaati hai, jo hamare hriday mein shanti lekar aati hai. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Medium shots of cosmic fire ring, dynamic movement blur, divine light flares., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S02-SH02",
+              "global_index": 16,
+              "chapter": 2,
+              "sequence": 2,
+              "title": "Tandava Natch — shot 2",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Drishti mein unka Tandava natch hai jo duniya ki srishti aur vinash ko chalta hai. Yeh naach sirf ashish nahi, balki samay ka aayaman hai. Har kadam mein ek prabhuvaat chali jaati hai, jo hamare hriday mein shanti lekar aati hai. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Medium shots of cosmic fire ring, dynamic movement blur, divine light flares., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S02-SH03",
+              "global_index": 17,
+              "chapter": 2,
+              "sequence": 2,
+              "title": "Tandava Natch — shot 3",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Drishti mein unka Tandava natch hai jo duniya ki srishti aur vinash ko chalta hai. Yeh naach sirf ashish nahi, balki samay ka aayaman hai. Har kadam mein ek prabhuvaat chali jaati hai, jo hamare hriday mein shanti lekar aati hai. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Medium shots of cosmic fire ring, dynamic movement blur, divine light flares., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C02-S02-SH04",
+              "global_index": 18,
+              "chapter": 2,
+              "sequence": 2,
+              "title": "Tandava Natch — shot 4",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Drishti mein unka Tandava natch hai jo duniya ki srishti aur vinash ko chalta hai. Yeh naach sirf ashish nahi, balki samay ka aayaman hai. Har kadam mein ek prabhuvaat chali jaati hai, jo hamare hriday mein shanti lekar aati hai. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Medium shots of cosmic fire ring, dynamic movement blur, divine light flares., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_number": 3,
+      "title": "Bhakti aur Shanti ka Pradish",
+      "purpose": "Focusing on Parvati, Nandi, devotees, and concluding with inner meaning.",
+      "target_duration_seconds": 90,
+      "sequences": [
+        {
+          "sequence_id": "C03-S01",
+          "chapter": 3,
+          "seq": 1,
+          "title": "Prem aur Parvati",
+          "purpose": "Highlighting the divine marriage and balance of Shiva-Parvati.",
+          "narration": "Yeh shanti sirf akele nahi hai, balki Parvati ke prem se bhi bharta hai. Unki shaadi mein ek aisa sangam hota hai jahan yagn aur ghar ek hote hain. Nandi unka vachan hai, jo har devotee ko prabhuvaat ki taraf le jaata hai.",
+          "duration_seconds": 45,
+          "visual_goal": "Soft focus on temple interior, couple silhouette, white bull profile.",
+          "pacing": "EMOTIONAL_MOMENT",
+          "shots": [
+            {
+              "shot_id": "C03-S01-SH01",
+              "global_index": 19,
+              "chapter": 3,
+              "sequence": 1,
+              "title": "Prem aur Parvati — shot 1",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Yeh shanti sirf akele nahi hai, balki Parvati ke prem se bhi bharta hai. Unki shaadi mein ek aisa sangam hota hai jahan yagn aur ghar ek hote hain. Nandi unka vachan hai, jo har devotee ko prabhuvaat ki taraf le jaata hai. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Soft focus on temple interior, couple silhouette, white bull profile., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S01-SH02",
+              "global_index": 20,
+              "chapter": 3,
+              "sequence": 1,
+              "title": "Prem aur Parvati — shot 2",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Yeh shanti sirf akele nahi hai, balki Parvati ke prem se bhi bharta hai. Unki shaadi mein ek aisa sangam hota hai jahan yagn aur ghar ek hote hain. Nandi unka vachan hai, jo har devotee ko prabhuvaat ki taraf le jaata hai. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Soft focus on temple interior, couple silhouette, white bull profile., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S01-SH03",
+              "global_index": 21,
+              "chapter": 3,
+              "sequence": 1,
+              "title": "Prem aur Parvati — shot 3",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Yeh shanti sirf akele nahi hai, balki Parvati ke prem se bhi bharta hai. Unki shaadi mein ek aisa sangam hota hai jahan yagn aur ghar ek hote hain. Nandi unka vachan hai, jo har devotee ko prabhuvaat ki taraf le jaata hai. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Soft focus on temple interior, couple silhouette, white bull profile., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S01-SH04",
+              "global_index": 22,
+              "chapter": 3,
+              "sequence": 1,
+              "title": "Prem aur Parvati — shot 4",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Yeh shanti sirf akele nahi hai, balki Parvati ke prem se bhi bharta hai. Unki shaadi mein ek aisa sangam hota hai jahan yagn aur ghar ek hote hain. Nandi unka vachan hai, jo har devotee ko prabhuvaat ki taraf le jaata hai. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Soft focus on temple interior, couple silhouette, white bull profile., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        },
+        {
+          "sequence_id": "C03-S02",
+          "chapter": 3,
+          "seq": 2,
+          "title": "Anant Kaar",
+          "purpose": "Conclusion on grace for devotees and inner peace.",
+          "narration": "Jab hum bhakt ke roop mein prarthana karte hain, toh unka prabhuvaat hamare hriday mein shanti lekar aata hai. Shiva sirf ek devta nahi, balki hamari atma ki sthiti ka anubhav hai. Namaskar.",
+          "duration_seconds": 45,
+          "visual_goal": "Peaceful sunrise over Kailash, temple bells ringing, fading to light.",
+          "pacing": "CONCLUSION",
+          "shots": [
+            {
+              "shot_id": "C03-S02-SH01",
+              "global_index": 23,
+              "chapter": 3,
+              "sequence": 2,
+              "title": "Anant Kaar — shot 1",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Jab hum bhakt ke roop mein prarthana karte hain, toh unka prabhuvaat hamare hriday mein shanti lekar aata hai. Shiva sirf ek devta nahi, balki hamari atma ki sthiti ka anubhav hai. Namaskar. (भाग 1)"
+              ],
+              "visual_type": "establishing",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Peaceful sunrise over Kailash, temple bells ringing, fading to light., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S02-SH02",
+              "global_index": 24,
+              "chapter": 3,
+              "sequence": 2,
+              "title": "Anant Kaar — shot 2",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Jab hum bhakt ke roop mein prarthana karte hain, toh unka prabhuvaat hamare hriday mein shanti lekar aata hai. Shiva sirf ek devta nahi, balki hamari atma ki sthiti ka anubhav hai. Namaskar. (भाग 2)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Peaceful sunrise over Kailash, temple bells ringing, fading to light., cinematic medium framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Medium Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S02-SH03",
+              "global_index": 25,
+              "chapter": 3,
+              "sequence": 2,
+              "title": "Anant Kaar — shot 3",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Jab hum bhakt ke roop mein prarthana karte hain, toh unka prabhuvaat hamare hriday mein shanti lekar aata hai. Shiva sirf ek devta nahi, balki hamari atma ki sthiti ka anubhav hai. Namaskar. (भाग 3)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Peaceful sunrise over Kailash, temple bells ringing, fading to light., cinematic close-up framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Close-Up",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            },
+            {
+              "shot_id": "C03-S02-SH04",
+              "global_index": 26,
+              "chapter": 3,
+              "sequence": 2,
+              "title": "Anant Kaar — shot 4",
+              "duration_seconds": 11,
+              "narration_lines": [
+                "Jab hum bhakt ke roop mein prarthana karte hain, toh unka prabhuvaat hamare hriday mein shanti lekar aata hai. Shiva sirf ek devta nahi, balki hamari atma ki sthiti ka anubhav hai. Namaskar. (भाग 4)"
+              ],
+              "visual_type": "character",
+              "characters": [
+                "lord_shiva"
+              ],
+              "location": "mount_kailash",
+              "flux_prompt": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head, Sacred abode of Lord Shiva in the Himalayas., Peaceful sunrise over Kailash, temple bells ringing, fading to light., cinematic wide framing",
+              "ltx_prompt": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "camera": {
+                "shot_type": "Wide Shot",
+                "angle": "Eye Level",
+                "movement": "slow cinematic push-in"
+              },
+              "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only",
+              "lighting": "",
+              "audio": {
+                "music": true,
+                "sfx": false,
+                "sfx_kind": ""
+              },
+              "pacing": "EXPLANATION",
+              "status": "WAITING",
+              "approved": false,
+              "version": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "character_id": "lord_shiva",
+      "name": "Mahadev",
+      "role": "Supreme Being, Adiyogi",
+      "visual_identity": {
+        "face": "Meditative expression with third eye hidden by ash (Vibhuti)",
+        "body": "Ashen blue-grey skin tone covered in white vibhuti",
+        "skin": "Cool grey-blue tones representing cosmic energy",
+        "hair": "Long matted black hair adorned with crescent moon and coiled snake Vasuki",
+        "eyes": "Deep black irises, one eye often closed or glowing gold when open",
+        "clothing": "Untouched tiger skin dhoti draped loosely over waist",
+        "ornaments": "Rudraksha beads around neck, Ganga flowing from head",
+        "weapons": ""
+      },
+      "identity_prompt": "Mahadev, Meditative expression with third eye hidden by ash (Vibhuti), Ashen blue-grey skin tone covered in white vibhuti, Cool grey-blue tones representing cosmic energy, Long matted black hair adorned with crescent moon and coiled snake Vasuki, Deep black irises, one eye often closed or glowing gold when open, Untouched tiger skin dhoti draped loosely over waist, Rudraksha beads around neck, Ganga flowing from head",
+      "consistency_rules": [
+        "Must maintain blue-grey skin tone in all lighting conditions",
+        "Ash (Vibhuti) texture must be visible on forehead and body",
+        "Never wear modern clothing or jewelry inconsistent with mythology",
+        "Third eye only visible during moments of intense power or meditation"
+      ],
+      "voice": "",
+      "approved": false
+    },
+    {
+      "character_id": "parvati",
+      "name": "Gauri",
+      "role": "Consort and Divine Mother",
+      "visual_identity": {
+        "face": "Serene with gentle smile, soft features",
+        "body": "Golden skin tone representing purity and strength",
+        "skin": "Warm golden tones with subtle floral glow",
+        "hair": "Long flowing black hair adorned with fresh flowers (Hibiscus)",
+        "eyes": "Dark brown irises filled with compassion",
+        "clothing": "Silk red or white saree with gold border",
+        "ornaments": "Floral garlands, gold jewelry minimal but elegant",
+        "weapons": ""
+      },
+      "identity_prompt": "Gauri, Serene with gentle smile, soft features, Golden skin tone representing purity and strength, Warm golden tones with subtle floral glow, Long flowing black hair adorned with fresh flowers (Hibiscus), Dark brown irises filled with compassion, Silk red or white saree with gold border, Floral garlands, gold jewelry minimal but elegant",
+      "consistency_rules": [
+        "Must wear traditional Indian attire never modern fashion",
+        "Floral elements must match the season or location context",
+        "Expression must remain calm and benevolent in all frames"
+      ],
+      "voice": "",
+      "approved": false
+    },
+    {
+      "character_id": "nandi",
+      "name": "Nandi",
+      "role": "Vahana (Bull) of Shiva",
+      "visual_identity": {
+        "face": "Strong white face with gentle eyes",
+        "body": "Large muscular white body with red markings on forehead",
+        "skin": "White hide with subtle texture details",
+        "hair": "Short black mane around neck and horns",
+        "eyes": "Dark brown eyes showing loyalty",
+        "clothing": "No clothing, adorned with a simple garland of flowers",
+        "ornaments": "Red tilak on forehead, sacred thread around neck",
+        "weapons": ""
+      },
+      "identity_prompt": "Nandi, Strong white face with gentle eyes, Large muscular white body with red markings on forehead, White hide with subtle texture details, Short black mane around neck and horns, Dark brown eyes showing loyalty, No clothing, adorned with a simple garland of flowers, Red tilak on forehead, sacred thread around neck",
+      "consistency_rules": [
+        "Must always be white in color unless specified otherwise",
+        "Never wear human-like accessories or jewelry",
+        "Posture must indicate reverence and strength"
+      ],
+      "voice": "",
+      "approved": false
+    },
+    {
+      "character_id": "narada",
+      "name": "Narada Muni",
+      "role": "Sage Messenger",
+      "visual_identity": {
+        "face": "Elderly sage with long white beard and wrinkles",
+        "body": "Skin tone matching ancient Indian sages (weathered)",
+        "skin": "Brown skin tone with age lines",
+        "hair": "Long grey hair tied in a topknot",
+        "eyes": "Focused eyes looking towards the divine",
+        "clothing": "Orange ochre cloth draped over body",
+        "ornaments": "Wooden beads, staff in hand",
+        "weapons": ""
+      },
+      "identity_prompt": "Narada Muni, Elderly sage with long white beard and wrinkles, Skin tone matching ancient Indian sages (weathered), Brown skin tone with age lines, Long grey hair tied in a topknot, Focused eyes looking towards the divine, Orange ochre cloth draped over body, Wooden beads, staff in hand",
+      "consistency_rules": [
+        "Must appear as an ascetic sage never in royal attire",
+        "Cloth must be simple and worn naturally without modern fasteners"
+      ],
+      "voice": "",
+      "approved": false
+    }
+  ],
+  "locations": [
+    {
+      "location_id": "mount_kailash",
+      "name": "Mount Kailash",
+      "description": "Sacred abode of Lord Shiva in the Himalayas.",
+      "lighting": "Ethereal soft light, golden hour glow on snow peaks",
+      "architecture": "Ancient cave entrances, natural rock formations",
+      "environment": "Snow-capped mountains, misty valleys, flowing streams",
+      "time_period": "Eternal mythological time (not modern)",
+      "visual_rules": [
+        "No modern buildings or vehicles visible in the distance",
+        "Snow must remain consistent with high altitude conditions",
+        "Vegetation must be restricted to alpine herbs and lotus flowers"
+      ],
+      "identity_prompt": "Sacred abode of Lord Shiva in the Himalayas.",
+      "approved": false
+    },
+    {
+      "location_id": "himalayas_valley",
+      "name": "Himalayan Valley",
+      "description": "Surrounding landscape of Kailash.",
+      "lighting": "Cool blue ambient light during dawn or dusk",
+      "architecture": "Natural rock formations, ancient meditation caves",
+      "environment": "Deep valleys, flowing Ganga tributaries, pine forests",
+      "time_period": "Eternal mythological time",
+      "visual_rules": [
+        "Must maintain high altitude atmosphere with snow mist",
+        "No modern roads or cars allowed in the frame"
+      ],
+      "identity_prompt": "Surrounding landscape of Kailash.",
+      "approved": false
+    },
+    {
+      "location_id": "kailash_cave",
+      "name": "Kailash Cave Interior",
+      "description": "Inner sanctum where Shiva resides.",
+      "lighting": "Dim interior light with divine fire glow (Agni)",
+      "architecture": "Carved stone pillars, ancient frescoes on walls",
+      "environment": "Cozy cave space with meditation platforms",
+      "time_period": "Eternal mythological time",
+      "visual_rules": [
+        "Must feel ancient and untouched by modern tools",
+        "Lighting must emphasize the spiritual atmosphere"
+      ],
+      "identity_prompt": "Inner sanctum where Shiva resides.",
+      "approved": false
+    },
+    {
+      "location_id": "temple_interior",
+      "name": "Temple Interior",
+      "description": "Place of worship for devotees.",
+      "lighting": "Warm yellow light from oil lamps (Diya)",
+      "architecture": "Traditional Shiva Lingam altar, wooden pillars",
+      "environment": "Quiet prayer hall with incense smoke",
+      "time_period": "Ancient to timeless Indian temple era",
+      "visual_rules": [
+        "No modern electronic devices visible",
+        "Clothing and architecture must reflect traditional temple design"
+      ],
+      "identity_prompt": "Place of worship for devotees.",
+      "approved": false
+    },
+    {
+      "location_id": "river_ganga",
+      "name": "River Ganga",
+      "description": "Holy river flowing from Shiva's hair.",
+      "lighting": "Reflective light on water surface, morning sun",
+      "architecture": "Natural banks with lotus flowers and banyan trees",
+      "environment": "Flowing water, lotus ponds, ancient ghats",
+      "time_period": "Eternal mythological time",
+      "visual_rules": [
+        "Water must appear sacred and clear not polluted",
+        "No modern boats or concrete structures on banks"
+      ],
+      "identity_prompt": "Holy river flowing from Shiva's hair.",
+      "approved": false
+    }
+  ],
+  "musicBeds": [
+    {
+      "bed_id": "opening_mystical",
+      "mood": "opening|mystical",
+      "duration_seconds": 120,
+      "description": "Soft drone with temple bells and ambient wind sounds to set the spiritual tone."
+    },
+    {
+      "bed_id": "tension_revelation",
+      "mood": "tension|revelation",
+      "duration_seconds": 90,
+      "description": "Deep rhythmic drums (Damaru) and orchestral swells for cosmic dance sequences."
+    },
+    {
+      "bed_id": "emotional_conclusion",
+      "mood": "emotional|peaceful",
+      "duration_seconds": 90,
+      "description": "Soft flute melody with ambient nature sounds (birds, water) for devotional conclusion."
+    }
+  ],
+  "styleLock": "Cinematic devotional documentary, photorealistic mythological India, 16:9",
+  "sceneCount": 0,
+  "shotCount": 26,
+  "scenarioName": "महादेव — शिव के दिव्य स्वरूप की यात्रा",
+  "project_id": null,
+  "error": null,
+  "createdAt": "2026-09-22T15:58:48.916Z",
+  "updatedAt": "2026-09-22T16:09:32.803Z"
+}

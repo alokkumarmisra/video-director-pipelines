@@ -1,0 +1,180 @@
+{
+  "id": "scenario",
+  "input": {
+    "title": "महादेव — शिव के दिव्य स्वरूप की यात्रा",
+    "story": "Traditional Shiv Puran accounts retold devotionally",
+    "language": "Hindi",
+    "genre": "Devotional",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 300,
+    "sceneSeconds": 10,
+    "aspectRatio": "16:9",
+    "instructions": "Hindi devotional documentary about Lord Shiva. Audience: परिवार सहित सभी आयु के भक्त. Tone: Spiritual + cinematic + informative. Narration: Hindi documentary narration, calm reverent male voice, slow measured pace."
+  },
+  "status": "analyzed",
+  "blueprint": {
+    "logline": "एक दिव्य संवाद में, शिव लोक अपने आकर्षणात्मक स्वरूप की यात्रा करता है, जो भक्तों को दुःख से प्राप्त शांति और आशय देने के लिए विशाल चरणों से यात्रा करता है।",
+    "analysis": {
+      "plot": "स्थानीय भक्तों की सुहावनी प्रेमिका शिव लोक के आकर्षणात्मक स्वरूप की यात्रा की गयी है, जो उसे समझाता है कि प्रेम में निराशाओं को बुलाया जा सकता है।",
+      "beginning": "शिव लोक की अपनी आकर्षणात्मक वस्तुओं के साथ प्रारम्भ होता है।",
+      "middle": "शिव लोक के यात्रा अनेक निशानों से गुज़रती है, जहाँ उसे प्रेम और आशय की दुनिया में खोजना पड़ता है।",
+      "climax": "अंतिम निशान से जब शिव लोक अपनी यात्रा की अंधारण्य चरणों पर आगेबढ़ जाता है, तो उसे निराशाओं से दूर और आशय की शक्ति में पहुंचना पड़ता है।",
+      "ending": "शिव लोक अपनी यात्रा समाप्त करता है, जब उसे आशय की शक्ति में पहुंचना मौका मिलता है।",
+      "main_character": "शिव लोक",
+      "supporting_characters": [
+        "भक्तों"
+      ],
+      "antagonist": null,
+      "objects": [
+        "सरपटी पानी",
+        "जोड़े संध्या",
+        "ग्रन्थ"
+      ],
+      "locations": [
+        "मानव दुनिया",
+        "शिवलिंग"
+      ],
+      "events": [
+        "शिव लोक की आयात्रा",
+        "प्रेम और आशय की खोज",
+        "अंधारण्य में पहुंचना"
+      ],
+      "relationships": "शिव लोक एवं भक्तों के सम्बन्ध",
+      "emotional_progression": "आशय से निराशा, प्रेम में उत्सुकता, आशय में पहुंचना",
+      "timeline": "शिव लोक की यात्रा का विस्तृत समयरेखा",
+      "visual_moments": [
+        "शिव लोक के आयात्रा",
+        "प्रेम और आशय की खोज",
+        "अंधारण्य में पहुंचना"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "shiv_lok",
+        "name": "शिव लोक",
+        "role": "main_character",
+        "species": "मनुष्य",
+        "age": "साधारणतः",
+        "appearance": {
+          "body": "वैरागी की तरह बिल्कुल दिखाई पड़ें, संध्या अँधेरे में घूमता है",
+          "fur": "-",
+          "eyes": "आशय की शक्ति का दिखावट आसमान से डरे लगने वाले नज़दीक हों",
+          "ears": "-"
+        },
+        "clothing": {
+          "top": "वैरागी का एक मानसिक बुन्द",
+          "bottom": "बिल्ली से तुरंत पहना वैरागी का कपड़ा"
+        },
+        "personality": [
+          "शांत",
+          "आसमान से डरता है"
+        ],
+        "visual_identity_prompt": "वैरागी शिव लोक, बिल्ली के पहने एक लाल कपड़ा, आसमान के डरे लगने वाले नज़दीक दिखाई पड़ें, संध्या अँधेरे में घूमता हुआ",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "bhakta",
+        "name": "भक्तों",
+        "role": "supporting_character",
+        "species": "मनुष्य",
+        "age": "साधारणतः",
+        "appearance": {
+          "body": "प्रेम से घूला हुआ, आशय की शक्ति को प्रेम में खोजने वाले दिखाएं",
+          "fur": "-",
+          "eyes": "प्रेम के भाव से जैसे उड़ता हुआ नज़दीक दिखाएं",
+          "ears": "-"
+        },
+        "clothing": {
+          "top": "हरा पेड़ के पेंश",
+          "bottom": "वैरागी की तरह कपड़ा"
+        },
+        "personality": [
+          "संध्या से घुले हुए",
+          "प्रेम की खोज में आशय"
+        ],
+        "visual_identity_prompt": "वैरागी भक्त, प्रेम से घूले लगने वाला हरा पेड़ के पेंश, खोज में आशय की शक्ति की तुरंत पहचान",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "mankind_world",
+        "name": "मानव दुनिया",
+        "description": "संध्या अँधेरे में घूमता हुआ, प्रेम और आशय की खोज में भक्तों से एक साथ",
+        "visual_identity_prompt": "संध्या अँधेरे में घूमता हुआ, प्रेम और आशय की खोज में भक्तों से एक साथ",
+        "time_of_day": "संध्या",
+        "lighting": "अँधेरा से प्रेरित",
+        "color_palette": "गुब्बारा, नीला"
+      },
+      {
+        "location_id": "shivling",
+        "name": "शिवलिंग",
+        "description": "मौन में प्रेम और आशय की शक्ति से घुमता हुआ",
+        "visual_identity_prompt": "मौन में प्रेम और आशय की शक्ति से घुमता हुआ",
+        "time_of_day": "संध्या",
+        "lighting": "पृष्ठभूमि में अँधेरा, प्रेरित",
+        "color_palette": "वास्तविक रंगों"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "water",
+        "name": "सरपटी पानी",
+        "description": "मन में संध्या के प्रेम और आशय की खोज की तरह घूमता हुआ",
+        "visual_identity_prompt": "सरपटी पानी, मन में संध्या के प्रेम और आशय की खोज की तरह घूमता हुआ"
+      },
+      {
+        "object_id": "lamp",
+        "name": "जोड़े संध्या",
+        "description": "प्रेम और आशय की खोज में भक्तों के प्रारम्भिक संदेहों को छाने वाली जोड़े संध्या",
+        "visual_identity_prompt": "प्रेम और आशय की खोज में भक्तों के प्रारम्भिक संदेहों को छाने वाली जोड़े संध्या"
+      },
+      {
+        "object_id": "granth",
+        "name": "ग्रन्थ",
+        "description": "शिव लोक की यात्रा के दौरान प्रेम और आशय की शक्ति में संदेहों का उत्पन्न स्रोत",
+        "visual_identity_prompt": "शिव लोक की यात्रा के दौरान प्रेम और आशय की शक्ति में संदेहों का उत्पन्न स्रोत"
+      }
+    ],
+    "beats": [
+      {
+        "n": 1,
+        "title": "प्रारम्भिक यात्रा",
+        "summary": "शिव लोक अपनी प्रेम और आशय के खोज की यात्रा शुरू करता है।"
+      },
+      {
+        "n": 2,
+        "title": "प्रेम की खोज",
+        "summary": "भक्तों से एक साथ प्रेम और आशय की खोज में शिव लोक निकलता है।"
+      },
+      {
+        "n": 3,
+        "title": "अंधारण्य में पहुंचना",
+        "summary": "शिव लोक अपनी यात्रा का समापन करता है, जब उसे आशय की शक्ति में पहुंचना मौका मिलता है।"
+      }
+    ]
+  },
+  "scenes": [],
+  "sceneCount": 30,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": null,
+  "error": null,
+  "createdAt": "2026-09-22T14:54:20.270Z",
+  "updatedAt": "2026-09-22T14:54:20.270Z"
+}

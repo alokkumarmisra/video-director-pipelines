@@ -1,6 +1,7 @@
 .env
 outputs/
 resources/
+reface/
 workflows/merged_pipeline.json
 node_modules/
 *.log

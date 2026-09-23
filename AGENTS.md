@@ -45,6 +45,16 @@ relative to it). Two parts:
 
 ## Scripts
 Generic runners (a new scenario = one new `prompts/<scenario>.json`):
+- `reface.py analyze <jobDir> | swap <jobDir> --face <faceId>` — **face-swap
+  studio worker** (local CPU, insightface — NOT ComfyUI). Analyze samples the
+  source at 1fps, detects faces (buffalo_l) and greedy-clusters identities by
+  embedding cosine (same rule as `clusterEmbeddings` in `lib/reface.mjs`) into
+  `faces.json` + `thumbs/faceN.jpg` (+ `embeddings.npz`, python-only). Swap
+  replaces the chosen identity with the largest face in `reference.*` via
+  inswapper_128 frame-by-frame and re-encodes `result.mp4` (libx264/yuv420p,
+  original audio muxed). Progress streams to `progress.json` for UI polling.
+  Models: buffalo_l auto-downloads to `~/.insightface`; inswapper_128 fetches
+  once from `INSWAPPER_URL` into `INSWAPPER_MODEL` (override both via env).
 - `director.mjs [scenario]` — N scenes, **merged** Flux→LTX per scene (one queue item each).
   JSON: `{ duration, scenes: [{ title, fluxPrompt, ltxPrompt }] }`
 - `character_sequence.mjs [scenario]` — reference visual + N keyframe beats (same subject),
@@ -139,7 +149,7 @@ used as the keyframe a clip is generated from. Default main = latest version.
 ## frontend/ (web UI)
 Serve the built UI + API: `npm install && npm run build` then `npm run serve`
 (http://localhost:8790). Dev with hot reload: `npm run serve` + `npm run dev` (vite :5173,
-proxies `/api` + `/outputs` to :8790). `build` = `tsc && vite build`.
+proxies `/api` + `/outputs` + `/resources` + `/reface` to :8790). `build` = `tsc && vite build`.
 
 Gotchas:
 - **Scenarios live in Postgres** (`scenarios` table, canonical for the UI) by default —
@@ -149,9 +159,14 @@ Gotchas:
   mode). Editing the JSON directly won't update the UI list — prefer the UI Save route.
 - Auth is session-cookie based. Defaults `LOGIN_USER`/`LOGIN_PASS` = `admin`/`admin` from
   env — change these for anything non-local (server.mjs already forces login for `/api/*`
-  and `/outputs/*`).
+  and `/outputs/*`, plus `/resources/*` and `/reface/*`).
 - `server.mjs` spawns the sequence scripts via `startRun()`; **only one run at a time** (the
   ComfyUI queue is serial) — new runs are rejected while one is `running`.
+- **Reface studio** (`RefacePage.tsx` + `POST /api/reface/*`, files under `reface/<id>/`,
+  served via `/reface/<id>/file/<path>` with range support): video uploads arrive as
+  **raw binary** (`readRaw`, 500MB cap — not base64 JSON); reference faces stay base64
+  data-URLs like every other image upload. One worker at a time (`refaceProcs`);
+  progress is polled from `progress.json` (3s), never SSE.
 - Runs stream script logs via SSE and parse `[asset] {...}` lines into live asset events —
   keep emitting `[asset]` JSON from any script you want surfaced in the UI.
 - **Postgres catalog**: every finished generation is recorded in the `video_generator`

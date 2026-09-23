@@ -43,7 +43,7 @@ export default function ResourcePage({ onOpenProject }: {
   const [refTargets, setRefTargets] = useState<Record<string, string>>({});
   // Bulk save: one project from the whole library (middle strip below).
   const [projectName, setProjectName] = useState("");
-  const [preview, setPreview] = useState<PreviewItem | null>(null);
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
   const dialog = useDialog();
   // View-only selection: checked cards + a top Delete button that hides them
   // from this page (client-side only — files stay on disk, refresh shows them
@@ -80,6 +80,15 @@ export default function ResourcePage({ onOpenProject }: {
 
   // Cards visible on the page (hidden ones stay on disk, only out of view).
   const visibleItems = items.filter((r) => !hiddenIds.has(r.id));
+  // Fullscreen preview steps through every visible card with ←/→ + ‹ ›.
+  const previewItems: PreviewItem[] = visibleItems.map((r) => (r.kind === "video"
+    ? { src: resourceUrl(r.file), kind: "video" as const, alt: r.file }
+    : { src: resourceUrl(r.file), kind: "image" as const, alt: r.prompt ?? r.file }));
+  const preview = previewIdx != null ? (previewItems[previewIdx] ?? null) : null;
+  const openPreview = (id: string) => {
+    const i = visibleItems.findIndex((x) => x.id === id);
+    if (i >= 0) setPreviewIdx(i);
+  };
   const selectedCount = items.filter((r) => selected.has(r.id) && !hiddenIds.has(r.id)).length;
 
   const toggleSelect = (id: string) =>
@@ -351,7 +360,7 @@ export default function ResourcePage({ onOpenProject }: {
 
   return (
     <section className="card" aria-label="Resource library">
-      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {preview && previewIdx != null && <Lightbox item={preview} items={previewItems} index={previewIdx} onIndexChange={setPreviewIdx} onClose={() => setPreviewIdx(null)} />}
       <div className="card-head">
         <h2>
           <span className="head-icon hi-craft"><IconFolder size={15} /></span>
@@ -472,9 +481,7 @@ export default function ResourcePage({ onOpenProject }: {
                       aria-label={r.kind === "video" ? `Fullscreen preview of ${r.file}` : `Fullscreen preview of ${r.file}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setPreview(r.kind === "video"
-                          ? { src: resourceUrl(r.file), kind: "video", alt: r.file }
-                          : { src: resourceUrl(r.file), kind: "image", alt: r.prompt ?? r.file });
+                        openPreview(r.id);
                       }}
                     >
                       <IconExpand size={13} />

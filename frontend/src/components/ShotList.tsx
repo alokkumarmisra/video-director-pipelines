@@ -217,7 +217,7 @@ export default function ShotList({
   const dialog = useDialog();
   const [filter, setFilter] = useState<number | "all">("all");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [preview, setPreview] = useState<PreviewItem | null>(null);
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
   const [loadError, setLoadError] = useState("");
   // Horizontal scene-tab strip: arrow buttons shift the list one tab at a
   // time (left arrow sits before scene 1, right arrow just before All).
@@ -500,6 +500,23 @@ export default function ShotList({
 
   const visible = filter === "all" ? rows : rows.filter((r) => r.n === filter);
 
+  // Every previewable thumb in story order (image then clip per scene).
+  // The fullscreen Lightbox steps through this list with ←/→ + ‹ › buttons.
+  const previewItems: PreviewItem[] = useMemo(() => {
+    if (!outDir) return [];
+    const list: PreviewItem[] = [];
+    for (const r of rows) {
+      if (r.imageFile) list.push({ src: outputUrl(outDir, r.imageFile), kind: "image", alt: `shot ${r.shot} image` });
+      if (r.clipFile) list.push({ src: outputUrl(outDir, r.clipFile), kind: "video", alt: `shot ${r.shot} video` });
+    }
+    return list;
+  }, [rows, outDir]);
+  const preview = previewIdx != null ? (previewItems[previewIdx] ?? null) : null;
+  const openPreview = (src: string) => {
+    const i = previewItems.findIndex((x) => x.src === src);
+    if (i >= 0) setPreviewIdx(i);
+  };
+
   // Selecting a scene tab reveals that scene's full prompts. All reveals
   // the full data for every scene. Details toggles rows individually.
   const selectScene = (n: number) => {
@@ -744,7 +761,7 @@ export default function ShotList({
 
   return (
     <section className={`card shotlist${collapsed ? " collapsed" : ""}`} aria-label={`Story Board for ${name}`}>
-      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {preview && previewIdx != null && <Lightbox item={preview} items={previewItems} index={previewIdx} onIndexChange={setPreviewIdx} onClose={() => setPreviewIdx(null)} />}
 
       {/* Header */}
       <div className="shotlist-head">
@@ -926,11 +943,11 @@ export default function ShotList({
                             tabIndex={0}
                             title={imgRunning ? imgGenLabel : `Scene ${r.n} keyframe image — click to preview`}
                             onClick={() =>
-                              setPreview({ src: outputUrl(outDir, r.imageFile!), kind: "image", alt: `shot ${r.shot} image` })
+                              openPreview(outputUrl(outDir, r.imageFile!))
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && r.imageFile)
-                                setPreview({ src: outputUrl(outDir, r.imageFile), kind: "image", alt: `shot ${r.shot} image` });
+                                openPreview(outputUrl(outDir, r.imageFile));
                             }}
                           >
                             <SmoothImage src={outputUrl(outDir, r.imageFile)} alt="" />
@@ -986,11 +1003,11 @@ export default function ShotList({
                             tabIndex={0}
                             title={clipRunning ? clipGenLabel : `Video ${r.n} clip — click to preview`}
                             onClick={() =>
-                              setPreview({ src: outputUrl(outDir, r.clipFile!), kind: "video", alt: `shot ${r.shot} video` })
+                              openPreview(outputUrl(outDir, r.clipFile!))
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && r.clipFile)
-                                setPreview({ src: outputUrl(outDir, r.clipFile), kind: "video", alt: `shot ${r.shot} video` });
+                                openPreview(outputUrl(outDir, r.clipFile));
                             }}
                           >
                             <video src={outputUrl(outDir, r.clipFile)} preload="metadata" muted playsInline />
@@ -1207,7 +1224,7 @@ export default function ShotList({
                           <button
                             className="ghost shotlist-btn"
                             onClick={() =>
-                              setPreview({ src: outputUrl(outDir, r.imageFile!), kind: "image", alt: `shot ${r.shot} image` })
+                              openPreview(outputUrl(outDir, r.imageFile!))
                             }
                           >
                             View image
@@ -1217,7 +1234,7 @@ export default function ShotList({
                           <button
                             className="ghost shotlist-btn"
                             onClick={() =>
-                              setPreview({ src: outputUrl(outDir, r.clipFile!), kind: "video", alt: `shot ${r.shot} video` })
+                              openPreview(outputUrl(outDir, r.clipFile!))
                             }
                           >
                             Play video

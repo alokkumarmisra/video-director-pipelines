@@ -33,6 +33,8 @@ interface Props {
   runQueue?: RunRequest[];
   onStitch?: () => void; // ask the run panel to re-stitch the final cut
   onRegen?: (kind: AssetKind, index: number | null) => void;
+  /** Bulk regenerate checked scenes (queued serially). Kind "both" = keyframe + clip per scene. */
+  onBulkRegen?: (kind: "keyframe" | "clip" | "both", indices: number[]) => void;
   onUploaded?: () => void; // a ref upload landed — ask the app to re-list outputs
   // Called by the "view other engine's outputs" button (shown when this
   // engine dir is empty but the sibling engine dir has renders).
@@ -111,7 +113,7 @@ function GenOverlay({ label, readout }: { label: string; readout?: string | null
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene, summary, projectName, dialogueEngine = "ltx", dialogueFormat = "landscape", onDialogueSaved }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onBulkRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene, summary, projectName, dialogueEngine = "ltx", dialogueFormat = "landscape", onDialogueSaved }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -138,6 +140,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const [lipTexts, setLipTexts] = useState<Record<number, string>>({});
   const [lipSaving, setLipSaving] = useState<number | null>(null);
   const [lipSaveError, setLipSaveError] = useState<Record<number, string>>({});
+  // Bulk-regen selection: checked scenes in the Keyframes → clips grid.
+  // Reset whenever the viewed output dir changes so picks never leak across projects.
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkKind, setBulkKind] = useState<"clip" | "keyframe" | "both">("clip");
+  const toggleSelected = (n: number) =>
+    setSelected((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n].sort((a, b) => a - b)));
   // Output dir whose listing is actually on screen. Stale-while-revalidate:
   // the previous project's files stay mounted until the new listing lands —
   // clearing them first is what flashed "No outputs yet" on every click.
@@ -232,7 +240,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // Reset the picked final-cut version only when moving to another project
   // (a refreshKey bump from a fresh stitch keeps working via `shownFinal`
   // falling back to latest when the picked file is gone).
-  useEffect(() => { setViewFinal(null); }, [scenario]);
+  useEffect(() => { setViewFinal(null); setSelected([]); }, [scenario]);
 
   // Never show another dir's files: the moment `scenario` changes, blank
   // the listing (a loading skeleton shows until the new one lands) AND point
@@ -341,10 +349,25 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     // generation time but a re-picked main (v3 over the run's v4) must win,
     // or this tile disagrees with the Generate Reference card.
     const liveRefFile = liveGenTarget === "ref" ? ref : (mains.ref ?? ref);
+    // Fullscreen preview order: final, reference, then scene by scene
+    // (keyframe then clip). ←/→ + ‹ › step through it.
+    const livePreviewItems: PreviewItem[] = [
+      ...(final ? [{ src: outputUrl(viewScenario, final), kind: "video" as const, alt: "final cut" }] : []),
+      ...(liveRefFile ? [{ src: outputUrl(viewScenario, liveRefFile), kind: "image" as const, alt: "reference" }] : []),
+      ...liveNums.flatMap((n) => {
+        const kf = kfByIndex.get(n);
+        const clip = clipByIndex.get(n);
+        return [
+          ...(kf ? [{ src: outputUrl(viewScenario, kf), kind: "image" as const, alt: pretty(kf) }] : []),
+          ...(clip ? [{ src: outputUrl(viewScenario, clip), kind: "video" as const, alt: pretty(clip) }] : []),
+        ];
+      }),
+    ];
+    const livePreviewIdx = preview ? livePreviewItems.findIndex((x) => x.src === preview.src) : -1;
     const Tag = bare ? "div" : "section";
     return (
       <Tag className={bare ? undefined : "card"}>
-      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {preview && <Lightbox item={livePreviewIdx >= 0 ? livePreviewItems[livePreviewIdx] : preview} items={livePreviewIdx >= 0 ? livePreviewItems : undefined} index={livePreviewIdx >= 0 ? livePreviewIdx : undefined} onIndexChange={(i) => setPreview(livePreviewItems[i])} onClose={() => setPreview(null)} />}
       {/* Lip-sync View popup: scenes with dialogue + editable dialogue text.
           Saving writes a new scenario version (stale voice files are deleted
           server-side, so the beat returns to PENDING until re-voiced). */}
@@ -926,6 +949,29 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       localStorage.setItem("ss-sec-refgallery", c ? "open" : "closed");
       return !c;
     });
+  // Fullscreen preview order for the static view: current image + video,
+  // final cut, reference, then every scene's main keyframe + clip in story
+  // order (legacy fallback shots appended). ←/→ + ‹ › step through it.
+  const staticPreviewItems: PreviewItem[] = [
+    ...(curKf ? [{ src: outputUrl(viewScenario, curKf.file), kind: "image" as const, alt: pretty(curKf.file) }] : []),
+    ...(curClip ? [{ src: outputUrl(viewScenario, curClip.file), kind: "video" as const, alt: pretty(curClip.file) }] : []),
+    ...(shownFinal ? [{ src: outputUrl(viewScenario, shownFinal), kind: "video" as const, alt: "final cut" }] : []),
+    ...(refFile ? [{ src: outputUrl(viewScenario, refFile), kind: "image" as const, alt: "reference" }] : []),
+    ...sceneNums.flatMap((n) => {
+      const bv = versions.beats[String(n)];
+      const kfMain = mains.beats[String(n)]?.keyframe || bv?.keyframe[bv.keyframe.length - 1]?.file || null;
+      const clipMain = mains.beats[String(n)]?.clip || bv?.clip[bv.clip.length - 1]?.file || null;
+      return [
+        ...(kfMain ? [{ src: outputUrl(viewScenario, kfMain), kind: "image" as const, alt: pretty(kfMain) }] : []),
+        ...(clipMain ? [{ src: outputUrl(viewScenario, clipMain), kind: "video" as const, alt: pretty(clipMain) }] : []),
+      ];
+    }),
+    ...fallbackShots.flatMap(({ kf, clip }) => [
+      { src: outputUrl(viewScenario, kf), kind: "image" as const, alt: pretty(kf) },
+      ...(clip ? [{ src: outputUrl(viewScenario, clip), kind: "video" as const, alt: pretty(clip) }] : []),
+    ]),
+  ].filter((x, i, a) => a.findIndex((y) => y.src === x.src) === i);
+  const staticPreviewIdx = preview ? staticPreviewItems.findIndex((x) => x.src === preview.src) : -1;
   return (
     <Tag className={isCard ? `card${collapsed ? " collapsed" : ""}` : (section === "reference" ? "ref-embed" : undefined)}>
       {!bare && section !== "reference" && (
@@ -947,6 +993,52 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           {isBeats && (
             <>
               <span className="beats-center" title="Story Board — every scene's keyframe image + video clip">Story Board</span>
+              {onBulkRegen && sceneNums.length > 0 && (
+                <span className="beats-bulk" role="group" aria-label="Bulk regenerate checked scenes">
+                  <button
+                    type="button"
+                    className="ghost beats-bulk-all"
+                    onClick={() => setSelected(sceneNums)}
+                    disabled={switchingGallery || selected.length === sceneNums.length}
+                    title="Check every scene"
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost beats-bulk-all"
+                    onClick={() => setSelected([])}
+                    disabled={switchingGallery || selected.length === 0}
+                    title="Uncheck every scene"
+                  >
+                    None
+                  </button>
+                  <select
+                    className="beats-bulk-kind"
+                    value={bulkKind}
+                    onChange={(e) => setBulkKind(e.target.value as "clip" | "keyframe" | "both")}
+                    disabled={switchingGallery || generating}
+                    title="What Regenerate rebuilds for each checked scene"
+                    aria-label="Bulk regenerate kind"
+                  >
+                    <option value="clip">Videos</option>
+                    <option value="keyframe">Images</option>
+                    <option value="both">Both</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="primary beats-bulk-go"
+                    onClick={() => { onBulkRegen(bulkKind, selected); setSelected([]); }}
+                    disabled={switchingGallery || generating || selected.length === 0}
+                    title={selected.length === 0
+                      ? "Check one or more scenes below first"
+                      : `Regenerate ${bulkKind === "both" ? "images + videos" : bulkKind === "keyframe" ? "images only" : "videos only"} for scene${selected.length === 1 ? "" : "s"} ${selected.join(", ")} — queued one by one, old versions kept`}
+                  >
+                    <IconRefresh size={12} />
+                    Regenerate{selected.length > 0 ? ` (${selected.length})` : ""}
+                  </button>
+                </span>
+              )}
               <span className="spacer" />
             </>
           )}
@@ -1041,7 +1133,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           </div>
         </div>
       )}
-      {preview && <Lightbox item={preview} onClose={() => setPreview(null)} />}
+      {preview && <Lightbox item={staticPreviewIdx >= 0 ? staticPreviewItems[staticPreviewIdx] : preview} items={staticPreviewIdx >= 0 ? staticPreviewItems : undefined} index={staticPreviewIdx >= 0 ? staticPreviewIdx : undefined} onIndexChange={(i) => setPreview(staticPreviewItems[i])} onClose={() => setPreview(null)} />}
 
       {(section === "all" || section === "output") && (curKf || curClip || generating || shownFinal) && (
         <>
@@ -1278,9 +1370,23 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 </button>
               ) : null;
               return (
-                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
-                  <div className="shot-head" aria-hidden="true">
-                    Scene {n}/{total}
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}${selected.includes(n) ? " selected" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
+                  <div className="shot-head">
+                    <span aria-hidden="true">Scene {n}/{total}</span>
+                    {onBulkRegen && (
+                      <>
+                        <span className="spacer" aria-hidden="true" />
+                        <input
+                          type="checkbox"
+                          className="shot-check"
+                          checked={selected.includes(n)}
+                          onChange={() => toggleSelected(n)}
+                          disabled={switchingGallery}
+                          title={`Select scene ${n} for bulk Regenerate`}
+                          aria-label={`Select scene ${n}`}
+                        />
+                      </>
+                    )}
                   </div>
                   <div className="img-frame">
                     {kfMain
@@ -1396,8 +1502,24 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const m = kf.match(/_seq(\d+)_/);
               const fn = m ? Number(m[1]) : fi + 1;
               return (
-              <div className="shot" key={kf} id={`shot-${fn}`} title={`Scene ${fn} — keyframe image + video clip`}>
-                <div className="shot-head" aria-hidden="true">Scene {fn}/{fallbackShots.length}</div>
+              <div className={`shot${selected.includes(fn) ? " selected" : ""}`} key={kf} id={`shot-${fn}`} title={`Scene ${fn} — keyframe image + video clip`}>
+                <div className="shot-head">
+                  <span aria-hidden="true">Scene {fn}/{fallbackShots.length}</span>
+                  {onBulkRegen && (
+                    <>
+                      <span className="spacer" aria-hidden="true" />
+                      <input
+                        type="checkbox"
+                        className="shot-check"
+                        checked={selected.includes(fn)}
+                        onChange={() => toggleSelected(fn)}
+                        disabled={switchingGallery}
+                        title={`Select scene ${fn} for bulk Regenerate`}
+                        aria-label={`Select scene ${fn}`}
+                      />
+                    </>
+                  )}
+                </div>
                 <div className="img-frame">
                   <ExpandButton title={`Fullscreen preview of ${pretty(kf)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, kf), kind: "image", alt: pretty(kf) })} />
                   <SmoothImage src={outputUrl(viewScenario, kf)} alt={pretty(kf)} />
