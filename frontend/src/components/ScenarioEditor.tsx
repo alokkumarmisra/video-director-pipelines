@@ -5,9 +5,35 @@ import { getScenario, listVersions, getVersion, deleteVersion as deleteVersionAp
 import { IconCheck, IconEye, IconEyeOff, IconFilm, IconLayers, IconPanel, IconPlus, IconSparkles, IconTrash, Spinner } from "./Icons";
 import Collapse from "./Collapse";
 import { useDialog } from "./Dialog";
+import { sceneColor, sceneGroupsOf, sceneTint, type SceneGroup } from "./sceneGroups";
 
 const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+// Shot label for a scene section. Director-approved beats carry
+// scene_number/shot_id/shot_number (one beat per timed shot); legacy or
+// manual beats carry none and render as a single-shot scene "N.1" (same
+// convention as the Story Board's ShotList).
+const shotLabel = (b: Beat, i: number): string => {
+  const sn = Number(b.scene_number);
+  if (Number.isFinite(sn) && sn > 0) {
+    const shotNum = Number(b.shot_number);
+    const sid = String(b.shot_id ?? "").trim();
+    const letter = Number.isFinite(shotNum) && shotNum > 0
+      ? String.fromCharCode(64 + Math.max(1, Math.round(shotNum)))
+      : "";
+    const id = sid || `${Math.round(sn)}-${letter || "A"}`;
+    const num = Number.isFinite(shotNum) && shotNum > 0 ? ` · shot ${Math.round(shotNum)}` : "";
+    const st = Number(b.start_time);
+    const en = Number(b.end_time);
+    const timing = Number.isFinite(st) && Number.isFinite(en) ? ` · ${st}–${en}s` : "";
+    return `🎞 S${Math.round(sn)} · ${id}${num}${timing}`;
+  }
+  return `🎞 Shot ${i + 1}.1`;
+};
+
+// Scene grouping + accent colors live in sceneGroups.ts (shared with
+// RenderMonitor so the rm-chip outlines match these Scene cards exactly).
 
 // Dialogue text format — one line per dialogue line as `speaker: line`,
 // with an optional per-line expression as `speaker (expression): line`
@@ -124,6 +150,11 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
   const [hiddenBeats, setHiddenBeats] = useState<Record<number, boolean>>({});
   const toggleBeat = (i: number) =>
     setHiddenBeats((prev) => ({ ...prev, [i]: !prev[i] }));
+  // Scene-level collapse (one toggle per Scene card). Shots stay
+  // individually expandable via hiddenBeats above.
+  const [hiddenScenes, setHiddenScenes] = useState<Record<string, boolean>>({});
+  const toggleScene = (key: string) =>
+    setHiddenScenes((prev) => ({ ...prev, [key]: !prev[key] }));
   // LLM beat generator (same "Generate beat" tool as the Story Board, but
   // applied to the unsaved working copy here — Save persists the result).
   const [genCount, setGenCount] = useState(1);
@@ -179,6 +210,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setVCfgCache({});
       setBeatViewBusy({});
       setHiddenBeats({});
+      setHiddenScenes({});
       setGenError("");
       return;
     }
@@ -357,7 +389,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     const okBeat = await dialog.confirm(
       "Its prompts are removed on the next Save (generated files are kept).",
       {
-        title: "Delete Scene " + (i + 1) + " (" + (b.title || "untitled") + ")?",
+        title: "Delete Shot " + (i + 1) + " (" + (b.title || "untitled") + ")?",
         tone: "error",
         okText: "Delete",
         cancelText: "Keep",
@@ -365,6 +397,52 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
     );
     if (!okBeat) return;
     setCfg((prev) => ({ ...prev, sequence: (prev.sequence || []).filter((_, k) => k !== i) }));
+    setSaved(false);
+  };
+  // Append a new shot to an existing numbered Scene (same scene_number, next
+  // shot_number/shot_id, inserted right after the scene's last shot).
+  const addShotToScene = (sceneNumber: number, indices: number[]) => {
+    if (!Number.isFinite(sceneNumber) || sceneNumber <= 0 || saving) return;
+    const sn = Math.round(sceneNumber);
+    const master = String(merged.referencePrompt ?? "").trim();
+    setCfg((prev) => {
+      const seq = Array.isArray(prev.sequence) ? [...prev.sequence] : [];
+      const inScene = indices
+        .map((i) => seq[i])
+        .filter(Boolean);
+      const maxShot = inScene.reduce((a, b) => {
+        const n = Number(b.shot_number);
+        return Number.isFinite(n) && n > a ? Math.round(n) : a;
+      }, inScene.length);
+      const nextShot = maxShot + 1;
+      const letter = String.fromCharCode(64 + Math.max(1, nextShot));
+      const first = inScene[0] ?? {};
+      const stem = String(first.title ?? `scene${sn}`).replace(/_[a-z]$/i, "") || `scene${sn}`;
+      const at = Math.max(...indices) + 1;
+      const shot: Beat = {
+        title: `${slug(stem) || `scene${sn}`}_${letter.toLowerCase()}`,
+        image: String(first.image ?? master ?? ""),
+        motion: "",
+        duration: Number(first.duration) > 0 ? Number(first.duration) : undefined,
+        scene_number: sn,
+        shot_id: `${sn}-${letter}`,
+        shot_number: nextShot,
+        dialogue: [],
+      };
+      seq.splice(Math.min(at, seq.length), 0, shot);
+      return { ...prev, sequence: seq };
+    });
+    setSaved(false);
+  };
+  const deleteScene = async (label: string, indices: number[]) => {
+    if (!indices.length) return;
+    const ok = await dialog.confirm(
+      `Removes ${indices.length} shot${indices.length === 1 ? "" : "s"} on the next Save (generated files are kept).`,
+      { title: `Delete ${label}?`, tone: "error", okText: "Delete", cancelText: "Keep" }
+    );
+    if (!ok) return;
+    const drop = new Set(indices);
+    setCfg((prev) => ({ ...prev, sequence: (prev.sequence || []).filter((_, k) => !drop.has(k)) }));
     setSaved(false);
   };
   // LLM proposes the next N beats from the working copy and appends them
@@ -395,6 +473,10 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
       setGenBusy(false);
     }
   };
+
+  // Scene groups for display (multi-shot scenes = one Scene card holding
+  // all its shots). Flat beat indices are preserved for save/version/goto.
+  const groups: SceneGroup[] = sceneGroupsOf(beats);
 
   if (!open) {
     return (
@@ -482,17 +564,86 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
         Project fields (description, duration, video type, reference prompt) live in the AI Craft + Generate Reference sections — edit them there; Save stores everything together.
       </p>
       <p className="hint">
-        Story beats below carry the same Shot title / Keyframe image / Motion &amp; camera as the Story Board — edit them here, then Save Scenario stores everything together. The Shot List mirrors the same prompts.
+        Beats with the same Scene no. group into one Scene card (same accent color) — each shot inside stays individually expandable.
+        Story beats carry the same Shot title / Keyframe image / Motion &amp; camera as the Story Board — edit them here, then Save Scenario stores everything together. The Shot List mirrors the same prompts.
       </p>
 
       <div className="shotlist-detail" aria-label="Story beats">
         <div className="shotlist-detail-title">
-          Story beats — {beats.length} scene{beats.length === 1 ? "" : "s"}
+          Story beats — {beats.length} shot{beats.length === 1 ? "" : "s"} · {groups.length} scene{groups.length === 1 ? "" : "s"}
         </div>
         {beats.length === 0 && (
           <p className="hint">No beats yet — add the first scene below.</p>
         )}
-        {beats.map((b, i) => {
+        {groups.map((g, gi) => {
+          const color = sceneColor(g.key, g.sceneNumber, gi);
+          const tint = sceneTint(g.key, g.sceneNumber, gi);
+          const sceneHidden = !!hiddenScenes[g.key];
+          const isMulti = g.indices.length > 1;
+          const label = g.sceneNumber != null ? `Scene ${g.sceneNumber}` : `Scene ${g.indices[0] + 1}`;
+          const totalDur = g.indices.reduce((a, idx) => {
+            const d = Number(beats[idx]?.duration);
+            return a + (Number.isFinite(d) && d > 0 ? d : 0);
+          }, 0);
+          const dlgLines = g.indices.reduce((a, idx) => {
+            const d = beats[idx]?.dialogue;
+            return a + (Array.isArray(d) ? d.filter((x) => x && String(x.line || "").trim()).length : 0);
+          }, 0);
+          return (
+          <div key={g.key} className="ed-scene" style={{ border: "1px solid var(--line)", borderLeft: `4px solid ${color}`, borderRadius: 8, marginBottom: 10, overflow: "hidden" }}>
+            <div className="ed-scene-head" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: tint, borderBottom: sceneHidden ? "none" : "1px solid var(--line)" }}>
+              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: "50%", background: color, flexShrink: 0 }} />
+              <span className="beat-title" style={{ fontWeight: 700 }}>
+                {label} · {g.indices.length} shot{g.indices.length === 1 ? "" : "s"}
+                {totalDur > 0 ? ` · ${totalDur}s` : ""}
+                {dlgLines ? ` · 🎙 ${dlgLines}` : ""}
+                {!isMulti && beats[g.indices[0]] ? ` · ${beats[g.indices[0]].title || `beat${g.indices[0] + 1}`}` : ""}
+              </span>
+              <span className="spacer" />
+              <button
+                className="icon-btn"
+                onClick={() => toggleScene(g.key)}
+                title={sceneHidden ? `Show ${label}` : `Hide ${label}`}
+                aria-label={sceneHidden ? `Show ${label}` : `Hide ${label}`}
+                aria-expanded={!sceneHidden}
+              >
+                {sceneHidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+              </button>
+              {onGotoClipScene && (
+                <button
+                  className="icon-btn"
+                  onClick={() => onGotoClipScene(g.indices[0] + 1)}
+                  title={`View ${label} in Keyframes → clips`}
+                  aria-label={`View ${label} in Keyframes → clips`}
+                >
+                  <IconFilm size={13} />
+                </button>
+              )}
+              {g.sceneNumber != null && (
+                <button
+                  className="ghost shotlist-btn"
+                  onClick={() => addShotToScene(g.sceneNumber as number, g.indices)}
+                  disabled={saving}
+                  title={`Append a new shot to ${label} (same scene number, next shot id)`}
+                >
+                  <IconPlus size={12} />
+                  Shot
+                </button>
+              )}
+              <button
+                className="icon-btn danger"
+                onClick={() => void deleteScene(label, g.indices)}
+                disabled={saving}
+                title={`Delete ${label} (${g.indices.length} shot${g.indices.length === 1 ? "" : "s"} — prompts only, files kept)`}
+                aria-label={`Delete ${label}`}
+              >
+                <IconTrash size={12} />
+              </button>
+            </div>
+            <Collapse open={!sceneHidden}>
+            {g.indices.map((i, k) => {
+          const b = beats[i];
+          if (!b) return null;
           const hidden = !!hiddenBeats[i];
           // Saved history for this scene (delta-based: only versions that
           // touched this scene). Latest = selected by default (editable).
@@ -505,20 +656,24 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
             : null;
           const busyOld = !!beatViewBusy[i];
           return (
-          <div key={i} id={`beat-${i + 1}`} className={`beat${i % 2 === 1 ? " alt" : ""}${hidden ? " is-collapsed" : ""}`}>
+          <div key={i} id={`beat-${i + 1}`} className={`beat${hidden ? " is-collapsed" : ""}`} style={{ borderLeft: `3px solid ${color}`, margin: 0, borderRadius: 0, borderTop: k > 0 ? "1px solid var(--line)" : "none" }}>
             <div className="beat-head">
-              <span className="beat-index">{i + 1}</span>
+              <span className="beat-index" style={{ background: color, borderColor: color }} title={`Flat beat ${i + 1} of ${beats.length}`}>{i + 1}</span>
               <span className="beat-title">
-                Scene {i + 1} · {b.title || `beat${i + 1}`}
+                Shot {k + 1}/{g.indices.length} · {b.title || `beat${i + 1}`}
                 {Number.isFinite(Number(b.duration)) && Number(b.duration) > 0 ? ` · ${Number(b.duration)}s` : ""}
                 {Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim()) ? ` · 🎙 ${b.dialogue.filter((d) => d && String(d.line || "").trim()).length}` : ""}
+                {" · "}
+                <span title={b.scene_number != null ? `Scene ${b.scene_number}, shot ${b.shot_id ?? b.shot_number ?? "1"} — one beat per timed shot (Director multi-shot scenes flatten this way)` : "Single-shot scene (one beat = one shot)"}>
+                  {shotLabel(b, i)}
+                </span>
               </span>
               <span className="spacer" />
               <button
                 className="icon-btn"
                 onClick={() => toggleBeat(i)}
-                title={hidden ? `Show Scene ${i + 1}` : `Hide Scene ${i + 1}`}
-                aria-label={hidden ? `Show Scene ${i + 1}` : `Hide Scene ${i + 1}`}
+                title={hidden ? `Expand shot ${k + 1} of ${label}` : `Collapse shot ${k + 1} of ${label}`}
+                aria-label={hidden ? `Expand shot ${k + 1} of ${label}` : `Collapse shot ${k + 1} of ${label}`}
                 aria-expanded={!hidden}
               >
                 {hidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
@@ -527,8 +682,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                 <button
                   className="icon-btn"
                   onClick={() => onGotoClipScene(i + 1)}
-                  title={`View Scene ${i + 1} in Keyframes → clips`}
-                  aria-label={`View Scene ${i + 1} in Keyframes → clips`}
+                  title={`View shot ${k + 1} of ${label} in Keyframes → clips`}
+                  aria-label={`View shot ${k + 1} of ${label} in Keyframes → clips`}
                 >
                   <IconFilm size={13} />
                 </button>
@@ -537,7 +692,7 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                 className="ghost shotlist-btn"
                 onClick={() => deleteBeat(i)}
                 disabled={saving}
-                title={`Delete Scene ${i + 1} (prompts only — generated files are kept)`}
+                title={`Delete shot ${k + 1} of ${label} (prompts only — generated files are kept)`}
               >
                 <IconTrash size={12} />
                 Delete
@@ -552,6 +707,26 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               onChange={(e) => updateBeat(i, { title: e.target.value })}
             />
             <p className="beat-meta">{slug(b.title) || "untitled"}</p>
+            <div className="grid grid-3" style={{ marginBottom: 4 }}>
+              <div>
+                <label title="Director scene this shot belongs to — beats with the same scene number group as one multi-shot scene">Scene no.</label>
+                <p className="beat-meta" title={b.scene_number != null ? `Scene ${b.scene_number} (from the Director board)` : "Single-shot scene — no Director scene linkage"}>
+                  {b.scene_number != null ? `S${b.scene_number}` : ""}
+                </p>
+              </div>
+              <div>
+                <label title="Shot id within the scene (e.g. 3-A) — from the Director board">Shot id</label>
+                <p className="beat-meta" title={b.shot_id ? `Shot ${b.shot_id} (from the Director board)` : "No Director shot id"}>
+                  {b.shot_id ? String(b.shot_id) : ""}
+                </p>
+              </div>
+              <div>
+                <label title="1-based shot position inside its scene (from the Director board)">Shot no.</label>
+                <p className="beat-meta" title={b.shot_number != null ? `Shot ${b.shot_number} of its scene (from the Director board)` : "No Director shot number"}>
+                  {b.shot_number != null ? String(b.shot_number) : ""}
+                </p>
+              </div>
+            </div>
             <label>Keyframe image — Flux</label>
             <textarea
               rows={2}
@@ -568,19 +743,6 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               disabled={saving}
               onChange={(e) => updateBeat(i, { motion: e.target.value })}
             />
-            <label title="Clip length for this scene in seconds — dialogue scenes grow to fit the voice automatically; empty = project default">Clip length (sec) — this scene</label>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={b.duration ?? ""}
-              placeholder="project default"
-              disabled={saving}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                updateBeat(i, { duration: e.target.value === "" || !Number.isFinite(v) ? undefined : Math.min(30, Math.max(1, Math.round(v))) });
-              }}
-            />
             <label title="One per line as speaker: line — voiced per character (Hindi TTS) and lip-synced">Dialogue (speaker: line per line — voiced + lip-synced)</label>
             <BeatDialogueField
               value={b.dialogue}
@@ -588,9 +750,9 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
               onChange={(d) => updateBeat(i, { dialogue: d })}
             />
             </Collapse>
-            {hist.length > 0 && (
-              <div className="beat-versions beat-versions-mini" aria-label={`Scene ${i + 1} versions`}>
-                <div className="beat-versions-pills">
+            {(
+              <div className="beat-versions beat-versions-mini" aria-label={`Shot ${k + 1} of ${label} versions and length`}>
+                <div className="beat-versions-pills" style={{ alignItems: "center" }}>
                   {hist.map((v) => {
                     const on = selV === v;
                     const isLatest = v === latestV;
@@ -609,6 +771,24 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                     );
                   })}
                   {busyOld && <span className="hint inline"><Spinner size={11} /></span>}
+                  <span className="spacer" />
+                  <span title="Clip length(sec) — dialogue shots grow to fit the voice automatically; empty = project default" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={b.duration ?? ""}
+                      placeholder="—"
+                      disabled={saving}
+                      aria-label="Clip length(sec)"
+                      style={{ maxWidth: 64, padding: "6px 8px", fontSize: 12 }}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        updateBeat(i, { duration: e.target.value === "" || !Number.isFinite(v) ? undefined : Math.min(30, Math.max(1, Math.round(v))) });
+                      }}
+                    />
+                    <span className="muted">s</span>
+                  </span>
                 </div>
                 {viewingOld && (
                   <div className="beat-versions-view">
@@ -619,6 +799,8 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                       <>
                         <label>Shot title — v{selV}</label>
                         <p className="beat-versions-text">{oldBeat.title || "—"}</p>
+                        <label>Scene / shot — v{selV}</label>
+                        <p className="beat-versions-text">{shotLabel(oldBeat, i)}</p>
                         <label>Keyframe image — v{selV}</label>
                         <p className="beat-versions-text">{oldBeat.image || "—"}</p>
                         <label>Motion &amp; camera — v{selV}</label>
@@ -639,6 +821,10 @@ export default function ScenarioEditor({ name, config, isDraft, onSave, override
                 )}
               </div>
             )}
+          </div>
+          );
+            })}
+            </Collapse>
           </div>
           );
         })}

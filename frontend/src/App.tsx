@@ -2049,6 +2049,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             onBulkRegen={(kind, indices) => handleBulkRegen(kind, indices, cutFormat === "vertical" ? "vertical" : undefined)}
             onUploaded={refresh}
             totalScenes={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : null}
+            beats={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence : null}
             progress={topProgress}
             onGotoEditorScene={(n) => gotoScene("editor", n)}
             summary={boardSummary}

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { listOutputs, outputUrl, type AssetEvent, type Engine, type RegenSpec } from "../api";
 import type { GenerationProgress } from "./GenerationProgressBar";
 import type { RunStatus } from "./RunPanel";
 import SmoothImage from "./SmoothImage";
 import { Spinner } from "./Icons";
 import Collapse from "./Collapse";
+import { groupColorForBeat, sceneNumberForBeat } from "./sceneGroups";
 
 interface Props {
   /** Base scenario name for labels (run's own scenario, not the viewed one). */
@@ -17,6 +18,11 @@ interface Props {
   assets: AssetEvent[];
   log: string;
   totalBeats: number | null;
+  /** Flat beat index -> Director scene_number (null = unlinked single-shot
+      beat). Keyframe/clip rm-chips in the same scene share a 2px outline in
+      the Scenario Editor's Scene color; different scenes get different
+      colors. Absent = no outlines (legacy look). */
+  beatScenes?: (number | null)[] | null;
   runMeta: { stitch: boolean; regen: RegenSpec | null; count: number };
   startedAt: number | null;
   now: number;
@@ -59,7 +65,7 @@ type Stage = "image" | "video" | "cut";
 // the real run state (RunPanel progress + asset stream + log), never timers.
 export default function RenderMonitor({
   scenario, outDir, engine, status, progress,
-  assets, log, totalBeats, runMeta, startedAt, now, comfyQueue,
+  assets, log, totalBeats, beatScenes, runMeta, startedAt, now, comfyQueue,
   showScreen, showFrames, showKfClips, pin, onPin,
 }: Props) {
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -317,6 +323,18 @@ export default function RenderMonitor({
 
   const chipClass = (done: boolean, active: boolean, extra = "") =>
     `rm-chip${done ? " is-done" : ""}${active ? " is-active" : ""}${extra ? ` ${extra}` : ""}`;
+  // Scene-group mark for a 1-based beat chip (same color as the Scenario
+  // Editor's Scene card): bottom border only — the other three edges keep
+  // the green done / red active / accent selected cues.
+  const chipStyle = (n: number): CSSProperties | undefined => {
+    const color = groupColorForBeat(beatScenes, n - 1);
+    return color ? { borderBottom: `1px solid ${color}` } : undefined;
+  };
+  // Scene suffix for a chip tooltip (null-safe when the config is unloaded).
+  const withScene = (n: number, title: string): string => {
+    const sn = sceneNumberForBeat(beatScenes, n - 1);
+    return sn != null ? `${title} · Scene ${sn}` : title;
+  };
 
   return (
     <div className="rm" aria-label="Render monitor">
@@ -435,7 +453,8 @@ export default function RenderMonitor({
                   key={n}
                   type="button"
                   className={`${chipClass(kfByIndex.has(n), kfActive(n))}${sel?.kind === "kf" && sel.n === n && selFile ? " is-selected" : ""}`}
-                  title={kfByIndex.get(n) ? `${kfByIndex.get(n)} — click to show in PROGRAM` : (kfActive(n) ? `Keyframe ${n} generating…` : `Keyframe ${n} pending`)}
+                  style={chipStyle(n)}
+                  title={withScene(n, kfByIndex.get(n) ? `${kfByIndex.get(n)} — click to show in PROGRAM` : (kfActive(n) ? `Keyframe ${n} generating…` : `Keyframe ${n} pending`))}
                   aria-current={kfActive(n) ? "true" : undefined}
                   disabled={!kfByIndex.has(n)}
                   onClick={() => toggleSel("kf", n, kfByIndex.get(n) ?? null)}
@@ -472,7 +491,8 @@ export default function RenderMonitor({
                   key={n}
                   type="button"
                   className={`${chipClass(clipByIndex.has(n), target === `clip:${n}`)}${sel?.kind === "clip" && sel.n === n && selFile ? " is-selected" : ""}`}
-                  title={clipByIndex.get(n) ? `${clipByIndex.get(n)} — click to show in PROGRAM` : (target === `clip:${n}` ? `Clip ${n} generating…` : `Clip ${n} pending`)}
+                  style={chipStyle(n)}
+                  title={withScene(n, clipByIndex.get(n) ? `${clipByIndex.get(n)} — click to show in PROGRAM` : (target === `clip:${n}` ? `Clip ${n} generating…` : `Clip ${n} pending`))}
                   disabled={!clipByIndex.has(n)}
                   onClick={() => toggleSel("clip", n, clipByIndex.get(n) ?? null)}
                 >

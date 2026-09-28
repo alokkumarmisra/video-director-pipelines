@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { sceneGroupsOf, sceneColor, sceneTint } from "./sceneGroups";
 import { listOutputs, outputUrl, selectMain, uploadRef, isVerticalOut, getDialogueStatus, saveSceneDialogue, type AssetEvent, type RunRequest, type VideoFormat, type Engine, type DialogueBeatStatus, type DialogueLine } from "../api";
-import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind } from "../types";
+import type { AssetVersion, MainsInfo, VersionsInfo, AssetKind, Beat } from "../types";
 import type { GenerationProgress } from "./GenerationProgressBar";
 import { formatLiveElapsed } from "./GenerationProgressBar";
 import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors, IconCheck, IconUpload, IconClipboard, IconX, IconExpand, IconEdit, Spinner } from "./Icons";
@@ -54,6 +55,11 @@ interface Props {
   projectName?: string | null;
   dialogueEngine?: Engine;
   dialogueFormat?: VideoFormat;
+  /** Scenario beats in flat order (1:1 with beat index n). When a beat
+      carries Director scene/shot linkage (scene_number + shot_id/shot_number),
+      the Keyframes → clips tile header shows `Scene <SN> · Shot <shot>` in
+      addition to the `n/total` beat position. Absent = legacy `Scene n/total`. */
+  beats?: Beat[] | null;
   /** A dialogue edit landed — parent should reload the scenario config
       (board summary + Story Board) and re-list outputs. */
   onDialogueSaved?: () => void;
@@ -67,6 +73,65 @@ const pretty = (f: string) =>
     .trim();
 
 const byIndex = (a: AssetEvent, b: AssetEvent) => (a.index ?? 0) - (b.index ?? 0);
+
+// Director scene/shot linkage for one flat beat index (1-based). Returns the
+// scene number + shot display (shot_number preferred, shot_id fallback) when
+// the beat carries it, else null (legacy/manual beat -> plain Scene n/total).
+function beatShotOf(beats: Beat[] | null | undefined, n: number): { scene: number; shot: string } | null {
+  const b = Array.isArray(beats) ? beats[n - 1] : undefined;
+  const sn = Number((b as Beat | undefined)?.scene_number);
+  if (!Number.isFinite(sn) || sn <= 0) return null;
+  const shotNum = Number((b as Beat | undefined)?.shot_number);
+  const sid = String((b as Beat | undefined)?.shot_id ?? "").trim();
+  const shot =
+    Number.isFinite(shotNum) && shotNum > 0
+      ? String(Math.round(shotNum))
+      : sid || "1";
+  return { scene: Math.round(sn), shot };
+}
+
+// Scene totals derived from the beats' Director linkage: total scenes = the
+// highest scene_number, per-scene shot counts = beats sharing one
+// scene_number. Null when no beat carries linkage (legacy/manual project).
+function sceneTotals(beats: Beat[] | null | undefined): { total: number; counts: Map<number, number> } | null {
+  const list = Array.isArray(beats) ? beats : [];
+  const sns = list
+    .map((b) => Math.round(Number((b as Beat | undefined)?.scene_number)))
+    .filter((sn) => Number.isFinite(sn) && sn > 0);
+  if (!sns.length) return null;
+  const counts = new Map<number, number>();
+  for (const sn of sns) counts.set(sn, (counts.get(sn) ?? 0) + 1);
+  return { total: Math.max(...sns), counts };
+}
+
+// Keyframes → clips tile header — compact so the totals survive the narrow
+// 5-column tile (`.shot-head` ellipsizes anything past ~24 chars, which is
+// what cut off `/122` in the old `Scene S · Shot s · n/N` format):
+//   Director linkage -> `Scene S/T · Shot s/t` (beat position in the tooltip)
+//   legacy/manual    -> `Scene n/total` (unchanged).
+function beatHead(beats: Beat[] | null | undefined, n: number, total: number | null): string {
+  const s = beatShotOf(beats, n);
+  if (!s) {
+    const pos = total != null ? `${n}/${total}` : `${n}`;
+    return `Scene ${pos}`;
+  }
+  const t = sceneTotals(beats);
+  const sceneTotal = t?.total ?? (total != null && total > 0 ? total : s.scene);
+  const shotsInScene = t?.counts.get(s.scene) ?? null;
+  const shotPart = shotsInScene != null ? `${s.shot}/${shotsInScene}` : `${s.shot}`;
+  return `Scene ${s.scene}/${sceneTotal} · Shot ${shotPart}`;
+}
+
+function beatTitle(beats: Beat[] | null | undefined, n: number, total: number | null): string {
+  const s = beatShotOf(beats, n);
+  const pos = total != null ? `beat ${n} of ${total}` : `beat ${n}`;
+  if (!s) return `Scene ${n} (${pos}) — keyframe image + video clip`;
+  const t = sceneTotals(beats);
+  const sceneTotal = t?.total ?? (total != null && total > 0 ? total : s.scene);
+  const shotsInScene = t?.counts.get(s.scene) ?? null;
+  const shotLong = shotsInScene != null ? `shot ${s.shot} of ${shotsInScene}` : `shot ${s.shot}`;
+  return `Scene ${s.scene} of ${sceneTotal}, ${shotLong} (${pos}) — keyframe image + video clip`;
+}
 
 // Dialogue text format for the Lip-sync viewer popup — one line per dialogue
 // line as `speaker: line`, with an optional per-line expression as
@@ -113,7 +178,7 @@ function GenOverlay({ label, readout }: { label: string; readout?: string | null
 
 // Gallery of outputs/<scenario>/: ref, keyframes, clips (with version
 // pickers + regenerate), final cut.
-export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onBulkRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene, summary, projectName, dialogueEngine = "ltx", dialogueFormat = "landscape", onDialogueSaved }: Props) {
+export default function OutputGallery({ scenario, refreshKey, assets, bare, generatingScenario, generatingFormat, section = "all", regenTarget, runQueue = [], onStitch, onRegen, onBulkRegen, onUploaded, onEngineSwitch, totalScenes, progress, onGotoEditorScene, summary, projectName, dialogueEngine = "ltx", dialogueFormat = "landscape", beats, onDialogueSaved }: Props) {
   const [files, setFiles] = useState<string[]>([]);
   const [versions, setVersions] = useState<VersionsInfo>({ ref: [], beats: {}, final: [] });
   const [mains, setMains] = useState<MainsInfo>({ ref: null, beats: {}, final: null });
@@ -154,6 +219,22 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const [loadedFor, setLoadedFor] = useState(scenario);
   const viewScenario = loadedFor || scenario;
   const switchingGallery = !assets && !!scenario && loadedFor !== scenario;
+  // Header color per scene group (same palette as the Scenario Editor's
+  // Scene cards + RenderMonitor chips): every shot of one Director scene
+  // shares its group's color. Built with the same sceneGroupsOf order so the
+  // colors match the editor exactly. Legacy beats without scene_number keep
+  // the default header. Keyed by 1-based beat number.
+  const sceneGroupStyle = useMemo(() => {
+    const map = new Map<number, { color: string; tint: string }>();
+    if (!Array.isArray(beats) || beats.length === 0) return map;
+    sceneGroupsOf(beats).forEach((g, gi) => {
+      if (g.sceneNumber == null) return;
+      const color = sceneColor(g.key, g.sceneNumber, gi);
+      const tint = sceneTint(g.key, g.sceneNumber, gi);
+      for (const idx of g.indices) map.set(idx + 1, { color, tint });
+    });
+    return map;
+  }, [beats]);
 
   const readAsDataUrl = (f: File) =>
     new Promise<string>((resolve, reject) => {
@@ -495,10 +576,17 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                 };
                 const kfReadout = kfGen ? liveReadout("image") : "generating";
                 const clipReadout = clipGen ? liveReadout("video") : "generating";
+                // Tile washes in its scene-group color (same hue as the header
+                // text) so shots of one scene read as a group. Skipped while
+                // generating so the red recording pulse stays intact.
+                const gs = !(kfGen || clipGen) ? sceneGroupStyle.get(n) ?? null : null;
                 return (
-                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
-                  <div className="shot-head" aria-hidden="true">
-                    Scene {n}{liveTotal != null ? `/${liveTotal}` : ""}
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}`} key={n} id={`shot-${n}`} title={beatTitle(beats, n, liveTotal)} style={gs ? { background: `color-mix(in srgb, ${gs.color} 16%, transparent)`, borderColor: `color-mix(in srgb, ${gs.color} 55%, transparent)` } : undefined}>
+                  <div className="shot-head" aria-hidden="true" title={beatHead(beats, n, liveTotal)} style={gs ? { background: gs.tint, borderBottomColor: gs.color, color: gs.color } : undefined}>
+                    {gs && (
+                      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: gs.color, flex: "none" }} />
+                    )}
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "1 1 auto" }}>{beatHead(beats, n, liveTotal)}</span>
                   </div>
                   <div className="img-frame">
                     {kf ? (
@@ -510,7 +598,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                       <div className={`frame-missing${kfGen ? " is-generating" : ""}`}>
                         {kfGen
                           ? <span className="gen-flag"><span className="gen-eq" aria-hidden="true"><span /><span /><span /><span /></span><span className="gen-dots">Generating</span>{kfReadout !== "generating" && <span> {kfReadout}</span>}</span>
-                          : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
+                          : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">{beatHead(beats, n, liveTotal)} · pending</span></span>}
                       </div>
                     )}
                   </div>
@@ -1369,23 +1457,29 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                   <IconEdit size={13} />
                 </button>
               ) : null;
+              // Tile washes in its scene-group color (same hue as the header
+              // text) so shots of one scene read as a group. The bulk-select
+              // outline keeps priority, and the red recording pulse wins
+              // while generating.
+              const gs = !(kfGen || clipGen) ? sceneGroupStyle.get(n) ?? null : null;
+              const isSel = selected.includes(n);
               return (
-                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}${selected.includes(n) ? " selected" : ""}`} key={n} id={`shot-${n}`} title={`Scene ${n} — keyframe image + video clip`}>
-                  <div className="shot-head">
-                    <span aria-hidden="true">Scene {n}/{total}</span>
+                <div className={`shot${(kfGen || clipGen) ? " generating" : ""}${isSel ? " selected" : ""}`} key={n} id={`shot-${n}`} title={beatTitle(beats, n, total)} style={gs ? { background: `color-mix(in srgb, ${gs.color} 16%, transparent)`, ...(isSel ? {} : { borderColor: `color-mix(in srgb, ${gs.color} 55%, transparent)` }) } : undefined}>
+                  <div className="shot-head" title={beatHead(beats, n, total)} style={gs ? { background: gs.tint, borderBottomColor: gs.color, color: gs.color } : undefined}>
+                    {gs && (
+                      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: gs.color, flex: "none" }} />
+                    )}
+                    <span aria-hidden="true" style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "1 1 auto" }}>{beatHead(beats, n, total)}</span>
                     {onBulkRegen && (
-                      <>
-                        <span className="spacer" aria-hidden="true" />
-                        <input
-                          type="checkbox"
-                          className="shot-check"
-                          checked={selected.includes(n)}
-                          onChange={() => toggleSelected(n)}
-                          disabled={switchingGallery}
-                          title={`Select scene ${n} for bulk Regenerate`}
-                          aria-label={`Select scene ${n}`}
-                        />
-                      </>
+                      <input
+                        type="checkbox"
+                        className="shot-check"
+                        checked={selected.includes(n)}
+                        onChange={() => toggleSelected(n)}
+                        disabled={switchingGallery}
+                        title={`Select scene ${n} for bulk Regenerate`}
+                        aria-label={`Select scene ${n}`}
+                      />
                     )}
                   </div>
                   <div className="img-frame">
@@ -1409,7 +1503,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                                 label={kfLabel}
                                 readout={kfPct != null || kfElapsed != null ? kfReadout : null}
                               />
-                            : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">Scene {n} · pending</span></span>}
+                          : <span className="frame-missing-inner"><IconImage size={16} /><span className="muted">{beatHead(beats, n, total)} · pending</span></span>}
                         </div>}
                   </div>
                   <VersionRow
@@ -1503,21 +1597,18 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               const fn = m ? Number(m[1]) : fi + 1;
               return (
               <div className={`shot${selected.includes(fn) ? " selected" : ""}`} key={kf} id={`shot-${fn}`} title={`Scene ${fn} — keyframe image + video clip`}>
-                <div className="shot-head">
-                  <span aria-hidden="true">Scene {fn}/{fallbackShots.length}</span>
+                <div className="shot-head" title={`Scene ${fn}/${fallbackShots.length}`}>
+                  <span aria-hidden="true" style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: "1 1 auto" }}>Scene {fn}/{fallbackShots.length}</span>
                   {onBulkRegen && (
-                    <>
-                      <span className="spacer" aria-hidden="true" />
-                      <input
-                        type="checkbox"
-                        className="shot-check"
-                        checked={selected.includes(fn)}
-                        onChange={() => toggleSelected(fn)}
-                        disabled={switchingGallery}
-                        title={`Select scene ${fn} for bulk Regenerate`}
-                        aria-label={`Select scene ${fn}`}
-                      />
-                    </>
+                    <input
+                      type="checkbox"
+                      className="shot-check"
+                      checked={selected.includes(fn)}
+                      onChange={() => toggleSelected(fn)}
+                      disabled={switchingGallery}
+                      title={`Select scene ${fn} for bulk Regenerate`}
+                      aria-label={`Select scene ${fn}`}
+                    />
                   )}
                 </div>
                 <div className="img-frame">

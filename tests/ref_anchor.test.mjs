@@ -38,7 +38,10 @@ describe("buildFluxImg2ImgGraph", () => {
     });
     assert.equal(g["ref:scale"].inputs.width, 960);
     assert.equal(g["ref:scale"].inputs.height, 512);
-    assert.equal(g["75:74"].inputs.text, "a knight at dawn");
+    // Builders enforce the 8k / no-distortion quality lock (keeps the prompt text + appends it).
+    assert.match(g["75:74"].inputs.text, /a knight at dawn/);
+    assert.match(g["75:74"].inputs.text, /8k uhd/);
+    assert.match(g["75:74"].inputs.text, /no distortion/);
     assert.equal(g["75:62"].inputs.steps, 4);
     assert.ok(Number.isFinite(g["75:73"].inputs.noise_seed));
     assert.equal(g["9"].inputs.filename_prefix, "scn/seq1");
@@ -54,18 +57,19 @@ describe("buildFluxImg2ImgGraph", () => {
     const t2i = buildFluxGraph({ prompt: "plain" });
     assert.deepEqual(t2i["75:64"].inputs.latent_image, ["75:66", 0]);
     assert.ok("75:66" in t2i);
-    assert.equal(t2i["75:74"].inputs.text, "plain");
+    assert.match(t2i["75:74"].inputs.text, /plain/);
+    assert.match(t2i["75:74"].inputs.text, /8k uhd/);
   });
 });
 
 describe("sequence wiring", () => {
   const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 
-  it("genKeyframe uploads the ref main and passes it to buildKeyframe", () => {
+  it("genKeyframe uploads the anchor and passes it to buildKeyframe", () => {
     const src = read("lib/sequence.mjs");
     assert.match(src, /resolveRefForRun\(outDir, prefix\)/);
-    assert.match(src, /uploadToInput\(ref\.fullPath/);
-    assert.match(src, /buildKeyframe\(seq\[i\]\.image, i, refInput\)/);
+    assert.match(src, /uploadToInput\(anchorPath/);
+    assert.match(src, /buildKeyframe\(keyframePromptFor\(seq\[i\]\.image, cfg\), i, refInput\)/);
   });
 
   it("switching the main ref regenerates stale keyframes + clips", () => {
@@ -85,7 +89,50 @@ describe("sequence wiring", () => {
     const lockAt = src.indexOf("runRef = resolveRefForRun(outDir, prefix)");
     assert.ok(genRefAt >= 0 && lockAt > genRefAt, "runRef must snapshot after await genRef()");
     // Visible in the run log so a wrong anchor is diagnosable per beat.
+    // Same-scene linkage: every keyframe anchors on the reference, every
+    // clip animates its own keyframe (no cross-scene pixel chaining).
     assert.match(src, /reference lock: every keyframe anchors on/);
+    assert.match(src, /every clip animates its own keyframe/);
+  });
+
+  it("keyframes carry the character/reference text lock (can't drift off-ref)", async () => {
+    const seq = await import("../lib/sequence.mjs");
+    const cfg = { character: "a brave rabbit in blue kurta", referencePrompt: "cinematic key visual of the rabbit" };
+    const out = seq.keyframePromptFor("the rabbit jumps", cfg);
+    assert.match(out, /the rabbit jumps/);
+    assert.match(out, /brave rabbit/);
+    assert.match(out, /cinematic key visual/);
+    // Never double-appends when the beat already carries the identity.
+    const again = seq.keyframePromptFor(out, cfg);
+    assert.equal(again, out);
+  });
+
+  it("clips carry the fidelity lock (animate the keyframe, never redesign)", async () => {
+    const seq = await import("../lib/sequence.mjs");
+    const out = seq.motionPromptFor("slow push-in");
+    assert.match(out, /slow push-in/);
+    assert.match(out, /animate natural motion only/);
+    assert.match(out, /8k uhd quality/);
+    assert.match(out, /no distortion/);
+    assert.equal(seq.motionPromptFor(out), out);
+    assert.match(seq.motionPromptFor(""), /animate natural motion only/);
+    const src = read("lib/sequence.mjs");
+    assert.match(src, /motionPromptFor\(beat\.motion\)/);
+  });
+
+  it("clips always animate their own keyframe (same-scene linkage, 8k, no distortion)", async () => {
+    const seq = await import("../lib/sequence.mjs");
+    const src = read("lib/sequence.mjs");
+    // No cross-scene pixel chaining: beat N never starts from beat N-1's frame.
+    assert.doesNotMatch(src, /chained from clip/);
+    assert.doesNotMatch(src, /chain_last/);
+    assert.match(src, /from own keyframe/);
+    // Keyframes render scene context at 8k with no distortion.
+    assert.match(seq.keyframePromptFor("a forest chase", {}), /8k uhd/);
+    assert.match(seq.keyframePromptFor("a forest chase", {}), /no distortion/);
+    // Builders enforce the same locks centrally.
+    const g = buildFluxImg2ImgGraph({ prompt: "x", image: "r.png" });
+    assert.match(g["75:74"].inputs.text, /no distortion/);
   });
 
   it("a freshly generated version becomes main (regen v4 beats picked v1/v2/v3)", () => {

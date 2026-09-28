@@ -15,6 +15,30 @@ link to their project (`director_boards.project_id` FK → `projects`, set on
 save/approve, `ON DELETE CASCADE` + board-file cleanup — deleting a project
 removes its storyboard; renames follow `scenario_name`). Unapproved drafts have
 no link and survive project deletion.
+Multi-shot scenes: when one line/sentence covers 2+ entities, the AI plans
+timed `shots[]` INSIDE the scene (`normalizeShot`/`normalizeShots`/
+`splitSceneTimeline` in `lib/director.mjs` — pronounceable-length durations
+that tile the scene total exactly, cumulative from 0). The UI renders one
+scene per row with its shots laid out horizontally, width ∝ duration.
+`APPROVE` flattens each shot to one generation beat (`<scene>_<a|b|…>`, shot
+duration/prompts/dialogue, `scene_number`/`shot_id`/`start_time`/`end_time`
+metadata + song-absolute offsets); shot-less scenes map 1:1 byte-identically.
+Dynamic planning: Generate Scenes is duration-driven, not count-driven —
+each batch gets numbered source lines sliced to its time window
+(`linesForTimeWindow`), a seconds budget, and planned-so-far context; the AI
+decides scene boundaries (`line_from`/`line_to`), scene/shot counts and all
+durations, and returns `complete=true` at the story end, at which point the
+server shrinks `sceneCount` to what was planned (`planProgress` paces it).
+`complete=true` is VERIFIED (`verifyPlanComplete`: last line covered + timeline
+within tolerance — never trusted blindly); a premature flag is logged and
+planning continues, and an early-finalized board reopens by extending the cap
+from the remaining seconds (close-enough `DONE_TOL` never spawns a filler scene).
+Scene boxes show the covered lines (`L2–3: "…"`) + a `⏱ ~planned/~target` pill.
+DB shot linkage: `project_assets` carries `scene_number/shot_id/shot_number/
+start_time/end_time` per keyframe/clip row (NULL for legacy/FINAL), written
+on every path via `shotColumns(beat)` in `lib/project_versioning.mjs` and
+returned by EFFECTIVE/EXACT asset SQL; `director_boards.shot_count`
+denormalizes the planned shot total beside `scenes_done`.
 
 ## What this is
 Repo root is the folder `comfyui-video-pipelines-frontend/` (all paths below are

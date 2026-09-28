@@ -4,6 +4,7 @@ import OutputGallery from "./OutputGallery";
 import { useDialog } from "./Dialog";
 import { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
 import RenderMonitor, { type RmPin } from "./RenderMonitor";
+import type { Beat } from "../types";
 import { IconPanel, IconPlay, IconScissors, IconStop, IconClapper, Spinner } from "./Icons";
 import Collapse from "./Collapse";
 
@@ -115,9 +116,10 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // pendingRun, or idle). Shows the spinner on the clicked button during
   // the startRun round-trip, before status flips to "running".
   const [starting, setStarting] = useState<"run" | "stitch" | "dialogue" | null>(null);
-  // Connected movie: beat N>1 starts from beat N-1's last frame (devotional
+  // Connected movie: beats N>1 carry seamless-continuation wording (devotional
   // Shiv/Ram/Krishna docs). Persisted per browser. Devotional boards also set
   // cfg.chainContinuity server-side, so this only forces it on for others.
+  // Pixels always stay per-scene (every clip animates its own keyframe).
   const [chain, setChain] = useState(() => localStorage.getItem("ss-chain") === "on");
   const toggleChain = () =>
     setChain((c) => {
@@ -162,17 +164,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setEndedAt(null);
     setCancelled(false);
     setPin(null);
-    setTotalBeats(null);
-    setDlgBeats(null);
+    clearSeqStats();
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
         .then((r) => {
           const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
-          setTotalBeats(seq.length || null);
-          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+          applySeqStats(seq);
         })
-        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
+        .catch(() => { clearSeqStats(); });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewedKey]);
@@ -195,17 +195,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setEndedAt(null);
     setCancelled(false);
     setPin(null);
-    setTotalBeats(null);
-    setDlgBeats(null);
+    clearSeqStats();
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
         .then((r) => {
           const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
-          setTotalBeats(seq.length || null);
-          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+          applySeqStats(seq);
         })
-        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
+        .catch(() => { clearSeqStats(); });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, runScenario, scenario]);
@@ -220,6 +218,21 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // start/end timestamps, and per-asset completion times for the ETA.
   const [totalBeats, setTotalBeats] = useState<number | null>(null);
   const [dlgBeats, setDlgBeats] = useState<number | null>(null);
+  // Flat beat index -> Director scene_number (null = unlinked single-shot
+  // beat). Drives the rm-chip scene-group outlines in RenderMonitor (same
+  // colors as the Scenario Editor's Scene cards).
+  const [beatScenes, setBeatScenes] = useState<(number | null)[] | null>(null);
+  const [seqBeats, setSeqBeats] = useState<Beat[] | null>(null);
+  const applySeqStats = (seq: Beat[]) => {
+    setTotalBeats(seq.length || null);
+    setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+    setBeatScenes(seq.map((b) => {
+      const sn = Number(b.scene_number);
+      return Number.isFinite(sn) && sn > 0 ? Math.round(sn) : null;
+    }));
+    setSeqBeats(seq);
+  };
+  const clearSeqStats = () => { setTotalBeats(null); setDlgBeats(null); setBeatScenes(null); setSeqBeats(null); };
   const [runMeta, setRunMeta] = useState<{ stitch: boolean; regen: RegenSpec | null; count: number; mode?: "dialogue" | "song" }>({ stitch: false, regen: null, count: 1 });
   const [startedAt, setStartedAt] = useState<number | null>(null);
   // Anchor of the per-asset interval chain (see the ETA memo below). Fresh
@@ -321,10 +334,9 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       getScenario(scenario)
         .then((r) => {
           const seq = Array.isArray(r.config.sequence) ? r.config.sequence : [];
-          setTotalBeats(seq.length || null);
-          setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
+          applySeqStats(seq);
         })
-        .catch(() => { setTotalBeats(null); setDlgBeats(null); });
+        .catch(() => { clearSeqStats(); });
       setStatus("running");
       setLog("");
       setAssets([]);
@@ -393,7 +405,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         setTotalBeats(seq.length || null);
         setDlgBeats(seq.filter((b) => Array.isArray(b.dialogue) && b.dialogue.some((d) => d && String(d.line || "").trim())).length || null);
       })
-      .catch(() => { setTotalBeats(null); setDlgBeats(null); });
+      .catch(() => { clearSeqStats(); });
     setStatus("running");
     setLog("");
     setAssets([]);
@@ -664,7 +676,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         </div>
         <div className="run-head-controls">
         <div className="run-head-actions" role="group" aria-label="Run controls">
-          <label className="vt-select" title="Chain scenes: beat N>1 starts from beat N-1's last frame, so the movie plays as one connected shot instead of merged clips. Devotional (Shiv/Ram/Krishna) projects chain automatically; tick this to force it on.">
+          <label className="vt-select" title="Chain scenes: beats N>1 carry seamless-continuation wording, so the movie plays as one connected story (every clip still animates its own scene image). Devotional (Shiv/Ram/Krishna) projects chain automatically; tick this to force it on.">
             <input type="checkbox" checked={chain} onChange={toggleChain} disabled={status === "running"} aria-label="Chain scenes for a connected movie" />
             <span className="vt-label">🔗 Chain</span>
           </label>
@@ -773,6 +785,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
               assets={assets}
               log={log}
               totalBeats={totalBeats}
+              beatScenes={beatScenes}
               runMeta={runMeta}
               startedAt={startedAt}
               now={now}
@@ -792,6 +805,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
               assets={assets}
               log={log}
               totalBeats={totalBeats}
+              beatScenes={beatScenes}
               runMeta={runMeta}
               startedAt={startedAt}
               now={now}
@@ -807,7 +821,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
                 the panel follows the run, but an idle panel on the other cut
                 hides it (the monitors above already show that cut from disk). */}
             {assets.length > 0 && (status === "running" || runFormat === idleFormat) && (
-              <OutputGallery scenario={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} progress={progress} />
+              <OutputGallery scenario={outScenario(runFolder ?? folder ?? runScenario ?? scenario, runEngine ?? engine, runFormat)} refreshKey={0} assets={assets} bare totalScenes={totalBeats} beats={seqBeats} progress={progress} />
             )}
           </RunPart>
         </>

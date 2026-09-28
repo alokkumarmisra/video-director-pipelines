@@ -16,6 +16,7 @@ import {
   nextVersionNumber,
   latestVersionOf,
   resolveEffective,
+  shotColumns,
   EFFECTIVE_ASSETS_SQL,
   EXACT_VERSION_SQL,
   NEXT_VERSION_SQL,
@@ -279,6 +280,47 @@ describe("delta versioning", () => {
     assert.match(srv, /\[version\].*previousVersion.*newVersion.*changedScenes.*insertedAssetIds/s);
     // Effective endpoint defaults to DISTINCT ON resolution.
     assert.ok(srv.includes("EFFECTIVE_ASSETS_SQL"), "effective query must be used");
+  });
+
+  it("shotColumns maps flattened shot-beats to asset columns (legacy beats -> NULLs)", () => {
+    // Multi-shot beat from boardToScenario flatten (scene 3, shot B).
+    assert.deepEqual(
+      shotColumns({ title: "lift_b", scene_number: 3, shot_id: "3-B", shot_number: 2, start_time: 1.4, end_time: 3 }),
+      [3, "3-B", 2, 1.4, 3]);
+    // Legacy single-shot beat carries no linkage -> all NULL.
+    assert.deepEqual(shotColumns({ title: "wake_up" }), [null, null, null, null, null]);
+    assert.deepEqual(shotColumns(null), [null, null, null, null, null]);
+    // Garbage never reaches the DB as 0/""/NaN.
+    assert.deepEqual(
+      shotColumns({ scene_number: 0, shot_id: "  ", shot_number: -1, start_time: -2, end_time: 0 }),
+      [null, null, null, null, null]);
+  });
+
+  it("project_assets stores shot linkage on every write path", () => {
+    const srv = fs.readFileSync(path.join(ROOT, "frontend", "server.mjs"), "utf8");
+    // Helper exists and is used by the write paths (not hand-rolled per site).
+    assert.ok(srv.includes("shotColumns"), "server must use shotColumns");
+    for (const site of ["UPSERT_IG", "pgSaveVersionDelta", "pgSaveVersionInPlace", "pgMarkAssetComplete"]) {
+      assert.ok(srv.includes(site), `${site} must exist`);
+    }
+    // Every INSERT/UPSERT column list carries the five shot columns.
+    const inserts = [...srv.matchAll(/INSERT INTO project_assets \(([^)]+)\)/g)].map((m) => m[1]);
+    assert.ok(inserts.length >= 5, `expected 5+ asset INSERTs, saw ${inserts.length}`);
+    for (const cols of inserts) {
+      for (const c of ["scene_number", "shot_id", "shot_number", "start_time", "end_time"]) {
+        assert.ok(cols.includes(c), `INSERT missing ${c}: ${cols.slice(0, 120)}…`);
+      }
+    }
+    // Readers return them so /api/project/:name/assets exposes linkage.
+    assert.match(EFFECTIVE_ASSETS_SQL, /shot_id/);
+    assert.match(EXACT_VERSION_SQL, /shot_number/);
+    // Fresh DDL + narrow-column migration carry them (existing installs).
+    assert.match(srv, /`scene_number INTEGER`/);
+    assert.match(srv, /`shot_id TEXT`/);
+    assert.match(srv, /CREATE INDEX IF NOT EXISTS idx_project_assets_scene_shot/);
+    // Director boards denormalize the planned shot total beside scenes_done.
+    assert.match(srv, /shot_count INTEGER/);
+    assert.match(srv, /shot_count = EXCLUDED\.shot_count/);
   });
 
   it("director approve names the project exactly like the story title", () => {

@@ -27,8 +27,10 @@
 //   node scripts/character_sequence_wan.mjs [scenario] --no-dialogue  # silent clips only
 //     (skips the automatic voice + lip-sync pass even when beats carry dialogue)
 //   node scripts/character_sequence_wan.mjs [scenario] --chain  # connected movie:
-//     beat N>1's clip starts from beat N-1's last frame (devotional Shiv/Ram/
-//     Krishna docs). Also auto-enabled by cfg.chainContinuity.
+//     beats N>1 carry seamless-continuation wording so scenes play continuously
+//     (devotional Shiv/Ram/Krishna docs). Pixels always stay per-scene
+//     (every clip animates its own keyframe). Also auto-enabled by
+//     cfg.chainContinuity.
 // Outputs go to outputs/<scenario>_wan/ (never clobbers the LTX run of the same scenario);
 // --vertical writes outputs/<scenario>_wan_vertical/ instead.
 import fs from "node:fs";

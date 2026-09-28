@@ -22,8 +22,9 @@
 //   node scripts/character_sequence.mjs [scenario] --no-dialogue  # silent clips only
 //     (skips the automatic voice + lip-sync pass even when beats carry dialogue)
 //   node scripts/character_sequence.mjs [scenario] --chain  # connected movie:
-//     beat N>1's clip starts from beat N-1's last frame (devotional Shiv/Ram/
-//     Krishna docs) instead of its own keyframe, so scenes play continuously.
+//     beats N>1 carry seamless-continuation wording so scenes play
+//     continuously (devotional Shiv/Ram/Krishna docs). Pixels always stay
+//     per-scene (every clip animates its own keyframe).
 //     Also auto-enabled by cfg.chainContinuity (devotional boards set it).
 import fs from "node:fs";
 import path from "node:path";
@@ -97,6 +98,7 @@ const opts = {
     duration: beatTargetDuration({ outDir, prefix, n: i + 1, beat: cfg.sequence[i], fallback: cfg.duration ?? 3 }),
     ratio: vertical ? VERTICAL_LTX_RATIO : "16:9 (Widescreen)",
     megapixels: vertical ? VERTICAL_LTX_MEGAPIXELS : 0.5,
+    negative: cfg.negative, // explicit override; undefined -> cartoon-aware auto default in buildLtxGraph
     prefix: `${scenario}/clip${i + 1}_${cfg.sequence[i].title}`,
   }),
   videoNode: "75",

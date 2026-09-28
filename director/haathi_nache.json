@@ -1,0 +1,232 @@
+{
+  "id": "haathi_nache",
+  "input": {
+    "title": "Haathi Nache",
+    "story": "[Intro]\nहा हा हा! हाथी चला!\nझूम झूम, छम छम, धम धम!\nकान हिलाए, सूँड घुमाए,\nआओ बच्चों, साथ में गाएँ!\n\n[Verse 1]\nएक हाथी चला धीरे-धीरे,\nछोटे कदम पड़े मीठे-मीठे।\nसूँड उठाकर बोला—हाय!\nकान हिलाकर हाथ हिलाई!\nहा हा हा, झूम झूम!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Verse 2]\nदो हाथी आए साथ-साथ,\nलहराएँ अपने बड़े-बड़े कान।\nछम छम पानी में जाएँ,\nसूँड से फुहार उड़ाएँ!\nछप छप छप, धम धम!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Verse 3]\nतीन हाथी केले खाएँ,\nपीले केले मुँह में लाएँ।\nएक ने खाया, दो ने खाया,\nतीनों ने मिलकर गीत सुनाया!\nहा हा हा, केला वाह!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Verse 4]\nचार हाथी गोल-गोल घूमे,\nपैर पटककर धम धम झूमे।\nदाएँ मुड़ें, बाएँ जाएँ,\nताली बजाकर मुस्काएँ!\nछम छम, झूम झूम!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Verse 5]\nपाँच हाथी खेलें मिल-जुलकर,\nसूँड मिलाएँ प्यार से हँसकर।\nछोटा बोले, बड़ा भी बोले,\nसबके मन में खुशियाँ डोले!\nहा हा हा, साथ-साथ!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Counting Section]\nछह हाथी कान हिलाएँ—एक, दो, तीन!\nसात हाथी सूँड घुमाएँ—चार, पाँच, छह!\nआठ हाथी पानी छपकाएँ—सात, आठ!\nनौ हाथी केले खाएँ—नौ!\nदस हाथी थककर सोएँ—दस!\nश्श्श… फिर उठकर नाचें!\nधम धम, झूम झूम!\n\n[Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Energy Section]\nएक, दो—कदम बढ़ाओ!\nतीन, चार—कान हिलाओ!\nपाँच, छह—सूँड घुमाओ!\nसात, आठ—पानी उड़ाओ!\nनौ, दस—सब गाओ!\nहा हा हा, नाचते जाओ!\nहाथी चला, हाथी चला,\nझूम झूम, धम धम चला!\n\n[Final Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक, दो, तीन, चार, पाँच,\nहाथी नाचे आज!\n\n[Final Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nछह, सात, आठ, नौ, दस,\nहाथी नाचे सबसे खास!\n\n[Final Chorus]\nहाथी आया झूम-झूम,\nनाचे अपना घूम-घूम!\nएक से दस गिनती गाएँ,\nहाथी संग सब झूमते जाएँ!\n\n[Outro]\nहा हा हा, हाथी चला,\nछम छम करके घर को चला।\nकान हिलाए, सूँड घुमाए,\nकल फिर आकर नाच दिखाए!\nझूम झूम… धम धम…\nबाय-बाय हाथी, बाय-बाय!",
+    "language": "Hindi",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 300,
+    "sceneSeconds": 3,
+    "aspectRatio": "16:9",
+    "instructions": "High-quality colorful 3D preschool animation, cute rounded character design, soft smooth shapes, expressive friendly faces, vibrant but pleasant colors, cinematic composition, soft global illumination, beautiful warm lighting, polished children's TV animation quality, playful atmosphere, clean background, detailed environment, soft shadows, appealing educational visuals, joyful expressions, wholesome family-friendly style."
+  },
+  "status": "analyzed",
+  "blueprint": {
+    "logline": "A vibrant 3D preschool animation where a baby elephant leads a counting adventure with friends, dancing and playing in a sunny jungle clearing.",
+    "analysis": {
+      "plot": "The story follows a baby elephant who invites more elephants to join a dance party. They count up to ten, eat bananas, play in water, and celebrate friendship before heading home.",
+      "beginning": "A single baby elephant enters the scene happily, singing and dancing alone.",
+      "middle": "More elephants arrive one by one (implied or shown), joining the dance, eating bananas together, and splashing in water as they count up to ten.",
+      "climax": "All ten elephants gather in a circle, dancing energetically together with high energy movements.",
+      "ending": "The elephants are tired, sleep briefly, wake up one last time for a final goodbye wave, and walk home.",
+      "main_character": "Baby Elephant (The leader of the group)",
+      "supporting_characters": [
+        "Adult Elephants",
+        "Small Elephant Friend"
+      ],
+      "antagonist": null,
+      "objects": [
+        "Banana Bunches",
+        "Water Pond",
+        "Red Scarf",
+        "Blue Bandana"
+      ],
+      "locations": [
+        "Sunny Jungle Clearing"
+      ],
+      "events": [
+        "Elephant enters frame",
+        "Waving ears and trunk",
+        "Dancing alone",
+        "Second elephant arrives",
+        "Splashing water together",
+        "Eating bananas in chorus",
+        "Spinning circle dance",
+        "Counting up to ten",
+        "Group clapping",
+        "Walking home waving goodbye"
+      ],
+      "relationships": "The baby elephant acts as the leader/friend who gathers others; all elephants are friends and family.",
+      "emotional_progression": "Starts with curiosity and joy, builds to excitement and high energy during the dance/counting, ends with peaceful satisfaction and warmth.",
+      "timeline": "Daytime throughout, bright lighting consistent with a preschool educational setting.",
+      "visual_moments": [
+        "Close up of baby elephant face",
+        "Wide shot of elephants in circle",
+        "Action shot of trunk splashing water",
+        "Group shot of ten elephants counting"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "baby_elephant",
+        "name": "Baby Elephant",
+        "role": "main_character",
+        "species": "Elephant",
+        "age": "Toddler",
+        "appearance": {
+          "body": "Small and chubby with wrinkled grey skin",
+          "fur": "Short smooth grey fur texture",
+          "eyes": "Large expressive brown eyes with long lashes",
+          "ears": "Large floppy pink inner ears"
+        },
+        "clothing": {
+          "top": "Tiny red scarf around neck",
+          "bottom": "None, natural legs visible"
+        },
+        "personality": [
+          "Friendly",
+          "Energetic",
+          "Curious",
+          "Playful"
+        ],
+        "visual_identity_prompt": "A cute baby elephant with wrinkled grey skin, large floppy pink ears, big brown eyes, small curved trunk, wearing a tiny red scarf around neck, standing on four legs, soft shadows, 3D preschool animation style, rounded character design",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "adult_elephant",
+        "name": "Adult Elephant",
+        "role": "supporting",
+        "species": "Elephant",
+        "age": "Teen/Adult",
+        "appearance": {
+          "body": "Large and sturdy with textured grey skin",
+          "fur": "Short smooth grey fur texture",
+          "eyes": "Kind dark eyes with expressive eyebrows",
+          "ears": "Large round pink inner ears"
+        },
+        "clothing": {
+          "top": "None, natural legs visible",
+          "bottom": "None, natural legs visible"
+        },
+        "personality": [
+          "Gentle",
+          "Protective",
+          "Joyful"
+        ],
+        "visual_identity_prompt": "A friendly adult elephant with textured grey skin, large round pink ears, kind dark eyes, long curved trunk, wearing a small blue bandana on head, standing on four legs, soft shadows, 3D preschool animation style, rounded character design",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "jungle_clearing",
+        "name": "Sunny Jungle Clearing",
+        "description": "A wide open grassy area with colorful trees and a small pond in the center.",
+        "visual_identity_prompt": "A vibrant 3D preschool animation jungle clearing with lush green grass, colorful stylized trees with large leaves, a calm blue water pond in background, soft global illumination, beautiful warm lighting, detailed environment, clean background, soft shadows",
+        "time_of_day": "Daytime",
+        "lighting": "Soft warm sunlight from above",
+        "color_palette": "Green grass, Blue sky, Grey elephants, Yellow bananas"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "banana_bunch",
+        "name": "Banana Bunch",
+        "description": "Bright yellow bananas hanging from trees or held in trunk.",
+        "visual_identity_prompt": "A bunch of bright yellow bananas with green stems, ripe texture, 3D preschool animation style, soft shadows"
+      },
+      {
+        "object_id": "water_pond",
+        "name": "Water Pond",
+        "description": "Small clear pond for elephants to splash in.",
+        "visual_identity_prompt": "A calm blue water surface with ripples and reflections, surrounded by grass, 3D preschool animation style, soft shadows"
+      }
+    ],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Intro",
+        "summary": "Baby elephant enters frame singing, waving ears and trunk with happy energy."
+      },
+      {
+        "n": 2,
+        "title": "Verse 1",
+        "summary": "Baby elephant walks slowly taking sweet steps while waving ears and trunk in rhythm."
+      },
+      {
+        "n": 3,
+        "title": "Chorus 1",
+        "summary": "Baby elephant spins around dancing alone to the beat of the song."
+      },
+      {
+        "n": 4,
+        "title": "Verse 2",
+        "summary": "An adult elephant joins in; both wave ears and splash water with trunks together."
+      },
+      {
+        "n": 5,
+        "title": "Chorus 2",
+        "summary": "The group dances together spinning around happily while singing the chorus."
+      },
+      {
+        "n": 6,
+        "title": "Verse 3",
+        "summary": "Three elephants gather to eat bananas, taking bites and smiling with joy."
+      },
+      {
+        "n": 7,
+        "title": "Chorus 3",
+        "summary": "Group continues dancing while celebrating eating the delicious fruit."
+      },
+      {
+        "n": 8,
+        "title": "Verse 4",
+        "summary": "Four elephants spin in a circle stomping feet and clapping hands together."
+      },
+      {
+        "n": 9,
+        "title": "Chorus 4",
+        "summary": "Energetic group dance with high jumps and wide arm movements."
+      },
+      {
+        "n": 10,
+        "title": "Verse 5",
+        "summary": "Five elephants interact, small one speaks to big one while clapping hands."
+      },
+      {
+        "n": 11,
+        "title": "Counting Section",
+        "summary": "Elephants count up to ten with actions: ears waving, trunk spinning, water splashing, eating bananas, sleeping briefly then waking up."
+      },
+      {
+        "n": 12,
+        "title": "Energy Section",
+        "summary": "Rapid counting sequence with running steps and high energy movements to count one to ten again."
+      },
+      {
+        "n": 13,
+        "title": "Final Chorus",
+        "summary": "All ten elephants dance in a final celebration circle with maximum energy."
+      },
+      {
+        "n": 14,
+        "title": "Outro",
+        "summary": "Elephants walk slowly home waving goodbye to the audience as they sing the farewell song."
+      }
+    ]
+  },
+  "scenes": [],
+  "sceneCount": 100,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": null,
+  "error": null,
+  "createdAt": "2026-09-23T14:35:07.287Z",
+  "updatedAt": "2026-09-23T14:35:07.287Z"
+}

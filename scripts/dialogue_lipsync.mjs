@@ -154,6 +154,7 @@ async function genSilentClip({ b, n, wavDuration }) {
       duration: beatTargetDuration({ outDir, prefix, n, beat: b, fallback: target }),
       ratio: vertical ? VERTICAL_LTX_RATIO : "16:9 (Widescreen)",
       megapixels: vertical ? VERTICAL_LTX_MEGAPIXELS : 0.5,
+      negative: cfg.negative, // explicit override; undefined -> cartoon-aware auto default
       prefix: `${scenario}/clip${n}_${b.title}`,
     });
   const entry = await run(graph, `clip${n}`);
@@ -170,7 +171,9 @@ async function genSilentClip({ b, n, wavDuration }) {
 }
 
 let synced = 0;
+let failed = 0;
 for (const { b, n } of dlgBeats) {
+  try {
   let wav = null;
   if (skipTts) {
     const { dialogueWavFile, audioDuration } = await import("../lib/tts.mjs");
@@ -202,6 +205,13 @@ for (const { b, n } of dlgBeats) {
     dialogue: b.dialogue, ttsCfg, wavFile: wav.file, providerName, tag,
   });
   synced++;
+  } catch (e) {
+    // One bad beat (e.g. a TTS voice failure) must not abort the remaining
+    // beats — report it and continue, mirroring the best-effort rule in
+    // lib/sequence.mjs (beats stay silent instead of failing the whole run).
+    failed++;
+    console.error(`${tag} beat ${n} (${b.title}) failed: ${String(e.message || e).slice(0, 300)} — skipping, continuing with the next beat`);
+  }
 }
 
 // Re-stitch so the final cut uses the lip-synced mains (with voices) —
@@ -215,4 +225,4 @@ if (synced > 0 && !skipLip && !noStitch) {
     process.exit(1);
   }
 }
-console.log(`${tag} DONE (voiced: ${dlgBeats.length}, lip-synced: ${synced})`);
+console.log(`${tag} DONE (voiced: ${dlgBeats.length}, lip-synced: ${synced}${failed ? `, failed: ${failed}` : ""})`);

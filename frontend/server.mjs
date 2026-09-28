@@ -18,6 +18,7 @@ import {
   planDelta,
   latestVersionOf,
   resolveEffective,
+  shotColumns,
   EFFECTIVE_ASSETS_SQL,
   EXACT_VERSION_SQL,
 } from "../lib/project_versioning.mjs";
@@ -58,6 +59,14 @@ import {
   normalizeLocation,
   normalizeObject,
   boardToScenario,
+  stripContinuityText,
+  parseLyricLines,
+  estimateLyricTiming,
+  linesForTimeWindow,
+  planProgress,
+  verifyPlanComplete,
+  validateLyricPlan,
+  extractPartialScenes,
 } from "../lib/director.mjs";
 import {
   newRefaceId,
@@ -596,6 +605,14 @@ CREATE TABLE IF NOT EXISTS project_assets (
   scene_id INTEGER,
   beat_index INTEGER NOT NULL DEFAULT 0,
   beat_title TEXT,
+  -- Director shot linkage (multi-shot scenes flatten to one beat per shot
+  -- at approve time; each keyframe/clip row records which scene + shot it
+  -- belongs to). All NULL for legacy single-shot beats and FINAL rows.
+  scene_number INTEGER,
+  shot_id TEXT,
+  shot_number INTEGER,
+  start_time DOUBLE PRECISION,
+  end_time DOUBLE PRECISION,
   asset_type TEXT NOT NULL,
   video_type TEXT NOT NULL DEFAULT 'YOUTUBE',
   status TEXT NOT NULL DEFAULT 'PENDING',
@@ -711,6 +728,10 @@ CREATE TABLE IF NOT EXISTS director_boards (
   status TEXT,
   scene_count INTEGER,
   scenes_done INTEGER,
+  -- Timed shots planned so far (sum over scenes of max(1, shots.length);
+  -- one generation beat per shot at approve time). Denormalized like
+  -- scene_count/scenes_done; the full shots live in the board JSONB.
+  shot_count INTEGER,
   scenario_name TEXT,
   -- Approved storyboard -> generated project link. Set when the approved
   -- project is saved (Approve only returns a name+config; the client PUT
@@ -971,14 +992,19 @@ async function pgUpsertProjectSong(name, cfg, projectId, folder) {
 async function pgUpsertDirectorBoard(board) {
   if (!pgUp || !board || typeof board !== "object" || !board.id) return;
   const scenes = Array.isArray(board.scenes) ? board.scenes.length : 0;
+  // Timed shots planned so far (one generation beat per shot at approve).
+  const shots = Array.isArray(board.scenes)
+    ? board.scenes.reduce((a, s) => a + Math.max(1, Array.isArray(s.shots) ? s.shots.length : 0), 0)
+    : 0;
   const pid = Number.isInteger(board.project_id) ? board.project_id : null;
   await pgPool.query(
     `INSERT INTO director_boards (board_id, title, status, scene_count, scenes_done,
-      scenario_name, project_id, board, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), now())
+      shot_count, scenario_name, project_id, board, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, COALESCE($10::timestamptz, now()), now())
      ON CONFLICT (board_id) DO UPDATE SET
        title = EXCLUDED.title, status = EXCLUDED.status,
        scene_count = EXCLUDED.scene_count, scenes_done = EXCLUDED.scenes_done,
+       shot_count = EXCLUDED.shot_count,
        scenario_name = EXCLUDED.scenario_name, board = EXCLUDED.board,
        updated_at = now(),
        -- Never unlink via a stale board object: only a non-null incoming id
@@ -990,6 +1016,7 @@ async function pgUpsertDirectorBoard(board) {
      board.status ?? null,
      Number.isFinite(Number(board.sceneCount)) ? Number(board.sceneCount) : null,
      scenes,
+     shots,
      board.scenarioName ?? null,
      pid,
      JSON.stringify(board),
@@ -1240,15 +1267,19 @@ async function pgSeedInstagramRows(query, projectId, folder, engine, cfg, versio
     const vm = versionMap(path.join(OUTPUTS, vdir), prefixForDir(vdir), seq);
     const UPSERT_IG = `INSERT INTO project_assets (
       project_id, folder_name, version, scene_id, beat_index, beat_title,
+      scene_number, shot_id, shot_number, start_time, end_time,
       asset_type, video_type, status, prompt, negative_prompt, file_path,
       model, workflow, attempts, max_retries, metadata, started_at, completed_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, 'INSTAGRAM', $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
-      $16::timestamptz, $17::timestamptz
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'INSTAGRAM', $13, $14, $15, $16, $17, $18, $19, 3, $20::jsonb,
+      $21::timestamptz, $22::timestamptz
     )
     ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
       folder_name = EXCLUDED.folder_name,
       scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      scene_number = EXCLUDED.scene_number, shot_id = EXCLUDED.shot_id,
+      shot_number = EXCLUDED.shot_number, start_time = EXCLUDED.start_time,
+      end_time = EXCLUDED.end_time,
       prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
       file_path = COALESCE(EXCLUDED.file_path, project_assets.file_path),
       model = EXCLUDED.model, workflow = EXCLUDED.workflow,
@@ -1269,14 +1300,17 @@ async function pgSeedInstagramRows(query, projectId, folder, engine, cfg, versio
       const bv = (vm.beats && vm.beats[String(n)]) || {};
       const kf = bv.keyframeMain ?? null;
       const cl = bv.clipMain ?? null;
+      const [scNum, shId, shNum, t0, t1] = shotColumns(b);
       if (kf) {
-        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null, "KEYFRAME",
+        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null,
+          scNum, shId, shNum, t0, t1, "KEYFRAME",
           "COMPLETED", b.image ?? null, negative, relPath(kf), IMG_MODEL, IMG_WORKFLOW, 1,
           JSON.stringify({ engine, format: "vertical", video_type: "INSTAGRAM", file: kf, beat: n, ...diskFacts(vdir, kf) }), nowISO, nowISO]);
         seeded++;
       }
       if (cl) {
-        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null, "VIDEO",
+        await query(UPSERT_IG, [projectId, folder, version, n, n, b.title ?? null,
+          scNum, shId, shNum, t0, t1, "VIDEO",
           "COMPLETED", b.motion ?? null, negative, relPath(cl), videoModel, videoWorkflow, 1,
           JSON.stringify({ engine, format: "vertical", video_type: "INSTAGRAM", file: cl, beat: n, ...diskFacts(vdir, cl) }), nowISO, nowISO]);
         seeded++;
@@ -1321,15 +1355,19 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
   const relPath = (file) => (file ? `outputs/${folder}/${file}` : null);
   const UPSERT = `INSERT INTO project_assets (
     project_id, folder_name, version, scene_id, beat_index, beat_title,
+    scene_number, shot_id, shot_number, start_time, end_time,
     asset_type, video_type, status, prompt, negative_prompt, file_path,
     model, workflow, attempts, max_retries, metadata, started_at, completed_at
   ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', $8, $9, $10, $11, $12, $13, $14, 3, $15::jsonb,
-    $16::timestamptz, $17::timestamptz
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'YOUTUBE', $13, $14, $15, $16, $17, $18, $19, 3, $20::jsonb,
+    $21::timestamptz, $22::timestamptz
   )
   ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
     folder_name = EXCLUDED.folder_name,
     scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+    scene_number = EXCLUDED.scene_number, shot_id = EXCLUDED.shot_id,
+    shot_number = EXCLUDED.shot_number, start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
     prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
     file_path = COALESCE(EXCLUDED.file_path, project_assets.file_path),
     model = EXCLUDED.model, workflow = EXCLUDED.workflow,
@@ -1349,7 +1387,9 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     const cl = bm.clipMain ?? null;
     const kfFacts = diskFacts(folder, kf);
     const clFacts = diskFacts(folder, cl);
+    const [scNum, shId, shNum, t0, t1] = shotColumns(b);
     await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
+      scNum, shId, shNum, t0, t1,
       "KEYFRAME", done(kf), b.image ?? null, negative,
       relPath(kf), IMG_MODEL, IMG_WORKFLOW, kf ? 1 : 0,
       kf ? JSON.stringify({ engine, video_type: "YOUTUBE", file: kf, beat: n, ...kfFacts }) : null,
@@ -1357,12 +1397,14 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     const img = cfg.image; // optional still from AI Craft
     if (img) {
       await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, null,
+        null, null, null, null, null,
         "IMAGE", done(img), cfg.imagePrompt ?? null, null, relPath(img),
         IMG_MODEL, IMG_WORKFLOW, img ? 1 : 0,
         img ? JSON.stringify({ engine, file: img }) : null,
         nowISO, nowISO]);
     }
     await pgPool.query(UPSERT, [projectId, folderSlug, version, sceneId(n), n, b.title ?? null,
+      scNum, shId, shNum, t0, t1,
       "VIDEO", done(cl), b.motion ?? null, negative,
       relPath(cl), videoModel, videoWorkflow, cl ? 1 : 0,
       cl ? JSON.stringify({ engine, video_type: "YOUTUBE", file: cl, beat: n, fps: videoFps, duration: videoDur, ...clFacts }) : null,
@@ -1373,6 +1415,7 @@ async function pgSaveProject(name, cfg, version, mains, outputFolder = null) {
     const finalV = mains.finalV ?? finalCutVersion(mains.final) ?? 1;
     const ff = diskFacts(folder, mains.final);
     await pgPool.query(UPSERT, [projectId, folderSlug, version, 0, finalV, null,
+      null, null, null, null, null,
       "FINAL", "COMPLETED", null, negative,
       relPath(mains.final), null, "ffmpeg-concat", 1,
       JSON.stringify({ engine, video_type: "YOUTUBE", file: mains.final, final_version: finalV, ...ff }),
@@ -1436,14 +1479,18 @@ async function pgSaveVersionDelta(name, prevCfg, cfg, projectType = undefined) {
     const negative = cfg.negative ?? null;
     const INSERT = `INSERT INTO project_assets (
       project_id, folder_name, version, scene_id, beat_index, beat_title,
+      scene_number, shot_id, shot_number, start_time, end_time,
       asset_type, video_type, status, prompt, negative_prompt, file_path,
       model, workflow, attempts, max_retries, metadata
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'YOUTUBE', 'PENDING', $13, $14, NULL, $15, $16, 0, 3, $17::jsonb
     )
     ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
       folder_name = EXCLUDED.folder_name,
       scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      scene_number = EXCLUDED.scene_number, shot_id = EXCLUDED.shot_id,
+      shot_number = EXCLUDED.shot_number, start_time = EXCLUDED.start_time,
+      end_time = EXCLUDED.end_time,
       prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
       model = EXCLUDED.model, workflow = EXCLUDED.workflow,
       metadata = COALESCE(EXCLUDED.metadata, project_assets.metadata)`;
@@ -1457,10 +1504,12 @@ async function pgSaveVersionDelta(name, prevCfg, cfg, projectType = undefined) {
       // `folder` is the transaction-resolved immutable storage folder above.
       const mains = mainsFor(folder, cfg);
       const engine = engineForFolder(folder);
-    const full = async (sceneId, beat, title, type, prompt, model, workflow, file, meta) => {
+      const full = async (sceneId, beat, title, type, prompt, model, workflow, file, meta, shot = null) => {
+      const [scNum, shId, shNum, t0, t1] = shot || [null, null, null, null, null];
       const r = await client.query(
         `${INSERT} RETURNING id`,
-        [projectId, folder, version, sceneId, beat, title ?? null, type, prompt ?? null,
+        [projectId, folder, version, sceneId, beat, title ?? null,
+          scNum, shId, shNum, t0, t1, type, prompt ?? null,
           negative, model, workflow,
           file ? JSON.stringify({ engine, file, version, ...meta }) : null]);
       insertedIds.push(r.rows[0].id);
@@ -1482,11 +1531,11 @@ async function pgSaveVersionDelta(name, prevCfg, cfg, projectType = undefined) {
         const kf = bm.keyframeMain ?? null;
         const cl = bm.clipMain ?? null;
         await full(n, n, b.title ?? null, "KEYFRAME", b.image ?? null, IMG_MODEL, IMG_WORKFLOW,
-          kf, { ...diskFacts(folder, kf), beat: n });
+          kf, { ...diskFacts(folder, kf), beat: n }, shotColumns(b));
         await full(n, n, b.title ?? null, "VIDEO", b.motion ?? null,
           engine === "wan" ? WAN_MODEL : LTX_MODEL,
           engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW,
-          cl, { ...diskFacts(folder, cl), beat: n });
+          cl, { ...diskFacts(folder, cl), beat: n }, shotColumns(b));
       }
       // Stitched final cut (one row per stitch; beat_index = stitch version).
       if (mains.final) {
@@ -1511,7 +1560,7 @@ async function pgSaveVersionDelta(name, prevCfg, cfg, projectType = undefined) {
           const workflow = type === "KEYFRAME" ? IMG_WORKFLOW : (engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW);
     const r = await client.query(
       `${INSERT} RETURNING id`,
-      [projectId, folder, version, n, n, b.title ?? null, type, prompt,
+      [projectId, folder, version, n, n, b.title ?? null, ...shotColumns(b), type, prompt,
         negative, model, workflow, JSON.stringify({ engine, beat: n })]);
           insertedIds.push(r.rows[0].id);
           changedScenes.push(n);
@@ -1595,14 +1644,18 @@ async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg, projectTy
     const negative = cfg.negative ?? null;
     const UPSERT = `INSERT INTO project_assets (
       project_id, folder_name, version, scene_id, beat_index, beat_title,
+      scene_number, shot_id, shot_number, start_time, end_time,
       asset_type, video_type, status, prompt, negative_prompt, file_path,
       model, workflow, attempts, max_retries, metadata
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, 'YOUTUBE', 'PENDING', $8, $9, NULL, $10, $11, 0, 3, $12::jsonb
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'YOUTUBE', 'PENDING', $13, $14, NULL, $15, $16, 0, 3, $17::jsonb
     )
     ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
       folder_name = EXCLUDED.folder_name,
       scene_id = EXCLUDED.scene_id, beat_title = EXCLUDED.beat_title,
+      scene_number = EXCLUDED.scene_number, shot_id = EXCLUDED.shot_id,
+      shot_number = EXCLUDED.shot_number, start_time = EXCLUDED.start_time,
+      end_time = EXCLUDED.end_time,
       prompt = EXCLUDED.prompt, negative_prompt = EXCLUDED.negative_prompt,
       model = EXCLUDED.model, workflow = EXCLUDED.workflow,
       status = 'PENDING', file_path = NULL, error_message = NULL,
@@ -1618,7 +1671,7 @@ async function pgSaveVersionInPlace(name, latestVersion, prevCfg, cfg, projectTy
         const model = type === "KEYFRAME" ? IMG_MODEL : (engine === "wan" ? WAN_MODEL : LTX_MODEL);
         const workflow = type === "KEYFRAME" ? IMG_WORKFLOW : (engine === "wan" ? WAN_WORKFLOW : LTX_WORKFLOW);
         await client.query(UPSERT,
-          [projectId, folder, version, n, n, b.title ?? null, type, prompt,
+          [projectId, folder, version, n, n, b.title ?? null, ...shotColumns(b), type, prompt,
             negative, model, workflow, JSON.stringify({ engine, beat: n })]);
         changedScenes.push(n);
         changedAssetTypes.push(type);
@@ -1856,6 +1909,17 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
     }
     const facts = diskFacts(outputFolder, asset.file);
     const filePath = `outputs/${outputFolder}/${asset.file}`;
+    // Director shot linkage for the completed beat (all-NULL for legacy
+    // single-shot beats and FINAL rows).
+    let shot = [null, null, null, null, null];
+    if (asset.stage === "keyframe" || asset.stage === "clip") {
+      try {
+        const rawCfg = await dbGetScenario(projectName);
+        const seqCfg = rawCfg ? JSON.parse(rawCfg).sequence : null;
+        const beatCfg = Array.isArray(seqCfg) ? seqCfg[(asset.index ?? 1) - 1] : null;
+        if (beatCfg) shot = shotColumns(beatCfg);
+      } catch { /* shot linkage stays NULL; never blocks completion */ }
+    }
     let target = null;
     if (asset.stage === "keyframe") {
       const beat = asset.index ?? 0;
@@ -1888,20 +1952,31 @@ async function pgMarkAssetComplete(projectName, asset, opts = {}) {
          attempts = attempts + 1,
          model = COALESCE(model, $5), workflow = COALESCE(workflow, $6),
          metadata = COALESCE(metadata, $7::jsonb),
+         scene_number = COALESCE(scene_number, $10), shot_id = COALESCE(shot_id, $11),
+         shot_number = COALESCE(shot_number, $12), start_time = COALESCE(start_time, $13),
+         end_time = COALESCE(end_time, $14),
          started_at = COALESCE(started_at, now()), completed_at = now()
        WHERE project_id = $2 AND version = $3 AND asset_type = $4 AND beat_index = $8 AND video_type = $9`,
       [filePath, projectId, version, target.type, target.model, target.workflow,
-       JSON.stringify(target.meta), target.beat, videoType]);
+       JSON.stringify(target.meta), target.beat, videoType, ...shot]);
     if (upd.rowCount === 0) {
       await pgPool.query(
         `INSERT INTO project_assets (
            project_id, version, scene_id, beat_index, asset_type, video_type, status,
+           scene_number, shot_id, shot_number, start_time, end_time,
            file_path, model, workflow, attempts, metadata, started_at, completed_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED', $7, $8, $9, 1, $10::jsonb, now(), now())
+         ) VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED',
+           $7, $8, $9, $10, $11,
+           $12, $13, $14, 1, $15::jsonb, now(), now())
          ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO UPDATE SET
            file_path = EXCLUDED.file_path, status = 'COMPLETED', error_message = NULL,
+           scene_number = COALESCE(project_assets.scene_number, EXCLUDED.scene_number),
+           shot_id = COALESCE(project_assets.shot_id, EXCLUDED.shot_id),
+           shot_number = COALESCE(project_assets.shot_number, EXCLUDED.shot_number),
+           start_time = COALESCE(project_assets.start_time, EXCLUDED.start_time),
+           end_time = COALESCE(project_assets.end_time, EXCLUDED.end_time),
            attempts = project_assets.attempts + 1, completed_at = now()`,
-        [projectId, version, sceneId, target.beat, target.type, videoType, filePath,
+        [projectId, version, sceneId, target.beat, target.type, videoType, ...shot, filePath,
          target.model, target.workflow, JSON.stringify(target.meta)]);
     }
   } catch (e) { console.warn("[pg] mark complete failed:", e.message); }
@@ -2088,6 +2163,25 @@ async function pgInit() {
             FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE`);
       }
     } catch (e) { console.warn("[pg] director_boards project_fk migration failed:", e.message); }
+    // Director shot counts (existing installs predate the column): timed
+    // shots planned so far per board, backfilled from the board JSONB.
+    await pgPool.query(`ALTER TABLE director_boards ADD COLUMN IF NOT EXISTS shot_count INTEGER`)
+      .catch(() => {});
+    try {
+      await pgPool.query(
+        `UPDATE director_boards SET shot_count = (
+           SELECT COALESCE(SUM(GREATEST(1,
+             CASE WHEN jsonb_typeof(s.value->'shots') = 'array'
+               THEN jsonb_array_length(s.value->'shots') ELSE 0 END)), 0)::int
+           FROM jsonb_array_elements(
+             CASE WHEN jsonb_typeof(board->'scenes') = 'array' THEN board->'scenes' ELSE '[]'::jsonb END
+           ) AS s
+         ) WHERE shot_count IS NULL`);
+    } catch (e) { console.warn("[pg] director_boards shot_count backfill failed:", e.message); }
+    // Shot linkage lookup: per-scene/shot asset rows for one project.
+    await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_project_assets_scene_shot
+        ON project_assets(project_id, scene_number)`)
+      .catch(() => {});
     // Documentary boards index (table itself is created in PG_SCHEMA above).
     await pgPool.query(`CREATE INDEX IF NOT EXISTS idx_documentary_boards_project ON documentary_boards(project_id)`)
       .catch(() => {});
@@ -2129,6 +2223,13 @@ async function pgInit() {
       `scene_id INTEGER`,
       `beat_index INTEGER NOT NULL DEFAULT 0`,
       `beat_title TEXT`,
+      // Director shot linkage: which scene + shot each keyframe/clip row
+      // belongs to (multi-shot scenes flatten to one beat per shot).
+      `scene_number INTEGER`,
+      `shot_id TEXT`,
+      `shot_number INTEGER`,
+      `start_time DOUBLE PRECISION`,
+      `end_time DOUBLE PRECISION`,
       `asset_type TEXT NOT NULL`,
       `video_type TEXT NOT NULL DEFAULT 'YOUTUBE'`,
       `status TEXT NOT NULL DEFAULT 'PENDING'`,
@@ -2232,6 +2333,7 @@ async function pgInit() {
     try {
       const vr = await pgPool.query(
         `SELECT project_id, folder_name, version, scene_id, beat_index, beat_title,
+                scene_number, shot_id, shot_number, start_time, end_time,
                 asset_type, status, prompt, negative_prompt, model, workflow,
                 attempts, error_message, metadata, started_at, completed_at,
                 metadata->>'engine' AS eng, metadata->>'vertical_file' AS vfile
@@ -2245,14 +2347,16 @@ async function pgInit() {
         const ins = await pgPool.query(
           `INSERT INTO project_assets (
              project_id, folder_name, version, scene_id, beat_index, beat_title,
+             scene_number, shot_id, shot_number, start_time, end_time,
              asset_type, video_type, status, prompt, negative_prompt, file_path,
              model, workflow, attempts, max_retries, error_message, metadata,
              started_at, completed_at
            ) VALUES (
-             $1,$2,$3,$4,$5,$6,$7,'INSTAGRAM',$8,$9,$10,$11,$12,$13,$14,3,$15,$16::jsonb,$17,$18
+             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'INSTAGRAM',$13,$14,$15,$16,$17,$18,$19,3,$20,$21::jsonb,$22,$23
            )
            ON CONFLICT (project_id, version, asset_type, beat_index, video_type) DO NOTHING`,
           [r.project_id, r.folder_name, r.version, r.scene_id, r.beat_index, r.beat_title,
+           r.scene_number, r.shot_id, r.shot_number, r.start_time, r.end_time,
            r.asset_type, r.status, r.prompt, r.negative_prompt,
            `outputs/${vdir}/${r.vfile}`, r.model, r.workflow, r.attempts ?? 0,
            r.error_message, JSON.stringify(meta), r.started_at, r.completed_at]);
@@ -2279,6 +2383,8 @@ pgInit();
 const DIST = path.join(__dirname, "dist");
 const PORT = Number(process.env.PORT || 8790);
 const LLM_BASE = (process.env.LLM_BASE || "https://furian-1.tailb2c0b0.ts.net").replace(/\/+$/, "");
+// Maximum timeout for ALL requests (LLM + ComfyUI + probes): 30 min.
+const REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 
 // ---------------------------------------------------------------- resources
 // User-uploaded images/videos library (the Resource page). Files live in
@@ -2348,7 +2454,7 @@ async function llmModelId() {
   if (!base) return null;
   try {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 8000);
+    const t = setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS);
     const r = await fetch(`${base}/v1/models`, { signal: ctl.signal });
     clearTimeout(t);
     const d = await r.json().catch(() => null);
@@ -2375,7 +2481,7 @@ async function captionImageWithVision(dataUrl) {
     }
   }
   const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), 180000);
+  const t = setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS);
   try {
     const r = await fetch(`${base}/v1/chat/completions`, {
       method: "POST",
@@ -2397,7 +2503,7 @@ async function captionImageWithVision(dataUrl) {
           },
         ],
         temperature: 0.4,
-        max_tokens: 500,
+        max_tokens: 50000,
         chat_template_kwargs: { enable_thinking: false },
       }),
     });
@@ -2698,9 +2804,10 @@ function startRun(scenario, opts = {}) {
   } else {
     if (stitch) argv.push("--stitch");
     if (opts.noDialogue) argv.push("--no-dialogue");
-    // Connected movie: beat N>1 starts from beat N-1's last frame
-    // (devotional Shiv/Ram/Krishna docs). Devotional boards also set
-    // cfg.chainContinuity, so the flag is only needed to force it on.
+    // Connected movie: beat N>1 carries "seamless continuation" TEXT
+    // wording (independent pixels — every clip still animates its own
+    // keyframe). Devotional boards also set cfg.chainContinuity, so the
+    // flag is only needed to force the wording on.
     if (opts.chain) argv.push("--chain");
     if (regen) {
       argv.push("--regen", regen.kind, ...(regen.index ? [String(regen.index)] : []));
@@ -2776,10 +2883,15 @@ async function comfyStatus() {
   const base = (process.env.COMFY_BASE || "").replace(/\/+$/, "");
   if (!base) return { up: false, error: "COMFY_BASE not set" };
   try {
-    const [stats, queue] = await Promise.all([
-      fetch(`${base}/system_stats`).then((r) => r.json()),
-      fetch(`${base}/queue`).then((r) => r.json()),
-    ]);
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS);
+    let stats, queue;
+    try {
+      [stats, queue] = await Promise.all([
+        fetch(`${base}/system_stats`, { signal: ctl.signal }).then((r) => r.json()),
+        fetch(`${base}/queue`, { signal: ctl.signal }).then((r) => r.json()),
+      ]);
+    } finally { clearTimeout(t); }
     return { up: true, stats, queue };
   } catch (e) {
     return { up: false, error: String(e.message || e) };
@@ -2792,7 +2904,7 @@ async function llmStatus() {
   if (!base) return { up: false, error: "LLM_BASE not set" };
   try {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), 4000);
+    const t = setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS);
     let r;
     try { r = await fetch(`${base}/v1/models`, { signal: ctl.signal }); }
     finally { clearTimeout(t); }
@@ -3188,17 +3300,23 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   const brief = await buildCraftPreview({ description, masterPrompt, topic, requirements, presetId, presetRules, rulesDisabled, target });
   const { idea, details, noRules, preset, customRules, system } = brief;
   const user = String(userPrompt ?? "").trim() ? String(userPrompt).trim() : brief.user;
-  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "local",
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-      temperature: 0.7,
-      max_tokens: 8000,
-      chat_template_kwargs: { enable_thinking: false },
-    }),
-  });
+  const craftCtl = new AbortController();
+  const craftT = setTimeout(() => craftCtl.abort(), REQUEST_TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+      method: "POST",
+      signal: craftCtl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local",
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        temperature: 0.7,
+        max_tokens: 80000,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+  } finally { clearTimeout(craftT); }
   if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
   let text = d.choices?.[0]?.message?.content || "";
@@ -3291,17 +3409,23 @@ ${JSON.stringify({
   }, null, 2)}
 
 Write the next beat (beat ${existing.length + 1}).`;
-  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "local",
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-      temperature: 0.7,
-      max_tokens: 2000,
-      chat_template_kwargs: { enable_thinking: false },
-    }),
-  });
+  const beatCtl = new AbortController();
+  const beatT = setTimeout(() => beatCtl.abort(), REQUEST_TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+      method: "POST",
+      signal: beatCtl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local",
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        temperature: 0.7,
+        max_tokens: 20000,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+  } finally { clearTimeout(beatT); }
   if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
   let text = d.choices?.[0]?.message?.content || "";
@@ -3397,17 +3521,23 @@ ${JSON.stringify({
   }, null, 2)}
 
 Write the publishing metadata.`;
-  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "local",
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-      temperature: 0.7,
-      max_tokens: 1500,
-      chat_template_kwargs: { enable_thinking: false },
-    }),
-  });
+  const metaCtl = new AbortController();
+  const metaT = setTimeout(() => metaCtl.abort(), REQUEST_TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+      method: "POST",
+      signal: metaCtl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local",
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        temperature: 0.7,
+        max_tokens: 50000,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+  } finally { clearTimeout(metaT); }
   if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
   let text = d.choices?.[0]?.message?.content || "";
@@ -3476,17 +3606,23 @@ async function craftMasterPrompt({ description = "", presetId, presetRules } = {
       : []),
     "Write the Master Prompt (cinematic key-visual of the main character).",
   ].join("\n\n");
-  const r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "local",
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-      temperature: 0.7,
-      max_tokens: 500,
-      chat_template_kwargs: { enable_thinking: false },
-    }),
-  });
+  const masterCtl = new AbortController();
+  const masterT = setTimeout(() => masterCtl.abort(), REQUEST_TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
+      method: "POST",
+      signal: masterCtl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "local",
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        temperature: 0.7,
+        max_tokens: 50000,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+  } finally { clearTimeout(masterT); }
   if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
   let text = String(d.choices?.[0]?.message?.content || "").trim();
@@ -4735,7 +4871,7 @@ const server = http.createServer(async (req, res) => {
     // Shared LLM call reusing the craft-endpoint convention (model "local",
     // thinking disabled). Parse failures save the raw response for debugging
     // and throw a useful error — nothing is silently discarded.
-    async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = 300000, rawTag = null }) {
+    async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null }) {
       const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
       if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
       const ctl = new AbortController();
@@ -4788,12 +4924,56 @@ const server = http.createServer(async (req, res) => {
       pgUpsertDirectorBoard(board).catch((e) => console.warn("[pg] director board mirror failed:", e.message));
       return board;
     };
+    // Connected-OFF scrub: a normalized scene (or shot) on a board with
+    // chainContinuity !== true must carry no handoff state — clear the
+    // continuity fields and strip any stored handoff sentences from the
+    // prompts so Approve generates independent shots. Mutates in place.
+    const scrubSceneContinuity = (s) => {
+      if (!s || typeof s !== "object") return s;
+      // Exact removal first: the stored field value is known, and its clauses
+      // may contain commas that the generic sentence-stripper cannot span.
+      const cont = typeof s.continuity_from_previous_scene === "string"
+        ? s.continuity_from_previous_scene.trim() : "";
+      if (cont) {
+        const needle = `continuing from previous shot: ${cont}`;
+        if (typeof s.image_prompt === "string") s.image_prompt = s.image_prompt.split(needle).join("");
+        if (typeof s.video_prompt === "string") s.video_prompt = s.video_prompt.split(needle).join("");
+      }
+      s.continuity_from_previous_scene = "";
+      s.transition_to_next_scene = "";
+      s.continuity_required = false;
+      s.reference_source = "NONE";
+      s.continuity_refs = [];
+      // Conservative strip here: exact + short-clause removal preserve the
+      // saved prompt's trailing style/context tokens. Any paraphrased
+      // remainder is neutralized at approve time (aggressive strip +
+      // re-grounding in boardToScenario).
+      const conservative = { aggressive: false };
+      if (typeof s.image_prompt === "string") s.image_prompt = stripContinuityText(s.image_prompt, conservative);
+      if (typeof s.video_prompt === "string") s.video_prompt = stripContinuityText(s.video_prompt, conservative);
+      if (Array.isArray(s.shots)) {
+        for (const sh of s.shots) {
+          if (!sh || typeof sh !== "object") continue;
+          sh.continuity_required = false;
+          sh.reference_source = "NONE";
+          sh.continuity_refs = [];
+          if (typeof sh.image_prompt === "string") sh.image_prompt = stripContinuityText(sh.image_prompt, conservative);
+          if (typeof sh.video_prompt === "string") sh.video_prompt = stripContinuityText(sh.video_prompt, conservative);
+        }
+      }
+      return s;
+    };
     const directorBoardMeta = (b) => ({
       id: b.id,
       title: b.input?.title ?? b.id,
       status: b.status,
       scenes: Array.isArray(b.scenes) ? b.scenes.length : 0,
       sceneCount: b.sceneCount ?? 0,
+      // Timed shots planned so far (mirrors the shot_count scalar; computed
+      // here from the board JSON the list endpoint already reads).
+      shots: Array.isArray(b.scenes)
+        ? b.scenes.reduce((a, s) => a + Math.max(1, Array.isArray(s.shots) ? s.shots.length : 0), 0)
+        : 0,
       scenarioName: b.scenarioName ?? null,
       // Approved storyboard -> generated project link (integer projects id).
       project_id: Number.isInteger(b.project_id) ? b.project_id : null,
@@ -4862,6 +5042,14 @@ const server = http.createServer(async (req, res) => {
         sceneSeconds,
         aspectRatio,
         instructions: String(b.instructions || "").trim(),
+        // Silent film opt-out (default ON = voiced): when false the scene
+        // batches emit dialogue [] and approve strips any stray lines.
+        includeDialogue: b.includeDialogue !== false,
+        // Connected movie (default ON): scenes continue the previous shot's
+        // end state via TEXT continuity in the prompts
+        // (cfg.chainContinuity -> runSequence chain wording). Generation
+        // pixels always stay per-scene (own keyframe per clip).
+        chainContinuity: b.chainContinuity !== false,
         ...(song ? { song } : {}),
       };
     }
@@ -4975,7 +5163,7 @@ const server = http.createServer(async (req, res) => {
         user: buildBiblePrompt(input),
         maxTokens: 8000,
         temperature: 0.7,
-        timeoutMs: 300000,
+        timeoutMs: REQUEST_TIMEOUT_MS,
         rawTag: `_raw_${slug(input.title)}_bible.log`,
       });
       const blueprint = normalizeBlueprint(raw);
@@ -5031,6 +5219,19 @@ const server = http.createServer(async (req, res) => {
           if (patch.input && typeof patch.input === "object") {
             const nt = String(patch.input.title || "").trim().slice(0, 120);
             if (nt) board.input.title = nt;
+            // Board-level toggles from the storyboard header (dialogues on/off,
+            // connected scenes on/off). Old boards without the keys gain them
+            // here so approve/prompt behaviour stays explicit.
+            if (typeof patch.input.includeDialogue === "boolean")
+              board.input.includeDialogue = patch.input.includeDialogue;
+            if (typeof patch.input.chainContinuity === "boolean")
+              board.input.chainContinuity = patch.input.chainContinuity;
+            // Turning Connected OFF takes effect immediately: scrub handoff
+            // state from already-planned scenes so Approve generates
+            // independent shots without requiring a per-scene regenerate.
+            if (patch.input.chainContinuity === false && Array.isArray(board.scenes)) {
+              for (const s of board.scenes) scrubSceneContinuity(s);
+            }
           }
           // Full-array merges for bible/scene edits from the storyboard UI.
           // Deleted scenes renumber the plan and shrink its total.
@@ -5052,6 +5253,11 @@ const server = http.createServer(async (req, res) => {
           }
           if (Array.isArray(patch.scenes)) {
             board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds));
+            // Scene edits saved onto an independent-shots board stay
+            // independent even if the edited text reintroduces handoffs.
+            if (board.input.chainContinuity !== true) {
+              for (const s of board.scenes) scrubSceneContinuity(s);
+            }
             board.sceneCount = board.scenes.length;
           }
           board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
@@ -5074,31 +5280,133 @@ const server = http.createServer(async (req, res) => {
         // was queued already advanced scenes.length — continuing from the
         // fresh count skips duplicates instead of re-planning the same range.
         const done = board.scenes.length;
-        const remaining = board.sceneCount - done;
-        if (remaining <= 0) return json(res, 200, board);
+        // Duration-driven planning: the timeline (not the scene cap) is the
+        // source of truth. Close enough counts as covered so a 299.5s plan
+        // never spawns another scene for half a second.
+        const songTarget = board.input && board.input.song && board.input.song.durationSeconds
+          ? Math.round(Number(board.input.song.durationSeconds)) : null;
+        const planTarget = songTarget || Math.round(Number(board.input.targetSeconds)) || 0;
+        const prog = planProgress(board.scenes, planTarget);
+        const avgScene = Math.max(1, Number(board.input.sceneSeconds) || 3);
+        const DONE_TOL = Math.max(1, avgScene / 2);
+        const timeCovered = planTarget > 0 && (planTarget - prog.plannedSeconds) <= DONE_TOL;
+        let remaining = board.sceneCount - done;
+        if (timeCovered) {
+          board.sceneCount = board.scenes.length;
+          board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
+          board.error = null;
+          return json(res, 200, writeDirectorBoard(board));
+        }
+        if (remaining <= 0) {
+          if (!board.scenes.length) return json(res, 200, board);
+          // Recovery: finalized early by a premature complete=true (now
+          // verified by verifyPlanComplete) while still owing timeline —
+          // extend the cap from the remaining seconds instead of dead-ending
+          // at x/x ready.
+          const owed = Math.max(avgScene, planTarget > 0 ? planTarget - prog.plannedSeconds : avgScene);
+          board.sceneCount = board.scenes.length + sceneCountFor(owed, avgScene);
+          remaining = board.sceneCount - done;
+          console.warn(`[director:${id}] reopened early-finalized plan (${done} scenes, ${prog.plannedSeconds}s/${planTarget || "?"}s) — cap extended to ${board.sceneCount}`);
+          if (remaining <= 0) return json(res, 200, board);
+        }
         const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
+        // This batch's time slice: cover ~n average-scenes worth of story,
+        // never budgeting far past the remaining timeline.
+        const remainingSecs = planTarget > 0 ? Math.max(0, planTarget - prog.plannedSeconds) : n * avgScene;
+        const budget = planTarget > 0
+          ? Math.max(avgScene, Math.min(n * avgScene, remainingSecs + avgScene / 2))
+          : n * avgScene;
         const beats = (board.blueprint.beats || []).slice();
         const prevScene = done > 0 ? board.scenes[done - 1] : null;
         // Prior spoken lines so the prompt can forbid verbatim repeats (late
         // batches used to re-plan the opening and copy scene-1 dialogue).
+        // Multi-shot scenes speak per shot, so shot lines count too.
         const priorDialogue = [];
         for (const s of board.scenes) {
           for (const d of (s.dialogue || [])) {
             if (d && d.line) priorDialogue.push(String(d.line));
           }
+          for (const sh of (s.shots || [])) {
+            for (const d of (sh.dialogue || [])) {
+              if (d && d.line) priorDialogue.push(String(d.line));
+            }
+          }
         }
-        const raw = await llmChatJson({
-          system: DIRECTOR_SYSTEM,
-          user: buildScenesPrompt({
-            input: board.input, blueprint: board.blueprint, beats, prevScene,
-            startNumber: done + 1, count: n, styleLock: board.styleLock,
-            totalScenes: board.sceneCount, priorDialogue,
-          }),
-          maxTokens: 16000,
-          temperature: 0.5,
-          timeoutMs: 600000,
-          rawTag: `_raw_${id}_scenes_${done + 1}.log`,
-        });
+        // Line-by-line context: timed line list so the scene batch analyzes
+        // its source lines in order. Songs use the lyric timing; stories get
+        // the same word-proportional estimate over their story lines. The
+        // batch receives only the lines overlapping its time window.
+        let lyricTiming = [];
+        let lineRange = [];
+        try {
+          const song = board.input && board.input.song;
+          if (song && song.hasLyrics !== false) {
+            const parsed = parseLyricLines(board.input.story);
+            if (parsed.length) {
+              // Prefer the bible's own line analysis when present; fall back
+              // to the parsed lines so timing always exists.
+              const bibleLines = Array.isArray(board.blueprint.lyric_lines) && board.blueprint.lyric_lines.length
+                ? board.blueprint.lyric_lines
+                : parsed;
+              lyricTiming = estimateLyricTiming(
+                bibleLines,
+                song.durationSeconds || board.input.targetSeconds);
+            }
+          } else if (planTarget > 0) {
+            const storyLines = parseLyricLines(board.input.story || "");
+            if (storyLines.length) {
+              lyricTiming = estimateLyricTiming(storyLines, planTarget);
+            }
+          }
+          if (lyricTiming.length && planTarget > 0) {
+            lineRange = linesForTimeWindow(lyricTiming, prog.plannedSeconds, prog.plannedSeconds + budget);
+            if (!lineRange.length) lineRange = lyricTiming.slice();
+          }
+        } catch { /* line timing is best-effort; the batch runs without it */ }
+        const scenesRawTag = `_raw_${id}_scenes_${done + 1}.log`;
+        // Huge batches can get cut off mid-array (model hits max_tokens /
+        // context). Salvage path: bind every COMPLETED scene from the raw
+        // text and continue the plan from there, instead of 500ing with
+        // zero progress after minutes of generation.
+        let raw = null;
+        let salvageNote = null;
+        // Dynamic planning: the AI decides scene boundaries, counts and
+        // durations inside this batch's time budget and reports complete=true
+        // when the story ends (salvage path never counts as complete).
+        let batchComplete = false;
+        try {
+          raw = await llmChatJson({
+            system: DIRECTOR_SYSTEM,
+            user: buildScenesPrompt({
+              input: board.input, blueprint: board.blueprint, beats, prevScene,
+              startNumber: done + 1, count: n, styleLock: board.styleLock,
+              totalScenes: board.sceneCount, priorDialogue,
+              lyricLines: Array.isArray(board.blueprint.lyric_lines) ? board.blueprint.lyric_lines : [],
+              lyricTiming,
+              lineRange, budgetSeconds: budget,
+              plannedSeconds: prog.plannedSeconds, targetSeconds: planTarget || null,
+              totalLines: lyricTiming.length || null,
+            }),
+            maxTokens: 16000,
+            temperature: 0.5,
+            timeoutMs: REQUEST_TIMEOUT_MS,
+            rawTag: scenesRawTag,
+          });
+          batchComplete = raw && raw.complete === true;
+        } catch (e) {
+          const msg = String((e && e.message) || "");
+          let salvaged = [];
+          if (/truncated|unbalanced|parse failed|no JSON/i.test(msg)) {
+            try {
+              const rawText = fs.readFileSync(path.join(DIRECTOR, scenesRawTag), "utf8");
+              salvaged = extractPartialScenes(rawText);
+            } catch { /* raw re-read is best-effort */ }
+          }
+          if (!salvaged.length) throw e;
+          console.warn(`[director:${id}] truncated batch — salvaged ${salvaged.length}/${n} scenes, resume continues from scene ${done + salvaged.length + 1}`);
+          raw = { scenes: salvaged };
+          salvageNote = `Partial batch: kept ${salvaged.length} of ${n} scenes (the AI output was cut off) — press Continue to plan the rest.`;
+        }
         const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
         if (!got.length) throw new Error("director returned no scenes — try again");
       // Dedupe guard: the LLM sometimes repeats an earlier line verbatim
@@ -5109,6 +5417,20 @@ const server = http.createServer(async (req, res) => {
       const seen = new Set(priorDialogue.map((l) => String(l || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim()).filter(Boolean));
       for (let i = 0; i < got.length && board.scenes.length < board.sceneCount; i++) {
         const normed = normalizeScene(got[i], board.scenes.length + 1, board.input.sceneSeconds);
+        // Silent-film board: the model sometimes still emits lines despite the
+        // DISABLED instruction — strip them server-side so Generate stays
+        // silent (no voice, no lip-sync, no clip growth).
+        if (board.input.includeDialogue === false) normed.dialogue = [];
+        // Independent-shots board: the model sometimes still emits handoff
+        // fields despite the INDEPENDENT instruction — scrub them server-side
+        // so Approve generates fresh shots instead of continuations.
+        if (board.input.chainContinuity !== true) scrubSceneContinuity(normed);
+        // The batch schema omits lyric_text to save tokens — join it back
+        // from the timed line list so the UI can show Line -> shots.
+        if (normed.lyric_line_id && !normed.lyric_text && lyricTiming.length) {
+          const line = lyricTiming.find((l) => Number(l.lyric_line_id) === Number(normed.lyric_line_id));
+          if (line && line.lyric_text) normed.lyric_text = String(line.lyric_text);
+        }
         if (Array.isArray(normed.dialogue) && normed.dialogue.length) {
           const fresh = [];
           for (const d of normed.dialogue) {
@@ -5120,6 +5442,13 @@ const server = http.createServer(async (req, res) => {
                   if (pd && pd.line && sameLine(pd.line, d.line)) { dup = true; break; }
                 }
                 if (dup) break;
+                for (const psh of (s.shots || [])) {
+                  for (const pd of (psh.dialogue || [])) {
+                    if (pd && pd.line && sameLine(pd.line, d.line)) { dup = true; break; }
+                  }
+                  if (dup) break;
+                }
+                if (dup) break;
               }
             }
             if (dup) continue;
@@ -5127,6 +5456,44 @@ const server = http.createServer(async (req, res) => {
             if (key) seen.add(key);
           }
           normed.dialogue = normalizeDialogue(fresh);
+        }
+        // Multi-shot scenes: the same verbatim-repeat guard applies per
+        // shot, so a line planned in an earlier shot never echoes inside a
+        // later shot of the same batch.
+        if (Array.isArray(normed.shots)) {
+          for (const sh of normed.shots) {
+            if (!Array.isArray(sh.dialogue) || !sh.dialogue.length) continue;
+            // The batch schema omits lyric_text to save tokens — join it back
+            // from the timed line list, same as scene-level linkage below.
+            if (sh.lyric_line_id && !sh.lyric_text && lyricTiming.length) {
+              const line = lyricTiming.find((l) => Number(l.lyric_line_id) === Number(sh.lyric_line_id));
+              if (line && line.lyric_text) sh.lyric_text = String(line.lyric_text);
+            }
+            const fresh = [];
+            for (const d of sh.dialogue) {
+              const key = String(d.line || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim();
+              let dup = key && seen.has(key);
+              if (!dup && key) {
+                for (const s of board.scenes) {
+                  for (const pd of (s.dialogue || [])) {
+                    if (pd && pd.line && sameLine(pd.line, d.line)) { dup = true; break; }
+                  }
+                  if (dup) break;
+                  for (const psh of (s.shots || [])) {
+                    for (const pd of (psh.dialogue || [])) {
+                      if (pd && pd.line && sameLine(pd.line, d.line)) { dup = true; break; }
+                    }
+                    if (dup) break;
+                  }
+                  if (dup) break;
+                }
+              }
+              if (dup) continue;
+              fresh.push(d);
+              if (key) seen.add(key);
+            }
+            sh.dialogue = normalizeDialogue(fresh);
+          }
         }
           board.scenes.push(normed);
         }
@@ -5139,8 +5506,43 @@ const server = http.createServer(async (req, res) => {
           return true;
         });
         board.scenes.forEach((s, i) => { s.scene_number = i + 1; });
+        // Lyric-plan self-check (§21): warnings only, never blocks the batch.
+        try {
+          const lines = Array.isArray(board.blueprint.lyric_lines) && board.blueprint.lyric_lines.length
+            ? board.blueprint.lyric_lines
+            : (board.input.song ? parseLyricLines(board.input.story) : []);
+          const issues = validateLyricPlan(
+            board.scenes, lines,
+            board.input.song ? (board.input.song.durationSeconds || board.input.targetSeconds) : null);
+          for (const issue of issues.slice(0, 8)) console.warn(`[director:${id}] plan check: ${issue}`);
+        } catch { /* validation is best-effort */ }
+        // Duration-driven completion, VERIFIED: the AI's complete=true is
+        // only honored when the last source line is actually covered and the
+        // planned seconds reach the target (small models declare completion
+        // mid-story). The pure-timeline path uses the same DONE_TOL close-
+        // enough rule as the route top. Otherwise planning continues; the cap
+        // only shrinks to what was truly planned so the UI reads x/x.
+        const nowCovered = planTarget > 0 &&
+          (planTarget - planProgress(board.scenes, planTarget).plannedSeconds) <= DONE_TOL;
+        const completeOk = verifyPlanComplete(board.scenes, {
+          targetSeconds: planTarget, totalLines: lyricTiming.length, flag: batchComplete,
+        }) || nowCovered;
+        if (batchComplete && !completeOk) {
+          const cov = board.scenes.reduce((a, s) => {
+            const c = [Number(s.line_to), Number(s.lyric_line_id), Number(s.parent_line_id)]
+              .filter((v) => Number.isFinite(v) && v > 0);
+            return c.length ? Math.max(a, ...c) : a;
+          }, 0);
+          const plannedNow = planProgress(board.scenes, planTarget).plannedSeconds;
+          console.warn(`[director:${id}] premature complete=true ignored (covers line ${cov}/${lyricTiming.length || "?"} at ${plannedNow}s/${planTarget || "?"}s) — planning continues`);
+        }
+        if (completeOk && board.scenes.length) {
+          board.sceneCount = board.scenes.length;
+        }
         board.status = board.scenes.length >= board.sceneCount ? "ready" : "scenes-partial";
-        board.error = null;
+        // A salvaged partial batch keeps its note so the UI explains why the
+        // plan stopped short; clean batches clear any stale error.
+        board.error = salvageNote || null;
         return json(res, 200, writeDirectorBoard(board));
       } finally {
         directorPlanning.delete(id);
@@ -5164,7 +5566,7 @@ const server = http.createServer(async (req, res) => {
         user: buildAddEntryPrompt({ input: board.input, blueprint: board.blueprint, kind, hint }),
         maxTokens: 2000,
         temperature: 0.7,
-        timeoutMs: 300000,
+        timeoutMs: REQUEST_TIMEOUT_MS,
         rawTag: `_raw_${id}_add_${kind}.log`,
       });
       const node = raw[kind] && typeof raw[kind] === "object" ? raw[kind] : raw;
@@ -5238,7 +5640,7 @@ const server = http.createServer(async (req, res) => {
         user: buildRegenEntryPrompt({ input: board.input, blueprint: board.blueprint, kind, entry: current }),
         maxTokens: 2000,
         temperature: 0.7,
-        timeoutMs: 300000,
+        timeoutMs: REQUEST_TIMEOUT_MS,
         rawTag: `_raw_${id}_regen_${kind}_${index}.log`,
       });
       const node = raw[kind] && typeof raw[kind] === "object" ? raw[kind] : raw;
@@ -5287,13 +5689,127 @@ const server = http.createServer(async (req, res) => {
         }),
         maxTokens: 4000,
         temperature: 0.6,
-        timeoutMs: 300000,
+        timeoutMs: REQUEST_TIMEOUT_MS,
         rawTag: `_raw_${id}_regen_${scene.scene_number}.log`,
       });
       const fresh = raw.scene && typeof raw.scene === "object" ? raw.scene : raw;
       board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds);
+      if (board.input.includeDialogue === false) board.scenes[index].dialogue = [];
+      if (board.input.chainContinuity !== true) scrubSceneContinuity(board.scenes[index]);
       board.error = null;
       return json(res, 200, writeDirectorBoard(board));
+    }
+    // Duplicate a board as a fresh version (copy characters, locations,
+    // objects, beats + scenes prompts exactly; drop the linked project so
+    // images/videos regenerate from scratch on approve). The new title is
+    // auto-versioned: "<base> v2", then v3, ... — computed as max+1 across
+    // the whole "<base>" family so re-copying v1 after v2 exists still
+    // yields v3, never a second v2.
+    if (p.match(/^\/api\/director\/boards\/[^\/]+\/duplicate$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      // DB-first read (file fallback) — mirrors GET /api/director/boards/:id.
+      let src = null;
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT board FROM director_boards WHERE board_id = $1", [id]);
+          if (r.rows[0]?.board) {
+            src = typeof r.rows[0].board === "string" ? JSON.parse(r.rows[0].board) : r.rows[0].board;
+          }
+        } catch (e) { console.warn("[pg] director board read failed:", e.message); }
+      }
+      if (!src) src = readDirectorBoard(id);
+      if (!src || !src.input) throw new Error("board not found");
+      const stripVersion = (t) => String(t || "").trim().replace(/\s+v\d+\s*$/i, "").trim();
+      const base = stripVersion(src.input.title || src.id) || "story";
+      // Collect every existing board title (DB + files) to find the family's
+      // max version. Base itself counts as v1.
+      const titles = [];
+      if (pgUp) {
+        try {
+          const r = await pgPool.query("SELECT board FROM director_boards");
+          for (const row of r.rows) {
+            try {
+              const b = typeof row.board === "string" ? JSON.parse(row.board) : row.board;
+              const t = b?.input?.title;
+              if (t) titles.push(String(t));
+            } catch { /* skip corrupt rows */ }
+          }
+        } catch (e) { console.warn("[pg] director boards list failed:", e.message); }
+      }
+      try {
+        fs.mkdirSync(DIRECTOR, { recursive: true });
+        for (const f of fs.readdirSync(DIRECTOR).filter((f) => f.endsWith(".json") && !f.startsWith("_raw"))) {
+          try {
+            const b = JSON.parse(fs.readFileSync(path.join(DIRECTOR, f), "utf8"));
+            const t = b?.input?.title;
+            if (t && !titles.includes(String(t))) titles.push(String(t));
+          } catch { /* skip corrupt board files */ }
+        }
+      } catch { /* titles stay DB-only */ }
+      const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const verRe = new RegExp(`^${esc(base)}\\s+v(\\d+)\\s*$`, "i");
+      let max = 0;
+      for (const t of titles) {
+        const s = String(t).trim();
+        if (s.toLowerCase() === base.toLowerCase()) max = Math.max(max, 1);
+        else {
+          const m = s.match(verRe);
+          if (m) max = Math.max(max, Number(m[1]) || 0);
+        }
+      }
+      let next = Math.max(2, max + 1);
+      const boardIdTaken = async (cid) => {
+        try {
+          if (fs.existsSync(directorBoardFile(cid))) return true;
+        } catch { /* ignore */ }
+        if (pgUp) {
+          try {
+            const r = await pgPool.query("SELECT 1 FROM director_boards WHERE board_id = $1", [cid]);
+            if (r.rows.length) return true;
+          } catch { /* treat as free */ }
+        }
+        return false;
+      };
+      let newTitle = `${base} v${next}`.slice(0, 120);
+      let newId = slug(newTitle) || `story_${Date.now().toString(36)}`;
+      // Id collision guard (e.g. a manually created same-slug board): bump
+      // the version until both the title and the id are free.
+      // eslint-disable-next-line no-await-in-loop
+      while (titles.some((t) => String(t).toLowerCase() === newTitle.toLowerCase()) || await boardIdTaken(newId)) {
+        next += 1;
+        newTitle = `${base} v${next}`.slice(0, 120);
+        newId = slug(newTitle) || `story_${Date.now().toString(36)}`;
+        if (next > max + 100) throw new Error("could not find a free versioned title");
+      }
+      const now = new Date().toISOString();
+      const clone = (v) => JSON.parse(JSON.stringify(v ?? null));
+      const scenes = Array.isArray(src.scenes) ? clone(src.scenes) : [];
+      const nb = {
+        id: newId,
+        input: { ...clone(src.input), title: newTitle },
+        status: scenes.length >= (src.sceneCount || 0) && (src.sceneCount || 0) > 0
+          ? "ready"
+          : scenes.length ? "scenes-partial" : "analyzed",
+        blueprint: clone(src.blueprint),
+        scenes,
+        sceneCount: src.sceneCount || scenes.length,
+        styleLock: src.styleLock,
+        // Fresh version = no linked project: approving mints a NEW project
+        // (newTitle), so images/videos generate from scratch. Nothing binary
+        // is copied — boards only carry prompts; outputs/ stays untouched.
+        scenarioName: null,
+        project_id: null,
+        migratedScenes: 0,
+        error: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      // Preserve the exact planning config (scene length etc.) from the source.
+      if (nb.input && typeof nb.input === "object") {
+        if (src.input.sceneSeconds != null) nb.input.sceneSeconds = src.input.sceneSeconds;
+        if (src.input.targetSeconds != null) nb.input.targetSeconds = src.input.targetSeconds;
+      }
+      return json(res, 200, writeDirectorBoard(nb));
     }
     if (p.match(/^\/api\/director\/boards\/[^/]+\/approve$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
@@ -5492,7 +6008,7 @@ const server = http.createServer(async (req, res) => {
         const raw = await llmChatJson({
           system: DOCUMENTARY_DIRECTOR_SYSTEM,
           user: buildDocBiblePrompt(board.brief),
-          maxTokens: 8000, temperature: 0.7, timeoutMs: 300000,
+          maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
           rawTag: `_raw_doc_${id}_bible.log`,
         });
         blueprint = raw && typeof raw === "object" ? raw : null;
@@ -5513,7 +6029,7 @@ const server = http.createServer(async (req, res) => {
             const raw = await llmChatJson({
               system: DOCUMENTARY_DIRECTOR_SYSTEM,
               user: buildDocShotsPrompt({ brief: board.brief, board, chapter: c, startGlobal: global }),
-              maxTokens: 8000, temperature: 0.7, timeoutMs: 300000,
+              maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
               rawTag: `_raw_doc_${id}_ch${c.chapter_number}.log`,
             });
             const seqs = raw && Array.isArray(raw.sequences) ? raw.sequences : null;
@@ -5904,7 +6420,7 @@ const server = http.createServer(async (req, res) => {
           }),
           maxTokens: 300,
           temperature: 0.2,
-          timeoutMs: 60000,
+          timeoutMs: REQUEST_TIMEOUT_MS,
         });
         const dur = Math.round(Math.min(300, Math.max(30, Number(raw.duration_seconds) || heuristic())));
         const out = { duration: Math.round(dur / 5) * 5, source: "llm" };
@@ -5945,7 +6461,7 @@ const server = http.createServer(async (req, res) => {
           }),
           maxTokens: 300,
           temperature: 0.2,
-          timeoutMs: 60000,
+          timeoutMs: REQUEST_TIMEOUT_MS,
         });
         const dur = Math.round(Math.min(600, Math.max(15, Number(raw.duration_seconds) || heuristic())));
         const out = { duration: Math.round(dur / 5) * 5, source: "llm" };
@@ -6367,6 +6883,12 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith("/api/")) return json(res, 404, { error: "unknown route" });
     serveStatic(req, res, p === "/" ? "/index.html" : p);
   } catch (e) {
+    // Log the real failure server-side (method + route + message + stack) so
+    // a 500 is always diagnosable from the backend terminal — previously only
+    // the message reached the client and nothing was logged.
+    try {
+      console.error(`[api] ${req.method} ${p} failed: ${(e && e.message) || e}${e && e.stack ? `\n${e.stack}` : ""}`);
+    } catch { /* logging must never break the error response */ }
     json(res, 500, { error: String(e.message || e) });
   }
 });

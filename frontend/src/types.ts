@@ -5,7 +5,9 @@ export interface Beat {
   // Per-beat clip length (dialogue beats grow to fit their voice audio —
   // see beatTargetDuration/estimateDialogueDuration in lib/tts.mjs; the
   // system analyzes dialogue text + pitch + expression to size each clip).
-  // Absent = scenario.duration.
+  // Absent = scenario.duration. For Director-approved projects this is the
+  // individual SHOT's duration_seconds from the board — each clip is
+  // generated at exactly this length (never the project default).
   duration?: number;
   // Scene delivery inherited from the Director board (shapes TTS prosody +
   // lip-sync staging when a line carries no explicit expression).
@@ -15,6 +17,29 @@ export interface Beat {
   // Spoken lines for this beat (voiced per character via Edge-TTS Hindi,
   // lip-synced via Easy-Wav2Lip). Absent/empty = silent beat.
   dialogue?: { speaker: string; line: string; expression?: string; emotion?: string; pitch?: string }[];
+  // Director scene/shot linkage (stamped by boardToScenario in
+  // lib/director.mjs when a multi-shot scene flattens to one beat per shot).
+  // The Projects workspace groups beats by scene_number and renders each
+  // shot with its own Director timing (start_time/end_time/duration) — the
+  // clip for the beat is generated at exactly that shot length. Absent =
+  // legacy/manual beat (renders as its own single-shot scene).
+  scene_number?: number | null;
+  shot_id?: string | null;
+  shot_number?: number | null;
+  start_time?: number | null;
+  end_time?: number | null;
+  // Scene location id (informational for the workspace UI/timeline).
+  location?: string;
+  // Song-absolute timing + lyric linkage for music-video boards
+  // (informational for the workspace UI/timeline).
+  song_start_time?: number | null;
+  song_end_time?: number | null;
+  lyric_line_id?: number | null;
+  parent_line_id?: number | null;
+  lyric_text?: string;
+  lyric_segment?: string;
+  semantic_meaning?: string;
+  visual_event?: string;
 }
 
 export interface Scenario {

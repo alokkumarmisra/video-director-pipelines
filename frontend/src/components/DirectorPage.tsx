@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   directorAddEntry, directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
-  directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario,
-  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorScene, type DirectorSong,
+  directorDuplicateBoard, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario,
+  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorScene, type DirectorShot, type DirectorSong,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconFolder, IconPanel, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
 import Collapse from "./Collapse";
+import DirectorGeneration from "./DirectorGeneration";
 import {
   emptyProgress, formatDuration, loadDirectorPace, recordDirectorPaceDuration,
   type GenerationProgress,
@@ -34,6 +35,73 @@ const SCENE_DURS = [
 const ASPECTS = ["16:9", "9:16", "1:1"];
 
 const str = (v: unknown): string => (v == null ? "" : String(v));
+
+// Shot timeline formatting: 1-decimal seconds ("1.4s"), ranges as "0–1.4s".
+const fmtT = (v: unknown): string => {
+  const n = Number(v);
+  return Number.isFinite(n) ? `${Math.round(n * 10) / 10}s` : "—";
+};
+const fmtRange = (a: unknown, b: unknown): string => `${fmtT(a)}–${fmtT(b)}`;
+// Timed shots of a scene (multi-shot scenes); [] = legacy single-image scene.
+const sceneShots = (s: DirectorScene): DirectorShot[] =>
+  (Array.isArray(s.shots) ? s.shots : []) as DirectorShot[];
+// Total generation beats a board flattens to (shots each render one clip).
+const boardBeats = (scenes: DirectorScene[]): number =>
+  scenes.reduce((a, s) => a + Math.max(1, sceneShots(s).length), 0);
+// Planned seconds across scenes (1-decimal), vs the board's time target.
+const boardPlannedSeconds = (scenes: DirectorScene[]): number =>
+  Math.round(scenes.reduce((a, s) => a + (Number(s.duration_seconds) || 0), 0) * 10) / 10;
+// Numbered source lines (story lines or lyric lines) for coverage text.
+const sourceLinesOf = (board: DirectorBoard | null): string[] => {
+  if (!board) return [];
+  const bp = board.blueprint as unknown as { lyric_lines?: { lyric_text?: unknown }[] } | null;
+  const song = board.input.song;
+  if (song && song.hasLyrics !== false && Array.isArray(bp?.lyric_lines) && bp.lyric_lines.length) {
+    return bp.lyric_lines.map((l) => str(l.lyric_text)).filter(Boolean);
+  }
+  return str(board.input.story).split("\n")
+    .map((l) => l.trim()).filter((l) => l && !/^\[.*\]$/.test(l));
+};
+// Human-readable source coverage for a scene box: the lyric/story lines it
+// covers ("L2–3: …"), falling back to the lyric text or story beat.
+const sceneCoverage = (s: DirectorScene, lines: string[]): string | null => {
+  if (str(s.lyric_text)) return `\u201c${str(s.lyric_text).slice(0, 120)}\u201d`;
+  const a = Number(s.line_from);
+  const b = Number(s.line_to);
+  if (lines.length && Number.isFinite(a) && a > 0) {
+    const from = Math.max(1, Math.round(a));
+    const to = Math.max(from, Number.isFinite(b) && b > 0 ? Math.round(b) : from);
+    const slice = lines.slice(from - 1, to).filter(Boolean);
+    if (slice.length) {
+      const label = to > from ? `L${from}\u2013${to}` : `L${from}`;
+      return `${label}: \u201c${slice.join(" / ").slice(0, 140)}\u201d`;
+    }
+  }
+  const beat = str(s.story_beat);
+  return beat ? beat.slice(0, 140) : null;
+};
+
+// "speaker: line" per line (optional "(expression)" after the speaker) —
+// shared by scene + per-shot dialogue editors; the clip grows to fit voices.
+const parseDialogueLines = (text: string): { speaker: string; line: string; expression?: string }[] =>
+  text.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const c = l.indexOf(":");
+    if (c <= 0) return { speaker: "", line: l };
+    const head = l.slice(0, c).trim();
+    const line = l.slice(c + 1).trim();
+    const m = head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    return m
+      ? { speaker: m[1].trim(), expression: m[2].trim(), line }
+      : { speaker: head, line };
+  }).filter((d) => d.line);
+const formatDialogueLines = (dlg: unknown): string =>
+  (Array.isArray(dlg) ? dlg.map((d) => {
+    const sp = String((d as { speaker?: unknown }).speaker || "").trim();
+    const ln = String((d as { line?: unknown }).line || "").trim();
+    const ex = String((d as { expression?: unknown }).expression || "").trim();
+    const head = sp && ex ? `${sp} (${ex})` : sp;
+    return head ? `${head}: ${ln}` : ln;
+  }).filter(Boolean).join("\n") : "");
 
 // Local fallback for story target duration (mirrors the server heuristic):
 // ~0.45s per word + 1.2s per line + 20s pad, clamped 30–600s, rounded to 5s.
@@ -127,6 +195,11 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [sceneCustom, setSceneCustom] = useState("4");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [instructions, setInstructions] = useState("");
+  // Dialogue opt-out (voice + lip-sync) and connected-scenes chaining.
+  // Both default ON: voiced, visually continuous movies. Uncheck dialogues
+  // for a silent film; uncheck connected for independent per-scene shots.
+  const [includeDialogue, setIncludeDialogue] = useState(true);
+  const [chainContinuity, setChainContinuity] = useState(true);
   // Boards.
   const [boards, setBoards] = useState<DirectorBoardMeta[]>([]);
   const [board, setBoard] = useState<DirectorBoard | null>(null);
@@ -162,7 +235,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   // Scene Details/Edit popup: one modal per scene (mode details = full
   // breakdown, mode edit = edit form). Cards stay compact; the separate
   // details section below the grid is replaced by this popup.
-  const [sceneModal, setSceneModal] = useState<{ index: number; mode: "details" | "edit" } | null>(null);
+  const [sceneModal, setSceneModal] = useState<{ index: number; mode: "details" | "edit"; shot?: number | null } | null>(null);
   const [sceneDraft, setSceneDraft] = useState<Partial<DirectorScene>>({});
   const [dialogueDraft, setDialogueDraft] = useState("");
   const [regenScene, setRegenScene] = useState<number | null>(null);
@@ -291,7 +364,10 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     setError("");
     setStoppedNote(null);
     try {
-      setBoard(await directorBoard(id));
+      const b = await directorBoard(id);
+      setBoard(b);
+      // Surface a server-side batch note (e.g. salvaged partial batch).
+      if (b.error && b.scenes.length < b.sceneCount) setStoppedNote(b.error);
       setSelectedScene(0);
       setEditingScene(null);
       setSceneModal(null);
@@ -312,6 +388,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       genreCustom: genre === "Custom" ? genreCustom.trim() : "",
       visualStyle, styleCustom: visualStyle === "Custom" ? styleCustom.trim() : "",
       targetSeconds, sceneSeconds, aspectRatio, instructions: instructions.trim(),
+      includeDialogue, chainContinuity,
       ...(mode === "song" && song
         ? { song: { ...song, hasLyrics } }
         : {}),
@@ -365,7 +442,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       // scenes the server already saved while we were away.
       let b = await directorBoard(board.id).catch(() => board);
       setBoard(b);
-      while (b.scenes.length < b.sceneCount) {
+      // Recovery pass: an early-finalized board (scenes == sceneCount but the
+      // timeline still owes seconds) gets one forced server call, which
+      // reopens it by extending the cap — the normal loop then paces the rest.
+      const bTarget = Number(b.input.song?.durationSeconds ?? b.input.targetSeconds);
+      const bTol = Math.max(1, (Number(b.input.sceneSeconds) || 3) / 2);
+      let forceOne = Number.isFinite(bTarget) && bTarget > 0 &&
+        b.scenes.length >= b.sceneCount &&
+        (bTarget - boardPlannedSeconds(b.scenes)) > bTol;
+      while (b.scenes.length < b.sceneCount || forceOne) {
+        forceOne = false;
         if (cancelRef.current) break;
         setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 12)} of ${b.sceneCount}`);
         setGeneratingRange({ from: b.scenes.length + 1, to: Math.min(b.sceneCount, b.scenes.length + 12) });
@@ -403,8 +489,17 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         }
         setBoard(b);
       }
-      if (cancelRef.current && b.scenes.length < b.sceneCount) {
-        setStoppedNote(`Stopped after scene ${b.scenes.length} of ${b.sceneCount} — press Continue to resume from scene ${b.scenes.length + 1}.`);
+      const endTarget = Number(b.input.song?.durationSeconds ?? b.input.targetSeconds);
+      const endOpen = Number.isFinite(endTarget) && endTarget > 0 &&
+        (endTarget - boardPlannedSeconds(b.scenes)) > Math.max(1, (Number(b.input.sceneSeconds) || 3) / 2);
+      if (cancelRef.current && (b.scenes.length < b.sceneCount || endOpen)) {
+        setStoppedNote(endOpen && b.scenes.length >= b.sceneCount
+          ? `Stopped at ~${boardPlannedSeconds(b.scenes)}s of ~${Math.round(endTarget)}s — press Continue planning to resume the timeline.`
+          : `Stopped after scene ${b.scenes.length} of ${b.sceneCount} — press Continue to resume from scene ${b.scenes.length + 1}.`);
+      } else if (b.error && b.scenes.length < b.sceneCount) {
+        // Server-side batch note (e.g. salvaged partial batch) — shown in
+        // the existing notice line so cut-off output still binds visibly.
+        setStoppedNote(b.error);
       }
       setSelectedScene((sel) => (sel == null && b.scenes.length ? 0 : sel));
       await refreshBoards();
@@ -557,37 +652,44 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
   };
 
+  // Per-shot dialogue drafts for the scene edit popup (keyed by shot index).
+  const [shotDlgDrafts, setShotDlgDrafts] = useState<Record<number, string>>({});
   const startEditScene = (index: number) => {
     if (!board) return;
     setEditingScene(index);
     setSceneDraft({ ...board.scenes[index] });
-    const dlg = board.scenes[index].dialogue;
-    setDialogueDraft(Array.isArray(dlg) ? dlg.map((d) => {
-      const sp = String(d.speaker || "").trim();
-      const ln = String(d.line || "").trim();
-      const ex = String((d as { expression?: string }).expression || "").trim();
-      const head = sp && ex ? `${sp} (${ex})` : sp;
-      return head ? `${head}: ${ln}` : ln;
-    }).filter(Boolean).join("\n") : "");
+    setDialogueDraft(formatDialogueLines(board.scenes[index].dialogue));
+    const per: Record<number, string> = {};
+    sceneShots(board.scenes[index]).forEach((sh, k) => { per[k] = formatDialogueLines(sh.dialogue); });
+    setShotDlgDrafts(per);
   };
   const saveEditScene = async () => {
     if (!board || editingScene == null) return;
-    const dlg = dialogueDraft.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
-      const c = l.indexOf(":");
-      if (c <= 0) return { speaker: "", line: l };
-      const head = l.slice(0, c).trim();
-      const line = l.slice(c + 1).trim();
-      const m = head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
-      return m
-        ? { speaker: m[1].trim(), expression: m[2].trim(), line }
-        : { speaker: head, line };
-    }).filter((d) => d.line);
-    const next = board.scenes.map((s, i) => (i === editingScene ? { ...s, ...sceneDraft, dialogue: dlg } : s));
+    const dlg = parseDialogueLines(dialogueDraft);
+    const draftShots = Array.isArray((sceneDraft as DirectorScene).shots)
+      ? (sceneDraft as DirectorScene).shots as DirectorShot[]
+      : null;
+    // Shot durations are authoritative when shots exist: the scene total is
+    // re-derived from them so the server keeps (not repairs) the timeline.
+    const shots = draftShots?.map((sh, k) => ({
+      ...sh,
+      dialogue: parseDialogueLines(shotDlgDrafts[k] ?? ""),
+    })) ?? undefined;
+    const total = shots?.length
+      ? Math.round(shots.reduce((a, x) => a + (Number(x.duration_seconds) || 0), 0) * 10) / 10
+      : undefined;
+    const next = board.scenes.map((s, i) => (i === editingScene
+      ? {
+        ...s, ...sceneDraft, dialogue: dlg,
+        ...(shots ? { shots, duration_seconds: total } : {}),
+      }
+      : s));
     try {
       const b = await directorUpdateBoard(board.id, { scenes: next });
       setBoard(b);
       setEditingScene(null);
       setSceneModal(null);
+      setShotDlgDrafts({});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -596,6 +698,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const closeSceneModal = () => {
     setSceneModal(null);
     setEditingScene(null);
+    setShotDlgDrafts({});
   };
 
   const startEditChar = (index: number) => {
@@ -664,13 +767,78 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
   };
 
+  // Board-level Dialogue toggle: OFF strips every planned scene's dialogue
+  // (silent film from here on — future batches plan [], approve carries no
+  // voice); ON only flips future batches/the approve handoff (planned scenes
+  // keep [] until regenerated, so nothing is invented behind the user's back).
+  const doToggleBoardDialogue = async () => {
+    if (!board || busy) return;
+    const off = board.input.includeDialogue !== false;
+    if (off) {
+      const ok = await dialog.confirm(
+        `Removes all ${board.scenes.filter((s) => (s.dialogue ?? []).length).length} planned dialogue line(s) from this board. Future scenes plan silent and Approve generates visuals only.`,
+        { title: "Turn dialogues OFF (silent film)?", tone: "info", okText: "Remove dialogues", cancelText: "Keep" }
+      );
+      if (!ok) return;
+      try {
+        const b = await directorUpdateBoard(board.id, {
+          input: { includeDialogue: false },
+          scenes: board.scenes.map((s) => ({ ...s, dialogue: [] })),
+        });
+        setBoard(b);
+        await refreshBoards();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    } else {
+      try {
+        const b = await directorUpdateBoard(board.id, { input: { includeDialogue: true } });
+        setBoard(b);
+        await refreshBoards();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    }
+  };
+
+  // Board-level Connected toggle: ON plans continuations (handoff text in
+  // prompts); OFF scrubs handoff state from already-planned scenes so Approve
+  // generates independent shots. Camera restaging of old scenes still needs a
+  // per-scene Regenerate; already-generated clips need a workspace regen.
+  const doToggleBoardChain = async () => {
+    if (!board || busy) return;
+    const next = board.input.chainContinuity !== true;
+    try {
+      const b = await directorUpdateBoard(board.id, next
+        ? { input: { chainContinuity: true } }
+        : {
+          input: { chainContinuity: false },
+          scenes: board.scenes.map((s) => ({ ...s, continuity_from_previous_scene: "", transition_to_next_scene: "" })),
+        });
+      setBoard(b);
+      await refreshBoards();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const doApprove = async () => {
     if (!board || busy || !board.scenes.length) return;
     const songNote = board.input.song
       ? ` The uploaded song ("${board.input.song.fileName}", ~${board.input.song.durationSeconds}s) travels with the project — after the final cut is stitched, mix it over the video from the project workspace.`
       : "";
+    const dlgNote = board.input.includeDialogue === false
+      ? " Dialogues are OFF — this project generates visuals only (no voice, no lip-sync)."
+      : "";
+    const chainNote = board.input.chainContinuity === true
+      ? " Connected scenes are ON — each scene continues the previous shot's end state in its prompts (every clip still animates its own scene image)."
+      : " Connected scenes are OFF — every scene generates as an independent fresh shot.";
+    const beats = boardBeats(board.scenes);
+    const shotNote = beats !== board.scenes.length
+      ? ` Multi-shot scenes flatten to ${beats} timed clips (one image + video per shot).`
+      : "";
     const ok = await dialog.confirm(
-      `Creates project "${board.input.title}" with ${board.scenes.length} scenes, then opens it in the workspace for generation (images → videos → final cut).${songNote}`,
+      `Creates project "${board.input.title}" with ${board.scenes.length} scenes, then opens it in the workspace for generation (images → videos → final cut).${shotNote}${songNote}${dlgNote}${chainNote}`,
       { title: `Approve storyboard for "${board.input.title}"?`, tone: "info", okText: "Approve", cancelText: "Keep editing" }
     );
     if (!ok) return;
@@ -756,6 +924,56 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
   };
 
+  // Duplicate the open board as a fresh version (exact copy of characters,
+  // locations, objects, beats + scenes prompts; no linked project so Approve
+  // mints a new project and images/videos regenerate from scratch). The
+  // server auto-versions the title (v2, then v3, …).
+  const [duplicating, setDuplicating] = useState(false);
+  const doDuplicateBoard = async () => {
+    if (!board || duplicating || busy) return;
+    const ok = await dialog.confirm(
+      `Copies characters, locations, objects, beats and all ${board.scenes.length}/${board.sceneCount} scene prompts exactly into a new versioned board (v2, then v3…). The copy starts with no linked project, so approving it generates fresh images/videos. The original board and its project are untouched.`,
+      { title: `Duplicate "${board.input.title}" as a new version?`, tone: "info", okText: "Duplicate", cancelText: "Cancel" }
+    );
+    if (!ok) return;
+    setDuplicating(true);
+    setError("");
+    try {
+      const nb = await directorDuplicateBoard(board.id);
+      setBoard(nb);
+      setSelectedScene(0);
+      setEditingScene(null);
+      setSceneModal(null);
+      await refreshBoards();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
+  // Duplicate one saved storyboard straight from the grid (same API as the
+  // open-board duplicate; opens the new versioned copy on success).
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const doDuplicateBoardById = async (id: string, title: string) => {
+    if (duplicatingId) return;
+    const ok = await dialog.confirm(
+      "Copies characters, locations, objects, beats and scene prompts exactly into a new versioned board (v2, then v3…). The copy starts with no linked project, so approving it generates fresh images/videos.",
+      { title: `Duplicate "${title}" as a new version?`, tone: "info", okText: "Duplicate", cancelText: "Cancel" }
+    );
+    if (!ok) return;
+    setDuplicatingId(id);
+    try {
+      const nb = await directorDuplicateBoard(id);
+      await refreshBoards();
+      await openBoard(nb.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
   // Jump the viewport to the live work: the first Generating box of the
   // current batch, else the last planned scene card. The sticky header pill
   // calls this so progress is one click away on long boards.
@@ -786,13 +1004,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const openSceneDetails = (i: number) => {
     if (!board || i < 0 || i >= board.scenes.length) return;
     setSelectedScene(i);
-    setSceneModal({ index: i, mode: "details" });
+    setSceneModal({ index: i, mode: "details", shot: null });
   };
   const openSceneEdit = (i: number) => {
     if (!board || i < 0 || i >= board.scenes.length) return;
     startEditScene(i);
     setSelectedScene(i);
-    setSceneModal({ index: i, mode: "edit" });
+    setSceneModal({ index: i, mode: "edit", shot: null });
   };
   const stepSceneModal = (dir: 1 | -1) => {
     if (!board || !sceneModal) return;
@@ -800,8 +1018,182 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     if (next === sceneModal.index) return;
     if (sceneModal.mode === "edit") startEditScene(next);
     setSelectedScene(next);
-    setSceneModal({ index: next, mode: sceneModal.mode });
+    // Keep the shot focus when the target scene has shots, else fall back.
+    const shots = sceneShots(board.scenes[next]);
+    const shot = sceneModal.shot == null || !shots.length
+      ? null
+      : Math.min(sceneModal.shot, shots.length - 1);
+    setSceneModal({ index: next, mode: sceneModal.mode, shot });
   };
+  // Per-shot popups (same modal shell as scenes, focused on one shot).
+  const openShotDetails = (i: number, k: number) => {
+    if (!board || i < 0 || i >= board.scenes.length) return;
+    const shots = sceneShots(board.scenes[i]);
+    if (!shots.length || k < 0 || k >= shots.length) return;
+    setSelectedScene(i);
+    setSceneModal({ index: i, mode: "details", shot: k });
+  };
+  const openShotEdit = (i: number, k: number) => {
+    if (!board || i < 0 || i >= board.scenes.length) return;
+    const shots = sceneShots(board.scenes[i]);
+    if (!shots.length || k < 0 || k >= shots.length) return;
+    startEditScene(i);
+    setSelectedScene(i);
+    setSceneModal({ index: i, mode: "edit", shot: k });
+  };
+  // Step across shots (flat position: within the scene, then into the
+  // neighboring scene's edge shot, or its scene view when shot-less).
+  const stepShotModal = (dir: 1 | -1) => {
+    if (!board || !sceneModal || sceneModal.shot == null) return;
+    const shots = sceneShots(board.scenes[sceneModal.index]);
+    const nextK = sceneModal.shot + dir;
+    if (nextK >= 0 && nextK < shots.length) {
+      if (sceneModal.mode === "edit") startEditScene(sceneModal.index);
+      setSceneModal({ ...sceneModal, shot: nextK });
+      return;
+    }
+    const nextI = Math.min(board.scenes.length - 1, Math.max(0, sceneModal.index + dir));
+    if (nextI === sceneModal.index) return;
+    if (sceneModal.mode === "edit") startEditScene(nextI);
+    setSelectedScene(nextI);
+    const nextShots = sceneShots(board.scenes[nextI]);
+    setSceneModal({
+      index: nextI,
+      mode: sceneModal.mode,
+      shot: !nextShots.length ? null : (dir > 0 ? 0 : nextShots.length - 1),
+    });
+  };
+  // One shot's read-only breakdown (shared by the scene popup's shot list
+  // and the shot-focused popup). Includes Details/Edit jump buttons unless
+  // already inside that shot's own popup (hideSelf).
+  const renderShotDetails = (d: DirectorScene, i: number, k: number, sh: DirectorShot, hideSelf = false) => (
+    <div key={str(sh.shot_id) || k} style={{ borderLeft: "2px solid var(--line-2)", paddingLeft: 8, marginBottom: 8 }}>
+      <p style={{ margin: "2px 0" }}>
+        <b>{d.scene_number}.{k + 1}{sh.shot_id ? ` (${sh.shot_id})` : ""}</b>
+        {` · ${fmtRange(sh.start_time, sh.end_time)} · ${fmtT(sh.duration_seconds)}`}
+        {sh.camera?.shot_type ? ` · ${sh.camera.shot_type}` : ""}
+      </p>
+      <p style={{ margin: "2px 0" }}>
+        {(str(sh.lyric_segment) || str(sh.action) || "—")}
+        {sh.semantic_meaning ? ` → ${sh.semantic_meaning}` : ""}
+      </p>
+      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }}>
+        {[(sh.characters ?? []).join(", ") || null, sh.location || null].filter(Boolean).join(" · ") || "—"}
+        {(sh.dialogue ?? []).length ? ` · 🎙 ${(sh.dialogue ?? []).map((x) => `${x.speaker || "voice"}: ${x.line}`).join(" / ")}` : ""}
+      </p>
+      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }} title={sh.image_prompt || ""}>
+        🖼 {str(sh.image_prompt).slice(0, 160) || "—"}{str(sh.image_prompt).length > 160 ? "…" : ""}
+      </p>
+      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }} title={sh.video_prompt || ""}>
+        🎬 {str(sh.video_prompt).slice(0, 160) || "—"}{str(sh.video_prompt).length > 160 ? "…" : ""}
+      </p>
+      {!hideSelf && (
+        <div className="row" style={{ marginTop: 4, gap: 4 }}>
+          <button
+            className="ghost shotlist-btn"
+            onClick={() => openShotDetails(i, k)}
+            title={`Open the full breakdown of Shot ${d.scene_number}.${k + 1} in a popup`}
+          >
+            Details
+          </button>
+          <button
+            className="ghost shotlist-btn"
+            onClick={() => openShotEdit(i, k)}
+            disabled={busy != null}
+            title={`Edit Shot ${d.scene_number}.${k + 1} in a popup`}
+          >
+            Edit
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  // One shot's edit form (shared by the scene popup's shot list and the
+  // shot-focused popup). Writes into sceneDraft/shots + shotDlgDrafts; the
+  // existing Save persists the whole scene (timings re-tiled server-side).
+  const renderShotEditor = (d: DirectorScene, k: number, sh: DirectorShot) => (
+    <div className="dir-shot-edit" key={str(sh.shot_id) || k}>
+      <div className="shotlist-detail-label">
+        Shot {d.scene_number}.{k + 1}{sh.shot_id ? ` (${sh.shot_id})` : ""} · {fmtRange(sh.start_time, sh.end_time)}
+      </div>
+      <div className="row" style={{ gap: 8 }}>
+        <label style={{ flex: 1 }} title="Seconds for this shot">
+          Duration
+          <input
+            type="number" min={0.5} max={30} step={0.1}
+            value={Number(sh.duration_seconds) || 0}
+            onChange={(e) => setSceneDraft((x) => {
+              const cur = sceneShots({ ...d, ...x } as DirectorScene);
+              return {
+                ...x,
+                shots: cur.map((y, j) => (j === k ? { ...y, duration_seconds: Number(e.target.value) } : y)),
+              };
+            })}
+          />
+        </label>
+        <label style={{ flex: 3 }} title="Exact words/clause this shot visualizes">
+          Segment
+          <input
+            value={str(sh.lyric_segment ?? "")} maxLength={300}
+            placeholder="Exact words this shot visualizes…"
+            onChange={(e) => setSceneDraft((x) => {
+              const cur = sceneShots({ ...d, ...x } as DirectorScene);
+              return {
+                ...x,
+                shots: cur.map((y, j) => (j === k ? { ...y, lyric_segment: e.target.value } : y)),
+              };
+            })}
+          />
+        </label>
+      </div>
+      <label style={{ marginTop: 6 }} title="One visible action for this shot">
+        Action
+        <input
+          value={str(sh.action ?? "")} maxLength={300}
+          onChange={(e) => setSceneDraft((x) => {
+            const cur = sceneShots({ ...d, ...x } as DirectorScene);
+            return {
+              ...x,
+              shots: cur.map((y, j) => (j === k ? { ...y, action: e.target.value } : y)),
+            };
+          })}
+        />
+      </label>
+      <label style={{ marginTop: 6 }} title="One per line as speaker: line — voiced + lip-synced on this shot's clip">
+        Shot dialogue
+        <textarea
+          rows={2}
+          value={shotDlgDrafts[k] ?? ""}
+          placeholder="speaker: line"
+          onChange={(e) => setShotDlgDrafts((m) => ({ ...m, [k]: e.target.value }))}
+        />
+      </label>
+      <label style={{ marginTop: 6 }}>Shot image prompt</label>
+      <textarea
+        rows={3}
+        value={str(sh.image_prompt ?? "")}
+        onChange={(e) => setSceneDraft((x) => {
+          const cur = sceneShots({ ...d, ...x } as DirectorScene);
+          return {
+            ...x,
+            shots: cur.map((y, j) => (j === k ? { ...y, image_prompt: e.target.value } : y)),
+          };
+        })}
+      />
+      <label style={{ marginTop: 6 }}>Shot video prompt (motion only)</label>
+      <textarea
+        rows={3}
+        value={str(sh.video_prompt ?? "")}
+        onChange={(e) => setSceneDraft((x) => {
+          const cur = sceneShots({ ...d, ...x } as DirectorScene);
+          return {
+            ...x,
+            shots: cur.map((y, j) => (j === k ? { ...y, video_prompt: e.target.value } : y)),
+          };
+        })}
+      />
+    </div>
+  );
 
   const chars = (board?.blueprint?.characters ?? []) as Record<string, unknown>[];
 
@@ -863,6 +1255,14 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const objs = (board?.blueprint?.objects ?? []) as Record<string, unknown>[];
   const beats = (board?.blueprint?.beats ?? []) as { n: number; title: string; summary: string }[];
   const analysis = (board?.blueprint?.analysis ?? {}) as Record<string, unknown>;
+  // Timeline still open: an early-finalized board (scenes == sceneCount,
+  // status ready) can still owe story seconds — Continue reopens it
+  // server-side (cap extension), mirroring the server's DONE_TOL rule.
+  const boardTarget = board ? Number(board.input.song?.durationSeconds ?? board.input.targetSeconds) : NaN;
+  const boardPlanned = board ? boardPlannedSeconds(board.scenes) : 0;
+  const boardTol = board ? Math.max(1, (Number(board.input.sceneSeconds) || 3) / 2) : 0;
+  const timelineOpen = !!board && Number.isFinite(boardTarget) && boardTarget > 0
+    && (boardTarget - boardPlanned) > boardTol;
 
   // Saved-storyboard rail content: the same board cards, always listed in
   // the right rail (even while a board is open) so every board stays one
@@ -896,6 +1296,15 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 {when != null ? fmtRelative(when) : ""}
               </span>
               <button
+                className="icon-btn"
+                onClick={(e) => { e.stopPropagation(); void doDuplicateBoardById(b.id, b.title); }}
+                disabled={duplicatingId === b.id}
+                title={`Duplicate "${b.title}" as a new version (copy characters, locations, scenes — no linked project/images/videos)`}
+                aria-label={`Duplicate board "${b.title}" as a new version`}
+              >
+                {duplicatingId === b.id ? <Spinner size={12} /> : <span aria-hidden="true">⧉</span>}
+              </button>
+              <button
                 className="icon-btn danger"
                 onClick={(e) => { e.stopPropagation(); void doDeleteBoardById(b.id, b.title); }}
                 title={`Delete board "${b.title}"`}
@@ -911,9 +1320,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 {chips.map((c) => <span key={c} className="dir-chip">{c}</span>)}
               </div>
             )}
-            <div className="dir-board-progress" title={`${done}/${total} scenes planned`}>
+            <div className="dir-board-progress" title={`${done}/${total} scenes planned${Number(b.shots) > done ? ` · ${b.shots} timed shots` : ""}`}>
               <div className="dir-board-bar"><span style={{ width: `${pct}%` }} /></div>
-              <span className="muted">{done}/{total} scenes</span>
+              <span className="muted">{done}/{total} scenes{Number(b.shots) > done ? ` · 🎞 ${b.shots}` : ""}</span>
             </div>
             <div className="dir-board-foot">
               {b.scenarioName
@@ -935,6 +1344,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   );
 
   return (
+    <>
     <div className="dir-layout">
     <section className={`card dir-main${collapsed ? " collapsed" : ""}`} aria-label="AI Story Director">
       <div className="card-head">
@@ -1172,7 +1582,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 )}
               </div>
               <div>
-                <label htmlFor="dir-scene">Scene duration</label>
+                <label htmlFor="dir-scene" title="Typical scene length (pacing hint only) — the AI decides each scene's own duration, shot count and shot timings from the story, line by line">Scene duration · AI-paced</label>
                 <select id="dir-scene" value={sceneOpt} onChange={(e) => setSceneOpt(Number(e.target.value))}>
                   {SCENE_DURS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
                 </select>
@@ -1181,7 +1591,41 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 )}
               </div>
             </div>
-            <p className="hint">Plans ≈ {plannedScenes} scene{plannedScenes === 1 ? "" : "s"} ({sceneSeconds}s each toward ~{targetSeconds}s).</p>
+            <p className="hint">AI analyzes the story line by line and plans up to {plannedScenes} scenes toward ~{targetSeconds}s — deciding each scene's duration, shot count and shot timings itself (typical scene ~{sceneSeconds}s).</p>
+            <div className="row" style={{ marginTop: 8, gap: 16 }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }} title="When ON, scenes carry spoken lines (voice + lip-sync). Turn OFF for a silent film — clips stay at their planned length.">
+                <input
+                  type="checkbox"
+                  checked={includeDialogue}
+                  onChange={(e) => setIncludeDialogue(e.target.checked)}
+                  disabled={busy != null}
+                />
+                🎙 Dialogues {includeDialogue ? "on" : "off"}
+              </label>
+              <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }} title="When ON, every scene continues the previous shot's end state (same look/framing) via prompt continuity — so the movie plays as one connected story. When OFF, every scene plans and generates as an independent fresh shot. Pixels always stay per-scene (each clip animates its own scene image).">
+                <input
+                  type="checkbox"
+                  checked={chainContinuity}
+                  onChange={(e) => setChainContinuity(e.target.checked)}
+                  disabled={busy != null}
+                />
+                🔗 Connected scenes {chainContinuity ? "on" : "off"}
+              </label>
+            </div>
+            {!includeDialogue && (
+              <p className="hint" style={{ margin: "4px 0 0" }}>
+                Silent film: scenes plan with empty dialogue — approve generates visuals only (no TTS, no lip-sync).
+              </p>
+            )}
+            {chainContinuity ? (
+              <p className="hint" style={{ margin: "4px 0 0" }}>
+                Connected: scenes continue the previous shot's end state in their prompts (each clip still animates its own scene image).
+              </p>
+            ) : (
+              <p className="hint" style={{ margin: "4px 0 0" }}>
+                Independent: every scene plans and generates as a fresh shot — no continuation of the previous scene.
+              </p>
+            )}
             <label htmlFor="dir-instructions" style={{ marginTop: 8 }}>Additional director instructions</label>
             <textarea
               id="dir-instructions"
@@ -1236,7 +1680,31 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               {" "}· {board.input.genre} · {board.input.language} · {board.input.aspectRatio} ·
               {" "}{board.scenes.length}/{board.sceneCount} scenes · ~{board.sceneCount * board.input.sceneSeconds}s
               {board.scenarioName ? <> · approved → <b>{board.scenarioName}</b></> : null}
+              {" "}· {board.input.includeDialogue === false ? "🔇 silent" : `🎙 ${board.scenes.filter((s) => (s.dialogue ?? []).length).length} dialogue`}
+              {" "}· {board.input.chainContinuity === true ? "🔗 connected" : "▫️ independent"}
             </p>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button
+                className="ghost shotlist-btn"
+                onClick={() => void doToggleBoardDialogue()}
+                disabled={busy != null}
+                title={board.input.includeDialogue === false
+                  ? "Turn dialogues ON — future scenes plan spoken lines (planned scenes stay silent until regenerated)"
+                  : "Turn dialogues OFF — strips all planned lines, future scenes plan silent, Approve generates visuals only"}
+              >
+                {board.input.includeDialogue === false ? "🎙 Dialogues: off → on" : "🔇 Dialogues: on → off"}
+              </button>
+              <button
+                className="ghost shotlist-btn"
+                onClick={() => void doToggleBoardChain()}
+                disabled={busy != null}
+                title={board.input.chainContinuity === true
+                  ? "Turn connected scenes OFF — scrubs handoffs from planned scenes; Approve generates independent shots"
+                  : "Turn connected scenes ON — future scenes continue the previous shot's end state in their prompts"}
+              >
+                {board.input.chainContinuity === true ? "🔗 Connected: on → off" : "▫️ Connected: off → on"}
+              </button>
+            </div>
             {board.blueprint?.logline ? <p className="hint">{board.blueprint.logline}</p> : null}
             {board.input.song?.file ? (
               <div className="beat-meta-box" style={{ marginBottom: 12 }}>
@@ -1249,10 +1717,23 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               </div>
             ) : null}
             <div className="row" style={{ marginBottom: 8 }}>
-              {board.scenes.length < board.sceneCount ? (
-                <button className="primary" onClick={() => void doScenes()} disabled={busy != null} title="Plan the remaining scenes (resumes on retry)">
+              {board.scenes.length < board.sceneCount || timelineOpen ? (
+                <button
+                  className="primary"
+                  onClick={() => void doScenes()}
+                  disabled={busy != null}
+                  title={timelineOpen && board.scenes.length >= board.sceneCount
+                    ? `The plan stopped early at ~${boardPlanned}s of ~${Math.round(boardTarget)}s — continue planning the rest of the timeline (the scene cap reopens automatically)`
+                    : "Plan the remaining scenes (resumes on retry)"}
+                >
                   {busy ? <Spinner size={13} /> : <IconFilm size={13} />}
-                  {busy ? `Planning…${sceneProgress ? ` ${sceneProgress}` : ""}` : board.scenes.length ? `Continue scenes (${board.scenes.length}/${board.sceneCount})` : "Generate scenes"}
+                  {busy
+                    ? `Planning…${sceneProgress ? ` ${sceneProgress}` : ""}`
+                    : board.scenes.length
+                      ? (timelineOpen && board.scenes.length >= board.sceneCount
+                        ? `Continue planning (~${boardPlanned}s of ~${Math.round(boardTarget)}s)`
+                        : `Continue scenes (${board.scenes.length}/${board.sceneCount})`)
+                      : "Generate scenes"}
                 </button>
               ) : (
                 <button className="btn-green" onClick={() => void doApprove()} disabled={busy != null} title="Create a standard project from these scenes and open it in the workspace for generation">
@@ -1260,7 +1741,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   {busy ? "Approving…" : "Approve Storyboard"}
                 </button>
               )}
-              {!busy && board.scenes.length > 0 && board.scenes.length < board.sceneCount && (
+              {!busy && timelineOpen && board.scenes.length >= board.sceneCount && (
+                <button
+                  className="ghost"
+                  onClick={() => void doApprove()}
+                  title={`Approve anyway with only ~${boardPlanned}s of ~${Math.round(boardTarget)}s planned — the rest of the story stays unplanned`}
+                >
+                  Approve short plan
+                </button>
+              )}
+              {!busy && board.scenes.length > 0 && (board.scenes.length < board.sceneCount || timelineOpen) && (
                 (() => {
                   const migrated = board.migratedScenes ?? (board.scenarioName ? board.scenes.length : 0);
                   const fresh = Math.max(0, board.scenes.length - (board.scenarioName ? migrated : 0));
@@ -1302,13 +1792,22 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               >
                 {showAnalysis ? "Hide analysis" : "Show analysis"}
               </button>
+              <button
+                className="ghost shotlist-btn"
+                onClick={() => void doDuplicateBoard()}
+                disabled={busy != null || duplicating}
+                title="Copy characters, locations, objects, beats + scene prompts exactly into a new versioned board (v2, then v3…) with no linked project — approve the copy to generate fresh images/videos"
+              >
+                {duplicating ? <Spinner size={11} /> : <span aria-hidden="true">⧉</span>}
+                {duplicating ? "Duplicating…" : "Duplicate as v2+"}
+              </button>
               <span className="spacer" />
               <button className="icon-btn danger" onClick={() => void doDeleteBoard()} disabled={busy != null} title={`Delete board "${board.input.title}"`} aria-label="Delete board">
                 <IconTrash size={13} />
               </button>
             </div>
             {busy && sceneProgress && <p className="hint">{sceneProgress}{planRemainingMs != null && ` · ⏳ ${formatDuration(planRemainingMs)} left`} · partial scenes are kept — Stop resumes from the next scene.</p>}
-            {!busy && stoppedNote && board.scenes.length < board.sceneCount && (
+            {!busy && stoppedNote && (board.scenes.length < board.sceneCount || timelineOpen) && (
               <p className="hint">{stoppedNote} Or migrate what's planned so far with Migrate partial — the rest can follow later.</p>
             )}
 
@@ -1588,79 +2087,195 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
 
             {(board.scenes.length > 0 || board.sceneCount > 0) && (
               <>
-                <div className="section-label">Scenes · {board.scenes.length}/{board.sceneCount}</div>
-                <div
-                  className="grid grid-bible"
-                  style={{ gridTemplateColumns: `repeat(${boardsOpen ? 5 : 6}, minmax(0, 1fr))` }}
-                  title={boardsOpen ? undefined : "Boards collapsed — showing 6 scenes per row"}
-                >
-                  {board.scenes.map((s, i) => {
-                    const selected = selectedScene === i;
+                <div className="row" style={{ alignItems: "center" }}>
+                  <div className="section-label" style={{ margin: 0 }}>Scenes · {board.scenes.length}/{board.sceneCount}</div>
+                  {(() => {
+                    const beats = boardBeats(board.scenes);
+                    return beats !== board.scenes.length ? (
+                      <span className="pill" title="Multi-shot scenes flatten to one image + video clip per shot at approve time">
+                        🎞 {beats} timed shots
+                      </span>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const planned = boardPlannedSeconds(board.scenes);
+                    const target = board.input.song?.durationSeconds ?? board.input.targetSeconds;
                     return (
-                      <div className="shot" key={s.scene_number} id={`dir-scene-${s.scene_number}`} style={selected ? { borderColor: "var(--accent-line)" } : undefined}>
-                        <div className="shot-head" aria-hidden="true">
-                          Scene {s.scene_number}/{board.sceneCount}
+                      <span className="pill" title="Planned story seconds vs the time target — the AI paces scenes itself until the timeline is covered">
+                        ⏱ ~{planned}s / ~{Math.round(Number(target) || 0)}s
+                      </span>
+                    );
+                  })()}
+                  <span className="spacer" />
+                  {(() => {
+                    const groups = new Map<number, { shots: string[]; text: string }>();
+                    for (const s of board.scenes) {
+                      const pid = s.parent_line_id ?? s.lyric_line_id;
+                      if (pid == null) continue;
+                      const g = groups.get(pid) ?? { shots: [], text: str(s.lyric_text) };
+                      if (s.shot_id) g.shots.push(s.shot_id);
+                      if (!g.text && s.lyric_text) g.text = str(s.lyric_text);
+                      groups.set(pid, g);
+                    }
+                    const multiCount = [...groups.keys()].filter((k) =>
+                      board.scenes.filter((x) => (x.parent_line_id ?? x.lyric_line_id) === k).length > 1).length;
+                    if (!groups.size) return null;
+                    return (
+                      <span
+                        className="pill"
+                        title={[...groups.entries()].map(([k, g]) =>
+                          g.shots.length > 1
+                            ? `Line ${k} → ${g.shots.length} shots (${g.shots.join(", ")})${g.text ? `: ${g.text.slice(0, 60)}` : ""}`
+                            : `Line ${k} → 1 shot${g.text ? `: ${g.text.slice(0, 60)}` : ""}`
+                        ).join("\n")}
+                      >
+                        🎵 {groups.size} lyric line{groups.size === 1 ? "" : "s"}{multiCount ? ` · ${multiCount} multi-shot` : ""}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="dir-scene-rows" aria-label="Scenes with timed shots">
+                  {(() => {
+                    const lines = sourceLinesOf(board);
+                    return board.scenes.map((s, i) => {
+                    const selected = selectedScene === i;
+                    const shots = sceneShots(s);
+                    const dlgCount = (s.dialogue ?? []).length
+                      + shots.reduce((a, sh) => a + ((sh.dialogue ?? []) as unknown[]).length, 0);
+                    const cov = sceneCoverage(s, lines);
+                    return (
+                      <div className={`dir-scene-row${selected ? " selected" : ""}`} key={s.scene_number} id={`dir-scene-${s.scene_number}`}>
+                        <div className="dir-scene-row-head">
+                          <span className="pill" aria-hidden="true" title={`Scene ${s.scene_number} of ${board.sceneCount}`}>
+                            {s.scene_number}/{board.sceneCount}
+                          </span>
+                          <span className="dir-scene-row-title" title={s.title}>{s.title}</span>
+                          <span className="muted" style={{ fontSize: 11 }} title={shots.length ? "Scene timeline = sum of its shots" : "Scene duration"}>
+                            ⏱ {fmtT(s.duration_seconds)}{shots.length ? ` · ${shots.length} shot${shots.length === 1 ? "" : "s"}` : ""}
+                            {dlgCount ? ` · 🎙 ${dlgCount}` : ""}
+                          </span>
+                          {((s.shot_id || s.parent_line_id != null) || s.continuity_required) && (
+                            <span className="muted" style={{ fontSize: 11 }}>
+                              {s.shot_id ? `🎞 ${s.shot_id}` : s.parent_line_id != null ? `🎞 Line ${s.parent_line_id}` : ""}
+                              {s.song_start_time != null && s.song_end_time != null ? ` · ${s.song_start_time}–${s.song_end_time}s` : ""}
+                              {s.continuity_required ? ` · 🔗 ${str(s.reference_source) || "PREV"}` : ""}
+                            </span>
+                          )}
+                          <span className="dir-scene-row-actions">
+                            <button
+                              className={`ghost shotlist-btn${selected ? " on" : ""}`}
+                              onClick={() => openSceneDetails(i)}
+                              title={`Open the full breakdown of Scene ${s.scene_number} in a popup`}
+                            >
+                              Details
+                            </button>
+                            <button className="ghost shotlist-btn" onClick={() => openSceneEdit(i)} title={`Edit Scene ${s.scene_number} in a popup`}>
+                              Edit
+                            </button>
+                            <button
+                              className="ghost shotlist-btn"
+                              disabled={regenScene != null || busy != null}
+                              onClick={() => void doRegenScene(i)}
+                              title={regenScene === i ? "Regenerating…" : `Regenerate Scene ${s.scene_number} with the AI Director`}
+                            >
+                              {regenScene === i ? <Spinner size={11} /> : <IconRefresh size={11} />}
+                              {regenScene === i ? "Working…" : "Regen"}
+                            </button>
+                            <button
+                              className="icon-btn danger"
+                              onClick={() => void doDeleteScene(i)}
+                              disabled={busy != null}
+                              title={`Delete Scene ${s.scene_number}`}
+                              aria-label={`Delete Scene ${s.scene_number}`}
+                            >
+                              <IconTrash size={12} />
+                            </button>
+                          </span>
                         </div>
-                        <div className="shotlist-desc-title" title={s.title}>{s.title}</div>
-                        <p className="hint" style={{ margin: "4px 0" }}>{s.action || "—"}</p>
-                        <span className="muted" style={{ fontSize: 11 }}>
-                          {s.camera?.shot_type ?? ""}{s.camera?.movement ? ` · ${s.camera.movement}` : ""} · {s.duration_seconds}s
-                          {Array.isArray(s.dialogue) && s.dialogue.length ? ` · 🎙 ${s.dialogue.length} line${s.dialogue.length === 1 ? "" : "s"}` : ""}
-                        </span>
-                        <div className="row" style={{ marginTop: 6, flexWrap: "wrap" }}>
-                          <button
-                            className={`ghost shotlist-btn${selected ? " on" : ""}`}
-                            onClick={() => openSceneDetails(i)}
-                            title={`Open the full breakdown of Scene ${s.scene_number} in a popup`}
-                          >
-                            Details
-                          </button>
-                          <button className="ghost shotlist-btn" onClick={() => openSceneEdit(i)} title={`Edit Scene ${s.scene_number} in a popup`}>
-                            Edit
-                          </button>
-                          <button
-                            className="ghost shotlist-btn"
-                            disabled={regenScene != null || busy != null}
-                            onClick={() => void doRegenScene(i)}
-                            title={regenScene === i ? "Regenerating…" : `Regenerate Scene ${s.scene_number} with the AI Director`}
-                          >
-                            {regenScene === i ? <Spinner size={11} /> : <IconRefresh size={11} />}
-                            {regenScene === i ? "Working…" : "Regen"}
-                          </button>
-                          <button
-                            className="icon-btn danger"
-                            onClick={() => void doDeleteScene(i)}
-                            disabled={busy != null}
-                            title={`Delete Scene ${s.scene_number}`}
-                            aria-label={`Delete Scene ${s.scene_number}`}
-                          >
-                            <IconTrash size={12} />
-                          </button>
+                        <div className="dir-shot-strip" role="list" aria-label={`Timed shots of Scene ${s.scene_number}`}>
+                          {shots.length ? shots.map((sh, k) => {
+                            const seg = str(sh.lyric_segment) || str(sh.action) || "—";
+                            const dlg = ((sh.dialogue ?? []) as unknown[]).length;
+                            return (
+                              <div
+                                className="dir-shot"
+                                role="listitem"
+                                key={str(sh.shot_id) || k}
+                                style={{ flexGrow: Math.max(1, Number(sh.duration_seconds) || 1) }}
+                                title={`${s.scene_number}.${k + 1}${sh.shot_id ? ` (${sh.shot_id})` : ""} · ${fmtRange(sh.start_time, sh.end_time)} of ${fmtT(s.duration_seconds)}${sh.semantic_meaning ? ` — ${sh.semantic_meaning}` : ""}`}
+                              >
+                                <div className="dir-shot-head" aria-hidden="true">
+                                  <span>{s.scene_number}.{k + 1}{sh.shot_id ? ` · ${sh.shot_id}` : ""}</span>
+                                  <span className="dir-shot-time">{fmtRange(sh.start_time, sh.end_time)}</span>
+                                </div>
+                                <div className="dir-shot-seg" title={seg}>{seg}</div>
+                                <span className="dir-shot-meta">
+                                  {sh.camera?.shot_type ?? ""}{sh.camera?.movement ? ` · ${sh.camera.movement}` : ""} · {fmtT(sh.duration_seconds)}
+                                  {dlg ? ` · 🎙 ${dlg}` : ""}
+                                </span>
+                                <div className="row" style={{ marginTop: 4, gap: 4 }}>
+                                  <button
+                                    className="ghost shotlist-btn"
+                                    onClick={() => openShotDetails(i, k)}
+                                    title={`Open the full breakdown of Shot ${s.scene_number}.${k + 1} in a popup`}
+                                  >
+                                    Details
+                                  </button>
+                                  <button
+                                    className="ghost shotlist-btn"
+                                    onClick={() => openShotEdit(i, k)}
+                                    disabled={busy != null}
+                                    title={`Edit Shot ${s.scene_number}.${k + 1} in a popup`}
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }) : (
+                            <div className="dir-shot" style={{ flexGrow: 1 }} title={`Scene ${s.scene_number} · ${fmtT(s.duration_seconds)}`}>
+                              <div className="dir-shot-head" aria-hidden="true">
+                                <span>{s.scene_number}.1</span>
+                                <span className="dir-shot-time">{fmtT(s.duration_seconds)}</span>
+                              </div>
+                              <div className="dir-shot-seg" title={s.action || ""}>{s.action || "—"}</div>
+                              <span className="dir-shot-meta">
+                                {s.camera?.shot_type ?? ""}{s.camera?.movement ? ` · ${s.camera.movement}` : ""} · {fmtT(s.duration_seconds)}
+                                {Array.isArray(s.dialogue) && s.dialogue.length ? ` · 🎙 ${s.dialogue.length}` : ""}
+                              </span>
+                            </div>
+                          )}
                         </div>
+                        {cov && (
+                          <p className="hint" style={{ margin: "6px 0 0" }} title={`Source lines covered by Scene ${s.scene_number}: ${cov}`}>
+                            📖 {cov.length > 160 ? `${cov.slice(0, 160)}…` : cov}
+                          </p>
+                        )}
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                   {Array.from({ length: Math.max(0, board.sceneCount - board.scenes.length) }, (_, k) => {
                     const num = board.scenes.length + 1 + k;
                     const isGen = generatingRange != null && num >= generatingRange.from && num <= generatingRange.to;
                     const eta = planSceneEta(num);
                     return (
                       <div
-                        className={`shot${isGen ? " generating" : " is-queued"}`}
+                        className={`dir-scene-row${isGen ? " generating" : " is-queued"}`}
                         key={`pending-${num}`}
                         id={`dir-scene-pending-${num}`}
                         aria-label={`Scene ${num} ${isGen ? "generating" : "to be generated"}${eta != null ? `, about ${formatDuration(eta)} remaining` : ""}`}
                       >
-                        <div className="shot-head" aria-hidden="true">
-                          Scene {num}/{board.sceneCount}
+                        <div className="dir-scene-row-head">
+                          <span className="pill" aria-hidden="true">Scene {num}/{board.sceneCount}</span>
+                          {isGen ? (
+                            <p className="hint" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                              <Spinner size={11} /> Generating…{eta != null && ` · ~${formatDuration(eta)} left`}
+                            </p>
+                          ) : (
+                            <p className="hint" style={{ margin: 0 }}>To be Generated{eta != null && ` · ~${formatDuration(eta)}`}</p>
+                          )}
                         </div>
-                        {isGen ? (
-                          <p className="hint" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                            <Spinner size={11} /> Generating…{eta != null && ` · ~${formatDuration(eta)} left`}
-                          </p>
-                        ) : (
-                          <p className="hint" style={{ margin: 0 }}>To be Generated{eta != null && ` · ~${formatDuration(eta)}`}</p>
-                        )}
                       </div>
                     );
                   })}
@@ -1669,6 +2284,94 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   const d = board.scenes[sceneModal.index];
                   if (!d) return null;
                   const isEdit = sceneModal.mode === "edit" && editingScene === sceneModal.index;
+                  const mShots = sceneShots(d);
+                  // Shot-focused popup (opened from a shot card's Details/Edit
+                  // buttons); null = whole-scene popup as before.
+                  const focusShot = sceneModal.shot != null && mShots.length
+                    ? Math.min(sceneModal.shot, mShots.length - 1)
+                    : null;
+                  const fShot = focusShot != null ? mShots[focusShot] : null;
+                  const draftShots = sceneShots({ ...d, ...sceneDraft } as DirectorScene);
+                  const eShot = focusShot != null ? (draftShots[focusShot] ?? fShot) : null;
+                  const headTitle = isEdit
+                    ? (focusShot != null && fShot
+                      ? `✏️ Edit Shot ${d.scene_number}.${focusShot + 1}${fShot.shot_id ? ` (${fShot.shot_id})` : ""}`
+                      : `✏️ Edit Scene ${d.scene_number}/${board.sceneCount}`)
+                    : (focusShot != null && fShot
+                      ? `🎬 Shot ${d.scene_number}.${focusShot + 1}${fShot.shot_id ? ` (${fShot.shot_id})` : ""}`
+                      : `🎬 Scene ${d.scene_number}/${board.sceneCount}`);
+                  // Absolute ends of the flat (scene, shot) walk for nav state.
+                  const atFirstShot = sceneModal.index <= 0 && (focusShot ?? 0) <= 0;
+                  const atLastShot = sceneModal.index >= board.scenes.length - 1 &&
+                    (focusShot == null || focusShot >= mShots.length - 1);
+                  // Shot-focused bodies (single shot + shot navigation).
+                  if (focusShot != null && fShot) {
+                    return (
+                      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={`${isEdit ? "Edit" : "Details of"} Shot ${d.scene_number}.${focusShot + 1}`} onClick={() => closeSceneModal()}>
+                        <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()}>
+                          <div className="row" style={{ alignItems: "center", marginBottom: 8 }}>
+                            <h3 className="dlg-title" style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+                              {headTitle} — {isEdit ? str(sceneDraft.title ?? d.title) || d.title : d.title}
+                            </h3>
+                            <button className="icon-btn" onClick={() => closeSceneModal()} title="Close popup (Esc)" aria-label="Close popup">
+                              ✕
+                            </button>
+                          </div>
+                          {isEdit && eShot ? (
+                            <>
+                              {renderShotEditor(d, focusShot, eShot)}
+                              <div className="dlg-actions" style={{ marginTop: 12 }}>
+                                <button
+                                  className="ghost"
+                                  onClick={() => setSceneModal({ index: sceneModal.index, mode: "details", shot: focusShot })}
+                                  title="Back to the shot breakdown without saving"
+                                >
+                                  Back
+                                </button>
+                                <button className="primary" onClick={() => void saveEditScene()} title={`Save Shot ${d.scene_number}.${focusShot + 1} (scene timings re-tiled automatically)`}>
+                                  Save shot
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {renderShotDetails(d, sceneModal.index, focusShot, fShot, true)}
+                              <div className="row" style={{ marginTop: 12 }}>
+                                <button
+                                  className="ghost shotlist-btn"
+                                  disabled={atFirstShot}
+                                  onClick={() => stepShotModal(-1)}
+                                  title="Previous shot"
+                                >
+                                  ← Prev
+                                </button>
+                                <button
+                                  className="ghost shotlist-btn"
+                                  disabled={atLastShot}
+                                  onClick={() => stepShotModal(1)}
+                                  title="Next shot"
+                                >
+                                  Next →
+                                </button>
+                                <span className="spacer" />
+                                <button
+                                  className="ghost shotlist-btn"
+                                  onClick={() => openShotEdit(sceneModal.index, focusShot)}
+                                  disabled={busy != null}
+                                  title={`Edit Shot ${d.scene_number}.${focusShot + 1}`}
+                                >
+                                  Edit shot
+                                </button>
+                                <button className="primary" onClick={() => closeSceneModal()} title="Close popup (Esc)">
+                                  Close
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
                   return (
                     <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? `Edit Scene ${d.scene_number}` : `Scene ${d.scene_number} details`} onClick={() => closeSceneModal()}>
                       <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()}>
@@ -1688,8 +2391,20 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                             <textarea rows={3} value={str(sceneDraft.action ?? "")} onChange={(e) => setSceneDraft((x) => ({ ...x, action: e.target.value }))} />
                             <label style={{ marginTop: 6 }}>Emotion</label>
                             <input value={str(sceneDraft.emotion ?? "")} maxLength={60} onChange={(e) => setSceneDraft((x) => ({ ...x, emotion: e.target.value }))} />
+                            <label style={{ marginTop: 6 }} title="Exact lyric words this shot visualizes (song boards)">Lyric segment</label>
+                            <input value={str(sceneDraft.lyric_segment ?? "")} maxLength={300} placeholder="Exact words this shot visualizes…" onChange={(e) => setSceneDraft((x) => ({ ...x, lyric_segment: e.target.value }))} />
+                            <label style={{ marginTop: 6 }} title="The visible event on screen for this shot">Visual event</label>
+                            <input value={str(sceneDraft.visual_event ?? "")} maxLength={300} placeholder="Visible event on screen…" onChange={(e) => setSceneDraft((x) => ({ ...x, visual_event: e.target.value }))} />
                             <label style={{ marginTop: 6 }}>Duration (sec)</label>
                             <input type="number" min={1} max={30} value={Number(sceneDraft.duration_seconds ?? d.duration_seconds)} onChange={(e) => setSceneDraft((x) => ({ ...x, duration_seconds: Number(e.target.value) }))} />
+                            {sceneShots({ ...d, ...sceneDraft } as DirectorScene).length > 0 && (
+                              <>
+                                <label style={{ marginTop: 8 }} title="Each shot renders its own image + video clip; widths in the scene row follow these durations">
+                                  Timed shots (durations must sum to the scene total — saved automatically)
+                                </label>
+                                {sceneShots({ ...d, ...sceneDraft } as DirectorScene).map((sh, k) => renderShotEditor(d, k, sh))}
+                              </>
+                            )}
                             <label style={{ marginTop: 6 }} title="One per line as speaker: line — voiced per character (Edge-TTS Hindi) and lip-synced; the clip grows to fit the voice">Dialogue (speaker: line per line — voiced + lip-synced)</label>
                             <textarea rows={3} value={dialogueDraft} placeholder={"chiku: नमस्ते! मैं चीकू हूँ।\nshera: कौन है वहाँ?"} onChange={(e) => setDialogueDraft(e.target.value)} />
                             <label style={{ marginTop: 6 }}>Image prompt</label>
@@ -1717,6 +2432,41 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                                 <p>{d.duration_seconds}s</p>
                               </div>
                             </div>
+                            {(d.lyric_text || d.lyric_segment || d.shot_id || d.parent_line_id != null) && (
+                              <>
+                                <div className="shotlist-detail-label">
+                                  Lyric {d.shot_id ? `· Shot ${d.shot_id}` : d.parent_line_id != null ? `· Line ${d.parent_line_id}` : ""}
+                                  {d.song_start_time != null && d.song_end_time != null ? ` · ${d.song_start_time}–${d.song_end_time}s` : ""}
+                                </div>
+                                <p>{d.lyric_text || "—"}</p>
+                                {(d.lyric_segment || d.semantic_meaning || d.visual_event) && (
+                                  <>
+                                    <div className="shotlist-detail-label">Segment → meaning → visual event</div>
+                                    <p>
+                                      {d.lyric_segment ? <><b>“{d.lyric_segment}”</b>{d.semantic_meaning || d.visual_event ? " → " : ""}</> : null}
+                                      {[d.semantic_meaning, d.visual_event].filter(Boolean).join(" → ") || "—"}
+                                    </p>
+                                  </>
+                                )}
+                                {(d.continuity_required || (d.reference_source && d.reference_source !== "NONE")) && (
+                                  <>
+                                    <div className="shotlist-detail-label">Continuity reference</div>
+                                    <p>
+                                      🔗 {d.reference_source || "PREVIOUS_IMAGE"}
+                                      {Array.isArray(d.continuity_refs) && d.continuity_refs.length ? ` (${d.continuity_refs.join(", ")})` : ""}
+                                    </p>
+                                  </>
+                                )}
+                              </>
+                            )}
+                            {sceneShots(d).length > 0 && (
+                              <>
+                                <div className="shotlist-detail-label">
+                                  Timed shots · {sceneShots(d).length} (each renders one clip) · {fmtT(d.duration_seconds)} total
+                                </div>
+                                {sceneShots(d).map((sh, k) => renderShotDetails(d, sceneModal.index, k, sh))}
+                              </>
+                            )}
                             <div className="shotlist-detail-grid">
                               <div>
                                 <div className="shotlist-detail-label">Characters</div>
@@ -1847,5 +2597,35 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         </button>
       )}
     </div>
+    {/* Generation copy just below the AI Story Director: Render Clip +
+        Generate Reference + Keyframes → clips + YouTube/Instagram cut,
+        scoped to this board's linked project. Shot-aware via the board's
+        flattened shot-beats (one beat per shot). Rendered only when a board
+        is open so planning flow is untouched. */}
+    {board && (
+      board.scenarioName ? (
+        <DirectorGeneration
+          projectName={board.scenarioName}
+          boardScenes={board.scenes}
+          onOpenProject={onOpenProject}
+        />
+      ) : (
+        <section className="card" aria-label="Generation" style={{ marginTop: 12 }}>
+          <div className="card-head">
+            <h2>🎬 Generation</h2>
+            <span className="spacer" />
+            <span className="pill" title="Approve or migrate the storyboard to create its project first">
+              {board.scenes.length}/{board.sceneCount} scenes planned
+            </span>
+          </div>
+          <p className="hint" style={{ margin: "8px 0 0" }}>
+            Approve the storyboard (or Migrate partial) to create its project — Render Clip, Generate Reference,
+            Keyframes → clips and the YouTube/Instagram cuts appear here for that project. Nothing here changes
+            planning; it only generates for the linked project once it exists.
+          </p>
+        </section>
+      )
+    )}
+    </>
   );
 }

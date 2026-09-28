@@ -143,11 +143,12 @@ describe("estimateDialogueDuration", () => {
 
 describe("prosodyFor", () => {
   it("slows and deepens sad lines", () => {
-    assert.deepEqual(prosodyFor({ line: "x", emotion: "sad" }, ""), { rate: "-15%", pitch: "-8%" });
+    // Rate is percent, pitch is Hz — edge-tts rejects "%" pitch (ValueError).
+    assert.deepEqual(prosodyFor({ line: "x", emotion: "sad" }, ""), { rate: "-15%", pitch: "-8Hz" });
   });
   it("brightens happy/high lines", () => {
     const p = prosodyFor({ line: "x", expression: "big happy smile", pitch: "high" }, "");
-    assert.equal(p.pitch, "+10%");
+    assert.equal(p.pitch, "+10Hz");
   });
   it("is neutral for plain lines", () => {
     assert.deepEqual(prosodyFor({ line: "Hello." }, ""), { rate: null, pitch: null });

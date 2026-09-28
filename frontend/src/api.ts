@@ -208,7 +208,7 @@ export interface RunRequest {
   skipLipsync?: boolean;
   /** Full generate: skip the automatic voice + lip-sync pass (silent clips). */
   noDialogue?: boolean;
-  /** Full generate: chain scenes — beat N>1 starts from beat N-1's last frame (connected movie). */
+  /** Full generate: chain scenes — beats N>1 carry seamless-continuation wording (connected movie). Pixels always stay per-scene. */
   chain?: boolean;
   /** Dialogue mode: voice+sync clips but leave the final cut alone (merge later). */
   noStitch?: boolean;
@@ -694,6 +694,10 @@ export interface DirectorInput {
   sceneSeconds: number;
   aspectRatio: string;
   instructions?: string;
+  /** Silent-film opt-out (false = no dialogues, no voice/lip-sync). Default true. */
+  includeDialogue?: boolean;
+  /** Connected movie (true = scenes continue the previous shot in their prompts). Default true. Pixels always stay per-scene. */
+  chainContinuity?: boolean;
   // Music-video mode: uploaded song attachment (from directorUploadSong).
   // durationSeconds drives the storyboard timeline; the story field carries
   // the pasted lyrics (or an instrumental placeholder when hasLyrics=false).
@@ -758,6 +762,64 @@ export interface DirectorScene {
   dialogue: { speaker: string; line: string; expression?: string; emotion?: string; pitch?: string }[];
   image_prompt: string;
   video_prompt: string;
+  // Lyric-semantic shot linkage (song boards; absent on story/old scenes).
+  // Multiple shots share one parent_line_id (shot_id "12-A", "12-B", ...).
+  lyric_line_id?: number | null;
+  parent_line_id?: number | null;
+  lyric_text?: string;
+  lyric_segment?: string;
+  semantic_meaning?: string;
+  visual_event?: string;
+  shot_id?: string | null;
+  shot_number?: number;
+  song_start_time?: number | null;
+  song_end_time?: number | null;
+  continuity_required?: boolean;
+  reference_source?: string;
+  continuity_refs?: string[];
+  // Source-line coverage (line-by-line planning): numbered story/lyric lines
+  // this scene covers. Null on old scenes.
+  line_from?: number | null;
+  line_to?: number | null;
+  // Timed sub-shots that tile duration_seconds exactly (multi-shot scenes).
+  // [] / absent = legacy single-image scene. Each shot flattens to one
+  // generation beat at approve time.
+  shots?: DirectorShot[];
+}
+
+// One timed shot inside a multi-shot DirectorScene. start_time/end_time are
+// scene-relative seconds (cumulative from 0); shot_number is 1-based within
+// the scene (rendered as "3.2" for scene 3, shot 2).
+export interface DirectorShot {
+  shot_id: string;
+  shot_number: number;
+  lyric_segment?: string;
+  semantic_meaning?: string;
+  visual_event?: string;
+  characters: string[];
+  location: string;
+  time_of_day?: string;
+  action: string;
+  emotion?: string;
+  expression?: string;
+  body_language?: string;
+  camera: { shot_type: string; angle: string; movement: string };
+  lighting?: string;
+  environment?: string;
+  continuity_from_previous_scene?: string;
+  transition_to_next_scene?: string;
+  dialogue: { speaker: string; line: string; expression?: string; emotion?: string; pitch?: string }[];
+  image_prompt: string;
+  video_prompt: string;
+  duration_seconds: number;
+  start_time: number;
+  end_time: number;
+  lyric_line_id?: number | null;
+  parent_line_id?: number | null;
+  lyric_text?: string;
+  continuity_required?: boolean;
+  reference_source?: string;
+  continuity_refs?: string[];
 }
 
 export interface DirectorBoard {
@@ -771,6 +833,7 @@ export interface DirectorBoard {
     locations: Record<string, unknown>[];
     objects: Record<string, unknown>[];
     beats: { n: number; title: string; summary: string }[];
+    lyric_lines?: { lyric_line_id: number; lyric_text: string; semantic_analysis?: string; visual_complexity?: string; planned_shots?: number }[];
   } | null;
   scenes: DirectorScene[];
   sceneCount: number;
@@ -791,6 +854,8 @@ export interface DirectorBoardMeta {
   status: DirectorBoard["status"];
   scenes: number;
   sceneCount: number;
+  /** Timed shots planned so far (one generation beat per shot). */
+  shots?: number | null;
   scenarioName?: string | null;
   /** Approved storyboard -> generated project link (integer projects id). */
   project_id?: number | null;
@@ -871,6 +936,14 @@ export const directorApprove = (id: string) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}/approve`, {
     method: "POST",
   }).then(directorOk<{ name: string; config: Scenario }>("approve failed"));
+
+// Duplicate a board as a fresh version (exact copy of characters, locations,
+// objects, beats + scenes prompts; no linked project so images/videos
+// regenerate from scratch). The server auto-versions the title (v2, v3, …).
+export const directorDuplicateBoard = (id: string) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/duplicate`, {
+    method: "POST",
+  }).then(directorOk<DirectorBoard>("duplicate failed"));
 
 export const directorDeleteBoard = (id: string) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
