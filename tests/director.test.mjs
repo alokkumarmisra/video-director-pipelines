@@ -35,6 +35,8 @@ import {
   normalizeReferenceSource,
   validateLyricPlan,
   extractPartialScenes,
+  canonicalizeSceneRefs,
+  dedupeScenes,
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
@@ -785,5 +787,87 @@ describe("extractPartialScenes (truncated batch salvage)", () => {
     assert.deepEqual(extractPartialScenes(""), []);
     assert.deepEqual(extractPartialScenes(`{ "scenes": [ { "scene_number": 1, `), []);
     assert.deepEqual(extractPartialScenes(`{ "scenes": [] } trailing prose`), []);
+  });
+});
+
+describe("bible-id grounding (locations/objects actually used)", () => {
+  const blueprint = () => normalizeBlueprint({
+    characters: [{ character_id: "bandar", name: "Bandar" }],
+    locations: [
+      { location_id: "jungle", name: "Jungle" },
+      { location_id: "park", name: "Park" },
+    ],
+    objects: [{ object_id: "apple_tree", name: "Apple Tree" }],
+    beats: [
+      { n: 1, title: "Intro", summary: "meet Bandar", location: "jungle", objects: ["apple_tree"] },
+      { n: 2, title: "Play", summary: "park games" },
+    ],
+  });
+  const input = {
+    title: "T", language: "English", genre: "Kids", visualStyle: "Cartoon",
+    targetSeconds: 60, sceneSeconds: 3, aspectRatio: "16:9", chainContinuity: true,
+  };
+
+  it("normalizeScene/normalizeShot drop non-primitive id entries (no [object Object])", () => {
+    const s = normalizeScene({ title: "A", characters: ["bandar", { x: 1 }, 7], location: "jungle", shots: [{ characters: [{ y: 2 }] }] }, 1, 3);
+    assert.deepEqual(s.characters, ["bandar", "7"]);
+    assert.deepEqual(s.shots[0].characters, []);
+  });
+
+  it("canonicalizeSceneRefs resolves display names to ids (case-insensitive)", () => {
+    const s = normalizeScene({ title: "A", characters: ["Bandar"], location: "PARK" }, 1, 3);
+    const { scene, repairs } = canonicalizeSceneRefs(s, blueprint());
+    assert.equal(scene.location, "park");
+    assert.deepEqual(scene.characters, ["bandar"]);
+    assert.deepEqual(repairs, []);
+  });
+
+  it("canonicalizeSceneRefs moves objects parked in location into visible refs", () => {
+    const s = normalizeScene({ title: "A", characters: ["bandar"], location: "apple_tree" }, 1, 3);
+    const { scene, repairs } = canonicalizeSceneRefs(s, blueprint());
+    assert.equal(scene.location, "");
+    assert.ok(scene.continuity_refs.includes("apple_tree"), "object still grounds the frame");
+    assert.ok(repairs.length > 0);
+  });
+
+  it("canonicalizeSceneRefs drops hallucinated cast, keeps unresolvable places as text", () => {
+    const s = normalizeScene({ title: "A", characters: ["bandar", "children", "elephant (hathi)"], location: "Somewhere Magical" }, 1, 3);
+    const { scene, repairs } = canonicalizeSceneRefs(s, blueprint());
+    assert.deepEqual(scene.characters, ["bandar"]);
+    assert.equal(scene.location, "Somewhere Magical");
+    assert.ok(repairs.some((r) => r.includes("children")), "dropped cast is reported");
+    assert.ok(repairs.some((r) => r.includes("Somewhere Magical")), "kept place is reported");
+  });
+
+  it("dedupeScenes drops exact title+action repeats, keeping the first", () => {
+    const a = { title: "Chase", action: "Monkey runs" };
+    const b = { title: "  chase ", action: "MONKEY  runs" };
+    const c = { title: "Rest", action: "Monkey sleeps" };
+    const { kept, dropped } = dedupeScenes([a], [b, c]);
+    assert.equal(dropped, 1);
+    assert.deepEqual(kept, [c]);
+  });
+
+  it("normalizeBlueprint keeps beat place/props; batches render them", () => {
+    const bp = blueprint();
+    assert.equal(bp.beats[0].location, "jungle");
+    assert.deepEqual(bp.beats[0].objects, ["apple_tree"]);
+    assert.ok(!("location" in bp.beats[1]), "beats without place stay lean");
+    const p = buildScenesPrompt({
+      input, blueprint: bp, beats: bp.beats, startNumber: 1, count: 12,
+      styleLock: "style", totalScenes: 20,
+    });
+    assert.ok(p.includes("VALID LOCATIONS: jungle, park"), "exact id list is in the prompt");
+    assert.ok(p.includes("VALID OBJECTS: apple_tree"), "objects listed");
+    assert.ok(p.includes("LOCATION & OBJECT ROTATION"), "rotation mandate present");
+    assert.ok(p.includes("exact id only"), "free-text places forbidden");
+    assert.ok(p.includes("Beat 1: Intro — meet Bandar [📍 jungle | 🧺 apple_tree]"), "beats carry place/props");
+    assert.ok(p.includes("LOCATION FOLLOWS THE STORY"), "connected mode no longer pins one place");
+  });
+
+  it("bible prompt asks beats for place + props", () => {
+    const p = buildBiblePrompt({ ...input, story: "A monkey plays." });
+    assert.ok(p.includes('"location": "<location_id where this beat happens>"'), "beat place in schema");
+    assert.ok(p.includes("spread beats across ALL locations/objects"), "spread rule present");
   });
 });

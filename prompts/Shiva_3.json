@@ -1,0 +1,2325 @@
+{
+  "tts": {
+    "voices": {},
+    "defaultVoice": "hi-IN-MadhurNeural"
+  },
+  "quality": "devotional-ultra-realistic",
+  "duration": 10,
+  "sequence": [
+    {
+      "image": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair (jata) with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayan mountains and misty clouds in the background, subtle golden sunrise light, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, photorealistic devotional art, epic Indian mythology aesthetic, shallow depth of field, dramatic yet peaceful, ultra-detailed, 8K, masterpiece, no text, no watermark.",
+      "title": "c01_s01_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Static, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s01_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "की झलक। यह स्थापना खंड है,",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "की झलक। यह स्थापना खंड है,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s01_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s01_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी में",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी में",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s01_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s02_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s02_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "की झलक। यह विस्तार खंड है,",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "की झलक। यह विस्तार खंड है,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s02_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "जिसमें दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s02_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी में",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी में",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s02_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s03_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — परिचय — दिव्य स्वरूप",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s03_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "की झलक। यह भावनात्मक गहराई खंड",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "की झलक। यह भावनात्मक गहराई खंड",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s03_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "है, जिसमें दिव्य स्वरूप, लीला और",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "है, जिसमें दिव्य स्वरूप, लीला और",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s03_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "आध्यात्मिक अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, introduction moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c01_s03_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Static, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s01_shot_1",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — उत्पत्ति और पृष्ठभूमि।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — उत्पत्ति और पृष्ठभूमि।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s01_shot_2",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह स्थापना खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह स्थापना खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s01_shot_3",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s01_shot_4",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s01_shot_5",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s02_shot_1",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — उत्पत्ति और पृष्ठभूमि।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — उत्पत्ति और पृष्ठभूमि।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s02_shot_2",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह विस्तार खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह विस्तार खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s02_shot_3",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s02_shot_4",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s02_shot_5",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s03_shot_1",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — उत्पत्ति और पृष्ठभूमि। यह",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — उत्पत्ति और पृष्ठभूमि। यह",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s03_shot_2",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "भावनात्मक गहराई खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "भावनात्मक गहराई खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s03_shot_3",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s03_shot_4",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Tracking Shot, buildup moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c02_s03_shot_5",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Pan, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s01_shot_1",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s01_shot_2",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह स्थापना खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह स्थापना खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s01_shot_3",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s01_shot_4",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s01_shot_5",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s02_shot_1",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s02_shot_2",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह विस्तार खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह विस्तार खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s02_shot_3",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s02_shot_4",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s02_shot_5",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s03_shot_1",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — दिव्य व्यक्तित्व और स्वरूप।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s03_shot_2",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s03_shot_3",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Tracking Shot, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s03_shot_4",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, slow cinematic push-in, explanation moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c03_s03_shot_5",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Tilt, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s01_shot_1",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s01_shot_2",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह स्थापना खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह स्थापना खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s01_shot_3",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s01_shot_4",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s01_shot_5",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s02_shot_1",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s02_shot_2",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह विस्तार खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह विस्तार खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s02_shot_3",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s02_shot_4",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s02_shot_5",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s03_shot_1",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — प्रमुख कथाएँ और लीलाएँ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s03_shot_2",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Tracking Shot, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s03_shot_3",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, slow cinematic push-in, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s03_shot_4",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Static, emotional_moment moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c04_s03_shot_5",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Dolly Out, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s01_shot_1",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s01_shot_2",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह स्थापना खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह स्थापना खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s01_shot_3",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s01_shot_4",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s01_shot_5",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s02_shot_1",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s02_shot_2",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह विस्तार खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह विस्तार खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s02_shot_3",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s02_shot_4",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s02_shot_5",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s03_shot_1",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — शक्ति, प्रतीक और अर्थ।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Tracking Shot, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s03_shot_2",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह भावनात्मक गहराई खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, slow cinematic push-in, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s03_shot_3",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Static, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s03_shot_4",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "को शांत, भक्तिमय वाणी में प्रस्तुत",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Pan, climax moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c05_s03_shot_5",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tracking Shot, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s01_shot_1",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — भक्तों से संबंध।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — भक्तों से संबंध।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s01_shot_2",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह स्थापना खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह स्थापना खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s01_shot_3",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s01_shot_4",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s01_shot_5",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tracking Shot, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s02_shot_1",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — भक्तों से संबंध।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — भक्तों से संबंध।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s02_shot_2",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "यह विस्तार खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "यह विस्तार खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s02_shot_3",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s02_shot_4",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s02_shot_5",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Tracking Shot, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s03_shot_1",
+      "motion": "gentle tracking shot motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — भक्तों से संबंध। यह",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — भक्तों से संबंध। यह",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, slow cinematic push-in, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s03_shot_2",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "भावनात्मक गहराई खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "भावनात्मक गहराई खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Static, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s03_shot_3",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ को",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Pan, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s03_shot_4",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "शांत, भक्तिमय वाणी में प्रस्तुत किया",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tilt, reflection moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c06_s03_shot_5",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, slow cinematic push-in, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s01_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Static, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s01_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्थापना खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्थापना खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Pan, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s01_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Tilt, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s01_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "को शांत, भक्तिमय वाणी में",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "को शांत, भक्तिमय वाणी में",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Dolly Out, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s01_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, slow cinematic push-in, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s02_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, Static, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s02_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "विस्तार खंड है, जिसमें दिव्य",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "विस्तार खंड है, जिसमें दिव्य",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Pan, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s02_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "स्वरूप, लीला और आध्यात्मिक अर्थ",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Tilt, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s02_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "को शांत, भक्तिमय वाणी में",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "को शांत, भक्तिमय वाणी में",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Dolly Out, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s02_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Establishing Shot, slow cinematic push-in, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s03_shot_1",
+      "motion": "gentle slow cinematic push-in motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "महादेव...** — आध्यात्मिक संदेश। यह",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Two Shot, Static, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s03_shot_2",
+      "motion": "gentle static motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "भावनात्मक गहराई खंड है, जिसमें",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "भावनात्मक गहराई खंड है, जिसमें",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Wide Shot, Pan, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s03_shot_3",
+      "motion": "gentle pan motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दिव्य स्वरूप, लीला और आध्यात्मिक",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Medium Shot, Tilt, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s03_shot_4",
+      "motion": "gentle tilt motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "अर्थ को शांत, भक्तिमय वाणी",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "अर्थ को शांत, भक्तिमय वाणी",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic devotional documentary, photorealistic mythological India, 16:9, Shiva, serene divine face of Shiva, majestic divine form, radiant fair skin with subtle divine glow, long dark matted hair adorned with crescent moon, deep compassionate eyes, tiger skin garment, sacred ash markings, rudraksha beads, serpent garland, trishul, damaru, trishul (trident), damaru, location: sacred Mount Kailash, Himalayan divine realm at dawn, shot: Close-Up, Dolly Out, conclusion moment of महादेव...**, lighting: soft golden divine light with gentle mist, rules: no modern objects, consistent face, consistent costume, Spiritual + cinematic + informative, ultra photorealistic, highly detailed 8k uhd cinematic film still, sharp focus, intricate details, natural skin texture, detailed expressive eyes, lifelike divine glow, volumetric lighting, rich colors, professional devotional cinematography, no cartoon, no painting, no illustration, no distortion, no distorted faces, no deformed faces, no extra limbs, no missing limbs, no blur, no low quality, no watermark",
+      "title": "c07_s03_shot_5",
+      "motion": "gentle dolly out motion, clouds drifting, lamp flames flickering, subtle divine glow pulsing; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "में प्रस्तुत किया गया है।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "में प्रस्तुत किया गया है।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    }
+  ],
+  "fluxSteps": 14,
+  "description": "Shiva — महादेव...**",
+  "folder_name": "shiva_3",
+  "chainContinuity": true,
+  "referencePrompt": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair (jata) with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayan mountains and misty clouds in the background, subtle golden sunrise light, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, photorealistic devotional art, epic Indian mythology aesthetic, shallow depth of field, dramatic yet peaceful, ultra-detailed, 8K, masterpiece, no text, no watermark."
+}

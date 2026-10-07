@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type RegenSpec, type VideoFormat, type VideoType } from "../api";
+import { alertServiceError, serviceOfflineKind, startRun, killRun, tailRun, outScenario, getScenario, type AssetEvent, type Engine, type ImageMode, type RegenSpec, type RunRequest, type VideoFormat, type VideoType } from "../api";
 import OutputGallery from "./OutputGallery";
 import { useDialog } from "./Dialog";
 import { MIN_TASK_MS, formatElapsed, formatStarted, loadPace, recordPaceDuration, type GenerationProgress } from "./GenerationProgressBar";
@@ -54,6 +54,8 @@ interface Props {
   folder?: string;
   engine: Engine;
   onEngine: (e: Engine) => void;
+  imageMode: ImageMode;
+  onImageMode: (e: ImageMode) => void;
   /** Which cut this section shows and generates: YOUTUBE (landscape main
       cut) or INSTAGRAM (9:16 Reel cut). A live run always owns the panel;
       the selection applies to the idle view and the next header run. */
@@ -69,7 +71,7 @@ interface Props {
   // Generate Reference from the scenario editor; count batches ref regens).
   // Queued requests carry the engine + format they were asked for (they may
   // have been switched since they were queued).
-  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean } | null;
+  pendingRun: { nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean; imageMode?: ImageMode } | null;
   // Reattach target: a run that was already active on the server when this
   // page loaded (e.g. after a refresh). RunPanel reopens its SSE tail — the
   // server replays the full log + asset events — so progress, the header bar
@@ -84,12 +86,57 @@ interface Props {
   onProgress?: (p: GenerationProgress) => void;
   /** ComfyUI queue depth (running + pending) for the monitor's QUEUE readout. */
   comfyQueue?: number;
+  // Runs waiting behind the active run (App / DirectorGeneration drain them
+  // serially — bulk Regenerate queues one single-asset run per checked
+  // scene). Counted into the progress totals + ETA below so the menu bar's
+  // Time Remaining covers the whole batch (5 / 10 / all), not just the one
+  // asset currently rendering. The active run itself is never in here.
+  runQueue?: RunRequest[];
+}
+
+// Queued work behind the active run, split for the Images / Videos progress
+// rows. `extra` counts tasks that are neither (dialogue voice tracks — they
+// only move the overall total + ETA fallback, never the per-row counts).
+// N / dlgBeats size full + dialogue runs queued behind a regen; unknown
+// sizes (config not loaded yet) contribute nothing rather than a guess.
+function queuedTaskCounts(
+  queue: RunRequest[] | undefined,
+  N: number | null,
+  dlgBeats: number | null,
+): { images: number; videos: number; extra: number } {
+  const out = { images: 0, videos: 0, extra: 0 };
+  for (const q of queue ?? []) {
+    if (q.mode === "song") continue; // audio progress lives on its own card
+    if (q.mode === "dialogue") {
+      const d = dlgBeats ?? 0;
+      if (d > 0) {
+        // Voice + lip-sync pass: D voice tracks + D synced clips + re-stitch.
+        out.videos += d + 1;
+        out.extra += d;
+      }
+      continue;
+    }
+    if (q.stitch) { out.videos += 1; continue; }
+    const regen = q.regen ?? null;
+    if (!regen) {
+      if (N != null && N > 0) { out.images += 1 + N; out.videos += N; }
+      continue;
+    }
+    if (regen.kind === "ref") {
+      out.images += Math.min(8, Math.max(1, Number(q.count) || 1));
+    } else if (regen.kind === "keyframe") {
+      out.images += 1;
+    } else if (regen.kind === "clip") {
+      out.videos += 1;
+    }
+  }
+  return out;
 }
 
 // Start / stitch / stop a run + live log tail (SSE) + live asset gallery.
 // Progress + ETA are derived from the real asset stream (see `progress`
 // below) — never fake timers.
-export default function RunPanel({ scenario, folder, engine, onEngine, videoType = "YOUTUBE", onVideoType, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress, comfyQueue = 0 }: Props) {
+export default function RunPanel({ scenario, folder, engine, onEngine, imageMode, onImageMode, videoType = "YOUTUBE", onVideoType, onDone, onStatus, pendingRun, attachRun, serverRun, onProgress, comfyQueue = 0, runQueue = [] }: Props) {
   // Displayed cut: the live run owns the panel while running; when idle the
   // YOUTUBE/INSTAGRAM dropdown picks which cut's outputs show (and what the
   // header Generate/Stitch buttons produce next).
@@ -158,13 +205,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setRunEngine(null);
     setRunMeta({ stitch: false, regen: null, count: 1 });
     setAssets([]);
-    setLog("");
+    resetLog();
     setAssetTimes([]);
     setStartedAt(null);
     setEndedAt(null);
     setCancelled(false);
     setPin(null);
     clearSeqStats();
+    bankRef.current = null;
+    bankedForRun.current = null;
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
@@ -189,13 +238,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setRunEngine(null);
     setRunMeta({ stitch: false, regen: null, count: 1 });
     setAssets([]);
-    setLog("");
+    resetLog();
     setAssetTimes([]);
     setStartedAt(null);
     setEndedAt(null);
     setCancelled(false);
     setPin(null);
     clearSeqStats();
+    bankRef.current = null;
+    bankedForRun.current = null;
     setStatus("idle");
     if (scenario) {
       getScenario(scenario)
@@ -214,6 +265,19 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   const [assets, setAssets] = useState<AssetEvent[]>([]);
   const closeTail = useRef<() => void>(() => {});
   const boxRef = useRef<HTMLPreElement>(null);
+  // Ref mirror of the run log: the SSE close handler runs in a stale closure
+  // and cannot read `log` state, so completion-time failure analysis (e.g. a
+  // ComfyUI outage mid-run) scans this instead. Reset everywhere setLog("")
+  // clears, appended everywhere the tail streams a line.
+  const logRef = useRef("");
+  const appendLog = (line: string) => {
+    logRef.current += line;
+    setLog((l) => l + line);
+  };
+  const resetLog = (msg = "") => {
+    logRef.current = msg;
+    setLog(msg);
+  };
   // Real progress inputs: total beats from the scenario config, run shape,
   // start/end timestamps, and per-asset completion times for the ETA.
   const [totalBeats, setTotalBeats] = useState<number | null>(null);
@@ -257,11 +321,34 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       return !c;
     });
   const dialog = useDialog();
+  // Shared run-end for fresh + reattached tails: a failed run whose log tail
+  // carries an API-offline marker (e.g. ComfyUI died mid-generation) pops the
+  // dedicated offline alert window instead of failing silently inline.
+  const finishRun = (s: string) => {
+    setEndedAt(Date.now());
+    setNow(Date.now());
+    const failed = s !== "done";
+    setStatus(failed ? "error" : "done");
+    onDone();
+    if (failed) {
+      const tail = logRef.current.slice(-4000);
+      if (serviceOfflineKind(tail)) void alertServiceError(tail, dialog, "Generation run");
+    }
+  };
   // Pace bookkeeping (refs, not state — written from the SSE callback):
   // last completion time + already-seen files, so each landed asset records
   // exactly one duration sample even if the server re-emits an event.
   const lastAssetAt = useRef<number>(0);
   const seenFiles = useRef<Set<string>>(new Set());
+  // Cumulative batch bank (declared before the progress memo, which folds it
+  // in): finished counts from earlier runs of the serially-drained batch.
+  // Each drained run resets its own asset stream on the next begin(), which
+  // used to snap the bar back (1/5 → 0/4) mid-batch — banking keeps the bar
+  // climbing monotonically instead. Only finished work is ever banked, so
+  // remaining-work math is untouched. Cleared when the batch drains fully,
+  // on project switch, and on reattach (see the banking effect below).
+  const bankRef = useRef<{ done: number; images: number; videos: number } | null>(null);
+  const bankedForRun = useRef<string | null>(null);
 
   // Shared SSE asset handler for fresh + reattached tails. Replayed backlog
   // events (replay: true — the server dumps pre-refresh assets once on SSE
@@ -305,11 +392,11 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     return () => clearInterval(t);
   }, [status, serverRun]);
 
-  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "dialogue" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape", mode?: "dialogue" | "song", beats?: string, noStitch?: boolean) => {
+  const begin = async (stitch: boolean, regen: RegenSpec | null = null, count = 1, which: "run" | "stitch" | "dialogue" | "external" = "external", runEngine: Engine = engine, runFormat: VideoFormat = "landscape", mode?: "dialogue" | "song", beats?: string, noStitch?: boolean, imageMode: ImageMode = "flux_text_image") => {
     if (!scenario) return;
     if (which !== "external") setStarting(which);
     try {
-      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count, mode, beats, noStitch, chain });
+      const res = await startRun(scenario, { stitch, regen, engine: runEngine, format: runFormat, count, mode, beats, noStitch, chain, imageMode });
       if (!res.id) throw new Error(res.error || "run rejected by server");
       const { id } = res;
       setRunId(id);
@@ -338,19 +425,22 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
         })
         .catch(() => { clearSeqStats(); });
       setStatus("running");
-      setLog("");
+      resetLog();
       setAssets([]);
       closeTail.current();
       closeTail.current = tailRun(
         id,
-        (line) => setLog((l) => l + line),
-        (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
+        appendLog,
+        finishRun,
         handleAssetEvent
       );
     } catch (e) {
       setEndedAt(Date.now());
       setStatus("error");
-      setLog(`run failed to start: ${e instanceof Error ? e.message : String(e)}\n`);
+      const msg = `run failed to start: ${e instanceof Error ? e.message : String(e)}\n`;
+      resetLog(msg);
+      // A down ComfyUI/LLM API at start pops its offline alert window.
+      void alertServiceError(msg, dialog, "Start run");
     } finally {
       setStarting(null);
     }
@@ -359,7 +449,7 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
   // Runs triggered from the output gallery (stitch / regenerate) or the
   // scenario editor (batch reference generation).
   useEffect(() => {
-    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine, pendingRun.format ?? "landscape", pendingRun.mode, pendingRun.beats, pendingRun.noStitch);
+    if (pendingRun) begin(!!pendingRun.stitch, pendingRun.regen || null, pendingRun.count ?? 1, "external", pendingRun.engine ?? engine, pendingRun.format ?? "landscape", pendingRun.mode, pendingRun.beats, pendingRun.noStitch, pendingRun.imageMode ?? "flux_text_image");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRun?.nonce]);
 
@@ -395,6 +485,10 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
     setTimeAnchor(Date.now());
     lastAssetAt.current = Date.now();
     seenFiles.current = new Set();
+    // Fresh session (refresh mid-batch): earlier runs' bank is gone — the
+    // bar restarts from this run, while Time Remaining stays exact.
+    bankRef.current = null;
+    bankedForRun.current = null;
     setEndedAt(null);
     setAssetTimes([]);
     setCancelled(false);
@@ -407,13 +501,13 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       })
       .catch(() => { clearSeqStats(); });
     setStatus("running");
-    setLog("");
+    resetLog();
     setAssets([]);
     closeTail.current();
     closeTail.current = tailRun(
       meta.id,
-      (line) => setLog((l) => l + line),
-      (s) => { setEndedAt(Date.now()); setNow(Date.now()); setStatus(s === "done" ? "done" : "error"); onDone(); },
+      appendLog,
+      finishRun,
       handleAssetEvent
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -457,6 +551,9 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       imagesDone = completed;
       imagesTotal = total;
     } else if (regen && (regen.kind === "keyframe" || regen.kind === "clip")) {
+      // Single-asset regen: this run renders exactly one asset. Queued
+      // bulk-regen runs (one per checked scene) are added on top below, so
+      // the bar + ETA cover the whole batch instead of just this asset.
       total = 1;
       completed = assets.length > 0 ? 1 : 0;
       scene = regen.index ?? null;
@@ -489,8 +586,37 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       videosDone = clipIdx.size;
     }
 
+    // Runs waiting behind this one (bulk Regenerate queues one single-asset
+    // run per checked scene). They render after this run on the same serial
+    // backend, so they join the totals AND the remaining-work ETA below
+    // (remImg/remVid derive from these totals) — the menu bar's Time
+    // Remaining then covers all 5 / 10 / all scenes, like a full Generate.
+    // `completed` stays this run's own landed assets: each queued run resets
+    // the stream when it starts, so its completions count as it drains.
+    const queued = queuedTaskCounts(runQueue, N, dlgBeats);
+    imagesTotal += queued.images;
+    videosTotal += queued.videos;
+    total += queued.images + queued.videos + queued.extra;
+
+    // Fold in finished work from earlier runs of this batch (banked at each
+    // run end while the queue is non-empty). Banked totals always equal
+    // banked completions, so the remaining below stays exactly the live
+    // remaining while pct/completed climb monotonically across the batch.
+    const bank = bankRef.current;
+    if (bank) {
+      total += bank.done;
+      completed += bank.done;
+      imagesTotal += bank.images;
+      imagesDone += bank.images;
+      videosTotal += bank.videos;
+      videosDone += bank.videos;
+    }
+
     let pct = total > 0 ? Math.min(100, (completed / total) * 100) : 0;
-    if (hasFinal) pct = 100;
+    // A landed final cut means 100% — except mid-batch (runs still queued
+    // or banked): the batch isn't done, so keep climbing naturally instead
+    // of flashing Completed before the queued scenes render.
+    if (hasFinal && (runQueue?.length ?? 0) === 0 && !bankRef.current) pct = 100;
 
     // ETA from real per-asset durations: each completion interval is
     // attributed to the asset that just finished, so image and video averages
@@ -638,9 +764,34 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
       activeElapsedMs,
       activeExpectedMs,
     };
-  }, [assets, assetTimes, totalBeats, dlgBeats, runMeta, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
+  }, [assets, assetTimes, totalBeats, dlgBeats, runMeta, runQueue, status, startedAt, timeAnchor, endedAt, now, cancelled, runScenario, scenario]);
 
   useEffect(() => { onProgress?.(progress); }, [progress, onProgress]);
+
+  // Cumulative batch banking: each drained run's asset stream resets on the
+  // next begin(), so without this the bar would snap back (1/5 → 0/4) at
+  // every handoff. When a run ends with more runs still queued, bank its
+  // finished counts (once per run id); the memo folds the bank into the
+  // display totals so the bar climbs monotonically across the whole batch.
+  // Only finished work is banked, so Time Remaining is untouched. The bank
+  // clears when the batch drains fully (or on switch/reattach, above).
+  useEffect(() => {
+    if (status === "running" || !runId) return;
+    if (bankedForRun.current === runId) return;
+    bankedForRun.current = runId;
+    if ((runQueue?.length ?? 0) > 0) {
+      const b = bankRef.current ?? { done: 0, images: 0, videos: 0 };
+      bankRef.current = {
+        done: b.done + progress.completed,
+        images: b.images + progress.imagesDone,
+        videos: b.videos + progress.videosDone,
+      };
+    } else {
+      bankRef.current = null;
+    }
+    // progress is intentionally the run-final snapshot at the status flip.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, runId]);
 
   const statusPill = {
     idle: <span className="pill">idle</span>,
@@ -680,15 +831,15 @@ export default function RunPanel({ scenario, folder, engine, onEngine, videoType
             <input type="checkbox" checked={chain} onChange={toggleChain} disabled={status === "running"} aria-label="Chain scenes for a connected movie" />
             <span className="vt-label">🔗 Chain</span>
           </label>
-          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation — dialogue beats are voiced + lip-synced automatically, clips sized to the voice" : "Start a full generation — dialogue beats are voiced (per-character Hindi TTS) + lip-synced automatically, each clip sized to its dialogue"}>
+          <button className="primary run-head-btn" onClick={() => begin(false, null, 1, "run", engine, idleFormat, undefined, undefined, undefined, imageMode)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Start a full vertical (9:16 Reel) generation — dialogue beats are voiced + lip-synced automatically, clips sized to the voice" : "Start a full generation — dialogue beats are voiced (per-character Hindi TTS) + lip-synced automatically, each clip sized to its dialogue"}>
             {starting === "run" ? <Spinner size={12} /> : <IconPlay size={12} />}
             {starting === "run" ? "Starting…" : "Generate"}
           </button>
-          <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch", engine, idleFormat)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Re-stitch the Reel final from selected mains only" : "Re-stitch final from selected mains only"}>
+          <button className="run-head-btn" onClick={() => begin(true, null, 1, "stitch", engine, idleFormat, undefined, undefined, undefined, imageMode)} disabled={status === "running" || starting !== null || !scenario} title={!scenario ? "Select or save a scenario first" : videoType === "INSTAGRAM" ? "Re-stitch the Reel final from selected mains only" : "Re-stitch final from selected mains only"}>
             {starting === "stitch" ? <Spinner size={12} /> : <IconScissors size={12} />}
             {starting === "stitch" ? "Starting…" : "Stitch only"}
           </button>
-          <button className="run-head-btn" onClick={() => begin(false, null, 1, "dialogue", engine, idleFormat, "dialogue")} disabled={status === "running" || starting !== null || !scenario || !dlgBeats} title={!scenario ? "Select or save a scenario first" : !dlgBeats ? "No dialogue lines in this project — add speaker: line dialogue in the Director or editor first" : `Re-voice ${dlgBeats} dialogue beat${dlgBeats === 1 ? "" : "s"} + re-lip-sync (Generate already does this automatically — use this only to retry voice/sync without rebuilding images)`}>
+          <button className="run-head-btn" onClick={() => begin(false, null, 1, "dialogue", engine, idleFormat, "dialogue", undefined, undefined, imageMode)} disabled={status === "running" || starting !== null || !scenario || !dlgBeats} title={!scenario ? "Select or save a scenario first" : !dlgBeats ? "No dialogue lines in this project — add speaker: line dialogue in the Director or editor first" : `Re-voice ${dlgBeats} dialogue beat${dlgBeats === 1 ? "" : "s"} + re-lip-sync (Generate already does this automatically — use this only to retry voice/sync without rebuilding images)`}>
             {starting === "dialogue" ? <Spinner size={12} /> : <span aria-hidden="true">🎙</span>}
             {starting === "dialogue" ? "Starting…" : `Dialogue${dlgBeats ? ` (${dlgBeats})` : ""}`}
           </button>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   folderOf, getScenario, listScenarios, outScenario, saveScenario, slugFolder,
-  type Engine, type RegenSpec, type RunRequest, type VideoFormat, type VideoType,
+  type Engine, type ImageMode, type RegenSpec, type RunRequest, type VideoFormat, type VideoType,
 } from "../api";
 import type { AssetKind } from "../types";
 import type { Scenario } from "../types";
@@ -20,6 +20,10 @@ interface Props {
   boardScenes?: { scene_number: number; shots?: { shot_id?: unknown }[] }[];
   /** Open the linked project in the full workspace (optional). */
   onOpenProject?: (name: string) => void;
+  /** Image mode for text-to-image workflow selection. */
+  imageMode?: ImageMode;
+  /** Callback when image mode changes. */
+  onImageMode?: (mode: ImageMode) => void;
 }
 
 const sameRequest = (a: RunRequest, b: RunRequest) =>
@@ -32,9 +36,11 @@ const sameRequest = (a: RunRequest, b: RunRequest) =>
 // is untouched. Multi-shot scenes need no special casing here: APPROVE
 // already flattens each shot to one generation beat (scene_N_a/b/…), so the
 // beats gallery naturally renders one image + clip per shot.
-export default function DirectorGeneration({ projectName, boardScenes = [], onOpenProject }: Props) {
+export default function DirectorGeneration({ projectName, boardScenes = [], onOpenProject, imageMode: initialImageMode, onImageMode }: Props) {
   const [engine, setEngine] = useState<Engine>("ltx");
   const [videoType, setVideoType] = useState<VideoType>("YOUTUBE");
+  // Always use the passed prop; if not provided, default to "flux_text_image"
+  const imageMode = initialImageMode ?? "flux_text_image";
   const [folder, setFolder] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [refPrompt, setRefPrompt] = useState("");
@@ -238,6 +244,8 @@ export default function DirectorGeneration({ projectName, boardScenes = [], onOp
         folder={folder}
         engine={engine}
         onEngine={setEngine}
+        imageMode={imageMode}
+        onImageMode={onImageMode ?? (() => {})}
         videoType={videoType}
         onVideoType={changeVideoType}
         onDone={refresh}
@@ -249,6 +257,7 @@ export default function DirectorGeneration({ projectName, boardScenes = [], onOp
         }}
         pendingRun={pendingRun}
         onProgress={setGenProgress}
+        runQueue={runQueue}
       />
 
       <div style={{ marginTop: 12 }}>
@@ -259,6 +268,7 @@ export default function DirectorGeneration({ projectName, boardScenes = [], onOp
           refBusy={runActive}
           refGenerating={refGenerating}
           isDraft={false}
+          isVertical={cutFormat === "vertical"}
           referenceSlot={cutDir ? (
             <OutputGallery
               key={`dir-ref:${cutDir}`}

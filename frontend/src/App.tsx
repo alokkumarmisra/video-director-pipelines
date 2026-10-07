@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, folderOf, slugFolder, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type RegenSpec, type RunRequest, type VideoFormat, type VideoType } from "./api";
+import { listScenarios, getScenario, getDashboard, saveScenario, deleteScenario, renameScenario, setFavorite, comfyStatus, getHealth, outScenario, folderOf, slugFolder, me, logout, fmtDateTime, listRuns, getTheme, saveTheme, DEFAULT_PRESET_ID, type Engine, type AuthUser, type ImageMode, type RegenSpec, type RunRequest, type VideoFormat, type VideoType } from "./api";
 import type { Beat, Scenario, ScenarioInfo, ComfyStatus, AssetKind, DashboardProject, HealthResponse, Run } from "./types";
 import ScenarioEditor from "./components/ScenarioEditor";
 import GenerateReference from "./components/GenerateReference";
@@ -14,6 +14,7 @@ import SceneTools from "./components/SceneTools";
 import HomePage from "./components/HomePage";
 import ResourcePage from "./components/ResourcePage";
 import DirectorPage from "./components/DirectorPage";
+import StoryPage from "./components/StoryPage";
 import CreateSongPage from "./components/CreateSongPage";
 import VideoLipSyncPage from "./components/VideoLipSyncPage";
 import DocumentaryPage from "./components/DocumentaryPage";
@@ -22,7 +23,7 @@ import ComponentsPage from "./components/ComponentsPage";
 import ViewBoundary from "./components/ViewBoundary";
 import Login from "./components/Login";
 import { DialogProvider, useDialog } from "./components/Dialog";
-import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconClipboard, IconDatabase, IconFilm, IconFolder, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSearch, IconSparkles, IconStar, IconSun, IconTrash, IconUser, Spinner } from "./components/Icons";
+import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconClipboard, IconDatabase, IconFilm, IconFolder, IconLayers, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSearch, IconSparkles, IconStar, IconSun, IconTrash, IconUser, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
 
@@ -345,7 +346,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   const boxBgFallback = theme === "dark" ? DEFAULT_BG_DARK : DEFAULT_BG_LIGHT;
   const boxBtnFallback = theme === "dark" ? DEFAULT_BTN_DARK : DEFAULT_BTN_LIGHT;
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "song" | "lipsync" | "documentary" | "reface" | "components">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "story" | "song" | "lipsync" | "documentary" | "reface" | "components">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -366,6 +367,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   // content stays mounted (dimmed) until it lands — no blank flash.
   const [draft, setDraft] = useState<{ name: string; config: Scenario; project_id?: number | null } | null>(null);
   const [engine, setEngine] = useState<Engine>("ltx");
+  const [imageMode, setImageMode] = useState<ImageMode>("flux_text_image");
   const [comfy, setComfy] = useState<ComfyStatus | null>(null);
   // Combined DB/LLM/ComfyUI health for the topbar status pills (same
   // /api/health payload the Home hero used to show — now always visible).
@@ -418,7 +420,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
     setNameOv(null);
     setCraftEpoch((e) => e + 1);
   }, []);
-  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean } | null>(null);
+  const [pendingRun, setPendingRun] = useState<{ nonce: number; stitch?: boolean; regen?: RegenSpec | null; count?: number; engine?: Engine; format?: VideoFormat; mode?: "dialogue" | "song"; beats?: string; noStitch?: boolean; skipTts?: boolean; skipLipsync?: boolean; noDialogue?: boolean; chain?: boolean; lipsync?: string; songModel?: string; imageMode?: ImageMode } | null>(null);
   // Reattach target for RunPanel: a run that was already active on the server
   // when this page loaded (refresh mid-generation). Restored here — not in
   // RunPanel — so the header bar, sidebar spinners and every generating
@@ -751,6 +753,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
       skipTts: !!spec.skipTts,
       skipLipsync: !!spec.skipLipsync,
       noStitch: !!spec.noStitch,
+      imageMode: spec.imageMode,
+      lipsync: spec.lipsync,
+      noDialogue: !!spec.noDialogue,
+      chain: !!spec.chain,
+      songModel: spec.songModel,
     };
     if (runActive) {
       setRunQueue((q) => (q.some((x) => sameRequest(x, item)) ? q : [...q, item]));
@@ -833,11 +840,60 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
     }
   }, [editorOpen, toggleEditor]);
 
-  // "Apply to All Scene": append the Master Prompt box text to every scene's
-  // keyframe image prompt below (same append rules as craft-time fan-out —
-  // blank or already-carried = untouched; motion is never touched). Drafts update locally and persist
-  // on the next explicit Save; saved projects persist immediately as a new
-  // version, like Story Board beat edits.
+  // "Apply to All Scene" popup (AI merge): the popup already ran the per-scene
+  // LLM merge and hands back the merged sequence + the edited master text.
+  // Persist exactly that (keyframe prompts only — motion untouched upstream).
+  // Drafts update locally and persist on the next explicit Save; saved
+  // projects persist immediately as a new version, like Story Board edits.
+  // The edited master also becomes the stored referencePrompt so the next
+  // added scene starts with the new text.
+  const applyAiSequence = async (next: Beat[], newMaster: string): Promise<{ applied: number; saved: boolean }> => {
+    if (!editor) return { applied: 0, saved: false };
+    const m = String(newMaster ?? "").trim();
+    const base: Scenario = draft ? draft.config : { ...editor.config, ...overrides };
+    const before = Array.isArray(base.sequence) ? base.sequence : [];
+    if (before.length === 0 || next.length === 0) return { applied: 0, saved: false };
+    let applied = 0;
+    next.forEach((b, i) => {
+      if (JSON.stringify(b ?? null) !== JSON.stringify(before[i] ?? null)) applied++;
+    });
+    const withMaster: Scenario = m && m !== String(base.referencePrompt ?? "").trim()
+      ? { ...base, referencePrompt: m, sequence: next }
+      : { ...base, sequence: next };
+    if (applied === 0) {
+      // No scene changed, but the master text itself may be new — still store
+      // it so the box + next scenes carry the addition.
+      if (m && m !== String(base.referencePrompt ?? "").trim()) {
+        if (draft) {
+          setDraft({ ...draft, config: withMaster });
+          return { applied: 0, saved: false };
+        }
+        await saveScenario(editor.name, withMaster);
+        dropEdits();
+        const sc = await getScenario(editor.name);
+        setCfg(sc.config);
+        refreshScenarios().catch(() => {});
+        refresh();
+      }
+      return { applied: 0, saved: false };
+    }
+    if (draft) {
+      setDraft({ ...draft, config: withMaster });
+      return { applied, saved: false };
+    }
+    await saveScenario(editor.name, withMaster);
+    // The save folded the card overrides in — drop them so the cards fall
+    // back to the freshly saved config.
+    dropEdits();
+    const sc = await getScenario(editor.name);
+    setCfg(sc.config);
+    refreshScenarios().catch(() => {});
+    refresh();
+    return { applied, saved: true };
+  };
+
+  // Legacy plain append behind the old direct button (kept for compat —
+  // the popup flow above persists the AI-merged sequence instead).
   const applyMasterToScenes = async (master: string): Promise<{ applied: number; saved: boolean }> => {
     if (!editor) return { applied: 0, saved: false };
     const m = String(master ?? "").trim();
@@ -914,12 +970,12 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
     const refFormat = cutFormat === "vertical" ? { format: "vertical" as VideoFormat } : {};
     const target = shownName || name;
     if (!target || !cfg) {
-      requestRun({ regen: { kind: "ref" }, count, ...refFormat });
+      requestRun({ regen: { kind: "ref" }, count, ...refFormat, imageMode });
       return;
     }
     // Never persist a half-switched state.
     if (shownName && shownName !== target) {
-      requestRun({ regen: { kind: "ref" }, count, ...refFormat });
+      requestRun({ regen: { kind: "ref" }, count, ...refFormat, imageMode });
       return;
     }
     const merged: Scenario = { ...cfg, ...overrides };
@@ -1371,6 +1427,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
                 { key: "cur", label: "Director", icon: <IconFilm size={13} aria-hidden="true" />, tone: "ci-director", current: true },
               ];
+            } else if (view === "story") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Story", icon: <IconLayers size={13} aria-hidden="true" />, tone: "ci-story", current: true },
+              ];
             } else if (view === "song") {
               crumbs = [
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
@@ -1501,6 +1562,17 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               </div>
             </>
           )}
+        </div>
+        <div className="topbar-center-image-mode">
+          <select
+            className="topbar-select"
+            value={imageMode}
+            onChange={(e) => setImageMode(e.target.value as ImageMode)}
+            aria-label="Image mode"
+          >
+            <option value="flux">Flux t2i</option>
+            <option value="flux_text_image">Flux Text to Image</option>
+          </select>
         </div>
         <div className="topbar-right">
           <div className="topbar-health" role="status" aria-label="Service status">
@@ -1634,6 +1706,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               <span className="sidenav-label">Director</span>
             </button>
             <button
+              className={`sidenav-btn nav-story ${view === "story" ? "on" : ""}`}
+              onClick={() => setView("story")}
+              aria-current={view === "story" ? "page" : undefined}
+              title="Open the Story view"
+            >
+              <span className="sidenav-icon"><IconLayers size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Story</span>
+            </button>
+            <button
               className={`sidenav-btn nav-song ${view === "song" ? "on" : ""}`}
               onClick={() => setView("song")}
               aria-current={view === "song" ? "page" : undefined}
@@ -1697,7 +1778,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-        <div className={`shell${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "documentary" ? " is-documentary" : ""}${view === "reface" ? " is-reface" : ""}${view === "components" ? " is-components" : ""}`}>
+        <div className={`shell${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "story" ? " is-story" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "documentary" ? " is-documentary" : ""}${view === "reface" ? " is-reface" : ""}${view === "components" ? " is-components" : ""}`}>
         {/* Projects rail tab — always visible (except Home): clicking slides
             only the container out over the content, clicking again collapses
             it. Nothing ever shrinks (same pattern as the Scene Tools dock). */}
@@ -1741,6 +1822,21 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
                 refresh();
               }}
               onPlanningProgress={setDirectorProgress}
+              imageMode={imageMode}
+              onImageMode={setImageMode}
+            />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "story" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Story">
+            <StoryPage
+              onOpenProject={openProject}
+              onProjectsChanged={() => {
+                refreshScenarios();
+                refresh();
+              }}
+              imageMode={imageMode}
+              onImageMode={setImageMode}
             />
           </ViewBoundary>
         </div>
@@ -1976,6 +2072,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             folder={draft ? "" : contentFolder}
             engine={engine}
             onEngine={setEngine}
+            imageMode={imageMode}
+            onImageMode={setImageMode}
             videoType={videoType}
             onVideoType={changeVideoType}
             onDone={refresh}
@@ -1993,6 +2091,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             serverRun={serverRun}
             onProgress={setGenProgress}
             comfyQueue={comfyQueue}
+            runQueue={runQueue}
           />
           {switchingProject ? (
             <section className="card ws-loading" aria-label="Loading project">
@@ -2010,6 +2109,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             refBusy={runActive}
             refGenerating={refGenerating}
             isDraft={!!draft}
+            isVertical={cutFormat === "vertical"}
             referenceSlot={!draft && contentName ? (
               <OutputGallery
                 key={`ref:${cutDir}`}
@@ -2154,6 +2254,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             onNameChange={setNameOv}
             onBeforeCraft={persistOpenProject}
             sceneCount={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence.length : 0}
+            beats={editor && Array.isArray(editor.config.sequence) ? editor.config.sequence : []}
+            onApplyAiSequence={applyAiSequence}
             onApplyMaster={applyMasterToScenes}
           />
           {/* Same blank-while-switching rule as the middle column: the editor

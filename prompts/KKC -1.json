@@ -1,0 +1,1040 @@
+{
+  "tts": {
+    "voices": {
+      "Speaker": "hi-IN-SwaraNeural",
+      "duryodhana": "hi-IN-SwaraNeural",
+      "bhagwan_vishnu": "hi-IN-MadhurNeural"
+    },
+    "defaultVoice": "hi-IN-MadhurNeural"
+  },
+  "duration": 10,
+  "sequence": [
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition\nभगवान् विश्नु: सूर्योदय में प्रकाश डालने वाला, विशाल-मुखी, निराकार संजात का दर्पण\nदुर्योधन: जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला\nहस्तिनापुर: महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c01_s01_shot_1",
+      "motion": "motion only: static, establishing shot, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 9,
+          "kind": "narration",
+          "text": "पांडव आये कुछ और निखर।",
+          "start": 0,
+          "seconds": 9,
+          "speaker": "narrator"
+        }
+      ],
+      "emotion": "ecstasy",
+      "dialogue": [
+        {
+          "line": "पांडव आये कुछ और निखर।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 9,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition\nभगवान् विश्नु: सूर्योदय में प्रकाश डालने वाला, विशाल-मुखी, निराकार संजात का दर्पण\nदुर्योधन: जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला\nहस्तिनापुर: महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c01_s01_shot_2",
+      "motion": "motion only: static, detail shot, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 7.5,
+          "kind": "narration",
+          "text": "सह धूप-घाम, पानी-पत्थर, सौभाग्य न सब दिन सोता है",
+          "start": 0,
+          "seconds": 7.5,
+          "speaker": "narrator"
+        }
+      ],
+      "emotion": "ecstasy",
+      "dialogue": [
+        {
+          "line": "सह धूप-घाम, पानी-पत्थर, सौभाग्य न सब दिन सोता है",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 7.5,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition\nभगवान् विश्नु: सूर्योदय में प्रकाश डालने वाला, विशाल-मुखी, निराकार संजात का दर्पण\nदुर्योधन: जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला\nहस्तिनापुर: महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c01_s01_shot_3",
+      "motion": "motion only: static, close-up shot of Duryodhana and Bhima, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 8.5,
+          "kind": "narration",
+          "text": "सौभाग्य न सब दिन सोता है, देखें आगे क्या होता है",
+          "start": 0,
+          "seconds": 8.5,
+          "speaker": "narrator"
+        }
+      ],
+      "emotion": "ecstasy",
+      "dialogue": [
+        {
+          "line": "सौभाग्य न सब दिन सोता है, देखें आगे क्या होता है",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 8.5,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन और पांडवों की लड़ाई की दृश्यिका उसके सामने आने वाले बाधों की प्रतिशत रूपांतरण।, cinematic wide framing",
+      "title": "c02_s01_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "दुर्योधन वह भी दे",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दुर्योधन वह भी दे",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन और पांडवों की लड़ाई की दृश्यिका उसके सामने आने वाले बाधों की प्रतिशत रूपांतरण।, cinematic medium framing",
+      "title": "c02_s01_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "ना सका, आशीष समाज",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "ना सका, आशीष समाज",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन और पांडवों की लड़ाई की दृश्यिका उसके सामने आने वाले बाधों की प्रतिशत रूपांतरण।, cinematic close-up framing",
+      "title": "c02_s01_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "की ले न सका,",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "की ले न सका,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन और पांडवों की लड़ाई की दृश्यिका उसके सामने आने वाले बाधों की प्रतिशत रूपांतरण।, cinematic wide framing",
+      "title": "c02_s01_shot_4",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "उलटे, हरि को बाँधने",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "उलटे, हरि को बाँधने",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन और पांडवों की लड़ाई की दृश्यिका उसके सामने आने वाले बाधों की प्रतिशत रूपांतरण।, cinematic medium framing",
+      "title": "c02_s01_shot_5",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 12,
+          "kind": "narration",
+          "text": "चला।",
+          "start": 0,
+          "seconds": 12,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "चला।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 12
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके विशाल प्राणोत्सव संरचना जो बाधाओं की चूम-चूम दिखाती है।, cinematic wide framing",
+      "title": "c02_s02_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "भगवान् हस्तिनापुर आये,",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "भगवान् हस्तिनापुर आये,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके विशाल प्राणोत्सव संरचना जो बाधाओं की चूम-चूम दिखाती है।, cinematic medium framing",
+      "title": "c02_s02_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "पांडव का संदेशा",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "पांडव का संदेशा",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके विशाल प्राणोत्सव संरचना जो बाधाओं की चूम-चूम दिखाती है।, cinematic close-up framing",
+      "title": "c02_s02_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "लाये।",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "लाये।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन ने आग्रह किया लेकिन संतोष में बाधने का उपयोग कर रहा है।, cinematic wide framing",
+      "title": "c02_s03_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "दो न्याय अगर तो आधा दो, पर,",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दो न्याय अगर तो आधा दो, पर,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन ने आग्रह किया लेकिन संतोष में बाधने का उपयोग कर रहा है।, cinematic medium framing",
+      "title": "c02_s03_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "इसमें भी यदि बाधा हो, तो दे",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "इसमें भी यदि बाधा हो, तो दे",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन ने आग्रह किया लेकिन संतोष में बाधने का उपयोग कर रहा है।, cinematic close-up framing",
+      "title": "c02_s03_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "दो केवल पाँच ग्राम, रक्खो अपनी धरत।",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दो केवल पाँच ग्राम, रक्खो अपनी धरत।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके संदेश की प्रतिस्थापन।, cinematic wide framing",
+      "title": "c03_s01_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "भगवान् हस्तिनापुर",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "भगवान् हस्तिनापुर",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके संदेश की प्रतिस्थापन।, cinematic medium framing",
+      "title": "c03_s01_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "आये, पांडव",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "आये, पांडव",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके संदेश की प्रतिस्थापन।, cinematic close-up framing",
+      "title": "c03_s01_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "का संदेशा",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "का संदेशा",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, भगवान् की दृश्यिका और उसके संदेश की प्रतिस्थापन।, cinematic wide framing",
+      "title": "c03_s01_shot_4",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "लाये।",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "लाये।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन की जवाबदारिदेवी की प्रतिस्थापन और भगवान् अपना संदेश लाता है।, cinematic wide framing",
+      "title": "c03_s02_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "दो न्याय अगर तो आधा दो,",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दो न्याय अगर तो आधा दो,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन की जवाबदारिदेवी की प्रतिस्थापन और भगवान् अपना संदेश लाता है।, cinematic medium framing",
+      "title": "c03_s02_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "पर, इसमें भी यदि बाधा हो,",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "पर, इसमें भी यदि बाधा हो,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन की जवाबदारिदेवी की प्रतिस्थापन और भगवान् अपना संदेश लाता है।, cinematic close-up framing",
+      "title": "c03_s02_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "तो दे दो केवल पाँच ग्राम,",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "तो दे दो केवल पाँच ग्राम,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन की जवाबदारिदेवी की प्रतिस्थापन और भगवान् अपना संदेश लाता है।, cinematic wide framing",
+      "title": "c03_s02_shot_4",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 11,
+          "kind": "narration",
+          "text": "रक्खो अपनी धरत।",
+          "start": 0,
+          "seconds": 11,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "रक्खो अपनी धरत।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 11
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन द्वारा भगवान् की प्रस्तावित आपूर्ति के संघर्ष में बाधने की प्रतिस्थापन।, cinematic wide framing",
+      "title": "c03_s03_shot_1",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "दुर्योधन वह भी दे ना सका,",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "दुर्योधन वह भी दे ना सका,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन द्वारा भगवान् की प्रस्तावित आपूर्ति के संघर्ष में बाधने की प्रतिस्थापन।, cinematic medium framing",
+      "title": "c03_s03_shot_2",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "आशीष समाज की ले न सका,",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "आशीष समाज की ले न सका,",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, महाभारत के मूल दृश्यों से प्रेमिकीकृत अवस्था, दुर्योधन द्वारा भगवान् की प्रस्तावित आपूर्ति के संघर्ष में बाधने की प्रतिस्थापन।, cinematic close-up framing",
+      "title": "c03_s03_shot_3",
+      "motion": "gentle cinematic motion, clouds drifting, subtle divine glow; keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 10,
+          "kind": "narration",
+          "text": "उलटे, हरि को बाँधने चला।",
+          "start": 0,
+          "seconds": 10,
+          "speaker": "narrator"
+        }
+      ],
+      "dialogue": [
+        {
+          "line": "उलटे, हरि को बाँधने चला।",
+          "speaker": "narrator"
+        }
+      ],
+      "duration": 10
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. भगवान् विश्नु, सूर्योदय में प्रकाश डालने वाले विशाल-मुखी, अल्प कोटि दबाव सहनीय।",
+      "title": "c04_s01_shot_26",
+      "motion": "Camera: Wide Shot, Angle: Eye Level, Movement: Static. Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 9.7,
+          "kind": "narration",
+          "text": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "start": 0,
+          "seconds": 9.7,
+          "speaker": "narrator"
+        },
+        {
+          "end": 19.8,
+          "kind": "dialogue",
+          "text": "भगवान्,दो नयाय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "start": 10,
+          "seconds": 9.8,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Tense and Awed",
+      "dialogue": [
+        {
+          "line": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भगवान्,दो नयाय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 19.8,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c04_s01_shot_27",
+      "motion": "Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6,
+          "kind": "narration",
+          "text": "भगवान् दुर्योधन, अपरिहार्य संधि प्रदान करता है",
+          "start": 0,
+          "seconds": 6,
+          "speaker": "narrator"
+        },
+        {
+          "end": 12.3,
+          "kind": "dialogue",
+          "text": "भगवान्,भगवान् दुर्योधन, अपरिहार्य संधि प्रदान करता है",
+          "start": 6.4,
+          "seconds": 5.9,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Respect and Fear",
+      "dialogue": [
+        {
+          "line": "भगवान् दुर्योधन, अपरिहार्य संधि प्रदान करता है",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भगवान्,भगवान् दुर्योधन, अपरिहार्य संधि प्रदान करता है",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 12.3,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c04_s02_shot_28",
+      "motion": "Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6.9,
+          "kind": "narration",
+          "text": "भगवान् भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 0,
+          "seconds": 6.9,
+          "speaker": "narrator"
+        },
+        {
+          "end": 14.2,
+          "kind": "dialogue",
+          "text": "भगवान्,भगवान् भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 7.3,
+          "seconds": 6.9,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Frustration and Defiance",
+      "dialogue": [
+        {
+          "line": "भगवान् भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भगवान्,भगवान् भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 14.2,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c04_s02_shot_29",
+      "motion": "Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 7.8,
+          "kind": "narration",
+          "text": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "start": 0,
+          "seconds": 7.8,
+          "speaker": "narrator"
+        },
+        {
+          "end": 16,
+          "kind": "dialogue",
+          "text": "दुर्योधन,दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "start": 8.2,
+          "seconds": 7.8,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Aggressive",
+      "dialogue": [
+        {
+          "line": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दुर्योधन,दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 16,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c04_s03_shot_30",
+      "motion": "Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6.2,
+          "kind": "narration",
+          "text": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे",
+          "start": 0,
+          "seconds": 6.2,
+          "speaker": "narrator"
+        },
+        {
+          "end": 12.8,
+          "kind": "dialogue",
+          "text": "भगवान्,जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे",
+          "start": 6.6,
+          "seconds": 6.2,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Resignation and Acceptance",
+      "dialogue": [
+        {
+          "line": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भगवान्,जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 12.8,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "global style + character bible + location bible + shot description + camera + lighting + composition, Cinematic documentary, photorealistic India, 16:9",
+      "title": "c04_s03_shot_31",
+      "motion": "Motion: None., Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6,
+          "kind": "narration",
+          "text": "दुर्योधन अपरिहार्य संधि पर जवाब देता है और अपने ख़तरे में आता है",
+          "start": 0,
+          "seconds": 6,
+          "speaker": "narrator"
+        },
+        {
+          "end": 12.4,
+          "kind": "dialogue",
+          "text": "दुर्योधन,दुर्योधन अपरिहार्य संधि पर जवाब देता है और अपने ख़तरे में आता है",
+          "start": 6.4,
+          "seconds": 6,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "Frustration and Defiance",
+      "dialogue": [
+        {
+          "line": "दुर्योधन अपरिहार्य संधि पर जवाब देता है और अपने ख़तरे में आता है",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दुर्योधन,दुर्योधन अपरिहार्य संधि पर जवाब देता है और अपने ख़तरे में आता है",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 12.4,
+      "time_of_day": "dawn"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. दुर्योधन जंजीर बढ़ाकर साध लेता है और भगवान् की अपरिहार्य संधि पर जवाब देता है।, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि",
+      "title": "c05_s01_duryodhana_binds_vishnu_with_chains",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 4.6,
+          "kind": "narration",
+          "text": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे।",
+          "start": 0,
+          "seconds": 4.6,
+          "speaker": "narrator"
+        },
+        {
+          "end": 9.5,
+          "kind": "dialogue",
+          "text": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे।",
+          "start": 4.9,
+          "seconds": 4.6,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "ecstasy",
+      "dialogue": [
+        {
+          "line": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे।",
+          "speaker": "narrator"
+        },
+        {
+          "line": "जंजीर बढ़ा कर साध मुझे, हाँ, हाँ दुर्योधन! बाँध मुझे।",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 9.5,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. दुर्योधन वह भी दे ना सका, उलटे, हरि को बाँधने चला।, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ",
+      "title": "c05_s01_vishnu_s_response_to_duryodhana_s_defiance",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 7.7,
+          "kind": "narration",
+          "text": "दुर्योधन वह भी दे ना सका, उलटे, हरि को बाँधने चला।",
+          "start": 0,
+          "seconds": 7.7,
+          "speaker": "narrator"
+        },
+        {
+          "end": 15.8,
+          "kind": "dialogue",
+          "text": "दुर्योधन वह भी दे ना सका, उलटे, हरि को बाँधने चला।",
+          "start": 8.1,
+          "seconds": 7.7,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "respect and fear",
+      "dialogue": [
+        {
+          "line": "दुर्योधन वह भी दे ना सका, उलटे, हरि को बाँधने चला।",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दुर्योधन वह भी दे ना सका, उलटे, हरि को बाँधने चला।",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 15.8,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि",
+      "title": "c05_s01_vishnu_s_demonstration_of_his_omnipresence_and_omniscience",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6.5,
+          "kind": "narration",
+          "text": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 0,
+          "seconds": 6.5,
+          "speaker": "narrator"
+        },
+        {
+          "end": 13.4,
+          "kind": "dialogue",
+          "text": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 6.9,
+          "seconds": 6.5,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "awe and respect",
+      "dialogue": [
+        {
+          "line": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 13.4,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ",
+      "title": "c05_s02_reflection_and_conclusion_of_vishnu_s_message_to_duryodhana",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 9.7,
+          "kind": "narration",
+          "text": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "start": 0,
+          "seconds": 9.7,
+          "speaker": "narrator"
+        },
+        {
+          "end": 19.8,
+          "kind": "dialogue",
+          "text": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "start": 10,
+          "seconds": 9.8,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "frustration and defiance",
+      "dialogue": [
+        {
+          "line": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दो न्याय अगर तो आधा दो, पर, इसमें भी यदि बाधा हो, तो दे दो केवल पाँच ग्राम, रक्खो अपनी धरत",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 19.8,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले स�������������रचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ",
+      "title": "c05_s02_vishnu_s_final_parting_words_to_duryodhana",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 7.8,
+          "kind": "narration",
+          "text": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "start": 0,
+          "seconds": 7.8,
+          "speaker": "narrator"
+        },
+        {
+          "end": 16,
+          "kind": "dialogue",
+          "text": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "start": 8.2,
+          "seconds": 7.8,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "respect and fear",
+      "dialogue": [
+        {
+          "line": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दुर्योधन वह भी दे ना सका, आशीष समाज की ले न सका, उलटे, हरि को बाँधने चला",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 16,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. दुर्योधन भी बाँधे जा देता है, लेकिन इसमें कोई शक की अवस्था नहीं, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि, दुर्योधन, जटिल रूप से भावप्रवण, बल परिपूर्ण, सुरक्षा प्रदान करने वाला, गोदामी, सूर्योदय में स्तम्भित, हास्याश्र्चित, प्रतिराज्यक, दुर्योधन की धरती से वापसी-वाले संरचना, अपेक्षाकृत बड़े-आकारित, प्रेमास्त्र संग्रह, दुर्योधन की आम धारणाएँ",
+      "title": "c05_s02_duryodhana_s_realization_and_submission",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 6.2,
+          "kind": "narration",
+          "text": "दुर्योधन भी बाँधे जा देता है, लेकिन इसमें कोई शक की अवस्था नहीं",
+          "start": 0,
+          "seconds": 6.2,
+          "speaker": "narrator"
+        },
+        {
+          "end": 12.7,
+          "kind": "dialogue",
+          "text": "दुर्योधन भी बाँधे जा देता है, लेकिन इसमें कोई शक की अवस्था नहीं",
+          "start": 6.6,
+          "seconds": 6.1,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "frustration and defiance",
+      "dialogue": [
+        {
+          "line": "दुर्योधन भी बाँधे जा देता है, लेकिन इसमें कोई शक की अवस्था नहीं",
+          "speaker": "narrator"
+        },
+        {
+          "line": "दुर्योधन भी बाँधे जा देता है, लेकिन इसमें कोई शक की अवस्था नहीं",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 12.7,
+      "time_of_day": "dusk"
+    },
+    {
+      "image": "Cinematic documentary, photorealistic India, 16:9, Cinematic + informative. भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन, भगवान् विश्�ヌः, सूर्योदय से प्रकाश समन्वित, शारीर भावप्रवण संरचना, अल्प कोटि दबाव सहनीय, सूर्योदय में प्रकाश डालने वाले, विशाल-मुखी, निराकार संजात का दर्पण, विशाल प्राणोत्सव संरचना, शृंगारपूर्वक बैंधुकि",
+      "title": "c05_s02_final_scene_vishnu_s_omnipresence_and_omniscience",
+      "motion": "motion only: what moves and how, Keep the exact character, face, clothing, colors, lighting and background from the input image — animate natural motion only, highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker, no blurry, no low quality",
+      "timing": [
+        {
+          "end": 7.4,
+          "kind": "narration",
+          "text": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 0,
+          "seconds": 7.4,
+          "speaker": "narrator"
+        },
+        {
+          "end": 15.2,
+          "kind": "dialogue",
+          "text": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "start": 7.8,
+          "seconds": 7.4,
+          "speaker": "Speaker"
+        }
+      ],
+      "emotion": "awe and respect",
+      "dialogue": [
+        {
+          "line": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "narrator"
+        },
+        {
+          "line": "भूलोक, अतल, पाताल देख, गत और अनागत काल देख, यह देख जगत का आदि-सृजन",
+          "speaker": "Speaker"
+        }
+      ],
+      "duration": 15.2,
+      "time_of_day": "dusk"
+    }
+  ],
+  "description": "KKC -1 — वर्षों तक वन में घूम-घूम,",
+  "folder_name": "kkc_1",
+  "referencePrompt": "\nLord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair (jata) with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayan mountains and misty clouds in the background, subtle golden sunrise light, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, photorealistic devotional art, epic Indian mythology aesthetic, shallow depth of field, dramatic yet peaceful, ultra-detailed, 8K, masterpiece, no text, no watermark."
+}

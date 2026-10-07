@@ -232,9 +232,11 @@ export default function RenderMonitor({
     : runMeta.regen?.kind === "ref"
       ? `${progress.imagesDone}/${Math.max(1, progress.imagesTotal)}`
       : runMeta.regen?.kind === "keyframe"
-        ? `${progress.imagesDone}/1`
+        // imagesTotal includes queued bulk-regen runs (one per checked
+        // scene), so STEP tracks the whole batch, not just this asset.
+        ? `${progress.imagesDone}/${Math.max(1, progress.imagesTotal)}`
         : runMeta.regen?.kind === "clip"
-          ? `${progress.videosDone}/1`
+          ? `${progress.videosDone}/${Math.max(1, progress.videosTotal)}`
           : fullPass === 1
             ? `${progress.imagesDone}/${progress.imagesTotal}`
             : `${progress.videosDone}/${progress.videosTotal}`;

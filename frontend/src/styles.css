@@ -638,6 +638,7 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 /* text helpers */
 .muted { color: var(--text-2); }
 .err-text { color: var(--err); }
+.warn-text { color: var(--warn, #d9a012); }
 .hint { font-size: 12px; color: var(--text-3); margin: 10px 0 0; }
 .spacer { flex: 1; }
 
@@ -4238,4 +4239,459 @@ button.rm-chip:disabled:hover { background: transparent; border-color: var(--lin
 }
 @media (prefers-reduced-motion: reduce) {
   .tip-float { animation: none; }
+}
+
+/* ============================================================
+   Story page — dedicated layer (scoped under .story-page; shared
+   .card/.pill/.row tokens untouched). Hero step flow, character
+   cast cards, film-strip scene cards with duration-weighted shot
+   rails, dialogue speech bubbles and a timeline cue rail.
+   Theme-aware via the design tokens above (dark + light).
+   ============================================================ */
+.story-page { display: flex; flex-direction: column; gap: 14px; }
+.story-page .card { position: relative; overflow: hidden; }
+/* Hero: gradient banner + step flow. */
+.story-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 18px 18px 14px;
+  background:
+    radial-gradient(600px 160px at 12% -40%, var(--glow-1), transparent 70%),
+    radial-gradient(500px 160px at 88% -30%, var(--glow-2), transparent 70%),
+    var(--surface);
+  box-shadow: var(--shadow-1);
+}
+.story-hero-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.story-hero-badge {
+  display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 12px; flex: none;
+  background: linear-gradient(135deg, var(--accent), var(--craft));
+  color: #fff; font-size: 19px;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+.story-hero h2 { margin: 0; font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
+.story-hero-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-3); }
+.story-hero-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.story-steps { display: flex; align-items: center; gap: 0; margin-top: 14px; overflow-x: auto; padding-bottom: 2px; }
+.story-step { display: flex; align-items: center; gap: 8px; flex: none; }
+.story-step-dot {
+  display: grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line-2); color: var(--text-3); background: var(--inset);
+}
+.story-step-label { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.story-step.done .story-step-dot { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.story-step.done .story-step-label { color: var(--text-2); }
+.story-step.now .story-step-dot {
+  background: var(--accent); border-color: transparent; color: #fff;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.story-step.now .story-step-label { color: var(--text); font-weight: 650; }
+.story-step-link { width: 34px; height: 1px; background: var(--line-2); margin: 0 10px; flex: none; }
+.story-step.done + .story-step-link, .story-step-link.done { background: var(--ok); opacity: 0.55; }
+.story-err {
+  border: 1px solid rgba(248, 113, 113, 0.35); background: var(--err-soft); color: var(--err);
+  border-radius: var(--radius-m); padding: 10px 14px; font-size: 12.5px; line-height: 1.5;
+}
+/* Section titles inside the story flow. */
+.story-sec-tag {
+  font-size: 10.5px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-3);
+}
+/* QA banner. */
+.story-qa { border-radius: var(--radius-m); padding: 10px 14px; font-size: 12.5px; line-height: 1.65; }
+.story-qa.ok { border: 1px solid var(--ok); background: var(--ok-soft); color: var(--text); }
+.story-qa.bad { border: 1px solid rgba(248, 113, 113, 0.35); background: var(--err-soft); color: var(--text); }
+.story-qa-title { font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.story-qa.ok .story-qa-title { color: var(--ok); }
+.story-qa.bad .story-qa-title { color: var(--err); }
+.story-qa .muted { color: var(--text-3); }
+/* Pill tabs for Characters / Scenes / Dialogue / Timeline. */
+.story-page .tabs {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  background: var(--inset); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px; margin-top: 12px; width: fit-content; max-width: 100%;
+}
+.story-page .tab {
+  border: 1px solid transparent; background: transparent; color: var(--text-3);
+  border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.story-page .tab:hover:not(.on) { color: var(--text-2); background: var(--surface-2); }
+.story-page .tab.on { background: var(--surface-2); color: var(--text); border-color: var(--line-2); box-shadow: var(--shadow-1); }
+.story-page .tabs .spacer { flex: 1; }
+.story-page .tabs .check { padding-right: 10px; }
+/* Character cast cards. */
+.story-chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.story-char {
+  display: flex; flex-direction: column; gap: 7px;
+  background: var(--inset); border: 1px solid var(--line);
+  border-radius: var(--radius-m); padding: 13px 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.story-char:hover { border-color: var(--line-2); transform: translateY(-1px); }
+.story-char-top { display: flex; align-items: center; gap: 10px; }
+.story-char-top .spacer { flex: 1; }
+.story-avatar {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 50%;
+  font-size: 15px; font-weight: 750;
+  color: #fff; background: linear-gradient(135deg, hsl(var(--spk, 350) 60% 52%), hsl(var(--spk, 350) 65% 38%));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.story-char-name { font-size: 13.5px; font-weight: 700; }
+.story-char-id { font-family: var(--mono); font-size: 10.5px; color: var(--text-3); background: var(--surface-2); border-radius: 5px; padding: 1px 6px; }
+.story-char .pill { font-size: 10.5px; }
+.story-char-fact { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+.story-char-fact b { color: var(--text-3); font-weight: 600; }
+.story-char-canon {
+  font-size: 11.5px; color: var(--text-3); line-height: 1.55;
+  border-left: 2px solid var(--accent-line); padding-left: 9px; font-style: italic;
+}
+/* Scene film-strip cards. */
+.story-scenes { display: flex; flex-direction: column; gap: 10px; }
+.story-scene {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr);
+  background: var(--inset); border: 1px solid var(--line);
+  border-radius: var(--radius-m); overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.story-scene:hover { border-color: var(--line-2); }
+.story-scene.open { border-color: var(--accent-line); }
+.story-scene-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 0; background: var(--surface-2);
+  border-right: 1px dashed var(--line-2);
+}
+.story-scene-num {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 9px;
+  background: var(--accent-soft); color: var(--accent-2);
+  font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.story-scene.open .story-scene-num { background: var(--accent); color: #fff; }
+.story-scene-dur { font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; writing-mode: horizontal-tb; }
+.story-scene-main { padding: 11px 14px 12px; min-width: 0; }
+.story-scene-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; cursor: pointer; }
+.story-scene-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; }
+.story-scene-loc { font-size: 11.5px; color: var(--text-3); }
+.story-scene-tools { margin-left: auto; display: flex; gap: 6px; }
+.story-scene-tools button { padding: 4px 8px; }
+.story-scene-beat { font-size: 12px; color: var(--text-3); line-height: 1.55; margin-top: 7px; }
+.story-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.story-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px 10px; line-height: 1.5;
+}
+.story-chip b { font-weight: 700; color: var(--text); }
+.story-chip.cast { border-color: var(--accent-line); }
+.story-chip .muted { color: var(--text-3); }
+/* Duration-weighted shot rail (width ∝ duration). */
+.story-shots { display: flex; gap: 5px; margin-top: 10px; }
+.story-shot {
+  min-width: 0; border-radius: 8px; padding: 6px 9px;
+  background: linear-gradient(180deg, var(--surface-2), var(--inset));
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+.story-shot-id { display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 700; color: var(--accent-2); white-space: nowrap; }
+.story-shot-meta { display: block; font-size: 10px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Dialogue speech bubbles (scenes + dialogue tab). */
+.story-dlg { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.story-line {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; border-top-left-radius: 4px; padding: 9px 12px;
+}
+.story-line-avatar {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  font-size: 12.5px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, hsl(var(--spk, 350) 60% 52%), hsl(var(--spk, 350) 65% 38%));
+}
+.story-line-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.story-line-name { font-size: 12.5px; font-weight: 750; }
+.story-line-mood { font-size: 10.5px; color: var(--text-3); background: var(--surface-2); border-radius: 999px; padding: 1px 8px; }
+.story-line-text { font-size: 13px; line-height: 1.6; color: var(--text); margin-top: 2px; }
+.story-line-foot { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; font-size: 11px; color: var(--text-3); }
+.story-line-foot .pill { font-size: 10px; padding: 1px 8px; }
+.story-line.unreg { border-color: rgba(248, 113, 113, 0.4); }
+/* Timeline cue rail. */
+.story-tl { position: relative; display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+.story-tl-row {
+  position: relative; display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 0 8px 22px; font-size: 12.5px; line-height: 1.5;
+}
+.story-tl-row::before {
+  content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px;
+  background: var(--line-2); border-radius: 2px;
+}
+.story-tl-row:first-child::before { top: 14px; }
+.story-tl-row:last-child::before { bottom: auto; height: 14px; }
+.story-tl-row::after {
+  content: ""; position: absolute; left: 2px; top: 13px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--surface); border: 2px solid var(--accent-2);
+}
+.story-tl-time {
+  flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--accent-2);
+  background: var(--accent-soft); border-radius: 6px; padding: 2px 7px; font-variant-numeric: tabular-nums;
+}
+.story-tl-total { margin-top: 8px; font-size: 12px; }
+/* Dialogue tab cards reuse the bubble look with a scene tag. */
+.story-dlg-card {
+  background: var(--inset); border: 1px solid var(--line);
+  border-radius: var(--radius-m); padding: 11px 13px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.story-dlg-card + .story-dlg-card { margin-top: 8px; }
+.story-dlg-tag { font-size: 11px; color: var(--text-3); display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .story-scene { grid-template-columns: minmax(0, 1fr); }
+  .story-scene-rail { flex-direction: row; border-right: none; border-bottom: 1px dashed var(--line-2); padding: 8px 12px; }
+  .story-steps { gap: 0; }
+  .story-step-link { width: 18px; margin: 0 6px; }
+}
+
+/* ============================================================
+   Documentary pipeline tabs — tabular stepper with arrows.
+   Bordered table-like strip; each tab is a cell (label + status),
+   joined by → arrows showing flow order. Two even rows: 8 + 8
+   (second row ends with Export).
+   ============================================================ */
+.doc-tabs {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  padding: 10px;
+  margin-bottom: 4px;
+}
+.doc-tabs-rows {
+  flex-direction: column;
+  gap: 8px;
+}
+.doc-tabs-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+}
+.doc-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  text-align: center;
+  padding: 4px 4px 3px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 0;
+  line-height: 1.25;
+}
+.doc-tab:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 12px -4px var(--accent-line);
+}
+.doc-tab.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.doc-tab.active .doc-tab-state { color: rgba(255, 255, 255, 0.9); }
+.doc-tab:disabled { opacity: 0.45; cursor: default; }
+.doc-tab-label {
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.doc-tab-label svg { flex: none; }
+.doc-tab-state {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.doc-tab-state .dot { width: 6px; height: 6px; }
+.doc-tab-state.done { color: var(--ok); }
+.doc-tab-state.approved { color: var(--ok); font-weight: 700; }
+.doc-tab-export { border-style: dashed; }
+.doc-tab-export:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--accent-2);
+}
+.doc-tab.active .doc-tab-state.done,
+.doc-tab.active .doc-tab-state.approved { color: #fff; }
+.doc-tab-arrow {
+  align-self: center;
+  flex: none;
+  padding: 0 5px;
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+@media (max-width: 760px) {
+  .doc-tabs-row { flex-wrap: wrap; gap: 6px; }
+  .doc-tab { flex-basis: calc(33.333% - 6px); }
+  .doc-tab-arrow { display: none; }
+}
+
+/* ============================================================
+   Documentary Shot Planning — chapter / sequence / shot cards.
+   Hierarchy: summary strip → chapter card → sequence group →
+   shot card (header pills, camera strip, voice lines, craft
+   meta, collapsible editors). States: approved (green edge),
+   skipped (dimmed).
+   ============================================================ */
+.doc-shots { display: flex; flex-direction: column; gap: 12px; }
+.doc-shots-summary { padding: 12px 14px; }
+.doc-shots-progress {
+  height: var(--bar-h); border-radius: 99px;
+  background: var(--bar-track); margin-top: 10px; overflow: hidden;
+}
+.doc-shots-progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s ease;
+}
+.doc-shots-hint { margin: 8px 0 0; font-size: 12px; }
+.doc-chapter { padding: 14px; }
+.doc-chapter + .doc-chapter { margin-top: 0; }
+.doc-chapter-head {
+  display: flex; align-items: flex-start; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 4px;
+}
+.doc-chapter-badge {
+  flex: none; margin-top: 1px;
+  font: 700 11px/1.6 var(--mono); letter-spacing: 0.04em;
+  color: var(--accent-2); background: var(--accent-soft);
+  border: 1px solid var(--accent-line); border-radius: 8px;
+  padding: 3px 9px; white-space: nowrap;
+}
+.doc-chapter-titles { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 220px; }
+.doc-chapter-title { font-size: 14.5px; letter-spacing: -0.01em; }
+.doc-chapter-purpose {
+  font-size: 12px; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.doc-seq {
+  margin-top: 10px; padding-left: 12px;
+  border-left: 2px solid var(--accent-line);
+}
+.doc-seq-head {
+  display: flex; align-items: baseline; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+.doc-seq-id {
+  font: 700 10.5px var(--mono); letter-spacing: 0.05em;
+  color: var(--text-2); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 2px 7px; white-space: nowrap;
+}
+.doc-seq-title { font-size: 13px; }
+.doc-seq-meta { font-size: 12px; }
+.doc-seq-shots { display: flex; flex-direction: column; gap: 10px; }
+.doc-shot {
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.doc-shot:hover { border-color: var(--line-2); box-shadow: var(--shadow-1); }
+.doc-shot.is-approved {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ok) 25%, transparent);
+}
+.doc-shot.is-skipped { opacity: 0.62; }
+.doc-shot-top .btn.sm { padding: 4px 10px; font-size: 12px; }
+.doc-shot-index {
+  font: 700 11.5px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--accent-2); background: var(--accent-soft);
+  border: 1px solid var(--accent-line); border-radius: 7px;
+  padding: 2px 8px; white-space: nowrap;
+}
+.doc-shot.is-approved .doc-shot-index {
+  color: var(--ok); background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+.doc-shot-id {
+  font: 600 11.5px var(--mono); color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 7px;
+}
+.doc-shot-title { margin: 8px 0 2px; font-size: 13.5px; letter-spacing: -0.01em; }
+.doc-shot-pills { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 2px; }
+.doc-shot-pills .pill { font-size: 11px; padding: 3px 9px; }
+.doc-shot-body { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.doc-shot-line {
+  display: flex; gap: 9px; align-items: flex-start;
+  background: var(--inset); border: 1px solid var(--line);
+  border-radius: var(--radius-s); padding: 8px 10px;
+}
+.doc-shot-line p { margin: 0; font-size: 12.8px; line-height: 1.55; flex: 1; min-width: 0; }
+.doc-shot-ico { flex: none; font-size: 13px; line-height: 1.5; margin-top: 1px; }
+.doc-shot-dlg { border-left: 3px solid var(--vid); }
+.doc-shot-narr { border-left: 3px solid var(--accent-line); }
+.doc-shot-act { border-left: 3px dashed var(--line-2); }
+.doc-shot-act p { color: var(--text-2); }
+.doc-shot-craft {
+  margin: 8px 0 0; font-size: 11.8px; line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.doc-shot-edits { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.doc-shot-edit {
+  border: 1px dashed var(--line-2); border-radius: var(--radius-s);
+  background: transparent;
+}
+.doc-shot-edit[open] { border-style: solid; background: var(--inset); }
+.doc-shot-edit > summary {
+  cursor: pointer; padding: 7px 10px;
+  font-size: 12px; font-weight: 650; color: var(--text-2);
+  list-style: none;
+}
+.doc-shot-edit > summary::-webkit-details-marker { display: none; }
+.doc-shot-edit > summary::before {
+  content: "▸"; display: inline-block; width: 14px;
+  color: var(--text-3); font-size: 11px;
+}
+.doc-shot-edit[open] > summary::before { content: "▾"; }
+.doc-shot-edit > summary:hover { color: var(--accent-2); }
+.doc-shot-edit-body { padding: 2px 10px 10px; display: flex; flex-direction: column; gap: 2px; }
+.doc-shot-edit-body label { margin-top: 8px; }
+.doc-shot-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.doc-shot-grid label { margin-top: 8px; min-width: 0; }
+@media (max-width: 640px) {
+  .doc-chapter { padding: 10px; }
+  .doc-shot { padding: 10px 11px; }
 }

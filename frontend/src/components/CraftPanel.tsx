@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import type { Scenario } from "../types";
-import { DEFAULT_PRESET_ID } from "../api";
+import { useEffect, useRef, useState } from "react";
+import type { Beat, Scenario } from "../types";
+import { applyMasterScene, DEFAULT_PRESET_ID } from "../api";
 import { IconCheck, IconPanel, IconSparkles, IconX, Spinner } from "./Icons";
 import PresetSelect from "./PresetSelect";
 
@@ -49,12 +49,18 @@ interface Props {
   open: boolean;
   onToggle: () => void;
   // Scenes currently below (Story Board / Scenario Editor). The Apply button
-  // appends the Master Prompt box text to every one of them.
+  // opens the Master Prompt popup, which AI-merges the edited master into
+  // each of these beats (keyframe image only — motion never touched).
   sceneCount: number;
-  // Append `master` to all scenes below: drafts update locally (persisted by
-  // the next explicit Save), saved projects persist immediately as a new
-  // version. Resolves { applied, saved } for the confirmation hint.
-  onApplyMaster: (master: string) => Promise<{ applied: number; saved: boolean }>;
+  // Keyframe beats the popup merges into (title for progress + image merged
+  // by the AI). Empty = popup Apply stays disabled.
+  beats?: Beat[];
+  // Persist the AI-merged sequence + the edited master text. Drafts update
+  // locally (next explicit Save persists); saved projects persist immediately
+  // as a new version. Resolves { applied, saved } for the confirmation hint.
+  onApplyAiSequence: (next: Beat[], newMaster: string) => Promise<{ applied: number; saved: boolean }>;
+  // Legacy plain append (kept for compat, unused by the popup flow).
+  onApplyMaster?: (master: string) => Promise<{ applied: number; saved: boolean }>;
   // Save-first hook: the parent persists the open saved project's current
   // box edits (rename + new version) BEFORE the LLM crafts, so crafting
   // always builds on stored project data. Resolves the display name to
@@ -67,7 +73,7 @@ interface Props {
 // master prompt -> local LLM crafts a scenario JSON.
 export default function CraftPanel({
   onCrafted, craftTarget, source, isDraft, syncEpoch, onPatch, onNameChange,
-  open, onToggle, sceneCount, onApplyMaster, onBeforeCraft,
+  open, onToggle, sceneCount, beats = [], onApplyAiSequence, onBeforeCraft,
 }: Props) {
   const [name, setName] = useState(source.name);
   const [description, setDescription] = useState(source.description);
@@ -94,28 +100,104 @@ export default function CraftPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
-  // "Apply to All Scene": appends the Master Prompt box text to every scene
-  // below (Story Board + Scenario Editor). Result message, not an error.
-  const [applyBusy, setApplyBusy] = useState(false);
+  // "Apply to All Scene" popup: the Master Prompt opens editable in a modal;
+  // its Apply button AI-merges the text into every scene's keyframe prompt
+  // (presence-checked per scene, inserted at the natural place). Result
+  // message, not an error.
   const [applyMsg, setApplyMsg] = useState("");
-  const applyMaster = async () => {
-    if (applyBusy) return;
-    setApplyBusy(true);
-    setApplyMsg("");
-    setError("");
+  // Master-prompt popup state. `statuses[i]` tracks the per-scene AI merge
+  // so the popup can show live progress ("working on scene N…").
+  const [masterOpen, setMasterOpen] = useState(false);
+  const [popupMaster, setPopupMaster] = useState("");
+  const [popupBusy, setPopupBusy] = useState(false);
+  const [popupError, setPopupError] = useState("");
+  const [popupDone, setPopupDone] = useState("");
+  const [popupAt, setPopupAt] = useState(-1);
+  const [statuses, setStatuses] = useState<
+    { state: "pending" | "working" | "done" | "skipped" | "failed"; reason: string }[]
+  >([]);
+  const cancelPopupRef = useRef(false);
+  const openMasterPopup = () => {
+    setPopupMaster(master);
+    setPopupError("");
+    setPopupDone("");
+    setPopupAt(-1);
+    const pendingList = (Array.isArray(beats) ? beats : []).map(() => ({ state: "pending" as const, reason: "" }));
+    setStatuses(pendingList);
+    cancelPopupRef.current = false;
+    setMasterOpen(true);
+  };
+  const closeMasterPopup = () => {
+    if (popupBusy) cancelPopupRef.current = true;
+    setMasterOpen(false);
+  };
+  // Popup Apply: AI-merge `popupMaster` into every beat one by one (sequential
+  // so the progress list advances scene-by-scene), then persist the merged
+  // sequence + edited master via the parent (draft-local or new version).
+  const applyPopupMaster = async () => {
+    const list = Array.isArray(beats) ? beats : [];
+    const m = popupMaster.trim();
+    if (popupBusy || !m || list.length === 0) return;
+    cancelPopupRef.current = false;
+    setPopupBusy(true);
+    setPopupError("");
+    setPopupDone("");
+    setStatuses(list.map(() => ({ state: "pending" as const, reason: "" })));
+    const nextImages: string[] = [];
+    let stopped = false;
+    for (let i = 0; i < list.length; i++) {
+      if (cancelPopupRef.current) { stopped = true; break; }
+      setPopupAt(i);
+      setStatuses((prev) => prev.map((s, k) => (k === i ? { state: "working", reason: "" } : s)));
+      try {
+        const r = await applyMasterScene(m, {
+          title: list[i].title ?? "",
+          image: list[i].image ?? "",
+          motion: list[i].motion ?? "",
+        });
+        nextImages[i] = r.image;
+        setStatuses((prev) => prev.map((s, k) => (k === i
+          ? r.changed
+            ? { state: "done", reason: `${r.fallback ? "LLM offline — appended. " : ""}${r.reason}` }
+            : { state: "skipped", reason: r.reason || "Already present — untouched." }
+          : s)));
+      } catch (e) {
+        nextImages[i] = String(list[i].image ?? "");
+        setStatuses((prev) => prev.map((s, k) => (k === i
+          ? { state: "failed", reason: e instanceof Error ? e.message : String(e) }
+          : s)));
+      }
+    }
+    setPopupAt(-1);
+    setPopupBusy(false);
+    if (stopped) {
+      setPopupError(`Stopped after scene ${statuses.filter((s) => s.state !== "pending").length} — no changes were saved.`);
+      return;
+    }
+    const next: Beat[] = list.map((b, i) => (
+      nextImages[i] !== undefined && nextImages[i] !== String(b.image ?? "")
+        ? { ...b, image: nextImages[i] }
+        : { ...b }
+    ));
+    const changedCount = next.filter((b, i) => b.image !== list[i].image).length;
+    // The edited master becomes the stored Master Prompt too (box + save),
+    // so the next scene added starts with the new text.
+    setMaster(m);
+    onPatch({ referencePrompt: m });
+    if (changedCount === 0) {
+      setPopupDone("Every scene already carries this text — nothing changed.");
+      setApplyMsg("Every scene already carries the Master Prompt.");
+      return;
+    }
     try {
-      const r = await onApplyMaster(master);
-      setApplyMsg(
-        r.applied === 0
-          ? "Every scene already carries the Master Prompt."
-          : r.saved
-            ? `Master Prompt applied to ${r.applied} scene${r.applied === 1 ? "" : "s"} — saved as a new version.`
-            : `Master Prompt applied to ${r.applied} scene${r.applied === 1 ? "" : "s"} — Save scenario to persist.`
-      );
+      const r = await onApplyAiSequence(next, m);
+      const msg = r.saved
+        ? `Master Prompt applied to ${r.applied} scene${r.applied === 1 ? "" : "s"} — saved as a new version.`
+        : `Master Prompt applied to ${r.applied} scene${r.applied === 1 ? "" : "s"} — Save scenario to persist.`;
+      setPopupDone(msg);
+      setApplyMsg(msg);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setApplyBusy(false);
+      setPopupError(e instanceof Error ? e.message : String(e));
     }
   };
   // "View Prompt" popup: the exact LLM messages the next craft would send.
@@ -230,6 +312,17 @@ export default function CraftPanel({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [promptOpen]);
+
+  // Escape closes the master popup (never while a scene merge is in flight —
+  // use Stop for that, so a stray keypress can't lose progress).
+  useEffect(() => {
+    if (!masterOpen || popupBusy) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMasterOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [masterOpen, popupBusy]);
 
   const setDuration = (v: string) => {
     setDurationStr(v);
@@ -362,12 +455,12 @@ export default function CraftPanel({
           View Prompt
         </button>
         <button
-          onClick={() => void applyMaster()}
-          disabled={busy || applyBusy || !master.trim() || sceneCount === 0}
-          title="Append the Master Prompt text above to every scene's keyframe image prompt below (Motion & camera is never touched)"
+          onClick={() => openMasterPopup()}
+          disabled={busy || !master.trim() || sceneCount === 0}
+          title="Open the Master Prompt popup — edit the text, then AI merges it into every scene's keyframe image prompt (Motion & camera is never touched)"
         >
-          {applyBusy ? <Spinner size={13} /> : <IconCheck size={13} />}
-          {applyBusy ? "Applying…" : "Apply to All Scene"}
+          <IconCheck size={13} />
+          Apply to All Scene
         </button>
         <button className="primary" onClick={() => void craft()} disabled={busy || !description.trim()}>
           {busy ? <Spinner size={13} /> : <IconSparkles size={13} />}
@@ -443,6 +536,83 @@ export default function CraftPanel({
               >
                 {busy ? <Spinner size={13} /> : <IconSparkles size={13} />}
                 {busy ? "Crafting…" : "Craft with this prompt"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {masterOpen && (
+        <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !popupBusy) closeMasterPopup(); }}>
+          <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="master-popup-title" style={{ maxWidth: 640 }}>
+            <div className="dialog-head">
+              <h2 id="master-popup-title">Apply Master Prompt to All Scenes</h2>
+              <button className="icon-btn" onClick={closeMasterPopup} aria-label="Close master prompt popup">
+                <IconX size={15} />
+              </button>
+            </div>
+            <p className="card-desc">
+              Edit the master text below (e.g. add “parrot red beak”), then press Apply.
+              The AI checks each scene — already-present details are skipped, missing ones are
+              inserted at the natural place in the keyframe prompt. Motion &amp; camera is never touched.
+            </p>
+            <label htmlFor="master-popup-text">Master Prompt (editable)</label>
+            <textarea
+              id="master-popup-text"
+              rows={4}
+              value={popupMaster}
+              disabled={popupBusy}
+              onChange={(e) => setPopupMaster(e.target.value)}
+              placeholder="Cinematic key-visual of the main character…"
+              aria-label="Master prompt to apply to all scenes (editable)"
+            />
+            {popupBusy && (
+              <div style={{ marginTop: 10 }} role="status" aria-live="polite">
+                <p className="hint">
+                  {popupAt >= 0 && beats[popupAt]
+                    ? "AI is working on scene " + (popupAt + 1) + " of " + beats.length + " — \u201c" + String(beats[popupAt].title || "beat" + (popupAt + 1)).slice(0, 60) + "\u201d…"
+                    : "Starting…"}
+                </p>
+                <div className="progress-bar" aria-hidden="true">
+                  <div
+                    className="progress-fill"
+                    style={{ width: String(beats.length ? Math.round((statuses.filter((s) => s.state !== "pending" && s.state !== "working").length / beats.length) * 100) : 0) + "%" }}
+                  />
+                </div>
+              </div>
+            )}
+            {statuses.length > 0 && (popupBusy || popupDone || popupError) && (
+              <div className="beat-versions" style={{ marginTop: 10, maxHeight: 220, overflowY: "auto" }} aria-label="Per-scene apply progress">
+                {statuses.map((s, i) => (
+                  <div key={i} className="row" style={{ alignItems: "center", gap: 8, padding: "2px 0" }}>
+                    <span className="beat-index" title={`Scene ${i + 1}`}>{i + 1}</span>
+                    <span className="beat-title" style={{ flex: 1 }} title={String(beats[i]?.title || "")}>
+                      {String(beats[i]?.title || `beat${i + 1}`).slice(0, 60)}
+                    </span>
+                    <span
+                      className={`pill${s.state === "done" ? " ok" : s.state === "failed" ? " warn" : s.state === "working" ? " running" : ""}`}
+                      title={s.reason || s.state}
+                    >
+                      {s.state === "working" ? (<><Spinner size={10} /> working</>) : s.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {popupError && <p className="err-text dialog-error" role="alert">{popupError}</p>}
+            {popupDone && <p className="hint">{popupDone}</p>}
+            <div className="dialog-actions">
+              <button type="button" className="ghost" onClick={closeMasterPopup} disabled={false}>
+                {popupBusy ? "Stop" : popupDone ? "Close" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => void applyPopupMaster()}
+                disabled={popupBusy || !popupMaster.trim() || beats.length === 0}
+                title="AI-check every scene and merge the master text where it is missing"
+              >
+                {popupBusy ? <Spinner size={13} /> : <IconSparkles size={13} />}
+                {popupBusy ? "Applying…" : "Apply"}
               </button>
             </div>
           </div>

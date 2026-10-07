@@ -8,6 +8,7 @@ import { IconClapper, IconFilm, IconImage, IconPanel, IconRefresh, IconScissors,
 import Lightbox, { type PreviewItem } from "./Lightbox";
 import SmoothImage from "./SmoothImage";
 import Collapse from "./Collapse";
+import { useIdleFollow } from "./useIdleFollow";
 
 interface Props {
   scenario: string;
@@ -678,8 +679,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     ? viewFinal
     : latestFinal;
   const shownFinalV = finalVersions.find((v) => v.file === shownFinal)?.v ?? null;
-  const refFile = mains.ref || versions.ref[versions.ref.length - 1]?.file
-    || files.find((f) => /_ref(\.png|_v\d+\.png)$/.test(f)) || null;
+  // Upload-zone preview: the selected main when versions are listed (null =
+  // explicitly deselected — shows the empty upload state, no reference input).
+  // Legacy dirs without a version listing fall back to the on-disk file.
+  const refFile = versions.ref.length
+    ? (mains.ref ?? null)
+    : files.find((f) => /_ref(\.png|_v\d+\.png)$/.test(f)) || null;
   const beatNums = Object.keys(versions.beats).map(Number).sort((a, b) => a - b);
   // Fallback for legacy dirs where versioning can't resolve (e.g. beat titles renamed since).
   const fallbackShots = beatNums.length === 0
@@ -758,7 +763,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   const pickMain = async (kind: "ref" | "keyframe" | "clip", index: number | null, file: string) => {
     if (switchingGallery) return;
     try {
-      const r = await selectMain(viewScenario, kind, index, file);
+      // Re-clicking the current reference main deselects it (empty file =
+      // clear): keyframes then generate from text only, no reference input.
+      const clearing = kind === "ref" && mains.ref === file;
+      const r = await selectMain(viewScenario, kind, index, clearing ? "" : file);
       setVersions(r.versions);
       setMains(r.mains);
       setFiles(r.files);
@@ -802,10 +810,12 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   );
 
   // All reference versions in one go — each card header shows its version
-  // (V1, V2, …); clicking an image sets it as main. Shared by Generate and
-  // Upload modes.
+  // (V1, V2, …); clicking an image sets it as main, clicking the main again
+  // deselects it (no reference input). Shared by Generate and Upload modes.
   const refNextV = versions.ref.length ? versions.ref[versions.ref.length - 1].v + 1 : 1;
+  const noRefSelected = versions.ref.length > 0 && mains.ref == null && genTarget !== "ref";
   const refCards = versions.ref.length || genTarget === "ref" ? (
+    <>
     <div className="ref-list">
       {versions.ref.map((v) => (
         <div className={`ref-card${mains.ref === v.file ? " on" : ""}`} key={v.file}>
@@ -813,7 +823,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             className="img-frame"
             title={[
               mains.ref === v.file
-                ? `${v.file} (main — ${mains.pinned?.ref ? "your pick" : "latest"})`
+                ? `${v.file} (main — ${mains.pinned?.ref ? "your pick" : "latest"} — click again to deselect)`
                 : `Set ${v.file} as main (your pick)`,
               refMeta[v.file]?.prompt?.trim()
                 ? `Master prompt: ${refMeta[v.file].prompt!.trim().slice(0, 200)}`
@@ -843,6 +853,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
         </div>
       )}
     </div>
+    {noRefSelected && (
+      <p className="hint">No reference selected — keyframes generate from text only, no reference image is used as input. Click an image to use it as the reference.</p>
+    )}
+    </>
   ) : (
     <div className="img-frame">
       <div className="frame-missing">no reference yet — generate above or switch to Upload</div>
@@ -1008,27 +1022,51 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
       return !c;
     });
   // Jump the viewport to the tile being generated (its .generating card),
-  // so the live work is one click away on 80-scene boards.
+  // so the live work is one click away on 80-scene boards. Manual — never
+  // gated by idleness.
   const scrollToGen = () => {
     if (genScene == null) return;
     document.getElementById(`shot-${genScene}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
-  // Auto-follow the live tile: whenever the run advances to a new scene,
-  // bring its Generating card into view — 80 scenes push it far below the
-  // fold otherwise. Skipped while collapsed, while the fullscreen preview
-  // is open, or for the reference tile (top of the card).
+  // Auto-follow the live tile ONLY while the user is idle (no pointer / key /
+  // wheel / touch / scroll input for IDLE_FOLLOW_MS, i.e. they walked away
+  // from the screen or the system sits idle). While the user is working,
+  // auto-scroll stays off — the "generating scene N" pill above still jumps
+  // on demand. Skipped while collapsed, while the fullscreen preview is
+  // open, or for the reference tile (top of the card).
+  const idle = useIdleFollow();
   const genTileRef = useRef<string | null>(null);
   useEffect(() => {
     if (!isBeats || collapsed || preview != null) return;
     if (!generating || genTarget == null || genTarget === "ref") return;
+    if (!idle) return;
     if (genTileRef.current === genTarget) return;
     genTileRef.current = genTarget;
     const n = genScene;
     window.setTimeout(() => {
       if (n != null) document.getElementById(`shot-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
-  }, [isBeats, collapsed, preview, generating, genTarget, genScene]);
+  }, [isBeats, collapsed, preview, generating, genTarget, genScene, idle]);
   useEffect(() => { genTileRef.current = null; }, [viewScenario]);
+  // Returning to the screen after 2+ idle minutes (tab switch, alt-tab):
+  // bring the currently generating tile into view, still only when idle so
+  // an actively-working user is never yanked.
+  useEffect(() => {
+    if (!isBeats) return;
+    const onReturn = () => {
+      if (document.visibilityState === "hidden") return;
+      if (!idle || !generating || genTarget == null || genTarget === "ref") return;
+      if (collapsed || preview != null) return;
+      const n = genScene;
+      if (n != null) document.getElementById(`shot-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
+    };
+  }, [isBeats, idle, generating, genTarget, genScene, collapsed, preview]);
   // Embedded Reference gallery (Generate Reference section) gets its own
   // hide/show toggle — same persisted icon pattern as the cards.
   const [refCollapsed, setRefCollapsed] = useState(() => localStorage.getItem("ss-sec-refgallery") === "closed");
@@ -1358,6 +1396,30 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
               Upload
             </button>
           </div>
+          {versions.ref.length > 0 && (
+            <div className="row" style={{ alignItems: "center", margin: "8px 0 2px" }}>
+              <label
+                className="tools-check"
+                title={mains.ref
+                  ? "Uncheck to generate keyframes from text only — no reference image is used as input"
+                  : "Check to use the latest reference image as the keyframe input"}
+              >
+                <input
+                  type="checkbox"
+                  checked={mains.ref != null}
+                  disabled={switchingGallery}
+                  onChange={() => {
+                    if (mains.ref) pickMain("ref", null, mains.ref);
+                    else pickMain("ref", null, versions.ref[versions.ref.length - 1].file);
+                  }}
+                />
+                Use reference image
+              </label>
+              {mains.ref
+                ? <span className="muted" style={{ fontSize: 12 }}>{mains.ref} is the keyframe input</span>
+                : <span className="muted" style={{ fontSize: 12 }}>off — keyframes generate from text only</span>}
+            </div>
+          )}
           {refMode === "generate" ? refCards : (
             <>
               <input

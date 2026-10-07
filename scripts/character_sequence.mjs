@@ -30,7 +30,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  buildFluxGraph, buildFluxImg2ImgGraph, buildLtxGraph,
+  buildFluxGraph, buildFluxImg2ImgGraph, buildFluxTextImageGraph, buildLtxGraph,
 } from "../lib/comfy.mjs";
 import {
   VERTICAL, VERTICAL_FLUX_WIDTH, VERTICAL_FLUX_HEIGHT, VERTICAL_LTX_RATIO, VERTICAL_LTX_MEGAPIXELS,
@@ -48,6 +48,9 @@ const scenario = args.find((a) => !a.startsWith("--")) || "anime_sequence";
 // under the display name (prompts/<displayName>.json). The server passes
 // both when they differ; CLI use omits the flag (config == storage arg).
 const cfgNameIdx = args.indexOf("--config-name");
+// --image-mode <value>: image mode ("flux" = pure t2i, "flux_text_image" = reference-based)
+const imageModeIdx = args.indexOf("--image-mode");
+const imageMode = imageModeIdx >= 0 && args[imageModeIdx + 1] ? args[imageModeIdx + 1] : "flux_text_image";
 const cfgName = cfgNameIdx >= 0 && args[cfgNameIdx + 1] ? args[cfgNameIdx + 1] : scenario;
 // --vertical: regenerate every asset at 9:16 into outputs/<scenario>_vertical/
 // (Instagram Reel cut). Never touches the landscape outputs.
@@ -79,6 +82,12 @@ const fluxStepsIdx = args.indexOf("--flux-steps");
 const fluxSteps = fluxStepsIdx >= 0 && Number(args[fluxStepsIdx + 1])
   ? Math.min(20, Math.max(1, Math.round(Number(args[fluxStepsIdx + 1]))))
   : (Number.isFinite(Number(cfg.fluxSteps)) ? Math.min(20, Math.max(1, Math.round(Number(cfg.fluxSteps)))) : 4);
+// Flux.1-dev (flux_text_image) renders properly at its shipped 20 steps;
+// explicit --flux-steps / cfg.fluxSteps still win.
+const fluxTextSteps = fluxStepsIdx >= 0 && Number(args[fluxStepsIdx + 1])
+  ? fluxSteps
+  : (Number.isFinite(Number(cfg.fluxSteps)) ? fluxSteps : 20);
+const fluxTextSize = vertical ? fluxSize : {};
 
 const opts = {
   scenario,
@@ -86,10 +95,17 @@ const opts = {
   prefix,
   tag: `[char:${scenario}${vertical ? "/vertical" : ""}]`,
   cfg,
-  buildRef: (prompt) => buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/ref`, steps: fluxSteps }),
-  buildKeyframe: (prompt, i, refImage) => refImage
-    ? buildFluxImg2ImgGraph({ prompt: frame(prompt), image: refImage, ...fluxSize, prefix: `${scenario}/seq${i + 1}`, steps: fluxSteps })
-    : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/seq${i + 1}`, steps: fluxSteps }),
+  imageMode,
+  buildRef: (prompt) =>
+    imageMode === "flux_text_image"
+      ? buildFluxTextImageGraph({ prompt: frame(prompt), ...fluxTextSize, prefix: `${scenario}/ref`, steps: fluxTextSteps })
+      : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/ref`, steps: fluxSteps }),
+  buildKeyframe: (prompt, i, refImage) =>
+    imageMode === "flux_text_image"
+      ? buildFluxTextImageGraph({ prompt: frame(prompt), ...fluxTextSize, prefix: `${scenario}/seq${i + 1}`, steps: fluxTextSteps })
+      : (refImage
+        ? buildFluxImg2ImgGraph({ prompt: frame(prompt), image: refImage, ...fluxSize, prefix: `${scenario}/seq${i + 1}`, steps: fluxSteps })
+        : buildFluxGraph({ prompt: frame(prompt), ...fluxSize, prefix: `${scenario}/seq${i + 1}`, steps: fluxSteps })),
   buildClip: (motion, image, i) => buildLtxGraph({
     prompt: move(motion),
     image,

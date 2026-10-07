@@ -11,6 +11,88 @@ const get = async <T,>(url: string) => {
   return d as T;
 };
 
+// ------------------------------------------------- service-offline alerts
+// Every AI/LLM request (director + documentary planning, craft, estimates,
+// captions) and every ComfyUI request (generation runs) funnels failures
+// here so a down API pops an alert window instead of failing silently.
+// Server tags connectivity failures at the choke points ("LLM API offline:"
+// from llmPostChat, "ComfyUI API offline:" from lib/comfy.mjs); the legacy
+// markers below cover older messages (LLM_BASE, EXEC ERROR, ...).
+export type OfflineService = "llm" | "comfy";
+
+/** Minimal dialog surface (structural so api.ts never imports components). */
+export interface AlertDialog {
+  alert(message: string, opts?: { title?: string; tone?: "info" | "success" | "warning" | "error"; okText?: string }): Promise<void>;
+}
+
+const LLM_OFFLINE_RE = /LLM API offline|LLM_BASE|LLM timed out/i;
+const LLM_ERROR_RE = /LLM HTTP|llama|chat\/completions|LM Studio/i;
+const COMFY_OFFLINE_RE = /ComfyUI API offline|COMFY_BASE|fetchJson gave up|upload gave up|ComfyUI API offline: download failed|upload\/image|system_stats/i;
+const COMFY_ERROR_RE = /ComfyUI|EXEC ERROR|UPLOAD ERROR|download failed/i;
+
+/** "llm"/"comfy" only when the message means that API is down/unreachable. */
+export const serviceOfflineKind = (msg: unknown): OfflineService | null => {
+  const s = msg instanceof Error ? msg.message : String(msg ?? "");
+  if (LLM_OFFLINE_RE.test(s)) return "llm";
+  if (COMFY_OFFLINE_RE.test(s)) return "comfy";
+  return null;
+};
+
+export interface ServiceError {
+  kind: OfflineService;
+  /** False for service errors that do NOT mean offline (e.g. LLM HTTP 400). */
+  offline: boolean;
+}
+
+/** Any LLM/ComfyUI-flavored failure (offline or not, e.g. LLM HTTP 400). */
+export const serviceErrorKind = (msg: unknown): ServiceError | null => {
+  const s = msg instanceof Error ? msg.message : String(msg ?? "");
+  if (LLM_OFFLINE_RE.test(s)) return { kind: "llm", offline: true };
+  if (COMFY_OFFLINE_RE.test(s)) return { kind: "comfy", offline: true };
+  if (LLM_ERROR_RE.test(s)) return { kind: "llm", offline: false };
+  if (COMFY_ERROR_RE.test(s)) return { kind: "comfy", offline: false };
+  return null;
+};
+
+/**
+ * Pop the alert window for an AI/ComfyUI failure. Returns "offline" when an
+ * API-offline alert was shown, "error" when a generic service-error alert was
+ * shown, null when the message is not service-related (caller keeps its own
+ * inline/generic handling). `action` names what the user tried to do.
+ */
+export const alertServiceError = async (
+  msg: unknown,
+  dialog: AlertDialog,
+  action = "AI request",
+): Promise<"offline" | "error" | null> => {
+  const text = msg instanceof Error ? msg.message : String(msg ?? "");
+  const found = serviceErrorKind(text);
+  if (!found) return null;
+  if (found.offline && found.kind === "llm") {
+    await dialog.alert(
+      `${action} needs the AI service (LM Studio / llama-server), but it is unreachable. ` +
+        `Start LM Studio with a model loaded, check LLM_BASE, then retry. ` +
+        `Live status: the topbar pills / GET /api/health.\n\nDetail: ${text.slice(0, 300)}`,
+      { title: "LLM API offline", tone: "error" },
+    );
+    return "offline";
+  }
+  if (found.offline && found.kind === "comfy") {
+    await dialog.alert(
+      `${action} needs ComfyUI, but it is unreachable. ` +
+        `Check the ComfyUI box and the reverse-proxy tunnel (COMFY_BASE), then retry generation. ` +
+        `Live status: the topbar pills / GET /api/health.\n\nDetail: ${text.slice(0, 300)}`,
+      { title: "ComfyUI API offline", tone: "error" },
+    );
+    return "offline";
+  }
+  await dialog.alert(text.slice(0, 500), {
+    title: found.kind === "llm" ? "AI request failed" : "ComfyUI request failed",
+    tone: "error",
+  });
+  return "error";
+};
+
 // ---------------------------------------------------------------- auth
 export type { AuthUser } from "./types";
 
@@ -97,6 +179,40 @@ export const deleteScenario = (name: string) =>
   fetch(`/api/scenario/${name}`, { method: "DELETE" }).then((r) =>
     r.ok ? r.json() : r.json().then((d) => Promise.reject(new Error(d.error || `HTTP ${r.status}`)))
   );
+// Import an external storyboard/project JSON file as a first-class project.
+// The server converts scenes[] (scene_number/name/timestamp/camera_angle/
+// visual_assets/character_actions/on_screen_text/audio_cues + any extras)
+// into a canonical Scenario and saves it through the standard pipeline
+// (scenarios + versions + projects + project_assets + prompts JSON).
+// Rejects with `exists=true` (plus `name`) when the project already exists
+// and `overwrite` was not set, so the UI can ask before replacing it.
+export interface ImportResult {
+  ok: boolean;
+  name: string;
+  version: number | null;
+  project_id: number | null;
+  scenes: number;
+  duration: number | null;
+  warnings: string[];
+  overwritten: boolean;
+}
+export const importProject = (project: unknown, opts: { name?: string; overwrite?: boolean } = {}) =>
+  fetch("/api/scenarios/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project, ...(opts.name ? { name: opts.name } : {}), ...(opts.overwrite ? { overwrite: true } : {}) }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) {
+      const e = new Error(d?.error || `import failed (HTTP ${r.status})`) as Error & { exists?: boolean; name?: string };
+      if (d?.exists) {
+        e.exists = true;
+        e.name = d?.name;
+      }
+      throw e;
+    }
+    return d as ImportResult;
+  });
 
 // Rename a project (prompts JSON + outputs dirs + every name-keyed DB row +
 // favorites move with it). Blocked server-side while a run is active.
@@ -176,6 +292,9 @@ export const saveTheme = (t: ThemeFile) =>
 
 export type Engine = "ltx" | "wan";
 
+// Image mode select in the topbar: chooses the AI model for image generation.
+export type ImageMode = "flux" | "flux_text_image" | "ltx" | "wan";
+
   // Landscape = the main (YouTube-style 16:9) cut; vertical = the 9:16
   // Instagram Reel cut (fresh vertical images + clips in a separate folder).
   export type VideoFormat = "landscape" | "vertical";
@@ -216,9 +335,11 @@ export interface RunRequest {
   lipsync?: string;
   /** Song mode: which audio model renders sung takes ("ace-step" | "minimax"). */
   songModel?: string;
+  /** Image generation mode for ref/keyframes ("flux" t2i | "flux_text_image" ref-anchored). */
+  imageMode?: ImageMode;
 }
 
-export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean; noDialogue?: boolean; chain?: boolean; lipsync?: string; songModel?: string } = {}) =>
+export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: Engine; format?: VideoFormat; regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song"; beats?: string; skipTts?: boolean; skipLipsync?: boolean; noStitch?: boolean; noDialogue?: boolean; chain?: boolean; lipsync?: string; songModel?: string; imageMode?: ImageMode } = {}) =>
   fetch("/api/runs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -238,6 +359,7 @@ export const startRun = (scenario: string, opts: { stitch?: boolean; engine?: En
         chain: !!opts.chain,
         lipsync: opts.lipsync,
         songModel: opts.songModel,
+      imageMode: opts.imageMode,
     }),
   }).then((r) => r.json() as Promise<{ id: string; folder?: string; error?: string }>);
 
@@ -396,6 +518,25 @@ export const estimateDirectorLength = (story: string, opts?: { title?: string; g
     if (!r.ok) throw new Error(d?.error || `estimate failed (HTTP ${r.status})`);
     return d as DirectorEstimate;
   });
+// Ask the local LLM to read a story/lyrics (+ title/genre/style/language) and
+// draft Additional director instructions. Stateless — the caller fills its
+// textarea with the result. Rejects when the LLM is offline (no heuristic
+// fallback for free-form text); the `source` field tells which path answered.
+export interface DirectorInstructionsSuggestion {
+  instructions: string;
+  reasoning?: string;
+  source: "llm";
+}
+export const suggestDirectorInstructions = (story: string, opts?: { title?: string; genre?: string; visualStyle?: string; language?: string; existing?: string }) =>
+  fetch("/api/director-instructions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ story, ...opts }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `suggest failed (HTTP ${r.status})`);
+    return d as DirectorInstructionsSuggestion;
+  });
 export const comfyStatus = () => get<ComfyStatus>("/api/comfy");
 export const listOutputs = (scenario: string) =>
   get<OutputsInfo>(`/api/outputs?scenario=${scenario}`);
@@ -486,6 +627,30 @@ export const craftBeat = (config: Scenario, count = 1) =>
       r.ok
         ? r.json() as Promise<{ beats?: { title: string; image: string; motion: string }[]; beat?: { title: string; image: string; motion: string } }>
         : r.json().then((d) => Promise.reject(new Error(d.error || "craft beat failed")))
+  );
+
+// AI merge of one Master Prompt addition into one scene's keyframe image
+// prompt. Called once per scene by the "Apply to All Scenes" popup so it can
+// show per-scene progress. The server checks semantic presence first
+// (paraphrase counts as present) and inserts only missing details at the
+// natural place; `fallback:true` means the LLM was offline and the naive
+// append was used instead.
+export interface ApplyMasterSceneResult {
+  image: string;
+  changed: boolean;
+  skipped: boolean;
+  reason: string;
+  fallback: boolean;
+}
+export const applyMasterScene = (master: string, beat: { title?: string; image?: string; motion?: string }) =>
+  fetch("/api/apply-master-scene", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ master, beat }),
+  }).then((r) =>
+    r.ok
+      ? r.json() as Promise<ApplyMasterSceneResult>
+      : r.json().then((d) => Promise.reject(new Error(d.error || "apply scene failed")))
   );
 
 // Ask the local LLM for publishing metadata (title / description /
@@ -844,6 +1009,9 @@ export interface DirectorBoard {
   // Scenes already migrated into scenarioName (partial-migration flow).
   migratedScenes?: number | null;
   error?: string | null;
+  // Grounding report for the latest scene batch (repaired/skipped cast or
+  // places) — rendered as a ⚠️ hint; cleared by manual edits. Null when clean.
+  warn?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -873,7 +1041,15 @@ export interface DirectorBoardMeta {
 const directorOk = <T,>(label: string) => (r: Response) =>
   r.ok
     ? r.json() as Promise<T>
-    : r.json().then((d) => Promise.reject(new Error(d?.error || label)));
+    : r.json().then((d) => {
+        // The Story QA gate returns { error, errors[], warnings[] } — show
+        // the full checklist, not just the first line.
+        const list = Array.isArray(d?.errors) ? d.errors.filter(Boolean).slice(0, 6) : [];
+        const msg = list.length && d?.error && list[0] && String(d.error).includes(String(list[0]))
+          ? `${d.error}${list.length > 1 ? `\n• ${list.slice(1).join("\n• ")}` : ""}`
+          : [d?.error || label, ...list].filter(Boolean).join("\n• ");
+        return Promise.reject(new Error(msg));
+      });
 
 export const directorBoards = () =>
   get<DirectorBoardMeta[]>("/api/director/boards");
@@ -983,6 +1159,13 @@ export interface DocShot {
   title: string;
   duration_seconds: number;
   narration_lines: string[];
+  // Source-analysis stage fields (dialogue / emotion / time / action /
+  // visual-meaning detection). Optional — older boards simply lack them.
+  dialogue_lines?: string[];
+  emotion?: string;
+  time_of_day?: string;
+  actions?: string[];
+  visual_meaning?: string;
   visual_type: string;
   characters: string[];
   location: string;
@@ -1027,6 +1210,14 @@ export interface DocBoard {
   characters: Record<string, unknown>[];
   locations: Record<string, unknown>[];
   musicBeds: Record<string, unknown>[];
+  // Source-analysis pass (RAW POEM → understanding pipeline). Present after
+  // Plan; null on boards created but never planned. Documentary-only.
+  analysis?: DocAnalysis | null;
+  // Per-stage Approve verdicts from the stage tabs (auto or manual).
+  stage_approvals?: Record<string, { approved: boolean; at: string | null; auto: boolean }>;
+  // Past Plan executions (newest first, capped server-side) for the tabs'
+  // past-runs view. Each entry mirrors the 15-stage checklist.
+  stage_history?: { at: string; source: string; stages: { key: string; done: boolean; detail: string }[] }[];
   styleLock?: string;
   scenarioName?: string | null;
   project_id?: number | null;
@@ -1048,6 +1239,20 @@ export interface DocBoardMeta {
   createdAt?: string | null;
 }
 
+// Source-analysis artifact (Documentary mode only): one LLM/heuristic pass
+// over the raw source text, consumed read-only by the bible + shot planners.
+export interface DocAnalysis {
+  source: "llm" | "heuristic";
+  understanding: { summary: string; themes: string[]; narrative_arc: string[] };
+  characters_detected: { name: string; role: string; mentions: number }[];
+  dialogues: { speaker: string; line: string; context: string }[];
+  narrations: { voice: string; text: string; purpose: string }[];
+  emotions: { scope: string; emotion: string; mood: string; intensity: string }[];
+  locations_times: { location: string; time_of_day: string; time_period: string; environment: string }[];
+  actions: { actor: string; action: string; object: string; context: string }[];
+  visual_meanings: { subject: string; literal: string; symbolic_meaning: string }[];
+}
+
 export const docBoards = () =>
   get<DocBoardMeta[]>("/api/documentary/boards");
 export const docBoard = (id: string) =>
@@ -1058,6 +1263,19 @@ export const docCreate = (brief: DocBrief) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(brief),
   }).then(directorOk<DocBoard>("documentary creation failed"));
+// Auto-detect the brief from title/topic/source (Documentary-only):
+// tone, audience, visual style, narration, music, source type, language,
+// characters, events, locations. Stateless — fills the form, nothing stored.
+export const docDetectBrief = (input: { title: string; topic: string; sourceMaterial: string }) =>
+  fetch("/api/documentary/detect-brief", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }).then((r) =>
+    r.ok
+      ? r.json() as Promise<{ detected: Record<string, string>; source: "llm" | "heuristic" }>
+      : r.json().then((d) => Promise.reject(new Error(d.error || "brief detection failed")))
+  );
 export const docPlan = (id: string) =>
   fetch(`/api/documentary/boards/${encodeURIComponent(id)}/plan`, {
     method: "POST",
@@ -1087,7 +1305,7 @@ export const docExport = (id: string, dir?: string) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dir ? { dir } : {}),
-  }).then(directorOk<{ documentary_final: string; chapters: string[]; narration_audio: string; music_dir: string; subtitles: string; metadata: string; total_seconds: number; wrote: string[] }>("export failed"));
+  }).then(directorOk<{ documentary_final: string; chapters: string[]; narration_audio: string; music_dir: string; subtitles: string; srtPreview: string; metadata: string; total_seconds: number; wrote: string[] }>("export failed"));
 
 // ---------------------------------------------------------------- reface
 // Face-swap studio: upload a video, detect + cluster every face identity,

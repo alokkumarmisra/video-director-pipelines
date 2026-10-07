@@ -1,0 +1,636 @@
+{
+  "id": "lord_shiva",
+  "input": {
+    "title": "Lord shiva",
+    "story": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair (jata) with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayan mountains and misty clouds in the background, subtle golden sunrise light, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, photorealistic devotional art, epic Indian mythology aesthetic, shallow depth of field, dramatic yet peaceful, ultra-detailed, 8K, masterpiece, no text, no watermark.",
+    "language": "English",
+    "genre": "Devotional",
+    "genreCustom": "",
+    "visualStyle": "Indian Mythological",
+    "styleCustom": "",
+    "targetSeconds": 60,
+    "sceneSeconds": 3,
+    "aspectRatio": "16:9",
+    "instructions": "",
+    "includeDialogue": false,
+    "chainContinuity": false
+  },
+  "status": "approved-partial",
+  "blueprint": {
+    "logline": "A serene and majestic portrayal of Lord Shiva, the destroyer and preserver of the universe, as he embodies peace, power, and spirituality in a Himalayan setting.",
+    "analysis": {
+      "plot": "The story revolves around the divine and majestic presence of Lord Shiva, emphasizing his serenity, compassion, and spiritual significance within Indian mythology.",
+      "beginning": "Scene opens with Lord Shiva's serene and powerful close-up portrait, highlighting his luminous blue-gray skin, flowing matted hair, and glowing third eye. The setting is the Himalayas, with misty clouds and a golden sunrise.",
+      "middle": "As the narrative progresses, Lord Shiva maintains his tranquil presence, symbolizing peace and spiritual strength. His divine attributes like the crescent moon, Ganga, and Tripundra are highlighted through visual motifs.",
+      "climax": "The climax showcases the magnificence of Lord Shiva in a dramatic yet peaceful manner, with a faint blue aura surrounding him and Himalayan mountains in the background.",
+      "ending": "The story concludes by reaffirming Lord Shiva's serene and compassionate nature, leaving viewers with an imprint of his divine presence.",
+      "main_character": "[object Object]",
+      "supporting_characters": [],
+      "antagonist": null,
+      "objects": [
+        "[object Object]",
+        "[object Object]",
+        "[object Object]",
+        "[object Object]"
+      ],
+      "locations": [
+        "[object Object]"
+      ],
+      "events": [
+        "[object Object]",
+        "[object Object]",
+        "[object Object]"
+      ],
+      "relationships": "Lord Shiva's serene and compassionate relationship with the cosmos, symbolized by his divine attributes like the crescent moon and sacred Ganga.",
+      "emotional_progression": "From serenity to magnificence, Lord Shiva's presence remains unwaveringly peaceful throughout the narrative.",
+      "timeline": "The story unfolds in a single day from dawn until sunset, focusing on Lord Shiva's divine attributes and spiritual significance.",
+      "visual_moments": [
+        "Lord Shiva's serene and majestic close-up portrait with golden sunrise light",
+        "Misty clouds and Himalayan mountains in the background",
+        "Subtle golden blue aura surrounding Lord Shiva"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "lord_shiva",
+        "name": "Lord Shiva",
+        "role": "main_character",
+        "species": "Human",
+        "age": "Eternal",
+        "appearance": {
+          "body": "Majestic, powerful yet serene physique",
+          "fur": "Long flowing matted hair (jata) with a crescent moon and sacred Ganga flowing from his hair",
+          "eyes": "Intense expressive eyes, glowing third eye",
+          "ears": "Elegant traditional earrings"
+        },
+        "clothing": {
+          "top": "Elegant traditional ornaments including rudraksha beads around the neck",
+          "bottom": "Soft tiger-skin detail near shoulders"
+        },
+        "personality": [
+          "Serenity",
+          "Compassion",
+          "Power",
+          "Spirituality"
+        ],
+        "visual_identity_prompt": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "himalayas",
+        "name": "Himalayas",
+        "description": "Misty clouds in the background with a golden sunrise. Himalayan mountains form a serene backdrop.",
+        "visual_identity_prompt": "Himalayas, misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere",
+        "time_of_day": "Dawn",
+        "lighting": "Subtle golden sunrise light, cinematic volumetric lighting",
+        "color_palette": "Blue-gray, gold, green, and soft hues"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "crescent_moon",
+        "name": "Crescent Moon",
+        "description": "A crescent moon flowing from Lord Shiva's hair, symbolizing his divine connection with the cosmos.",
+        "visual_identity_prompt": "Crescent moon, flowing from Lord Shiva's hair, glowing softly, ethereal"
+      },
+      {
+        "object_id": "sacred_ganga",
+        "name": "Sacred Ganga",
+        "description": "The sacred river Ganga flowing from Lord Shiva's hair, representing purity and spirituality.",
+        "visual_identity_prompt": "River Ganga, flowing from Lord Shiva's hair, sparkling with divine light"
+      },
+      {
+        "object_id": "rudraksha_beads",
+        "name": "Rudraksha Beads",
+        "description": "Elegant traditional rudraksha beads around Lord Shiva's neck.",
+        "visual_identity_prompt": "Rudraksha beads, elegant and sacred, around Lord Shiva's neck"
+      },
+      {
+        "object_id": "tripundra",
+        "name": "Tripundra",
+        "description": "Subtle Tripundra of sacred ash on Lord Shiva's forehead.",
+        "visual_identity_prompt": "Tripundra of sacred ash, subtle and glowing, on Lord Shiva's forehead with a third eye"
+      }
+    ],
+    "lyric_lines": [],
+    "beats": []
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Lord Shiva in the Himalayas",
+      "story_beat": "Opening scene establishing Lord Shiva's presence in the Himalayas.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva meditates with the crescent moon and sacred Ganga flowing from his hair.",
+      "emotion": "Serene and peaceful",
+      "expression": "Serenely compassionate expression, eyes closed in meditation",
+      "body_language": "Seated cross-legged with hands in dhyan mudra, head slightly tilted upwards",
+      "camera": {
+        "shot_type": "Establishing Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden sunrise light casting soft shadows on the mountains and Lord Shiva's form",
+      "environment": "Misty clouds in the background, Himalayan peaks visible, lush greenery around him",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva (lord_shiva), Himalayas (himalayas), crescent_moon (crescent_moon), sacred_ganga (sacred_ganga), Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+      "video_prompt": "MOTION ONLY for THIS scene's own keyframe: what moves and how (limbs, face, cloth, water, camera) + highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "1-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva meditates with the crescent moon and sacred Ganga flowing from his hair.",
+          "semantic_meaning": "Establishing Lord Shiva's serene presence in the Himalayas, surrounded by natural elements of divine significance.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva is seated in a meditative pose with the crescent moon and sacred Ganga flowing from his hair.",
+          "emotion": "Serene and peaceful",
+          "expression": "Serenely compassionate expression, eyes closed in meditation",
+          "body_language": "Seated cross-legged with hands in dhyan mudra, head slightly tilted upwards",
+          "camera": {
+            "shot_type": "Establishing Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden sunrise light casting soft shadows on the mountains and Lord Shiva's form",
+          "environment": "Misty clouds in the background, Himalayan peaks visible, lush greenery around him",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva (lord_shiva), Himalayas (himalayas), crescent_moon (crescent_moon), sacred_ganga (sacred_ganga), Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+          "video_prompt": "MOTION ONLY for this shot: Lord Shiva's body slightly shifting in the meditative pose, the flow of the sacred Ganga and crescent moon gently moving with the breeze.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "title": "Lord Shiva Meditating in the Himalayas",
+      "story_beat": "Beat N: Lord Shiva is shown meditating amidst the serene beauty of the Himalayas.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva is in a meditative pose, surrounded by misty clouds and golden sunlight.",
+      "emotion": "Peaceful and serene",
+      "expression": "Relaxed, with a soft, gentle smile",
+      "body_language": "Sitting cross-legged on a rock, with his hands resting in his lap. His eyes are closed, and his body is relaxed but still powerful.",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden sunrise light casting a warm glow over Lord Shiva and the surrounding mountains.",
+      "environment": "Misty clouds in the background, with the Himalayan peaks visible in the distance. Lord Shiva is seated on a rock, with his hair flowing down his back, the crescent moon and sacred Ganga gently cascading from it.",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva (lord_shiva), serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him; Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere; Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+      "video_prompt": "MOTION ONLY for THIS scene's own keyframe: what moves and how (limbs, face, cloth, water, camera) + highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "2-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva is seated in a meditative pose.",
+          "semantic_meaning": "Lord Shiva is shown in a peaceful and serene state, surrounded by the natural beauty of the Himalayas.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva is sitting cross-legged on a rock, with his hands resting in his lap. His eyes are closed, and he is meditating.",
+          "emotion": "Peaceful and serene",
+          "expression": "Relaxed, with a soft, gentle smile",
+          "body_language": "Sitting cross-legged, hands in his lap, eyes closed, faint blue aura surrounding him",
+          "camera": {
+            "shot_type": "Wide Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden sunrise light casting a warm glow over Lord Shiva and the surrounding mountains.",
+          "environment": "Misty clouds in the background, with the Himalayan peaks visible in the distance. Lord Shiva is seated on a rock, with his hair flowing down his back, the crescent moon and sacred Ganga gently cascading from it.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva (lord_shiva), serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him; Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere; Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+          "video_prompt": "MOTION ONLY for this shot: Lord Shiva's slight movements as he continues his meditation, the gentle flow of the sacred Ganga from his hair, and the subtle changes in the golden light of the morning sun. The camera remains static, focusing on Lord Shiva and the surrounding environment.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "title": "Lord Shiva in the Himalayas",
+      "story_beat": "Lord Shiva meditates atop the Himalayas, surrounded by divine light and nature.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva meditates in a serene pose, surrounded by misty clouds and golden sunlight.",
+      "emotion": "Peaceful and contemplative",
+      "expression": "Serene compassionate expression with slightly closed eyes",
+      "body_language": "Erect posture with hands resting on knees, long hair flowing down to the ground",
+      "camera": {
+        "shot_type": "Establishing Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden sunrise light illuminating Lord Shiva and his surroundings",
+      "environment": "Misty Himalayan mountains, golden sunlight streaming through the clouds",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva (lord_shiva), Himalayas (himalayas), Crescent Moon (crescent_moon), Sacred Ganga (sacred_ganga), Rudraksha Beads (rudraksha_beads), Tripundra (tripundra): Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him. Himalayas, misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere. Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+      "video_prompt": "MOTION ONLY for THIS scene's own keyframe: what moves and how (limbs, face, cloth, water, camera) + highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "3-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva meditates atop the Himalayas.",
+          "semantic_meaning": "Lord Shiva is in a state of deep meditation, surrounded by divine light and nature.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva sits cross-legged with his hands resting on his knees, eyes closed in meditation, long hair flowing down to the ground. Misty clouds float around him as golden sunlight streams through them.",
+          "emotion": "Peaceful and contemplative",
+          "expression": "Serene compassionate expression with slightly closed eyes",
+          "body_language": "Erect posture with hands resting on knees, long hair flowing down to the ground",
+          "camera": {
+            "shot_type": "Establishing Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden sunrise light illuminating Lord Shiva and his surroundings",
+          "environment": "Misty Himalayan mountains, golden sunlight streaming through the clouds",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva (lord_shiva), Himalayas (himalayas), Crescent Moon (crescent_moon), Sacred Ganga (sacred_ganga), Rudraksha Beads (rudraksha_beads), Tripundra (tripundra): Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him. Himalayas, misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere.",
+          "video_prompt": "MOTION ONLY for this shot: Lord Shiva's subtle movement of breathing and slight nodding. Misty clouds gently moving around him. Golden sunlight streaming through the clouds. Camera remains static in establishing shot position.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 4,
+      "title": "Lord Shiva in Meditation",
+      "story_beat": "Beat N: Lord Shiva is shown in his serene meditation under the golden rays of dawn on the Himalayas.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva is shown in a meditative pose, his body slightly tilted towards the rising sun.",
+      "emotion": "Serene and peaceful",
+      "expression": "Relaxed, closed eyes with a slight smile on his lips",
+      "body_language": "Elegant posture, hands in meditation position (Anjali mudra), subtle movements of hair due to the breeze",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden morning light casting a warm glow on Lord Shiva's face and body, highlighting his divine features.",
+      "environment": "Misty Himalayan mountains in the background, with the first rays of sunlight illuminating the landscape.",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him; Himalayas, misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere; Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+      "video_prompt": "MOTION ONLY for this scene's own keyframe: slight movements of Lord Shiva's hair due to the breeze, camera capturing the serene environment; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "4-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva is shown in a meditative pose under the golden rays of dawn on the Himalayas.",
+          "semantic_meaning": "Lord Shiva's serene meditation and peaceful presence under the morning sun.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva is shown in a meditative pose, his body slightly tilted towards the rising sun.",
+          "emotion": "Serene and peaceful",
+          "expression": "Relaxed, closed eyes with a slight smile on his lips",
+          "body_language": "Elegant posture, hands in meditation position (Anjali mudra), subtle movements of hair due to the breeze",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden morning light casting a warm glow on Lord Shiva's face and body, highlighting his divine features.",
+          "environment": "Misty Himalayan mountains in the background, with the first rays of sunlight illuminating the landscape.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva, divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him; Himalayas, misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere; Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+          "video_prompt": "MOTION ONLY for this shot: slight movements of Lord Shiva's hair due to the breeze, camera capturing the serene environment; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 5,
+      "title": "Lord Shiva Meditating in the Himalayas",
+      "story_beat": "Beat N: Lord Shiva is shown meditating in the serene Himalayan setting.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva is shown in a meditative pose with his eyes closed, hands resting on his lap. His divine presence fills the frame.",
+      "emotion": "Peaceful and serene",
+      "expression": "Soft smile, calm and composed",
+      "body_language": "Erect spine, relaxed arms, slightly open palms facing upwards",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden morning light filtering through the misty clouds creating a divine glow around Lord Shiva.",
+      "environment": "Himalayan mountains in the background, lush greenery, river Ganga flowing nearby with the crescent moon and sacred Ganga visible in his hair.",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva (lord_shiva), serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+      "video_prompt": "MOTION ONLY for THIS scene's own keyframe: what moves and how (limbs, face, cloth, water, camera) + highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "5-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva meditating in the Himalayas.",
+          "semantic_meaning": "Lord Shiva is shown in a peaceful and serene state as he meditates amidst the divine landscape of the Himalayas.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva sits cross-legged with his eyes closed, hands resting on his lap. His presence fills the frame.",
+          "emotion": "Peaceful and serene",
+          "expression": "Soft smile, calm and composed",
+          "body_language": "Erect spine, relaxed arms, slightly open palms facing upwards",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden morning light filtering through the misty clouds creating a divine glow around Lord Shiva.",
+          "environment": "Himalayan mountains in the background, lush greenery, river Ganga flowing nearby with the crescent moon and sacred Ganga visible in his hair.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva (lord_shiva), serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him, Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere, Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+          "video_prompt": "MOTION ONLY for this shot: Lord Shiva's hands gently resting on his lap, slight movement of the river Ganga in the background, camera slightly tilting to capture the serene landscape.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 6,
+      "title": "Lord Shiva in Meditation",
+      "story_beat": "Beat N: Lord Shiva meditates atop the Himalayas, surrounded by divine light.",
+      "duration_seconds": 3,
+      "characters": [
+        "lord_shiva"
+      ],
+      "location": "himalayas",
+      "time_of_day": "Morning",
+      "action": "Lord Shiva meditates with his eyes closed, serene and composed.",
+      "emotion": "Peaceful and calm",
+      "expression": "Closed eyes, slight smile on lips",
+      "body_language": "Sitting in a lotus position, hands resting on knees, body slightly bent forward",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "Golden sunrise light illuminates Lord Shiva from the east.",
+      "environment": "Himalayan mountains in the background, misty clouds swirling around him.",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Lord Shiva (lord_shiva), divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him. Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere. Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur.",
+      "video_prompt": "MOTION ONLY for THIS scene's own keyframe: what moves and how (limbs, face, cloth, water, camera) + highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "6-A",
+          "shot_number": 1,
+          "lyric_segment": "Lord Shiva meditates atop the Himalayas.",
+          "semantic_meaning": "Lord Shiva is in a state of deep meditation, surrounded by divine light and nature's beauty.",
+          "visual_event": "",
+          "characters": [
+            "lord_shiva"
+          ],
+          "location": "himalayas",
+          "time_of_day": "",
+          "action": "Lord Shiva sits in a lotus position with eyes closed, hands resting on knees.",
+          "emotion": "Peaceful and calm",
+          "expression": "Closed eyes, slight smile on lips",
+          "body_language": "Sitting in a lotus position, hands resting on knees, body slightly bent forward",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "Golden sunrise light illuminates Lord Shiva from the east.",
+          "environment": "Himalayan mountains in the background, misty clouds swirling around him.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Lord Shiva (lord_shiva), divine and majestic close-up portrait, serene compassionate expression, powerful yet peaceful presence, luminous blue-gray skin, long flowing matted hair with the crescent moon and sacred Ganga flowing from his hair, subtle Tripundra of sacred ash on forehead with a glowing third eye, rudraksha beads around neck, elegant traditional ornaments, soft tiger-skin detail visible near shoulders, faint blue aura surrounding him. Himalayas (himalayas), misty clouds in the background, golden sunrise light, Himalayan mountains, cinematic volumetric lighting, realistic divine skin texture, highly detailed face, symmetrical composition, intense expressive eyes, spiritual atmosphere. Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur.",
+          "video_prompt": "MOTION ONLY for this shot: Lord Shiva's hands slightly moving in meditation.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    }
+  ],
+  "sceneCount": 20,
+  "styleLock": "Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+  "scenarioName": "Lord shiva",
+  "error": null,
+  "createdAt": "2026-10-07T05:16:59.167Z",
+  "updatedAt": "2026-10-07T06:11:44.433Z",
+  "warn": null,
+  "project_id": 459,
+  "migratedScenes": 6
+}

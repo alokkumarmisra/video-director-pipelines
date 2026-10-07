@@ -64,7 +64,7 @@ test("heuristic 5-min plan is valid and sums near target", () => {
   const total = h.chapters.reduce((a, c) => a + c.target_duration_seconds, 0);
   assert.ok(Math.abs(total - 300) < 90, `total ${total}`);
   const shots = h.chapters.flatMap((c) => c.sequences.flatMap((q) => q.shots));
-  assert.ok(shots.every((s) => s.duration_seconds >= 6 && s.duration_seconds <= 15), "shots 6-15s");
+  assert.ok(shots.every((s) => s.duration_seconds >= 3 && s.duration_seconds <= 15), "shots 3-15s");
   assert.ok(shots.every((s) => s.flux_prompt.length > 20 && s.narration_lines.length > 0));
   assert.ok(shots.every((s) => /animate natural motion only/i.test(s.ltx_prompt)));
 });

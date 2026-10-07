@@ -1,0 +1,209 @@
+{
+  "description": "Natkhat Bandar & Colorful Fruits (Mischievous Monkey Jungle Fruit Dance) — 3D Animated Rhyme / Storyboard for Toddlers & Preschoolers (Samriddhi Kids)",
+  "referencePrompt": "Sunlit cartoonish 3D jungle environment, Vibrant tropical flowers and oversized green leaves, Leafy vine for swinging. Monkey swings down from a vine toward the camera, lands playfully in the center, smiles cheerfully, and waves hello.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+  "duration": 130,
+  "sequence": [
+    {
+      "title": "Intro & Hook",
+      "image": "Sunlit cartoonish 3D jungle environment, Vibrant tropical flowers and oversized green leaves, Leafy vine for swinging. Monkey swings down from a vine toward the camera, lands playfully in the center, smiles cheerfully, and waves hello.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey swings down from a vine toward the camera, lands playfully in the center, smiles cheerfully, and waves hello. Camera: Wide Establishing Shot transitioning into a Dynamic Pan & Zoom toward center Mood/audio: Lively bongo drums, maracas, chattering jungle birds, and kids giggling",
+      "duration": 15,
+      "scene_number": 1,
+      "start_time": 0,
+      "end_time": 15,
+      "scene_name": "Intro & Hook",
+      "camera_angle": "Wide Establishing Shot transitioning into a Dynamic Pan & Zoom toward center",
+      "camera": {
+        "shot_type": "wide",
+        "angle": "",
+        "movement": "pan+zoom"
+      },
+      "timestamp": {
+        "start": "0:00",
+        "end": "0:15"
+      },
+      "visual_assets": [
+        "Sunlit cartoonish 3D jungle environment",
+        "Vibrant tropical flowers and oversized green leaves",
+        "Leafy vine for swinging"
+      ],
+      "character_actions": "Monkey swings down from a vine toward the camera, lands playfully in the center, smiles cheerfully, and waves hello.",
+      "on_screen_text": "Sparkle animations around landing",
+      "audio_cues": "Lively bongo drums, maracas, chattering jungle birds, and kids giggling"
+    },
+    {
+      "title": "Chorus Dance",
+      "image": "Clean, brightly lit jungle clearing, Centered character placement for toddlers. Monkey places hands on hips, spins around in a circle, and stomps feet to the bouncy 'Dhin-Tak Dhin-Tak' rhythm.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey places hands on hips, spins around in a circle, and stomps feet to the bouncy 'Dhin-Tak Dhin-Tak' rhythm. Camera: Medium Shot, straight-on Eye-Level Mood/audio: Catchy repetitive chorus beat with subtle rhythmic camera bounce",
+      "duration": 15,
+      "scene_number": 2,
+      "start_time": 15,
+      "end_time": 30,
+      "scene_name": "Chorus Dance",
+      "camera_angle": "Medium Shot, straight-on Eye-Level",
+      "camera": {
+        "shot_type": "medium",
+        "angle": "eye-level",
+        "movement": ""
+      },
+      "timestamp": {
+        "start": "0:15",
+        "end": "0:30"
+      },
+      "visual_assets": [
+        "Clean, brightly lit jungle clearing",
+        "Centered character placement for toddlers"
+      ],
+      "character_actions": "Monkey places hands on hips, spins around in a circle, and stomps feet to the bouncy 'Dhin-Tak Dhin-Tak' rhythm.",
+      "on_screen_text": null,
+      "audio_cues": "Catchy repetitive chorus beat with subtle rhythmic camera bounce"
+    },
+    {
+      "title": "Fruit 1 - Red Apple",
+      "image": "Apple tree branch, Glossy vibrant 3D red apple. Monkey plucks the red apple, presents it to the camera with both hands, takes a bite, shows a delighted 'yummy' expression, and claps hands.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey plucks the red apple, presents it to the camera with both hands, takes a bite, shows a delighted 'yummy' expression, and claps hands. Camera: Close-Up shifting into a Medium Shot Mood/audio: Crisp biting sound effect (crunch), cheering, clapping sound prompts",
+      "duration": 20,
+      "scene_number": 3,
+      "start_time": 30,
+      "end_time": 50,
+      "scene_name": "Fruit 1 - Red Apple",
+      "camera_angle": "Close-Up shifting into a Medium Shot",
+      "camera": {
+        "shot_type": "close-up",
+        "angle": "",
+        "movement": "dynamic"
+      },
+      "timestamp": {
+        "start": "0:30",
+        "end": "0:50"
+      },
+      "visual_assets": [
+        "Apple tree branch",
+        "Glossy vibrant 3D red apple"
+      ],
+      "character_actions": "Monkey plucks the red apple, presents it to the camera with both hands, takes a bite, shows a delighted 'yummy' expression, and claps hands.",
+      "on_screen_text": "RED / लाल (Bouncy rounded 3D text)",
+      "audio_cues": "Crisp biting sound effect (crunch), cheering, clapping sound prompts"
+    },
+    {
+      "title": "Fruit 2 - Yellow Banana",
+      "image": "Lush banana tree, Golden sunlight rays, Ripe yellow banana bunch. Monkey leaps up to pluck a yellow banana, lands, peels it with exaggerated motions, and sways hips side-to-side in a funny dance.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey leaps up to pluck a yellow banana, lands, peels it with exaggerated motions, and sways hips side-to-side in a funny dance. Camera: Low-Angle Shot tilting upward Mood/audio: Playful slide-whistle peeling sound, upbeat bouncy bassline",
+      "duration": 20,
+      "scene_number": 4,
+      "start_time": 50,
+      "end_time": 70,
+      "scene_name": "Fruit 2 - Yellow Banana",
+      "camera_angle": "Low-Angle Shot tilting upward",
+      "camera": {
+        "shot_type": "",
+        "angle": "low-angle",
+        "movement": "tilt"
+      },
+      "timestamp": {
+        "start": "0:50",
+        "end": "1:10"
+      },
+      "visual_assets": [
+        "Lush banana tree",
+        "Golden sunlight rays",
+        "Ripe yellow banana bunch"
+      ],
+      "character_actions": "Monkey leaps up to pluck a yellow banana, lands, peels it with exaggerated motions, and sways hips side-to-side in a funny dance.",
+      "on_screen_text": "YELLOW / पीला (Vibrant yellow 3D text with starburst animation)",
+      "audio_cues": "Playful slide-whistle peeling sound, upbeat bouncy bassline"
+    },
+    {
+      "title": "Fruit 3 - Orange",
+      "image": "Citrus tree branch, Plump textured 3D orange. Monkey tosses the orange into the air, balances it playfully on his head, winks, and tilts his head gently from side to side.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey tosses the orange into the air, balances it playfully on his head, winks, and tilts his head gently from side to side. Camera: Medium Close-Up Mood/audio: Light cartoon boing sound effect on balance, rhythmic chime melody",
+      "duration": 20,
+      "scene_number": 5,
+      "start_time": 70,
+      "end_time": 90,
+      "scene_name": "Fruit 3 - Orange",
+      "camera_angle": "Medium Close-Up",
+      "camera": {
+        "shot_type": "close-up",
+        "angle": "",
+        "movement": ""
+      },
+      "timestamp": {
+        "start": "1:10",
+        "end": "1:30"
+      },
+      "visual_assets": [
+        "Citrus tree branch",
+        "Plump textured 3D orange"
+      ],
+      "character_actions": "Monkey tosses the orange into the air, balances it playfully on his head, winks, and tilts his head gently from side to side.",
+      "on_screen_text": "ORANGE / नारंगी (Bright orange 3D bubble lettering)",
+      "audio_cues": "Light cartoon boing sound effect on balance, rhythmic chime melody"
+    },
+    {
+      "title": "Fruit 4 - Green Grapes",
+      "image": "Winding grape trellis above, Large clusters of translucent green grapes. Monkey crouches down, makes an energetic slow-motion jump upward to pick the grapes, lands, and hops up and down happily.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "Monkey crouches down, makes an energetic slow-motion jump upward to pick the grapes, lands, and hops up and down happily. Camera: High-to-Low Follow Shot Mood/audio: Swoosh jumping sound effect, joyful kid laughter",
+      "duration": 20,
+      "scene_number": 6,
+      "start_time": 90,
+      "end_time": 110,
+      "scene_name": "Fruit 4 - Green Grapes",
+      "camera_angle": "High-to-Low Follow Shot",
+      "camera": {
+        "shot_type": "",
+        "angle": "high-angle",
+        "movement": "tracking"
+      },
+      "timestamp": {
+        "start": "1:30",
+        "end": "1:50"
+      },
+      "visual_assets": [
+        "Winding grape trellis above",
+        "Large clusters of translucent green grapes"
+      ],
+      "character_actions": "Monkey crouches down, makes an energetic slow-motion jump upward to pick the grapes, lands, and hops up and down happily.",
+      "on_screen_text": "GREEN / हरा (Fresh bright green 3D text pop)",
+      "audio_cues": "Swoosh jumping sound effect, joyful kid laughter"
+    },
+    {
+      "title": "Outro & Grand Finale Dance",
+      "image": "Woven wooden fruit basket with apple, banana, orange, and grapes, Jungle background characters (baby elephant, baby chicks). All animal characters perform a synchronized celebration dance. In the final moments, the monkey holds up the basket, walks closer, and waves goodbye.. 3D animated kids style, vibrant colors, soft lighting, high detail",
+      "motion": "All animal characters perform a synchronized celebration dance. In the final moments, the monkey holds up the basket, walks closer, and waves goodbye. Camera: Ultra-Wide Panoramic Shot gradually pulling back Mood/audio: Grand musical crescendo, party horn/chimes, ending friendly vocal sign-off",
+      "duration": 20,
+      "scene_number": 7,
+      "start_time": 110,
+      "end_time": 130,
+      "scene_name": "Outro & Grand Finale Dance",
+      "camera_angle": "Ultra-Wide Panoramic Shot gradually pulling back",
+      "camera": {
+        "shot_type": "wide",
+        "angle": "high-angle",
+        "movement": "pan+pull-back"
+      },
+      "timestamp": {
+        "start": "1:50",
+        "end": "2:10"
+      },
+      "visual_assets": [
+        "Woven wooden fruit basket with apple, banana, orange, and grapes",
+        "Jungle background characters (baby elephant, baby chicks)"
+      ],
+      "character_actions": "All animal characters perform a synchronized celebration dance. In the final moments, the monkey holds up the basket, walks closer, and waves goodbye.",
+      "on_screen_text": "Red • Yellow • Orange • Green (Rainbow celebration ribbon banner)",
+      "audio_cues": "Grand musical crescendo, party horn/chimes, ending friendly vocal sign-off"
+    }
+  ],
+  "target_audience": "Toddlers & Preschoolers",
+  "channel": "Samriddhi Kids",
+  "format": "3D Animated Rhyme / Storyboard",
+  "project_title": "Natkhat Bandar & Colorful Fruits (Mischievous Monkey Jungle Fruit Dance)",
+  "total_duration": "02:10",
+  "importMeta": {
+    "source": "json-import",
+    "importedAt": "2026-10-05T08:24:03.129Z",
+    "sceneCount": 7
+  },
+  "folder_name": "natkhat_bandar_colorful_fruits_mischievous_monkey_jungle_fruit_dance"
+}

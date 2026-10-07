@@ -1,0 +1,1203 @@
+{
+  "id": "ram_and_sita",
+  "input": {
+    "title": "Ram and Sita",
+    "story": "\"Ram and Sita are walking through the forest. Sita looks worried.\nRam says, 'Sita, do not worry. I am with you.'\nSita looks at Ram and says, 'I know Ram, but this forest feels strange.'\nSuddenly Shyam arrives and says, 'Ram! Sita! You must leave immediately.'\"",
+    "language": "Hindi",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 60,
+    "sceneSeconds": 5,
+    "aspectRatio": "16:9",
+    "instructions": "",
+    "includeDialogue": true,
+    "chainContinuity": true
+  },
+  "status": "ready",
+  "blueprint": {
+    "logline": "Ram and Sita encounter a mysterious forest, but are joined by Shyam who urges them to leave immediately.",
+    "analysis": {
+      "plot": "The story revolves around Ram and Sita's journey in an unfamiliar forest, with the arrival of Shyam introducing urgency and conflict.",
+      "beginning": "Ram and Sita walk through a forest, feeling uneasy. Sita expresses her worry which is comforted by Ram’s presence.",
+      "middle": "Shyam arrives and introduces immediate danger, prompting Ram and Sita to consider leaving the forest.",
+      "climax": "The arrival of Shyam, urging them to leave immediately, creates a moment of tension and urgency.",
+      "ending": "Ram and Sita decide to heed Shyam's advice and leave the forest.",
+      "main_character": "ram_sita",
+      "supporting_characters": [
+        "shyam"
+      ],
+      "antagonist": null,
+      "objects": [
+        "forest_path",
+        "sandalwood_tree",
+        "leaves"
+      ],
+      "locations": [
+        "[object Object]",
+        "[object Object]"
+      ],
+      "events": [
+        "Sita expresses worry",
+        "Shyam arrives and urges them to leave"
+      ],
+      "relationships": "Ram comforts Sita; Shyam warns Ram and Sita.",
+      "emotional_progression": "worry -> comfort -> tension -> urgency",
+      "timeline": "ram_and_sita_walk_through_forest,sita_expresses_worry_to_ram,shyam_arrives_and_urges_them_to_leave",
+      "visual_moments": [
+        "Ram and Sita walking",
+        "Sita looking worried at Ram",
+        "Shyam arriving and saying urgently to leave"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "ram_sita",
+        "name": "Ram and Sita",
+        "role": "main_character",
+        "species": "human",
+        "age": "adolescent",
+        "appearance": {
+          "body": "slender human figures with healthy skin tone",
+          "fur": "",
+          "eyes": "clear brown eyes",
+          "ears": "small pointed ears"
+        },
+        "clothing": {
+          "top": "simple cotton tunic",
+          "bottom": "white shorts"
+        },
+        "personality": [
+          "brave",
+          "caring"
+        ],
+        "visual_identity_prompt": "Ram and Sita: slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "shyam",
+        "name": "Shyam",
+        "role": "supporting_character",
+        "species": "human",
+        "age": "adolescent",
+        "appearance": {
+          "body": "slender human figure with healthy skin tone",
+          "fur": "",
+          "eyes": "sharp brown eyes",
+          "ears": "small pointed ears"
+        },
+        "clothing": {
+          "top": "simple cotton vest",
+          "bottom": "brown pants"
+        },
+        "personality": [
+          "alert",
+          "protective"
+        ],
+        "visual_identity_prompt": "Shyam: slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "forest_path",
+        "name": "Forest Path",
+        "description": "A winding path through dense, colorful trees with vibrant leaves and scattered sandalwood.",
+        "visual_identity_prompt": "dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches, early morning, soft diffused light",
+        "time_of_day": "early morning",
+        "lighting": "soft diffused light",
+        "color_palette": "green, red, gold"
+      },
+      {
+        "location_id": "sandalwood_tree",
+        "name": "Sandalwood Tree",
+        "description": "A majestic sandalwood tree with thick bark and vibrant green leaves.",
+        "visual_identity_prompt": "majestic sandalwood tree with thick brown bark and vibrant green leaves, sunlight filtering through branches casting dappled shadows on the ground",
+        "time_of_day": "early morning",
+        "lighting": "soft diffused light",
+        "color_palette": "brown, green"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "forest_path",
+        "name": "Forest Path",
+        "description": "A winding path through dense, colorful trees with vibrant leaves and scattered sandalwood.",
+        "visual_identity_prompt": "dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches"
+      },
+      {
+        "object_id": "sandalwood_tree",
+        "name": "Sandalwood Tree",
+        "description": "A majestic sandalwood tree with thick bark and vibrant green leaves.",
+        "visual_identity_prompt": "majestic sandalwood tree with thick brown bark and vibrant green leaves"
+      },
+      {
+        "object_id": "leaves",
+        "name": "Leaves",
+        "description": "Vibrant red and green leaves scattered along the forest path.",
+        "visual_identity_prompt": "vibrant red and green leaves, scattered along the forest path"
+      }
+    ],
+    "lyric_lines": [],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Ram and Sita walk through the forest",
+        "summary": "Ram and Sita are walking through a dense forest, feeling uneasy.",
+        "location": "forest_path",
+        "objects": [
+          "forest_path",
+          "leaves"
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Sita expresses worry to Ram",
+        "summary": "Sita looks worried and tells Ram she feels strange in the forest.",
+        "location": "forest_path",
+        "objects": [
+          "forest_path",
+          "leaves"
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Shyam arrives and urges them to leave",
+        "summary": "Suddenly, Shyam arrives and tells Ram and Sita they must leave immediately.",
+        "location": "forest_path",
+        "objects": [
+          "sandalwood_tree",
+          "forest_path"
+        ]
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Ram and Sita walk through the forest",
+      "story_beat": "Beat 1: Ram and Sita walk through the forest — Ram and Sita are walking through a dense forest, feeling uneasy.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "walking together on the forest path, leaves rustling in the breeze",
+      "emotion": "uneasy and worried",
+      "expression": "slight frowns, looking around nervously",
+      "body_language": "slightly hunched shoulders, slow, careful steps",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita walking together from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram and Sita continue to walk on the forest path as they start their conversation.",
+      "dialogue": [
+        {
+          "speaker": "ram_sita",
+          "line": "Sita looks worried and tells Ram she feels strange in the forest.",
+          "expression": "frowning, looking around nervously",
+          "emotion": "worried",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram and Sita walking together on the forest path, leaves rustling in the breeze; Ram and Sita continue to walk on the forest path as they start their conversation; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "1-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Ram and Sita walking together on the forest path.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "walking together on the forest path, leaves rustling in the breeze",
+          "emotion": "uneasy and worried",
+          "expression": "slight frowns, looking around nervously",
+          "body_language": "slightly hunched shoulders, slow, careful steps",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram and Sita walking together on the forest path, leaves rustling in the breeze; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "title": "Sita expresses worry to Ram",
+      "story_beat": "Beat 2: Sita expresses worry to Ram — Sita looks worried and tells Ram she feels strange in the forest.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Ram and Sita stop walking, Sita looks at Ram with concern",
+      "emotion": "worried",
+      "expression": "Sita's face shows worry; Ram looks concerned",
+      "body_language": "Ram slightly leans forward to listen intently, Sita has a worried expression on her face",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Shyam arrives on the scene.",
+      "dialogue": [
+        {
+          "speaker": "ram_sita",
+          "line": "I know Ram, but this forest feels strange.",
+          "expression": "concerned look",
+          "emotion": "worried",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram and Sita stop walking, Sita looks at Ram with concern; Ram slightly leans forward to listen intently, Sita has a worried expression on her face; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "2-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Ram and Sita stop walking; Sita looks at Ram with concern.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Ram and Sita stop walking, Sita looks at Ram with concern",
+          "emotion": "worried",
+          "expression": "Sita's face shows worry; Ram looks concerned",
+          "body_language": "Ram slightly leans forward to listen intently, Sita has a worried expression on her face",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram and Sita stop walking, Sita looks at Ram with concern; Ram slightly leans forward to listen intently, Sita has a worried expression on her face; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "title": "Shyam arrives and urges them to leave",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave — Suddenly, Shyam arrives and tells Ram and Sita they must leave immediately.",
+      "duration_seconds": 4,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately",
+      "emotion": "urgent and concerned",
+      "expression": "Shyam's face shows urgency; Ram and Sita look surprised and worried",
+      "body_language": "Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram and Sita follow Shyam's instructions.",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "You must leave immediately.",
+          "expression": "serious look",
+          "emotion": "urgent",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately; Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 6,
+      "shots": [
+        {
+          "shot_id": "3-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Shyam arrives and stops in front of Ram and Sita.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita",
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam arrives, stops in front of Ram and Sita",
+          "emotion": "urgent and concerned",
+          "expression": "Shyam's face shows urgency; Ram and Sita look surprised and worried",
+          "body_language": "Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately; Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 4,
+          "start_time": 0,
+          "end_time": 4,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 4,
+      "title": "Sita Expresses Worry to Ram",
+      "story_beat": "Beat 2: Sita expresses worry to Ram — Sita looks worried and tells Ram she feels strange in the forest.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Sita stops walking, looks worried at Ram and speaks to him.",
+      "emotion": "worried",
+      "expression": "concerned look with slightly lowered head",
+      "body_language": "slightly opened mouth, hands on hips, looking concerned",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram listens to Sita's concern.",
+      "dialogue": [],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Sita stops walking, looks worried at Ram and speaks to him; Sita slightly opens her mouth in concern, hands on hips, looking at Ram with a concerned look; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "4-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Sita stops walking and expresses her concern to Ram.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Sita stops, looks worried at Ram and speaks to him",
+          "emotion": "worried",
+          "expression": "concerned look with slightly lowered head",
+          "body_language": "slightly opened mouth, hands on hips, looking concerned",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Sita stops walking, looks worried at Ram and speaks to him; Sita slightly opens her mouth in concern, hands on hips, looking at Ram with a concerned look; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 5,
+      "title": "Shyam Arrives Urgently",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave — Suddenly, Shyam arrives and tells Ram and Sita they must leave immediately.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately.",
+      "emotion": "urgent and concerned",
+      "expression": "Shyam's face shows urgency; Ram and Sita look surprised and worried",
+      "body_language": "Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram and Sita follow Shyam's instructions.",
+      "dialogue": [],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately; Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "5-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Shyam arrives and stops in front of Ram and Sita.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita",
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam arrives, stops in front of Ram and Sita",
+          "emotion": "urgent and concerned",
+          "expression": "Shyam's face shows urgency; Ram and Sita look surprised and worried",
+          "body_language": "Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam arrives, stops in front of Ram and Sita, tells them to leave immediately; Shyam stands confidently with hands on hips, Ram and Sita have slightly opened mouths in surprise; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 6,
+      "title": "Ram Consoling Sita",
+      "story_beat": "Beat 2: Sita expresses worry to Ram — Sita looks worried and tells Ram she feels strange in the forest.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Ram walks beside Sita, placing a comforting hand on her shoulder.",
+      "emotion": "calm and reassuring",
+      "expression": "Sita looks worried; Ram's face shows concern and reassurance",
+      "body_language": "Sita leans slightly into Ram, head lowered. Ram places a soothing hand on her shoulder, looking directly at Sita with calm eyes.",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram and Sita follow Shyam's instructions.",
+      "dialogue": [
+        {
+          "speaker": "ram_sita",
+          "line": "Sita, do not worry. I am with you.",
+          "expression": "calm and reassuring smile",
+          "emotion": "reassuring",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram walks beside Sita, placing a comforting hand on her shoulder; Ram's face shows concern and reassurance; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "6-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Ram comforting Sita by placing a hand on her shoulder.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Ram walks beside Sita and places a comforting hand on her shoulder.",
+          "emotion": "reassuring",
+          "expression": "Sita looks worried; Ram's face shows concern and reassurance",
+          "body_language": "Sita leans slightly into Ram, head lowered. Ram places a soothing hand on her shoulder, looking directly at Sita with calm eyes.",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram walks beside Sita, placing a comforting hand on her shoulder; Ram's face shows concern and reassurance; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 7,
+      "title": "Sita Expresses Concern",
+      "story_beat": "Beat 2: Sita expresses worry to Ram — Sita looks at Ram and says, 'I know Ram, but this forest feels strange.'",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Sita looks at Ram with a concerned expression, then speaks.",
+      "emotion": "worried and thoughtful",
+      "expression": "Sita looks worried; Ram's face shows concern and reassurance",
+      "body_language": "Sita stops walking, looking directly at Ram. She has a thoughtful look on her face as she speaks.",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "Ram and Sita follow Shyam's instructions.",
+      "dialogue": [],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Sita looks at Ram with a concerned expression, then speaks; Sita has a thoughtful look on her face as she speaks; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 2,
+      "line_to": 3,
+      "shots": [
+        {
+          "shot_id": "7-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Sita expresses her concern to Ram about the strange forest.",
+          "visual_event": "",
+          "characters": [
+            "ram_sita"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Sita looks at Ram with a concerned expression, then speaks.",
+          "emotion": "worried and thoughtful",
+          "expression": "concerned look",
+          "body_language": "Sita stops walking, looking directly at Ram. She has a thoughtful look on her face as she speaks.",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Sita looks at Ram with a concerned expression, then speaks; Sita has a thoughtful look on her face as she speaks; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 8,
+      "title": "Shyam's Arrival and Urgent Message",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave — Suddenly, Shyam arrives and tells Ram and Sita they must leave immediately.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam arrives on the forest path and stops in front of Ram and Sita. He speaks urgently.",
+      "emotion": "urgent and worried",
+      "expression": "concerned look with raised hands",
+      "body_language": "Shyam steps forward, his hands spread wide for emphasis.",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "Ram! Sita! You must leave immediately.",
+          "expression": "concerned look with raised hands",
+          "emotion": "worried and urgent",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "8-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Shyam arrives on the forest path and speaks urgently.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking.",
+          "emotion": "worried and urgent",
+          "expression": "concerned look with raised hands",
+          "body_language": "Shyam steps forward, his hands spread wide for emphasis.",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 9,
+      "title": "Shyam's Urgent Message",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave — Suddenly, Shyam arrives and tells Ram and Sita they must leave immediately.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam arrives and stops in front of Ram and Sita. He speaks urgently.",
+      "emotion": "worried and urgent",
+      "expression": "concerned look with raised hands",
+      "body_language": "Shyam steps forward, his hands spread wide for emphasis.",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "9-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Shyam arrives and speaks urgently.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking.",
+          "emotion": "worried and urgent",
+          "expression": "concerned look with raised hands",
+          "body_language": "Shyam steps forward, his hands spread wide for emphasis.",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants, alert expression, standing confidently on the forest path; Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam steps forward and stops in front of Ram and Sita. He raises his hands for emphasis while speaking; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 10,
+      "title": "Sita's Concern",
+      "story_beat": "Beat 4: Sita looks at Ram and says, 'I know Ram, but this forest feels strange.'",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Sita looks at Ram and expresses her concern.",
+      "emotion": "worried and cautious",
+      "expression": "worrying look with furrowed brows",
+      "body_language": "Sita stops walking, turns to Ram, and gestures toward the forest with a concerned expression.",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions, walking together on a forest path; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Sita stops walking and turns to Ram with a worrying look. She gestures toward the forest path; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": []
+    },
+    {
+      "scene_number": 11,
+      "title": "Shyam's Urgent Warning",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam arrives on the forest path and urgently tells Ram and Sita they must leave immediately.",
+      "emotion": "concerned and urgent",
+      "expression": "worried look with furrowed brows, alert stance",
+      "body_language": "running steps, stopping abruptly, pointing toward the forest path",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts, calm expressions; Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam arrives on the forest path and stops abruptly. He looks at Ram and Sita with a worried expression, pointing toward the forest path; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 4,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "11-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam arrives on the forest path and stops abruptly.",
+          "emotion": "concerned and urgent",
+          "expression": "worried look with wide eyes and raised voice",
+          "body_language": "running steps, stopping abruptly, pointing toward the forest path",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam arrives on the forest path and stops abruptly. He looks at Ram and Sita with a worried expression, pointing toward the forest path; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 12,
+      "title": "Shyam's Urgent Warning Continuation",
+      "story_beat": "Beat 3: Shyam arrives and urges them to leave.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram_sita",
+        "shyam"
+      ],
+      "location": "forest_path",
+      "time_of_day": "early morning",
+      "action": "Shyam stops abruptly, looks at Ram and Sita with a worried expression, and points towards the forest path.",
+      "emotion": "concerned and urgent",
+      "expression": "worried look with wide eyes and raised voice",
+      "body_language": "running steps, stopping abruptly, pointing toward the forest path",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft diffused light filtering through the trees",
+      "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+      "continuity_from_previous_scene": "same forest clearing, Ram and Sita mid-conversation from the last frame, camera holds the Two Shot framing",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants; Ram and Sita (ram_sita): slender human figures with healthy skin tone, clear brown eyes, small pointed ears, wearing simple cotton tunics and white shorts; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam arrives on the forest path and stops abruptly. He looks at Ram and Sita with a worried expression, pointing toward the forest path; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 4,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "12-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest_path",
+          "time_of_day": "",
+          "action": "Shyam stops abruptly on the forest path and looks at Ram and Sita with a worried expression, pointing towards the forest.",
+          "emotion": "concerned and urgent",
+          "expression": "worried look with wide eyes and raised voice",
+          "body_language": "running steps, stopping abruptly, pointing toward the forest path",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft diffused light filtering through the trees",
+          "environment": "dense green forest with a winding path and vibrant red and green leaves scattered along it",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Shyam (shyam): slender human figure with healthy skin tone, sharp brown eyes, small pointed ears, wearing a simple cotton vest and brown pants; dense green forest with winding path, vibrant red and green leaves, scattered sandalwood trees along the path, golden sunlight filtering through branches; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam arrives on the forest path and stops abruptly. He looks at Ram and Sita with a worried expression, pointing toward the forest path; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    }
+  ],
+  "sceneCount": 12,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": null,
+  "error": null,
+  "createdAt": "2026-10-05T18:33:26.493Z",
+  "updatedAt": "2026-10-05T18:39:02.901Z",
+  "warn": null
+}

@@ -38,10 +38,8 @@ describe("buildFluxImg2ImgGraph", () => {
     });
     assert.equal(g["ref:scale"].inputs.width, 960);
     assert.equal(g["ref:scale"].inputs.height, 512);
-    // Builders enforce the 8k / no-distortion quality lock (keeps the prompt text + appends it).
-    assert.match(g["75:74"].inputs.text, /a knight at dawn/);
-    assert.match(g["75:74"].inputs.text, /8k uhd/);
-    assert.match(g["75:74"].inputs.text, /no distortion/);
+    // Verbatim prompts: builders send the text exactly as written (no quality tokens).
+    assert.equal(g["75:74"].inputs.text, "a knight at dawn");
     assert.equal(g["75:62"].inputs.steps, 4);
     assert.ok(Number.isFinite(g["75:73"].inputs.noise_seed));
     assert.equal(g["9"].inputs.filename_prefix, "scn/seq1");
@@ -57,8 +55,7 @@ describe("buildFluxImg2ImgGraph", () => {
     const t2i = buildFluxGraph({ prompt: "plain" });
     assert.deepEqual(t2i["75:64"].inputs.latent_image, ["75:66", 0]);
     assert.ok("75:66" in t2i);
-    assert.match(t2i["75:74"].inputs.text, /plain/);
-    assert.match(t2i["75:74"].inputs.text, /8k uhd/);
+    assert.equal(t2i["75:74"].inputs.text, "plain");
   });
 });
 
@@ -120,28 +117,30 @@ describe("sequence wiring", () => {
     assert.match(src, /motionPromptFor\(beat\.motion\)/);
   });
 
-  it("clips always animate their own keyframe (same-scene linkage, 8k, no distortion)", async () => {
+  it("clips always animate their own keyframe (same-scene linkage, verbatim keyframes)", async () => {
     const seq = await import("../lib/sequence.mjs");
     const src = read("lib/sequence.mjs");
     // No cross-scene pixel chaining: beat N never starts from beat N-1's frame.
     assert.doesNotMatch(src, /chained from clip/);
     assert.doesNotMatch(src, /chain_last/);
     assert.match(src, /from own keyframe/);
-    // Keyframes render scene context at 8k with no distortion.
-    assert.match(seq.keyframePromptFor("a forest chase", {}), /8k uhd/);
-    assert.match(seq.keyframePromptFor("a forest chase", {}), /no distortion/);
-    // Builders enforce the same locks centrally.
+    // Keyframes render scene context verbatim (no auto-appended quality tokens).
+    assert.equal(seq.keyframePromptFor("a forest chase", {}), "a forest chase");
+    // Builders pass the prompt through untouched.
     const g = buildFluxImg2ImgGraph({ prompt: "x", image: "r.png" });
-    assert.match(g["75:74"].inputs.text, /no distortion/);
+    assert.equal(g["75:74"].inputs.text, "x");
   });
 
   it("a freshly generated version becomes main (regen v4 beats picked v1/v2/v3)", () => {
     const src = read("lib/sequence.mjs");
     // Each generator records the just-written file and prefers it over the
     // previously selected main; skips (no new file) keep the old selection.
-    const hits = src.match(/newFile \?\? path\.basename\(resolveMain\(/g) || [];
+    // genRef resolves the basename after the null check, beats inline it.
+    const hits = src.match(/newFile \?\? (?:path\.basename\()?resolveMain\(/g) || [];
     assert.equal(hits.length, 3, "genRef + genKeyframe + genClip must select the fresh file");
     assert.match(src, /newFile = path\.basename\(dest\)/);
+    // A deselected ref skip records nothing (no silent re-enable).
+    assert.match(src, /deselected, skipping/);
   });
 
   it("keyframe seeds are deterministic per beat+version (character stability)", () => {

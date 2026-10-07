@@ -23,6 +23,14 @@ scene per row with its shots laid out horizontally, width ∝ duration.
 `APPROVE` flattens each shot to one generation beat (`<scene>_<a|b|…>`, shot
 duration/prompts/dialogue, `scene_number`/`shot_id`/`start_time`/`end_time`
 metadata + song-absolute offsets); shot-less scenes map 1:1 byte-identically.
+Bible-id grounding: every scene-batch brief carries VALID id lists + a
+location/object rotation + anti-repeat mandate (ids only — free-text places,
+objects in the location slot, and invented cast are forbidden); beats carry
+`location`/`objects` place-props. The server enforces it per batch
+(`canonicalizeSceneRefs`/`dedupeScenes` in `lib/director.mjs`: display names
+resolve to ids, objects parked in `location` move to `continuity_refs`,
+hallucinated cast and exact-duplicate scenes are skipped) and reports repairs
+in `board.warn` (⚠️ hint in the storyboard header, cleared by manual edits).
 Dynamic planning: Generate Scenes is duration-driven, not count-driven —
 each batch gets numbered source lines sliced to its time window
 (`linesForTimeWindow`), a seconds budget, and planned-so-far context; the AI
@@ -208,7 +216,11 @@ Gotchas:
   from root `.env` (see `.env.example`). `GET /api/db` reports catalog health/counts.
 - "Craft" / "extend beat" features call a local llama-server at `LLM_BASE`
   (`/v1/chat/completions`, `chat_template_kwargs: {enable_thinking:false}`) to author
-  scenario JSON.
+  scenario JSON. Every chat-completions POST in `server.mjs` goes through the shared
+  `llmPostChat` helper, which transparently retries transport drops (socket hang up /
+  reset / 429 / 502 / 503 / 504 — the LM Studio "Client disconnected" case) with
+  exponential backoff (`LLM_RETRIES`, default 3, and `LLM_RETRY_BASE_MS` env overrides);
+  timeouts and 4xx/model errors are never retried.
 
 ## Configuration
 - `COMFY_BASE` (required) and `LLM_BASE` come from root `.env` via the tiny built-in loader

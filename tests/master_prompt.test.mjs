@@ -82,10 +82,25 @@ describe("master prompt wiring (static)", () => {
     const src = read("frontend/src/components/CraftPanel.tsx");
     assert.ok(src.includes("Apply to All Scene"), "apply button present");
     const iView = src.indexOf("onClick={() => void openPromptPreview()}");
-    const iApply = src.indexOf("onClick={() => void applyMaster()}");
+    const iApply = src.indexOf("openMasterPopup()");
     const iCraft = src.indexOf("onClick={() => void craft()}");
     assert.ok(iView !== -1 && iApply !== -1 && iCraft !== -1, "all three buttons present");
     assert.ok(iView < iApply && iApply < iCraft, "order must be View Prompt -> Apply to All Scene -> Craft scenario");
+  });
+
+  it("Master popup edits the master and AI-merges per scene with progress", () => {
+    const panel = read("frontend/src/components/CraftPanel.tsx");
+    // Popup with editable master text + its own Apply button.
+    assert.match(panel, /Apply Master Prompt to All Scenes/);
+    assert.match(panel, /applyPopupMaster/);
+    assert.match(panel, /AI is working on scene/);
+    // Per-scene AI endpoint + frontend helper.
+    assert.match(read("frontend/server.mjs"), /\/api\/apply-master-scene/);
+    assert.match(read("frontend/server.mjs"), /mergeMasterIntoScene/);
+    assert.match(read("frontend/src/api.ts"), /applyMasterScene/);
+    // Popup receives beats and persists the merged sequence.
+    assert.match(panel, /onApplyAiSequence/);
+    assert.match(read("frontend/src/App.tsx"), /onApplyAiSequence=\{applyAiSequence\}/);
   });
 
   it("server exposes /api/apply-master with the shared append rules", () => {

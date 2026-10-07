@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  directorAddEntry, directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
-  directorDuplicateBoard, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario,
-  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorScene, type DirectorShot, type DirectorSong,
+  alertServiceError, directorAddEntry, directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
+  directorDuplicateBoard, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
+  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorScene, type DirectorShot, type DirectorSong, type ImageMode,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconFolder, IconPanel, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
 import Collapse from "./Collapse";
 import DirectorGeneration from "./DirectorGeneration";
+import { useIdleFollow } from "./useIdleFollow";
 import {
   emptyProgress, formatDuration, loadDirectorPace, recordDirectorPaceDuration,
   type GenerationProgress,
@@ -48,6 +49,21 @@ const sceneShots = (s: DirectorScene): DirectorShot[] =>
 // Total generation beats a board flattens to (shots each render one clip).
 const boardBeats = (scenes: DirectorScene[]): number =>
   scenes.reduce((a, s) => a + Math.max(1, sceneShots(s).length), 0);
+// Projected total beats for an in-progress board: beats planned so far plus
+// the remaining scene rows projected at the observed shots/scene average.
+// Shots ARE scenes at generation time (one clip per shot), so this is the
+// live "total scenes" — it starts at sceneCount (1 shot/scene) and grows as
+// multi-shot scenes land. When the plan completes (rows == sceneCount) it
+// collapses to exactly the flattened beats, mirroring the server shrink.
+const boardBeatsTotal = (scenes: DirectorScene[], sceneCount: number): number => {
+  const done = boardBeats(scenes);
+  const rows = scenes.length;
+  const cap = Math.max(0, Math.round(Number(sceneCount) || 0));
+  if (!rows) return Math.max(1, cap);
+  if (rows >= cap) return done;
+  const avg = done / Math.max(1, rows);
+  return Math.max(cap, done, Math.round(done + Math.max(0, cap - rows) * avg));
+};
 // Planned seconds across scenes (1-decimal), vs the board's time target.
 const boardPlannedSeconds = (scenes: DirectorScene[]): number =>
   Math.round(scenes.reduce((a, s) => a + (Number(s.duration_seconds) || 0), 0) * 10) / 10;
@@ -158,12 +174,14 @@ const BOARD_STATUS: Record<string, { label: string; cls: string }> = {
   "approved-partial": { label: "Approved · partial", cls: "done" },
 };
 const boardStatusOf = (s: string) => BOARD_STATUS[s] ?? { label: s, cls: "" };
-export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlanningProgress }: {
+export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlanningProgress, imageMode, onImageMode }: {
   onOpenProject: (name: string) => void;
   onProjectsChanged: () => void;
   /** Lifts AI planning progress (analyze + scene batches) to the menu's
       Progress Status — same shape as generation progress, unit "scenes". */
   onPlanningProgress?: (p: GenerationProgress) => void;
+  imageMode?: ImageMode;
+  onImageMode?: (mode: ImageMode) => void;
 }) {
   const dialog = useDialog();
   // Story form.
@@ -195,6 +213,10 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [sceneCustom, setSceneCustom] = useState("4");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [instructions, setInstructions] = useState("");
+  // ✨ Get by AI for the instructions box: the local LLM reads the story +
+  // master settings and drafts tailored director instructions into the box.
+  const [suggestingInstructions, setSuggestingInstructions] = useState(false);
+  const [instructionsNote, setInstructionsNote] = useState<string | null>(null);
   // Dialogue opt-out (voice + lip-sync) and connected-scenes chaining.
   // Both default ON: voiced, visually continuous movies. Uncheck dialogues
   // for a silent film; uncheck connected for independent per-scene shots.
@@ -253,6 +275,21 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [showAnalysis, setShowAnalysis] = useState(false);
+  // 📝 Directing-inputs viewer/editor: the master inputs saved before
+  // directing (title, story/lyrics, language, genre, style, durations,
+  // aspect, instructions + toggles). Opened from the open board header AND
+  // from any Saved Storyboard card (fetches that board's inputs on demand).
+  // View always; Edit flips the fields editable and Save persists via PUT.
+  const [inputBoard, setInputBoard] = useState<DirectorBoard | null>(null);
+  const [inputEditing, setInputEditing] = useState(false);
+  const [inputDraft, setInputDraft] = useState({
+    title: "", story: "", language: "English", genre: "Kids", genreCustom: "",
+    visualStyle: "3D Preschool Animation", styleCustom: "", targetSeconds: 60,
+    sceneSeconds: 3, aspectRatio: "16:9", instructions: "",
+    includeDialogue: true, chainContinuity: true,
+  });
+  const [savingInputs, setSavingInputs] = useState(false);
+  const [loadingCardInputs, setLoadingCardInputs] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ss-sec-director") === "closed");
   const toggleCollapsed = () =>
     setCollapsed((c) => {
@@ -302,12 +339,54 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
           ? `AI set ~${r.duration}s${r.reasoning ? ` — ${r.reasoning}` : ""}`
           : `LLM offline — heuristic set ~${r.duration}s`,
       );
+      // Heuristic fallback means the LLM API is down — surface the offline
+      // alert window, not just the inline note.
+      if (r.source !== "llm") {
+        await dialog.alert(
+          "AI length needs the AI service (LM Studio / llama-server), but it is unreachable — " +
+            `the duration was set with the offline heuristic (~${r.duration}s). Start LM Studio ` +
+            "with a model loaded, check LLM_BASE, then retry for the AI estimate. " +
+            "Live status: the topbar pills / GET /api/health.",
+          { title: "LLM API offline", tone: "error" },
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setTargetNote(msg);
       alertIfLlm(msg);
     } finally {
       setEstimatingTarget(false);
+    }
+  };
+  // ✨ Get by AI for Additional director instructions: the local LLM reads the
+  // story/lyrics + master settings and drafts tailored instructions into the
+  // box (existing text is sent along so the AI refines instead of discarding).
+  const handleSuggestInstructions = async () => {
+    if (suggestingInstructions || busy) return;
+    if (story.trim().length < 20 && !title.trim()) {
+      setInstructionsNote("Paste the story (20+ characters) or give it a title first.");
+      return;
+    }
+    setSuggestingInstructions(true);
+    setInstructionsNote(null);
+    try {
+      const r = await suggestDirectorInstructions(story, {
+        title: title.trim(),
+        genre: genre === "Custom" && genreCustom.trim() ? genreCustom.trim() : genre,
+        visualStyle: visualStyle === "Custom" && styleCustom.trim() ? styleCustom.trim() : visualStyle,
+        language,
+        existing: instructions.trim(),
+      });
+      setInstructions(r.instructions);
+      setInstructionsNote(
+        r.reasoning ? `AI drafted instructions — ${r.reasoning}` : "AI drafted instructions — review and edit as needed.",
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setInstructionsNote(msg);
+      alertIfLlm(msg);
+    } finally {
+      setSuggestingInstructions(false);
     }
   };
   const sceneSeconds = sceneOpt === -1 ? Math.min(30, Math.max(1, Number(sceneCustom) || 4)) : sceneOpt;
@@ -346,13 +425,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   };
   useEffect(() => { void refreshBoards(); }, []);
 
-  // LLM failures (e.g. "LLM HTTP 400: …" from llama-server) pop the centered
-  // alert dialog — inline text under the header is too easy to miss mid-flow.
+  // AI/ComfyUI failures pop the centered alert dialog — inline text under
+  // the header is too easy to miss mid-flow. A down LLM/ComfyUI API gets its
+  // dedicated offline alert window ("LLM API offline" / "ComfyUI API
+  // offline"); other service errors keep the generic failure alert.
   // The message is ALSO kept inline so it survives after dismissing.
   const alertIfLlm = (msg: string) => {
-    if (/LLM(\s|$|_BASE)|llama|chat\/completions/i.test(msg)) {
-      void dialog.alert(msg, { title: "AI request failed", tone: "error" });
-    }
+    void alertServiceError(msg, dialog, "AI Director request");
   };
   const reportError = (e: unknown, suffix = "") => {
     const msg = `${e instanceof Error ? e.message : String(e)}${suffix}`;
@@ -453,7 +532,11 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       while (b.scenes.length < b.sceneCount || forceOne) {
         forceOne = false;
         if (cancelRef.current) break;
-        setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 12)} of ${b.sceneCount}`);
+        // Shot-aware progress: shots ARE scenes at generation time (one clip
+        // per shot), so the total tracks projected beats, not just scene rows.
+        const beatsDone = boardBeats(b.scenes);
+        const beatsTotal = boardBeatsTotal(b.scenes, b.sceneCount);
+        setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 12)} of ${b.sceneCount} · 🎞 ${beatsDone}/${beatsTotal} shots`);
         setGeneratingRange({ from: b.scenes.length + 1, to: Math.min(b.sceneCount, b.scenes.length + 12) });
         const ctl = new AbortController();
         abortRef.current = ctl;
@@ -494,8 +577,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         (endTarget - boardPlannedSeconds(b.scenes)) > Math.max(1, (Number(b.input.sceneSeconds) || 3) / 2);
       if (cancelRef.current && (b.scenes.length < b.sceneCount || endOpen)) {
         setStoppedNote(endOpen && b.scenes.length >= b.sceneCount
-          ? `Stopped at ~${boardPlannedSeconds(b.scenes)}s of ~${Math.round(endTarget)}s — press Continue planning to resume the timeline.`
-          : `Stopped after scene ${b.scenes.length} of ${b.sceneCount} — press Continue to resume from scene ${b.scenes.length + 1}.`);
+          ? `Stopped at ~${boardPlannedSeconds(b.scenes)}s of ~${Math.round(endTarget)}s (🎞 ${boardBeats(b.scenes)} shots) — press Continue planning to resume the timeline.`
+          : `Stopped after scene ${b.scenes.length} of ${b.sceneCount} (🎞 ${boardBeats(b.scenes)}/${boardBeatsTotal(b.scenes, b.sceneCount)} shots) — press Continue to resume from scene ${b.scenes.length + 1}.`);
       } else if (b.error && b.scenes.length < b.sceneCount) {
         // Server-side batch note (e.g. salvaged partial batch) — shown in
         // the existing notice line so cut-off output still binds visibly.
@@ -512,7 +595,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         try {
           const fresh = await directorBoard(board.id);
           setBoard(fresh);
-          setStoppedNote(`Planning is already running for this board — wait a moment, then Continue from scene ${fresh.scenes.length + 1} of ${fresh.sceneCount}. No duplicates were saved.`);
+          setStoppedNote(`Planning is already running for this board — wait a moment, then Continue from scene ${fresh.scenes.length + 1} of ${fresh.sceneCount} (🎞 ${boardBeats(fresh.scenes)}/${boardBeatsTotal(fresh.scenes, fresh.sceneCount)} shots). No duplicates were saved.`);
         } catch { /* keep sick */ }
       } else {
         reportError(e, " — partial scenes are kept, retry continues.");
@@ -563,7 +646,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   };
 
   // AI append: the server re-reads the story/lyrics + master settings +
-  // the already-generated bible and appends exactly one new entry.
+  // the already-generated bible, appends exactly one new entry, and refreshes
+  // the story beats to fold the new entry in (existing beats stay stable).
   const doAddEntry = async (kind: DirectorEntryKind) => {
     if (!board || addingEntry || busy) return;
     setAddingEntry(kind);
@@ -754,6 +838,20 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       document.body.style.overflow = prev;
     };
   }, [sceneModal]);
+  // Same lock for the directing-inputs popup.
+  useEffect(() => {
+    if (inputBoard == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeInputs();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [inputBoard]);
 
   const doRenameBoard = async () => {
     if (!board || !titleDraft.trim()) return;
@@ -764,6 +862,94 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       await refreshBoards();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // 📝 Directing inputs popup: snapshot a board's saved master inputs into the
+  // draft (view mode). Edit flips the fields editable; Save persists via PUT.
+  const openInputs = (b: DirectorBoard) => {
+    setInputBoard(b);
+    setInputEditing(false);
+    setInputDraft({
+      title: str(b.input.title),
+      story: str(b.input.story),
+      language: str(b.input.language) || "English",
+      genre: str(b.input.genre) || "Kids",
+      genreCustom: str(b.input.genreCustom),
+      visualStyle: str(b.input.visualStyle) || "3D Preschool Animation",
+      styleCustom: str(b.input.styleCustom),
+      targetSeconds: Math.max(15, Math.round(Number(b.input.targetSeconds) || 60)),
+      sceneSeconds: Math.min(30, Math.max(1, Math.round(Number(b.input.sceneSeconds) || 3))),
+      aspectRatio: str(b.input.aspectRatio) || "16:9",
+      instructions: str(b.input.instructions),
+      includeDialogue: b.input.includeDialogue !== false,
+      chainContinuity: b.input.chainContinuity === true,
+    });
+  };
+  // Saved-card icon: fetch that board's full inputs on demand (the rail meta
+  // carries only title/genre chips), then show the same popup. stopPropagation
+  // at the call site keeps the card itself from opening.
+  const openInputsById = async (id: string) => {
+    if (loadingCardInputs) return;
+    // Reuse the already-open board when it matches — no fetch needed.
+    if (board && board.id === id) {
+      openInputs(board);
+      return;
+    }
+    setLoadingCardInputs(id);
+    try {
+      openInputs(await directorBoard(id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingCardInputs(null);
+    }
+  };
+  const closeInputs = () => {
+    setInputBoard(null);
+    setInputEditing(false);
+    setSavingInputs(false);
+  };
+  const saveInputs = async () => {
+    if (!inputBoard || savingInputs) return;
+    if (!inputDraft.title.trim()) {
+      setError("Project title is required.");
+      return;
+    }
+    if (inputDraft.story.trim().length < 3) {
+      setError("Story is too short — paste the full story.");
+      return;
+    }
+    setSavingInputs(true);
+    setError("");
+    try {
+      const b = await directorUpdateBoard(inputBoard.id, {
+        input: {
+          title: inputDraft.title.trim().slice(0, 120),
+          story: inputDraft.story.trim().slice(0, 10000),
+          language: inputDraft.language,
+          genre: inputDraft.genre,
+          genreCustom: inputDraft.genreCustom.trim().slice(0, 40),
+          visualStyle: inputDraft.visualStyle,
+          styleCustom: inputDraft.styleCustom.trim().slice(0, 120),
+          targetSeconds: Math.max(15, Math.min(3600, Math.round(Number(inputDraft.targetSeconds) || 60))),
+          sceneSeconds: Math.min(30, Math.max(1, Math.round(Number(inputDraft.sceneSeconds) || 3))),
+          aspectRatio: inputDraft.aspectRatio,
+          instructions: inputDraft.instructions.trim().slice(0, 2000),
+          includeDialogue: inputDraft.includeDialogue,
+          chainContinuity: inputDraft.chainContinuity,
+        },
+      });
+      // Turning Connected OFF scrubs handoffs server-side; turning Dialogues
+      // OFF strips lines — reload so the open board shows the effect at once.
+      if (board && board.id === b.id) setBoard(b);
+      setInputBoard(b);
+      setInputEditing(false);
+      await refreshBoards();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingInputs(false);
     }
   };
 
@@ -834,11 +1020,10 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       ? " Connected scenes are ON — each scene continues the previous shot's end state in its prompts (every clip still animates its own scene image)."
       : " Connected scenes are OFF — every scene generates as an independent fresh shot.";
     const beats = boardBeats(board.scenes);
-    const shotNote = beats !== board.scenes.length
-      ? ` Multi-shot scenes flatten to ${beats} timed clips (one image + video per shot).`
-      : "";
+    const total = boardBeatsTotal(board.scenes, board.sceneCount);
+    const shotNote = ` Multi-shot scenes flatten to ${beats} timed clips (one image + video per shot) — shots generate as scenes.`
     const ok = await dialog.confirm(
-      `Creates project "${board.input.title}" with ${board.scenes.length} scenes, then opens it in the workspace for generation (images → videos → final cut).${shotNote}${songNote}${dlgNote}${chainNote}`,
+      `Creates project "${board.input.title}" with ${board.scenes.length} scenes (${beats}/${total} shots), then opens it in the workspace for generation (images → videos → final cut).${shotNote}${songNote}${dlgNote}${chainNote}`,
       { title: `Approve storyboard for "${board.input.title}"?`, tone: "info", okText: "Approve", cancelText: "Keep editing" }
     );
     if (!ok) return;
@@ -870,12 +1055,12 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       : "";
     const ok = board.scenarioName
       ? await dialog.confirm(
-        `Appends ${fresh} new scene${fresh === 1 ? "" : "s"} (1–${board.scenes.length} planned so far) into existing project "${board.scenarioName}" (updates its scenario). Already-generated images/videos are kept — only new scenes generate.${songNote}`,
+        `Appends ${fresh} new scene${fresh === 1 ? "" : "s"} (1–${board.scenes.length} planned so far, 🎞 ${boardBeats(board.scenes)} shots) into existing project "${board.scenarioName}" (updates its scenario). Already-generated images/videos are kept — only new scenes generate.${songNote}`,
         { title: `Migrate remaining scenes into "${board.scenarioName}"?`, tone: "info", okText: fresh ? "Migrate remaining" : "Re-migrate", cancelText: "Keep planning" }
       )
       : await dialog.confirm(
-        `Migrates scenes 1–${board.scenes.length} of ${board.sceneCount} planned into project "${board.input.title}" now and opens it for generation (images → videos → final cut). Keep planning here — Continue plans the rest, then Migrate remaining appends them to the same project.${songNote}`,
-        { title: `Migrate partial project (${board.scenes.length}/${board.sceneCount} scenes)?`, tone: "info", okText: "Migrate partial", cancelText: "Keep planning" }
+        `Migrates scenes 1–${board.scenes.length} of ${board.sceneCount} planned (🎞 ${boardBeats(board.scenes)}/${boardBeatsTotal(board.scenes, board.sceneCount)} shots) into project "${board.input.title}" now and opens it for generation (images → videos → final cut). Keep planning here — Continue plans the rest, then Migrate remaining appends them to the same project.${songNote}`,
+        { title: `Migrate partial project (${board.scenes.length}/${board.sceneCount} scenes · 🎞 ${boardBeats(board.scenes)} shots)?`, tone: "info", okText: "Migrate partial", cancelText: "Keep planning" }
       );
     if (!ok) return;
     setBusy({ label: "Migrating partial project…", since: Date.now() });
@@ -932,7 +1117,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const doDuplicateBoard = async () => {
     if (!board || duplicating || busy) return;
     const ok = await dialog.confirm(
-      `Copies characters, locations, objects, beats and all ${board.scenes.length}/${board.sceneCount} scene prompts exactly into a new versioned board (v2, then v3…). The copy starts with no linked project, so approving it generates fresh images/videos. The original board and its project are untouched.`,
+      `Copies characters, locations, objects, beats and all ${board.scenes.length}/${board.sceneCount} scene prompts (🎞 ${boardBeats(board.scenes)} shots) exactly into a new versioned board (v2, then v3…). The copy starts with no linked project, so approving it generates fresh images/videos. The original board and its project are untouched.`,
       { title: `Duplicate "${board.input.title}" as a new version?`, tone: "info", okText: "Duplicate", cancelText: "Cancel" }
     );
     if (!ok) return;
@@ -983,13 +1168,17 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     const last = document.getElementById(`dir-scene-${board?.scenes.length ?? 0}`);
     (live ?? last)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
-  // Auto-follow the live batch: each new batch brings its first Generating
-  // box into view so the active work stays visible while 80+ scenes push it
-  // far below the fold. Skipped while the scene popup is open (background
-  // is scroll-locked then — the pill click still jumps on demand).
+  // Auto-follow the live batch ONLY while the user is idle (same 2-minute
+  // rule as the generation tiles: no auto-scroll while the user is working).
+  // Each new batch brings its first Generating box into view so the active
+  // work stays visible while 80+ scenes push it far below the fold. Skipped
+  // while the scene popup is open (background is scroll-locked then — the
+  // pill click still jumps on demand).
+  const idle = useIdleFollow();
   const liveFromRef = useRef<number | null>(null);
   useEffect(() => {
     if (!generatingRange || sceneModal) return;
+    if (!idle) return;
     if (liveFromRef.current === generatingRange.from) return;
     liveFromRef.current = generatingRange.from;
     const from = generatingRange.from;
@@ -997,7 +1186,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       document.getElementById(`dir-scene-pending-${from}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 120);
-  }, [generatingRange, sceneModal]);
+  }, [generatingRange, sceneModal, idle]);
   useEffect(() => { liveFromRef.current = null; }, [board?.id]);
   // Scene Details/Edit popups (scene cards stay compact with essentials
   // only; the full breakdown + edit form live in the modal).
@@ -1209,11 +1398,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     return loadDirectorPace();
   })();
   const planBatchElapsed = batchStartRef.current != null ? Math.max(0, dirNow - batchStartRef.current) : 0;
+  // Shot-aware planning totals: shots flatten to one generation beat each,
+  // so progress tracks beats (not just scene rows). Starts at sceneCount and
+  // grows with the observed shots/scene average as multi-shot scenes land.
+  const planBeatsTotal = board ? boardBeatsTotal(board.scenes, board.sceneCount) : 0;
+  const planBeatsDone = board ? boardBeats(board.scenes) : 0;
   const planTotal = planPhase
-    ? planPhase.kind === "analyze" ? Math.max(1, planPhase.total) : Math.max(1, board?.sceneCount ?? planPhase.total)
+    ? planPhase.kind === "analyze" ? Math.max(1, planPhase.total) : Math.max(1, planBeatsTotal || planPhase.total)
     : 0;
   const planDone = planPhase
-    ? planPhase.kind === "analyze" ? 0 : Math.min(planTotal, board?.scenes.length ?? 0)
+    ? planPhase.kind === "analyze" ? 0 : Math.min(planTotal, planBeatsDone)
     : 0;
   const planRemainingMs = planPhase && planPace != null && planTotal > planDone
     ? Math.max(0, Math.round((planTotal - planDone) * planPace - planBatchElapsed))
@@ -1275,7 +1469,12 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         const st = boardStatusOf(b.status);
         const total = Math.max(0, Number(b.sceneCount) || 0);
         const done = Math.min(total, Math.max(0, Number(b.scenes) || 0));
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        // Shot-aware card total: shots ARE scenes at generation time, so the
+        // live total projects remaining rows at the observed shots/scene avg.
+        const shotsDone = Math.max(0, Number(b.shots) || 0);
+        const avg = done > 0 ? Math.max(1, shotsDone / done) : 1;
+        const shotsTotal = done >= total ? shotsDone : Math.max(total, shotsDone, Math.round(shotsDone + Math.max(0, total - done) * avg));
+        const pct = shotsTotal > 0 ? Math.round((shotsDone / shotsTotal) * 100) : 0;
         const chips = [b.genre, b.visualStyle, b.language, b.aspectRatio].filter(Boolean) as string[];
         const when = b.updatedAt ? Date.parse(b.updatedAt) : null;
         return (
@@ -1295,6 +1494,15 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               <span className="muted dir-board-when" title={b.updatedAt ?? ""}>
                 {when != null ? fmtRelative(when) : ""}
               </span>
+              <button
+                className="icon-btn"
+                onClick={(e) => { e.stopPropagation(); void openInputsById(b.id); }}
+                disabled={loadingCardInputs === b.id}
+                title={`View/edit the saved directing inputs for "${b.title}" (project name, story, language, genre, style, durations, instructions)`}
+                aria-label={`View directing inputs for "${b.title}"`}
+              >
+                {loadingCardInputs === b.id ? <Spinner size={12} /> : <span aria-hidden="true">📝</span>}
+              </button>
               <button
                 className="icon-btn"
                 onClick={(e) => { e.stopPropagation(); void doDuplicateBoardById(b.id, b.title); }}
@@ -1320,9 +1528,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 {chips.map((c) => <span key={c} className="dir-chip">{c}</span>)}
               </div>
             )}
-            <div className="dir-board-progress" title={`${done}/${total} scenes planned${Number(b.shots) > done ? ` · ${b.shots} timed shots` : ""}`}>
+            <div className="dir-board-progress" title={`${done}/${total} scenes planned · ${shotsDone}/${shotsTotal} timed shots (shots generate as scenes)`}>
               <div className="dir-board-bar"><span style={{ width: `${pct}%` }} /></div>
-              <span className="muted">{done}/{total} scenes{Number(b.shots) > done ? ` · 🎞 ${b.shots}` : ""}</span>
+              <span className="muted">{done}/{total} scenes · 🎞 {shotsDone}/{shotsTotal}</span>
             </div>
             <div className="dir-board-foot">
               {b.scenarioName
@@ -1591,7 +1799,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 )}
               </div>
             </div>
-            <p className="hint">AI analyzes the story line by line and plans up to {plannedScenes} scenes toward ~{targetSeconds}s — deciding each scene's duration, shot count and shot timings itself (typical scene ~{sceneSeconds}s).</p>
+            <p className="hint">AI analyzes the story line by line and plans up to {plannedScenes} scenes toward ~{targetSeconds}s — deciding each scene's duration, shot count and shot timings itself (typical scene ~{sceneSeconds}s). Multi-shot scenes raise the shot total above the scene count — shots generate as scenes (one clip per shot).</p>
             <div className="row" style={{ marginTop: 8, gap: 16 }}>
               <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }} title="When ON, scenes carry spoken lines (voice + lip-sync). Turn OFF for a silent film — clips stay at their planned length.">
                 <input
@@ -1626,7 +1834,19 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 Independent: every scene plans and generates as a fresh shot — no continuation of the previous scene.
               </p>
             )}
-            <label htmlFor="dir-instructions" style={{ marginTop: 8 }}>Additional director instructions</label>
+            <div className="row" style={{ marginTop: 8, alignItems: "center", gap: 8 }}>
+              <label htmlFor="dir-instructions" style={{ margin: 0 }}>Additional director instructions</label>
+              <span className="spacer" />
+              <button
+                type="button"
+                className="ghost shotlist-btn"
+                onClick={() => void handleSuggestInstructions()}
+                disabled={busy != null || suggestingInstructions || (story.trim().length < 20 && !title.trim())}
+                title="Ask the local LLM to read the story and draft tailored director instructions into this box"
+              >
+                {suggestingInstructions ? "Drafting…" : "✨ Get by AI"}
+              </button>
+            </div>
             <textarea
               id="dir-instructions"
               rows={3}
@@ -1634,6 +1854,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               placeholder="Keep Minku's appearance exactly the same… avoid scary scenes…"
               onChange={(e) => setInstructions(e.target.value)}
             />
+            {instructionsNote && <p className="muted" style={{ margin: "4px 0 0" }}>{instructionsNote}</p>}
             <div className="row" style={{ marginTop: 12 }}>
               <button className="primary" onClick={() => void doAnalyze()} disabled={busy != null || songUploading || !title.trim() || (mode === "song" ? !song : story.trim().length < 20)} title={mode === "song" ? "Read the song into characters, locations, beats (no images/videos yet)" : "Analyze the story into characters, locations, beats (no images/videos yet)"}>
                 {busy ? <Spinner size={13} /> : <IconSparkles size={13} />}
@@ -1674,11 +1895,18 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     title="Rename — the approved project takes exactly this name"
                   >
                     Rename
+                  </button>{" "}
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => openInputs(board)}
+                    title="View/edit the saved directing inputs (project name, story, language, genre, style, durations, instructions) — what you entered before directing"
+                  >
+                    📝 Inputs
                   </button>
                 </>
               )}
               {" "}· {board.input.genre} · {board.input.language} · {board.input.aspectRatio} ·
-              {" "}{board.scenes.length}/{board.sceneCount} scenes · ~{board.sceneCount * board.input.sceneSeconds}s
+              {" "}{board.scenes.length}/{board.sceneCount} scenes · 🎞 {boardBeats(board.scenes)}/{boardBeatsTotal(board.scenes, board.sceneCount)} shots · ~{boardPlannedSeconds(board.scenes)}s/~{Math.round(Number(board.input.song?.durationSeconds ?? board.input.targetSeconds) || 0)}s
               {board.scenarioName ? <> · approved → <b>{board.scenarioName}</b></> : null}
               {" "}· {board.input.includeDialogue === false ? "🔇 silent" : `🎙 ${board.scenes.filter((s) => (s.dialogue ?? []).length).length} dialogue`}
               {" "}· {board.input.chainContinuity === true ? "🔗 connected" : "▫️ independent"}
@@ -1731,8 +1959,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     ? `Planning…${sceneProgress ? ` ${sceneProgress}` : ""}`
                     : board.scenes.length
                       ? (timelineOpen && board.scenes.length >= board.sceneCount
-                        ? `Continue planning (~${boardPlanned}s of ~${Math.round(boardTarget)}s)`
-                        : `Continue scenes (${board.scenes.length}/${board.sceneCount})`)
+                        ? `Continue planning (~${boardPlanned}s of ~${Math.round(boardTarget)}s · 🎞 ${boardBeats(board.scenes)} shots)`
+                        : `Continue scenes (${board.scenes.length}/${board.sceneCount} · 🎞 ${boardBeats(board.scenes)}/${boardBeatsTotal(board.scenes, board.sceneCount)})`)
                       : "Generate scenes"}
                 </button>
               ) : (
@@ -1768,9 +1996,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     <button
                       className="ghost"
                       onClick={() => void doMigratePartial()}
-                      title={`Migrate scenes 1–${board.scenes.length} of ${board.sceneCount} into a project now — Continue plans the rest, Migrate remaining appends them later`}
+                      title={`Migrate scenes 1–${board.scenes.length} of ${board.sceneCount} (🎞 ${boardBeats(board.scenes)} shots) into a project now — Continue plans the rest, Migrate remaining appends them later`}
                     >
-                      Migrate partial ({board.scenes.length}/{board.sceneCount})
+                      Migrate partial ({board.scenes.length}/{board.sceneCount} · 🎞 {boardBeats(board.scenes)})
                     </button>
                   );
                 })()
@@ -1810,6 +2038,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
             {!busy && stoppedNote && (board.scenes.length < board.sceneCount || timelineOpen) && (
               <p className="hint">{stoppedNote} Or migrate what's planned so far with Migrate partial — the rest can follow later.</p>
             )}
+            {!busy && board.warn && (
+              <p className="hint warn-text" title="Server-side grounding report for the latest scene batch (unknown cast/places repaired or skipped)">⚠️ {board.warn}</p>
+            )}
 
             {showAnalysis && (
               <div className="beat-meta-box" style={{ marginBottom: 12 }}>
@@ -1831,7 +2062,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     className="ghost shotlist-btn"
                     onClick={() => void doAddEntry("character")}
                     disabled={addingEntry != null || busy != null}
-                    title="AI reads the story/lyrics + master settings + existing bible and appends one new character"
+                    title="AI reads the story/lyrics + master settings + existing bible, appends one new character, and refreshes the story beats to include it"
                   >
                     {addingEntry === "character" ? <Spinner size={11} /> : <span aria-hidden="true">＋</span>}
                     {addingEntry === "character" ? "Adding…" : "Add character"}
@@ -1989,7 +2220,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     className="ghost shotlist-btn"
                     onClick={() => void doAddEntry("location")}
                     disabled={addingEntry != null || busy != null}
-                    title="AI reads the story/lyrics + master settings + existing bible and appends one new location"
+                    title="AI reads the story/lyrics + master settings + existing bible, appends one new location, and refreshes the story beats to include it"
                   >
                     {addingEntry === "location" ? <Spinner size={11} /> : <span aria-hidden="true">＋</span>}
                     {addingEntry === "location" ? "Adding…" : "Add location"}
@@ -1998,7 +2229,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     className="ghost shotlist-btn"
                     onClick={() => void doAddEntry("object")}
                     disabled={addingEntry != null || busy != null}
-                    title="AI reads the story/lyrics + master settings + existing bible and appends one new object"
+                    title="AI reads the story/lyrics + master settings + existing bible, appends one new object, and refreshes the story beats to include it"
                   >
                     {addingEntry === "object" ? <Spinner size={11} /> : <span aria-hidden="true">＋</span>}
                     {addingEntry === "object" ? "Adding…" : "Add object"}
@@ -2088,14 +2319,15 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
             {(board.scenes.length > 0 || board.sceneCount > 0) && (
               <>
                 <div className="row" style={{ alignItems: "center" }}>
-                  <div className="section-label" style={{ margin: 0 }}>Scenes · {board.scenes.length}/{board.sceneCount}</div>
+                  <div className="section-label" style={{ margin: 0 }}>Scenes · {board.scenes.length}/{board.sceneCount} · Shots {boardBeats(board.scenes)}/{boardBeatsTotal(board.scenes, board.sceneCount)}</div>
                   {(() => {
                     const beats = boardBeats(board.scenes);
-                    return beats !== board.scenes.length ? (
-                      <span className="pill" title="Multi-shot scenes flatten to one image + video clip per shot at approve time">
-                        🎞 {beats} timed shots
+                    const total = boardBeatsTotal(board.scenes, board.sceneCount);
+                    return (
+                      <span className="pill" title="Shots ARE scenes at generation time — each shot flattens to one image + video clip at approve time, so this shot total is the real generation total">
+                        🎞 {beats}/{total} timed shots
                       </span>
-                    ) : null;
+                    );
                   })()}
                   {(() => {
                     const planned = boardPlannedSeconds(board.scenes);
@@ -2608,6 +2840,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
           projectName={board.scenarioName}
           boardScenes={board.scenes}
           onOpenProject={onOpenProject}
+          imageMode={imageMode}
+          onImageMode={onImageMode}
         />
       ) : (
         <section className="card" aria-label="Generation" style={{ marginTop: 12 }}>
@@ -2625,6 +2859,173 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
           </p>
         </section>
       )
+    )}
+    {/* 📝 Directing-inputs popup: what was saved before directing (project
+        name, story/lyrics, language, genre, style, durations, instructions).
+        View always; Edit + Save to change. Story/style edits steer FUTURE
+        scene batches only — planned characters/scenes stay until regenerated;
+        song boards lock the target to the song length. */}
+    {inputBoard && (
+      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Directing inputs" onClick={() => closeInputs()}>
+        <div className="dlg-box char-popup" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+          <h3 className="dlg-title">
+            📝 Directing inputs — {str(inputBoard.input.title) || inputBoard.id}
+          </h3>
+          <p className="dlg-message">
+            What you saved before directing. View anytime; press Edit to change.
+            Edits steer <b>future</b> scene batches (pacing, style grounding, instructions) —
+            already-planned characters and scenes stay as-is until regenerated.
+            {inputBoard.input.song?.durationSeconds
+              ? " Song board: the target duration stays locked to the uploaded song."
+              : ""}
+          </p>
+          {!inputEditing ? (
+            <>
+              <div className="shotlist-detail-label">Project name</div>
+              <p>{str(inputBoard.input.title) || "—"}</p>
+              <div className="shotlist-detail-label">Story{inputBoard.input.song ? " / lyrics" : ""}</div>
+              <p style={{ whiteSpace: "pre-wrap", maxHeight: 220, overflowY: "auto" }}>{str(inputBoard.input.story) || "—"}</p>
+              <div className="dir-scene-row-head" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span><span className="shotlist-detail-label">Language</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.language) || "—"}</p></span>
+                <span><span className="shotlist-detail-label">Genre</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.genre) || "—"}{inputBoard.input.genre === "Custom" && inputBoard.input.genreCustom ? ` (${inputBoard.input.genreCustom})` : ""}</p></span>
+                <span><span className="shotlist-detail-label">Visual style</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.visualStyle) || "—"}{inputBoard.input.visualStyle === "Custom" && inputBoard.input.styleCustom ? ` (${inputBoard.input.styleCustom})` : ""}</p></span>
+                <span><span className="shotlist-detail-label">Aspect ratio</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.aspectRatio) || "—"}</p></span>
+              </div>
+              <div className="dir-scene-row-head" style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
+                <span><span className="shotlist-detail-label">Target duration</span><p style={{ margin: "2px 0 0" }}>~{Math.round(Number(inputBoard.input.song?.durationSeconds ?? inputBoard.input.targetSeconds) || 0)}s{inputBoard.input.song?.durationSeconds ? " (🔒 song length)" : ""}</p></span>
+                <span><span className="shotlist-detail-label">Scene duration (AI pace hint)</span><p style={{ margin: "2px 0 0" }}>~{inputBoard.input.sceneSeconds}s</p></span>
+                <span><span className="shotlist-detail-label">Dialogues</span><p style={{ margin: "2px 0 0" }}>{inputBoard.input.includeDialogue === false ? "🔇 off (silent)" : "🎙 on"}</p></span>
+                <span><span className="shotlist-detail-label">Connected scenes</span><p style={{ margin: "2px 0 0" }}>{inputBoard.input.chainContinuity === true ? "🔗 on" : "▫️ off"}</p></span>
+              </div>
+              {inputBoard.input.song?.fileName ? (
+                <>
+                  <div className="shotlist-detail-label" style={{ marginTop: 8 }}>Song</div>
+                  <p>🎵 {str(inputBoard.input.song.fileName)} · ~{inputBoard.input.song.durationSeconds}s</p>
+                </>
+              ) : null}
+              <div className="shotlist-detail-label" style={{ marginTop: 8 }}>Additional director instructions</div>
+              <p style={{ whiteSpace: "pre-wrap" }}>{str(inputBoard.input.instructions) || "—"}</p>
+              <div className="dlg-actions">
+                <button className="ghost" onClick={() => closeInputs()} title="Close (Esc)">
+                  Close
+                </button>
+                <button className="primary" onClick={() => setInputEditing(true)} disabled={busy != null} title="Edit these directing inputs">
+                  Edit
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label>Project name</label>
+              <input
+                value={inputDraft.title}
+                maxLength={120}
+                onChange={(e) => setInputDraft((d) => ({ ...d, title: e.target.value }))}
+                title="Board title — the approved project takes exactly this name"
+              />
+              <label style={{ marginTop: 8 }}>Story{inputBoard.input.song ? " / lyrics" : ""} (future batches plan from this)</label>
+              <textarea
+                rows={8}
+                value={inputDraft.story}
+                maxLength={10000}
+                onChange={(e) => setInputDraft((d) => ({ ...d, story: e.target.value }))}
+                title="Saved story text — edits steer future scene batches; planned characters/scenes stay until regenerated"
+              />
+              <div className="grid grid-3" style={{ marginTop: 8 }}>
+                <div>
+                  <label>Language</label>
+                  <select value={inputDraft.language} onChange={(e) => setInputDraft((d) => ({ ...d, language: e.target.value }))}>
+                    {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label>Genre</label>
+                  <select value={inputDraft.genre} onChange={(e) => setInputDraft((d) => ({ ...d, genre: e.target.value }))}>
+                    {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  {inputDraft.genre === "Custom" && (
+                    <input value={inputDraft.genreCustom} maxLength={40} placeholder="Custom genre…" onChange={(e) => setInputDraft((d) => ({ ...d, genreCustom: e.target.value }))} style={{ marginTop: 6 }} />
+                  )}
+                </div>
+                <div>
+                  <label>Visual style</label>
+                  <select value={inputDraft.visualStyle} onChange={(e) => setInputDraft((d) => ({ ...d, visualStyle: e.target.value }))}>
+                    {STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  {inputDraft.visualStyle === "Custom" && (
+                    <input value={inputDraft.styleCustom} maxLength={120} placeholder="Describe the custom style…" onChange={(e) => setInputDraft((d) => ({ ...d, styleCustom: e.target.value }))} style={{ marginTop: 6 }} />
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-3" style={{ marginTop: 8 }}>
+                <div>
+                  <label>Target duration (sec){inputBoard.input.song?.durationSeconds ? " 🔒" : ""}</label>
+                  <input
+                    type="number" min={15} max={3600}
+                    value={inputDraft.targetSeconds}
+                    disabled={inputBoard.input.song?.durationSeconds != null}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, targetSeconds: Number(e.target.value) }))}
+                    title={inputBoard.input.song?.durationSeconds ? "Locked to the uploaded song length" : "Story timeline target — future batches pace to this"}
+                  />
+                </div>
+                <div>
+                  <label>Scene duration (sec)</label>
+                  <input
+                    type="number" min={1} max={30}
+                    value={inputDraft.sceneSeconds}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, sceneSeconds: Number(e.target.value) }))}
+                    title="AI pace hint for future batches — each scene's own duration still comes from the story"
+                  />
+                </div>
+                <div>
+                  <label>Aspect ratio</label>
+                  <select value={inputDraft.aspectRatio} onChange={(e) => setInputDraft((d) => ({ ...d, aspectRatio: e.target.value }))}>
+                    {ASPECTS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
+              <label style={{ marginTop: 8 }}>Additional director instructions</label>
+              <textarea
+                rows={3}
+                value={inputDraft.instructions}
+                maxLength={2000}
+                placeholder="Keep Minku's appearance exactly the same…"
+                onChange={(e) => setInputDraft((d) => ({ ...d, instructions: e.target.value }))}
+              />
+              <div className="row" style={{ marginTop: 8, gap: 16 }}>
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }}>
+                  <input
+                    type="checkbox"
+                    checked={inputDraft.includeDialogue}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, includeDialogue: e.target.checked }))}
+                  />
+                  🎙 Dialogues {inputDraft.includeDialogue ? "on" : "off"}
+                </label>
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }}>
+                  <input
+                    type="checkbox"
+                    checked={inputDraft.chainContinuity}
+                    onChange={(e) => setInputDraft((d) => ({ ...d, chainContinuity: e.target.checked }))}
+                  />
+                  🔗 Connected {inputDraft.chainContinuity ? "on" : "off"}
+                </label>
+              </div>
+              <p className="hint" style={{ margin: "6px 0 0" }}>
+                Turning Dialogues OFF strips all planned lines; turning Connected OFF scrubs handoffs —
+                the open board reloads with the effect at once.
+              </p>
+              <div className="dlg-actions">
+                <button className="ghost" onClick={() => { if (inputBoard) openInputs(board && board.id === inputBoard.id ? board : inputBoard); }} disabled={savingInputs} title="Discard edits, back to view">
+                  Cancel
+                </button>
+                <button className="primary" onClick={() => void saveInputs()} disabled={savingInputs || !inputDraft.title.trim() || inputDraft.story.trim().length < 3} title="Save these directing inputs">
+                  {savingInputs ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     )}
     </>
   );

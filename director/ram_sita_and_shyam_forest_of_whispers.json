@@ -1,0 +1,1470 @@
+{
+  "id": "ram_sita_and_shyam_forest_of_whispers",
+  "input": {
+    "title": "Ram, Sita and Shyam — Forest of Whispers",
+    "story": "Ram and Sita are walking through a peaceful forest. Sita looks worried. Ram notices her expression and looks at her with concern.\n\nRam says, 'Sita, do not worry. I am with you.'\n\nSita looks at Ram and smiles gently.\n\nSita says, 'I know, Ram. When you are with me, I am not afraid.'\n\nSuddenly, Shyam appears from behind the trees. He looks frightened.\n\nShyam says, 'Ram! Sita! You must leave this place immediately.'\n\nRam turns toward Shyam with a serious expression.\n\nRam says, 'What happened, Shyam?'\n\nShyam replies, 'There is danger ahead.'",
+    "language": "Hindi",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 60,
+    "sceneSeconds": 5,
+    "aspectRatio": "16:9",
+    "instructions": "",
+    "includeDialogue": true,
+    "chainContinuity": true
+  },
+  "status": "approved",
+  "blueprint": {
+    "logline": "Ram and Sita encounter a mysterious forest where Shyam warns them of impending danger.",
+    "analysis": {
+      "plot": "A peaceful journey through the forest turns into a warning of danger, leading to an immediate departure.",
+      "beginning": "Ram and Sita walk through a serene forest. Sita looks worried, prompting Ram’s reassurance.",
+      "middle": "Shyam arrives, frightened and warns them about an imminent threat, causing urgency for their departure.",
+      "climax": "The trio prepares to leave the forest immediately upon Shyam's warning of danger.",
+      "ending": "Ram, Sita, and Shyam leave the forest in a hurry due to the warning from Shyam.",
+      "main_character": "ram",
+      "supporting_characters": [
+        "sita",
+        "shyam"
+      ],
+      "antagonist": "null",
+      "objects": [
+        "tiger"
+      ],
+      "locations": [
+        "forest"
+      ],
+      "events": [
+        "walking through a peaceful forest",
+        "Sita looking worried",
+        "Ram comforting Sita",
+        "Shyam appearing and warning them",
+        "preparing to leave the forest immediately"
+      ],
+      "relationships": "Ram comforts Sita, Shyam warns of danger.",
+      "emotional_progression": "Relief -> Worry -> Fear -> Urgency",
+      "timeline": "Walking -> Stopping -> Frightening appearance -> Immediate departure",
+      "visual_moments": [
+        "Sita looking worried",
+        "Ram comforting her",
+        "Shyam appearing and warning them",
+        "preparing to leave"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "ram",
+        "name": "ram",
+        "role": "main_character",
+        "species": "human",
+        "age": "teenager",
+        "appearance": {
+          "body": "healthy",
+          "fur": "",
+          "eyes": "brown",
+          "ears": "normal human ears"
+        },
+        "clothing": {
+          "top": "blue dhoti",
+          "bottom": "red kurta"
+        },
+        "personality": [
+          "courageous",
+          "compassionate"
+        ],
+        "visual_identity_prompt": "human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "sita",
+        "name": "sita",
+        "role": "supporting_character",
+        "species": "human",
+        "age": "teenager",
+        "appearance": {
+          "body": "slender",
+          "fur": "",
+          "eyes": "brown",
+          "ears": "normal human ears"
+        },
+        "clothing": {
+          "top": "yellow blouse",
+          "bottom": "blue dhoti"
+        },
+        "personality": [
+          "kind",
+          "worried"
+        ],
+        "visual_identity_prompt": "human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      },
+      {
+        "character_id": "shyam",
+        "name": "shyam",
+        "role": "supporting_character",
+        "species": "human",
+        "age": "teenager",
+        "appearance": {
+          "body": "healthy",
+          "fur": "",
+          "eyes": "brown",
+          "ears": "normal human ears"
+        },
+        "clothing": {
+          "top": "green dhoti",
+          "bottom": "white kurta"
+        },
+        "personality": [
+          "scared",
+          "worried"
+        ],
+        "visual_identity_prompt": "human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "forest",
+        "name": "forest of whispers",
+        "description": "A lush, serene forest filled with whispering trees and gentle flora.",
+        "visual_identity_prompt": "lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature",
+        "time_of_day": "afternoon",
+        "lighting": "soft natural light filtering through leaves",
+        "color_palette": "green, brown, soft yellow"
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "tiger",
+        "name": "tiger",
+        "description": "A large, majestic tiger that appears suddenly.",
+        "visual_identity_prompt": "majestic tiger with stripes in a natural habitat, realistic fur and muscles"
+      }
+    ],
+    "lyric_lines": [],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Introduction to the peaceful forest",
+        "summary": "Ram and Sita walk through a serene forest.",
+        "location": "forest",
+        "objects": [
+          "tiger"
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Sita looks worried",
+        "summary": "Sita looks worried, prompting Ram’s reassurance.",
+        "location": "forest"
+      },
+      {
+        "n": 3,
+        "title": "Ram comforts Sita",
+        "summary": "Ram says, 'Sita, do not worry. I am with you.'",
+        "location": "forest"
+      },
+      {
+        "n": 4,
+        "title": "Shyam appears and warns them",
+        "summary": "Suddenly, Shyam appears from behind the trees. He looks frightened.",
+        "location": "forest",
+        "objects": [
+          "tiger"
+        ]
+      },
+      {
+        "n": 5,
+        "title": "Ram asks about what happened",
+        "summary": "Ram turns toward Shyam with a serious expression and says, 'What happened, Shyam?'",
+        "location": "forest"
+      },
+      {
+        "n": 6,
+        "title": "Shyam warns of danger",
+        "summary": "Shyam replies, 'There is danger ahead.'",
+        "location": "forest",
+        "objects": [
+          "tiger"
+        ]
+      },
+      {
+        "n": 7,
+        "title": "Preparation to leave the forest immediately",
+        "summary": "Ram, Sita, and Shyam prepare to leave the forest in a hurry.",
+        "location": "forest"
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Introduction to the Peaceful Forest",
+      "story_beat": "Beat 1: Introduction to the peaceful forest — Ram and Sita walk through a serene forest.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram",
+        "sita"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram and Sita walk through the forest. Trees sway gently, and soft light filters through the leaves.",
+      "emotion": "calm and peaceful",
+      "expression": "smiling and relaxed faces",
+      "body_language": "walking leisurely with even strides",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "This scene introduces Ram and Sita in a serene forest setting.",
+      "transition_to_next_scene": "Ram and Sita continue walking as they notice Sita looking worried.",
+      "dialogue": [
+        {
+          "speaker": "sita",
+          "line": "Sita looks worried, prompting Ram’s reassurance.",
+          "expression": "worried face with furrowed brow",
+          "emotion": "anxious",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) and sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) walking through a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram and Sita walk through the forest. Trees sway gently, and soft light filters through the leaves; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "1-A",
+          "shot_number": 1,
+          "lyric_segment": "Ram and Sita walk through a peaceful forest.",
+          "semantic_meaning": "Introducing Ram and Sita in the serene forest setting.",
+          "visual_event": "",
+          "characters": [
+            "ram",
+            "sita"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "walking leisurely with even strides",
+          "emotion": "calm and peaceful",
+          "expression": "smiling and relaxed faces",
+          "body_language": "walking leisurely with even strides",
+          "camera": {
+            "shot_type": "Wide Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [
+            {
+              "speaker": "sita",
+              "line": "Sita looks worried.",
+              "expression": "worried face with furrowed brow",
+              "emotion": "anxious",
+              "pitch": "medium"
+            }
+          ],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) and sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) walking through a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram and Sita walk through the forest. Trees sway gently, and soft light filters through the leaves; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "title": "Sita Looks Worried and Ram Reassures Her",
+      "story_beat": "Beat 2: Sita looks worried — Sita looks worried, prompting Ram’s reassurance.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram",
+        "sita"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram comforts Sita by saying, 'Sita, do not worry. I am with you.'",
+      "emotion": "reassuring and calm",
+      "expression": "smiling gently at Sita",
+      "body_language": "placing a reassuring hand on Sita's shoulder while looking into her eyes",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram and Sita continue walking through the serene forest.",
+      "transition_to_next_scene": "Sita looks at Ram and smiles gently in response to his words.",
+      "dialogue": [
+        {
+          "speaker": "ram",
+          "line": "'Sita, do not worry. I am with you.'",
+          "expression": "smiling gently at Sita",
+          "emotion": "reassuring and calm",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) comforting sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) by saying 'Sita, do not worry. I am with you.' in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram comforts Sita by saying 'Sita, do not worry. I am with you.'; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "2-A",
+          "shot_number": 1,
+          "lyric_segment": "'Sita, do not worry. I am with you.'",
+          "semantic_meaning": "Ram comforts Sita by assuring her of his presence.",
+          "visual_event": "",
+          "characters": [
+            "ram",
+            "sita"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Ram placing a reassuring hand on Sita's shoulder while looking into her eyes",
+          "emotion": "reassuring and calm",
+          "expression": "smiling gently at Sita",
+          "body_language": "placing a reassuring hand on Sita's shoulder while looking into her eyes",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) comforting sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) by saying 'Sita, do not worry. I am with you.' in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram comforts Sita by saying 'Sita, do not worry. I am with you.'; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "title": "Shyam Appears and Warns Them",
+      "story_beat": "Beat 4: Shyam appears and warns them — Suddenly, Shyam appears from behind the trees. He looks frightened.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram",
+        "sita",
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Shyam appears from behind the trees, looking frightened.",
+      "emotion": "frightened and anxious",
+      "expression": "wide eyes with open mouth, trembling body",
+      "body_language": "stepping backward, trembling",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram comforts Sita in the serene forest setting.",
+      "transition_to_next_scene": "Shyam appears from behind the trees looking frightened and warns them about danger.",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "'Ram! Sita! You must leave this place immediately.'",
+          "expression": "wide eyes with open mouth, trembling body",
+          "emotion": "frightened and anxious",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) appearing from behind the trees in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam appears from behind the trees looking frightened and warns them about danger; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 6,
+      "shots": [
+        {
+          "shot_id": "3-A",
+          "shot_number": 1,
+          "lyric_segment": "'Ram! Sita! You must leave this place immediately.'",
+          "semantic_meaning": "Shyam appears from behind the trees and warns them about danger.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "appearing from behind the trees, looking frightened",
+          "emotion": "frightened and anxious",
+          "expression": "wide eyes with open mouth, trembling body",
+          "body_language": "stepping backward, trembling",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) appearing from behind the trees in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam appears from behind the trees looking frightened and warns them about danger; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 4,
+      "title": "Ram Asks Shyam What Happened",
+      "story_beat": "Beat 5: Ram asks about what happened — Ram turns toward Shyam with a serious expression and says, 'What happened, Shyam?'",
+      "duration_seconds": 5,
+      "characters": [
+        "ram",
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram turns toward Shyam with a serious expression and asks, 'What happened, Shyam?'",
+      "emotion": "serious and concerned",
+      "expression": "serious face with furrowed brow",
+      "body_language": "turning his body towards Shyam with an intent look",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Shyam appears from behind the trees and warns them about danger.",
+      "transition_to_next_scene": "Ram asks Shyam what happened in a serious tone.",
+      "dialogue": [
+        {
+          "speaker": "ram",
+          "line": "'What happened, Shyam?'",
+          "expression": "serious face with furrowed brow",
+          "emotion": "serious and concerned",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram turns toward Shyam with a serious expression and asks, 'What happened, Shyam?'; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 7,
+      "line_to": 8,
+      "shots": [
+        {
+          "shot_id": "4-A",
+          "shot_number": 1,
+          "lyric_segment": "'What happened, Shyam?'",
+          "semantic_meaning": "Ram turns toward Shyam with a serious expression and asks what has happened.",
+          "visual_event": "",
+          "characters": [
+            "ram",
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "turning his body towards Shyam with an intent look",
+          "emotion": "serious and concerned",
+          "expression": "serious face with furrowed brow",
+          "body_language": "turning his body towards Shyam with an intent look",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram turns toward Shyam with a serious expression and asks, 'What happened, Shyam?'; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 5,
+      "title": "Shyam Warns of Danger Ahead",
+      "story_beat": "Beat 6: Shyam warns of danger — Shyam replies, 'There is danger ahead.'",
+      "duration_seconds": 5,
+      "characters": [
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Shyam replies, 'There is danger ahead.'",
+      "emotion": "serious and worried",
+      "expression": "worried face with furrowed brow",
+      "body_language": "standing still with a serious expression",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram asks Shyam what happened in a serious tone.",
+      "transition_to_next_scene": "Shyam warns them about danger ahead and they prepare to leave immediately.",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "'There is danger ahead.'",
+          "expression": "worried face with furrowed brow",
+          "emotion": "serious and worried",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing still with a serious expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam warns them about danger ahead and they prepare to leave immediately; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 9,
+      "line_to": 9,
+      "shots": [
+        {
+          "shot_id": "5-A",
+          "shot_number": 1,
+          "lyric_segment": "'There is danger ahead.'",
+          "semantic_meaning": "Shyam warns them about an impending danger.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "standing still with a serious expression",
+          "emotion": "serious and worried",
+          "expression": "worried face with furrowed brow",
+          "body_language": "standing still with a serious expression",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing still with a serious expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam warns them about danger ahead and they prepare to leave immediately; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 6,
+      "title": "Preparation to Leave the Forest Immediately",
+      "story_beat": "Beat 7: Preparation to leave the forest immediately — Ram, Sita, and Shyam prepare to leave the forest in a hurry.",
+      "duration_seconds": 5,
+      "characters": [
+        "ram",
+        "sita",
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram, Sita, and Shyam prepare to leave the forest in a hurry.",
+      "emotion": "anxious and hurried",
+      "expression": "concerned faces with furrowed brows",
+      "body_language": "hurriedly packing supplies and preparing to move quickly",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Tracking Shot"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Shyam warns them about danger ahead.",
+      "transition_to_next_scene": "Ram, Sita, and Shyam prepare to leave the forest immediately in a hurry.",
+      "dialogue": [],
+      "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta), sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) and shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) preparing to leave the forest in a hurry in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram, Sita, and Shyam prepare to leave the forest in a hurry; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 10,
+      "line_to": 9,
+      "shots": [
+        {
+          "shot_id": "6-A",
+          "shot_number": 1,
+          "lyric_segment": "Preparation to leave the forest immediately.",
+          "semantic_meaning": "Ram, Sita, and Shyam prepare to leave the forest in a hurry due to the warning of danger.",
+          "visual_event": "",
+          "characters": [
+            "ram",
+            "sita",
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "hurriedly packing supplies and preparing to move quickly",
+          "emotion": "anxious and hurried",
+          "expression": "concerned faces with furrowed brows",
+          "body_language": "hurriedly packing supplies and preparing to move quickly",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Tracking Shot"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta), sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) and shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) preparing to leave the forest in a hurry in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram, Sita, and Shyam prepare to leave the forest in a hurry; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5,
+          "start_time": 0,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 7,
+      "title": "Shyam's Warning",
+      "story_beat": "Beat 4: Shyam appears and warns them — Suddenly, Shyam appears from behind the trees. He looks frightened.",
+      "duration_seconds": 3,
+      "characters": [
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Shyam suddenly appears from behind the trees and looks frightened.",
+      "emotion": "frightened",
+      "expression": "wide eyes, open mouth, trembling body",
+      "body_language": "stepping backward, hands raised in fear",
+      "camera": {
+        "shot_type": "Wide Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Shyam warns them about danger ahead.",
+      "transition_to_next_scene": "Ram turns toward Shyam with a serious expression.",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "मैं आपको यहाँ से जाना है, तुम्हें खतरा है।",
+          "expression": "frightened and whispering",
+          "emotion": "scared",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) suddenly appearing from behind the trees in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam suddenly appears from behind the trees and looks frightened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "7-A",
+          "shot_number": 1,
+          "lyric_segment": "Shyam suddenly appears from behind the trees.",
+          "semantic_meaning": "Shyam unexpectedly arrives and looks frightened.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Shyam steps out from behind the trees, looking scared.",
+          "emotion": "frightened",
+          "expression": "wide eyes, open mouth, trembling body",
+          "body_language": "stepping backward, hands raised in fear",
+          "camera": {
+            "shot_type": "Wide Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) stepping out from behind the trees in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam steps out from behind the trees and looks frightened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 8,
+      "title": "Ram Turns Toward Shyam",
+      "story_beat": "Beat 5: Ram asks about what happened — Ram turns toward Shyam with a serious expression and says, 'What happened, Shyam?'",
+      "duration_seconds": 2,
+      "characters": [
+        "ram",
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram turns towards Shyam with a serious expression.",
+      "emotion": "serious and concerned",
+      "expression": "furrowed brows, deep gaze",
+      "body_language": "standing tall, hands on hips",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Shyam suddenly appears from behind the trees and looks frightened.",
+      "transition_to_next_scene": "Ram turns toward Shyam with a serious expression and asks about what happened.",
+      "dialogue": [
+        {
+          "speaker": "ram",
+          "line": "मैंने क्या हुआ, शयम?",
+          "expression": "serious and concerned",
+          "emotion": "concerned",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "8-A",
+          "shot_number": 1,
+          "lyric_segment": "Ram turns toward Shyam with a serious expression and asks about what happened.",
+          "semantic_meaning": "Ram expresses concern by turning towards Shyam.",
+          "visual_event": "",
+          "characters": [
+            "ram",
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Ram turns towards Shyam with a serious expression.",
+          "emotion": "serious and concerned",
+          "expression": "furrowed brows, deep gaze",
+          "body_language": "standing tall, hands on hips",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 2,
+          "start_time": 0,
+          "end_time": 2,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 9,
+      "title": "Shyam Warns of Danger",
+      "story_beat": "Beat 6: Shyam warns of danger — Shyam replies, 'There is danger ahead.'",
+      "duration_seconds": 3,
+      "characters": [
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Shyam warns Ram and Sita about the danger ahead.",
+      "emotion": "serious and urgent",
+      "expression": "solemn face, serious tone",
+      "body_language": "standing tall with a grave expression",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram turns toward Shyam with a serious expression and asks about what happened.",
+      "transition_to_next_scene": "Shyam warns Ram and Sita about the danger ahead.",
+      "dialogue": [
+        {
+          "speaker": "shyam",
+          "line": "आगे खुशी से जाना है।",
+          "expression": "solemn face, serious tone",
+          "emotion": "serious and urgent",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam stands tall with a grave expression and warns about the danger ahead; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 6,
+      "shots": [
+        {
+          "shot_id": "9-A",
+          "shot_number": 1,
+          "lyric_segment": "Shyam replies, 'There is danger ahead.'",
+          "semantic_meaning": "Shyam warns Ram and Sita about the danger ahead.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Shyam stands tall with a grave expression and warns about the danger ahead.",
+          "emotion": "serious and urgent",
+          "expression": "solemn face, serious tone",
+          "body_language": "standing tall with a grave expression",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam stands tall with a grave expression and warns about the danger ahead; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 10,
+      "title": "Shyam's Warning Continues",
+      "story_beat": "Beat 7: Preparation to leave the forest immediately — Ram, Sita, and Shyam prepare to leave the forest in a hurry.",
+      "duration_seconds": 15,
+      "characters": [
+        "ram",
+        "sita",
+        "shyam"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Ram, Sita, and Shyam prepare to leave the forest hurriedly.",
+      "emotion": "serious urgency",
+      "expression": "focused faces with determined expressions",
+      "body_language": "quick movements as they gather belongings and check surroundings",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram turns toward Shyam with a serious expression and asks about what happened.",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam with a serious expression; sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) looking worried while standing next to ram; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what happened; Sita looks worried while standing next to Ram. Highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's characters exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 8,
+      "shots": [
+        {
+          "shot_id": "10-A",
+          "shot_number": 1,
+          "lyric_segment": "'There is danger ahead.'",
+          "semantic_meaning": "Shyam warns Ram and Sita about the danger ahead.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Shyam stands tall with a grave expression and warns about the danger ahead.",
+          "emotion": "serious and urgent",
+          "expression": "solemn face, serious tone",
+          "body_language": "standing tall with a grave expression",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam stands tall with a grave expression and warns about the danger ahead; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 2.9,
+          "start_time": 0,
+          "end_time": 2.9,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-B",
+          "shot_number": 2,
+          "lyric_segment": "'What happened, Shyam?'",
+          "semantic_meaning": "Ram asks Shyam about what has happened.",
+          "visual_event": "",
+          "characters": [
+            "ram"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Ram turns toward Shyam with a serious expression and asks about what has happened.",
+          "emotion": "worried",
+          "expression": "concerned face with raised eyebrows",
+          "body_language": "turning towards Shyam",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam with a serious expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what has happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 2.3,
+          "start_time": 2.9,
+          "end_time": 5.2,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-C",
+          "shot_number": 3,
+          "lyric_segment": "'Sita looks worried.'",
+          "semantic_meaning": "Sita expresses her concern.",
+          "visual_event": "",
+          "characters": [
+            "sita"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Sita looks worried while standing next to Ram and Shyam.",
+          "emotion": "worried",
+          "expression": "concerned face with raised eyebrows",
+          "body_language": "standing with a worried expression",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) looking worried while standing next to ram and shyam in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Sita looks worried while standing next to Ram and Shyam; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 2.3,
+          "start_time": 5.2,
+          "end_time": 7.5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-D",
+          "shot_number": 4,
+          "lyric_segment": "'Ram! Sita! You must leave this place immediately.'",
+          "semantic_meaning": "Shyam urges Ram and Sita to leave quickly.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Shyam rushes forward, urging Ram and Sita to leave the forest immediately.",
+          "emotion": "serious urgency",
+          "expression": "urgent face with raised hands",
+          "body_language": "rushing forward",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) rushing forward in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam rushes forward and urges Ram and Sita to leave the forest immediately; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 5.3,
+          "start_time": 7.5,
+          "end_time": 12.8,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-E",
+          "shot_number": 5,
+          "lyric_segment": "'What happened, Shyam?'",
+          "semantic_meaning": "Ram asks Shyam about what has happened.",
+          "visual_event": "",
+          "characters": [
+            "ram"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Ram turns toward Shyam with a serious expression and asks about what has happened.",
+          "emotion": "worried",
+          "expression": "concerned face with raised eyebrows",
+          "body_language": "turning towards Shyam",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam with a serious expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what has happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 2.2,
+          "start_time": 12.8,
+          "end_time": 15,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 11,
+      "title": "Shyam's Warning",
+      "story_beat": "Beat 6: Shyam warns of danger — Shyam replies, 'There is danger ahead.' [📍 forest | 🧺 tiger]",
+      "duration_seconds": 5,
+      "characters": [
+        "shyam",
+        "ram",
+        "sita"
+      ],
+      "location": "forest",
+      "time_of_day": "afternoon",
+      "action": "Shyam stands tall and warns Ram and Sita about the danger ahead. Ram turns to Shyam with a serious expression, and Sita looks worried.",
+      "emotion": "serious urgency",
+      "expression": "solemn face, serious tone; concerned face with raised eyebrows; worried face",
+      "body_language": "standing tall with a grave expression; turning towards Shyam; standing with a worried expression",
+      "camera": {
+        "shot_type": "Two Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft afternoon light, dappled shadows on the forest floor",
+      "environment": "lush green foliage, vibrant colors of nature",
+      "continuity_from_previous_scene": "Ram turns toward Shyam with a serious expression and asks about what happened.",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam with a serious expression; sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) looking worried while standing next to ram; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Shyam stands tall with a grave expression and warns about the danger ahead. Ram turns toward Shyam with a serious expression and asks about what has happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 8,
+      "line_to": 9,
+      "shots": [
+        {
+          "shot_id": "11-A",
+          "shot_number": 1,
+          "lyric_segment": "'There is danger ahead.'",
+          "semantic_meaning": "Shyam warns Ram and Sita about the danger ahead.",
+          "visual_event": "",
+          "characters": [
+            "shyam"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Shyam stands tall with a grave expression and warns about the danger ahead.",
+          "emotion": "serious urgency",
+          "expression": "solemn face, serious tone",
+          "body_language": "standing tall with a grave expression",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "shyam (human teenager with healthy body, brown eyes, wearing a green dhoti and white kurta) standing tall with a grave expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Shyam stands tall with a grave expression and warns about the danger ahead; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 1.9,
+          "start_time": 0,
+          "end_time": 1.9,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "11-B",
+          "shot_number": 2,
+          "lyric_segment": "'What happened, Shyam?'",
+          "semantic_meaning": "Ram asks Shyam about what has happened.",
+          "visual_event": "",
+          "characters": [
+            "ram"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Ram turns toward Shyam with a serious expression and asks about what has happened.",
+          "emotion": "worried",
+          "expression": "concerned face with raised eyebrows",
+          "body_language": "turning towards Shyam",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "ram (human teenager with healthy body, brown eyes, wearing a blue dhoti and red kurta) turning toward shyam with a serious expression in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Ram turns toward Shyam with a serious expression and asks about what has happened; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 1.6,
+          "start_time": 1.9,
+          "end_time": 3.5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "11-C",
+          "shot_number": 3,
+          "lyric_segment": "'Sita looks worried.'",
+          "semantic_meaning": "Sita expresses her concern.",
+          "visual_event": "",
+          "characters": [
+            "sita"
+          ],
+          "location": "forest",
+          "time_of_day": "",
+          "action": "Sita looks worried while standing next to Ram and Shyam.",
+          "emotion": "worried",
+          "expression": "concerned face with raised eyebrows",
+          "body_language": "standing with a worried expression",
+          "camera": {
+            "shot_type": "Two Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft afternoon light, dappled shadows on the forest floor",
+          "environment": "lush green foliage, vibrant colors of nature",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "sita (human teenager with slender body, brown eyes, wearing a yellow blouse and blue dhoti) looking worried while standing next to ram and shyam in a lush forest with whispering trees and soft green foliage in the afternoon light, dappled shadows on the forest floor, vibrant colors of nature; colorful 3d preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering; ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Sita looks worried while standing next to Ram and Shyam; highly clear 8k uhd quality, smooth natural motion, no distortion, no morphing, no flicker — never describe looks, face, clothing, colors or style; the video model must animate the input image's character exactly, never redesign it",
+          "duration_seconds": 1.5,
+          "start_time": 3.5,
+          "end_time": 5,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    }
+  ],
+  "sceneCount": 11,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": "Ram, Sita and Shyam — Forest of Whispers",
+  "error": null,
+  "createdAt": "2026-10-05T18:43:08.429Z",
+  "updatedAt": "2026-10-05T18:49:25.130Z",
+  "warn": null,
+  "project_id": 429,
+  "migratedScenes": 11
+}

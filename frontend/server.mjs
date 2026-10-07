@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { Pool } from "pg";
-import { versionMap, setMain, nextVersion } from "../lib/sequence_state.mjs";
+import { versionMap, setMain, clearRefMain, nextVersion } from "../lib/sequence_state.mjs";
 import {
   normalizeFormat, outDirName, cfgNameForDir, prefixForDir, engineForDir,
   allDirsFor, folderSlug, fileSlug,
@@ -49,11 +49,14 @@ import {
   normalizeBlueprint,
   normalizeDialogue,
   normalizeScene,
+  canonicalizeSceneRefs,
+  dedupeScenes,
   sameLine,
   buildBiblePrompt,
   buildScenesPrompt,
   buildRegenPrompt,
   buildAddEntryPrompt,
+  buildBeatsRefreshPrompt,
   buildRegenEntryPrompt,
   normalizeCharacter,
   normalizeLocation,
@@ -66,8 +69,10 @@ import {
   planProgress,
   verifyPlanComplete,
   validateLyricPlan,
+  validateStoryBoard,
   extractPartialScenes,
 } from "../lib/director.mjs";
+import { storyboardToScenario } from "../lib/project_import.mjs";
 import {
   newRefaceId,
   REFACE_ID_RE,
@@ -90,7 +95,21 @@ import {
   DOCUMENTARY_DIRECTOR_SYSTEM,
   buildDocBiblePrompt,
   buildDocShotsPrompt,
+  buildDocBriefDetectPrompt,
+  normalizeDocDetectedBrief,
+  fillDocBriefAuto,
+  heuristicDetectBrief,
+  heuristicEstimateDuration,
+  heuristicTopicText,
+  buildDocAnalysisPrompt,
+  normalizeDocAnalysis,
+  normalizeDocStageApprovals,
+  snapshotDocStages,
+  DOC_HISTORY_CAP,
+  heuristicAnalyze,
+  docAnalysisContext,
   heuristicPlan,
+  splitNarrationForShots,
   boardToScenario as docBoardToScenario,
   buildTimeline as docBuildTimeline,
   subtitlesFromBoard as docSubtitles,
@@ -1740,16 +1759,15 @@ async function pgAddReference({ projectId, dir, file, prompt, engine, source = "
       "SELECT max(version) AS v FROM scenario_versions WHERE name = (SELECT name FROM projects WHERE project_id = $1)",
       [projectId]);
     const version = ver.rows[0]?.v ?? null;
-    const pin = await client.query(
-      `SELECT id FROM project_references
-       WHERE project_id = $1 AND output_dir = $2 AND pinned LIMIT 1`,
-      [projectId, dir]);
-    const takeMain = source !== "generated" || pin.rowCount === 0;
+    // Reference input is explicit-only (checkbox / click / upload): a fresh
+    // generation NEVER takes main by itself. Only uploads (a deliberate file
+    // choice, never a render) flip the main onto themselves.
+    const takeMain = source !== "generated";
     if (takeMain) {
       await client.query(
-        `UPDATE project_references SET is_main = FALSE, pinned = CASE WHEN $3 THEN FALSE ELSE pinned END
+        `UPDATE project_references SET is_main = FALSE, pinned = FALSE
          WHERE project_id = $1 AND output_dir = $2`,
-        [projectId, dir, source !== "generated"]);
+        [projectId, dir]);
     }
     const ins = await client.query(
       `INSERT INTO project_references (
@@ -1773,11 +1791,20 @@ async function pgAddReference({ projectId, dir, file, prompt, engine, source = "
 // UI "set as main" for a reference file: flip is_main (+pinned, it's a
 // deliberate pick) onto its row, clearing the dir scope. Unknown files
 // (legacy, recorded nowhere) are inserted first so the pick sticks.
+// file == null/"" clears instead: every row in the dir loses is_main, so no
+// reference is served as input until the next explicit pick.
 async function pgSetReferenceMain({ projectId, dir, file, prompt, engine }) {
-  const filePath = `outputs/${dir}/${file}`;
   const client = await pgPool.connect();
   try {
     await client.query("BEGIN");
+    if (file == null || file === "") {
+      await client.query(
+        "UPDATE project_references SET is_main = FALSE, pinned = FALSE WHERE project_id = $1 AND output_dir = $2",
+        [projectId, dir]);
+      await client.query("COMMIT");
+      return;
+    }
+    const filePath = `outputs/${dir}/${file}`;
     const hit = await client.query(
       `SELECT id FROM project_references
        WHERE project_id = $1 AND output_dir = $2
@@ -2386,6 +2413,77 @@ const LLM_BASE = (process.env.LLM_BASE || "https://furian-1.tailb2c0b0.ts.net").
 // Maximum timeout for ALL requests (LLM + ComfyUI + probes): 30 min.
 const REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 
+// LLM retry policy: the local backend (LM Studio / llama-server, reached over
+// a tunnel here) can drop long generations mid-flight — LM Studio logs
+// "[LM STUDIO SERVER] Client disconnected. Stopping generation..." and our
+// fetch fails with a transport error AFTER minutes of compute. Every
+// chat-completions POST below goes through llmPostChat, which transparently
+// re-issues the SAME request on transport failures and gets the data instead
+// of surfacing the drop. Retried ONLY on transport failures (reset / hang
+// up / refused / 429 / 502 / 503 / 504) — never on our own timeout
+// (AbortError: the model may still be working through the first request, and
+// stacking a second full generation behind it would pile up load) and never
+// on 4xx/model errors (those are meaningful, not drops). Chat completions
+// are side-effect-free from our side (compute only), so re-issuing is safe.
+// Tuning via env: LLM_RETRIES (extra attempts after the first, default 3),
+// LLM_RETRY_BASE_MS (backoff base, default 2000).
+const LLM_RETRIES = Math.max(0, Math.min(10, parseInt(process.env.LLM_RETRIES || "3", 10) || 0));
+const LLM_RETRY_BASE_MS = Math.max(250, Number(process.env.LLM_RETRY_BASE_MS) || 2000);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const LLM_RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
+const LLM_RETRYABLE_CODE = /^(ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|EAI_AGAIN|EHOSTUNREACH|ENETRESET|UND_ERR_SOCKET|UND_ERR_CONNECT|UND_ERR_CLOSED)$/;
+function llmRetryableFetchError(e) {
+  if (!e || e.name === "AbortError") return false;
+  const code = String((e.cause && e.cause.code) || e.code || "");
+  if (code && LLM_RETRYABLE_CODE.test(code)) return true;
+  return /fetch failed|socket hang ?up|terminated|disconnected|network|connection|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|EAI_AGAIN/i
+    .test(`${String((e.cause && e.cause.message) || "")} ${String(e.message || e)}`);
+}
+// POST one OpenAI-compatible chat-completions body with transparent retries.
+// Returns the parsed JSON. Throws the last transport error annotated with the
+// attempt count, or the caller's domain error for non-retryable cases.
+async function llmPostChat(url, payload, { timeoutMs = REQUEST_TIMEOUT_MS, tag = "llm" } = {}) {
+  const attempts = 1 + LLM_RETRIES;
+  let lastErr = null;
+  for (let n = 1; n <= attempts; n++) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        signal: ctl.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const err = new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        if (!LLM_RETRYABLE_STATUS.has(r.status)) throw err;
+        lastErr = err;
+        if (n >= attempts) break; // exhausted — fall through to the annotated throw below
+      } else {
+        return await r.json();
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") throw e; // our own timeout — meaningful, never retry
+      if (!llmRetryableFetchError(e)) throw e;
+      lastErr = e;
+      if (n >= attempts) break; // exhausted — fall through to the annotated throw below
+    } finally { clearTimeout(t); }
+    const wait = Math.min(30000, LLM_RETRY_BASE_MS * 2 ** (n - 1)) + Math.floor(Math.random() * 1000);
+    console.warn(`[llm:${tag}] attempt ${n}/${attempts} failed (${String((lastErr && lastErr.message) || lastErr).slice(0, 160)}) — retrying in ${wait}ms`);
+    await sleep(wait);
+  }
+  const err = lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  // Tag connectivity failures so the UI can pop an "LLM API offline" alert
+  // window instead of a generic failure: transport drops (refused / reset /
+  // hang up) and 502/503/504 from the local backend mean the AI service is
+  // down. 429 (rate limit) and 4xx/model errors keep their plain LLM prefix.
+  const offline = llmRetryableFetchError(lastErr) ||
+    /LLM HTTP (502|503|504)\b/.test(String((lastErr && lastErr.message) || lastErr || ""));
+  err.message = `${offline ? "LLM API offline: " : ""}${err.message} (after ${attempts} attempts)`;
+  throw err;
+}
+
 // ---------------------------------------------------------------- resources
 // User-uploaded images/videos library (the Resource page). Files live in
 // resources/ (gitignored); resources/meta.json is the sidecar index so the
@@ -2463,7 +2561,7 @@ async function llmModelId() {
     return id;
   } catch { return llmModelCache.id; }
 }
-const looksVision = (id) => /vl|vision|llava|moondream|pixtral|gemma[-_ ]?3|qwenvl/i.test(String(id || ""));
+const looksVision = (id) => /vl|vision|llava|moondream|pixtral|gemma[-_ ]?[34]|qwenvl/i.test(String(id || ""));
 // Describe an image (data URL) as an image-generation prompt via the local
 // vision model. Throws a human-readable error when no vision model is loaded.
 async function captionImageWithVision(dataUrl) {
@@ -2480,42 +2578,33 @@ async function captionImageWithVision(dataUrl) {
       throw novision;
     }
   }
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const r = await fetch(`${base}/v1/chat/completions`, {
-      method: "POST",
-      signal: ctl.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "local",
-        messages: [
-          {
-            role: "system",
-            content: "You describe a reference photo for an AI image generator. Output ONLY one detailed static-scene prompt: subject identity and appearance, clothing, pose, setting, lighting, colors, medium and quality tags. No quotes, no preamble, no trailing commentary.",
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Describe this image as an image-generation prompt." },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-        temperature: 0.4,
-        max_tokens: 50000,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-    });
-    if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-    const d = await r.json();
+    const d = await llmPostChat(`${base}/v1/chat/completions`, {
+      model: "local",
+      messages: [
+        {
+          role: "system",
+          content: "You describe a reference photo for an AI image generator. Output ONLY one detailed static-scene prompt: subject identity and appearance, clothing, pose, setting, lighting, colors, medium and quality tags. No quotes, no preamble, no trailing commentary.",
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Describe this image as an image-generation prompt." },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      temperature: 0.4,
+      max_tokens: 800,
+      chat_template_kwargs: { enable_thinking: false },
+    }, { tag: "caption" });
     const text = String(d.choices?.[0]?.message?.content ?? "").trim();
     if (!text) throw new Error("The vision model returned an empty caption.");
     return text;
   } catch (e) {
     if (e?.name === "AbortError") throw new Error("Caption timed out (180s) — the vision model may still be loading; try again.");
     throw e;
-  } finally { clearTimeout(t); }
+  }
 }
 // Data URL the vision model reads for a resource entry (original image, or
 // the video's extracted middle frame).
@@ -2802,6 +2891,7 @@ function startRun(scenario, opts = {}) {
     if (opts.noStitch) argv.push("--no-stitch");
     if (engine === "wan") argv.push("--wan");
   } else {
+    if (opts.imageMode) argv.push("--image-mode", opts.imageMode);
     if (stitch) argv.push("--stitch");
     if (opts.noDialogue) argv.push("--no-dialogue");
     // Connected movie: beat N>1 carries "seamless continuation" TEXT
@@ -3300,25 +3390,13 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   const brief = await buildCraftPreview({ description, masterPrompt, topic, requirements, presetId, presetRules, rulesDisabled, target });
   const { idea, details, noRules, preset, customRules, system } = brief;
   const user = String(userPrompt ?? "").trim() ? String(userPrompt).trim() : brief.user;
-  const craftCtl = new AbortController();
-  const craftT = setTimeout(() => craftCtl.abort(), REQUEST_TIMEOUT_MS);
-  let r;
-  try {
-    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-      method: "POST",
-      signal: craftCtl.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "local",
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        temperature: 0.7,
-        max_tokens: 80000,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-    });
-  } finally { clearTimeout(craftT); }
-  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
+    model: "local",
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    temperature: 0.7,
+    max_tokens: 8000,
+    chat_template_kwargs: { enable_thinking: false },
+  }, { tag: "craft" });
   let text = d.choices?.[0]?.message?.content || "";
   text = text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "").trim();
   const m = text.match(/\{[\s\S]*\}/);
@@ -3409,25 +3487,13 @@ ${JSON.stringify({
   }, null, 2)}
 
 Write the next beat (beat ${existing.length + 1}).`;
-  const beatCtl = new AbortController();
-  const beatT = setTimeout(() => beatCtl.abort(), REQUEST_TIMEOUT_MS);
-  let r;
-  try {
-    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-      method: "POST",
-      signal: beatCtl.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "local",
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        temperature: 0.7,
-        max_tokens: 20000,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-    });
-  } finally { clearTimeout(beatT); }
-  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
+    model: "local",
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    temperature: 0.7,
+    max_tokens: 2000,
+    chat_template_kwargs: { enable_thinking: false },
+  }, { tag: "craft-beat" });
   let text = d.choices?.[0]?.message?.content || "";
   text = text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "").trim();
   const m = text.match(/\{[\s\S]*\}/);
@@ -3521,25 +3587,13 @@ ${JSON.stringify({
   }, null, 2)}
 
 Write the publishing metadata.`;
-  const metaCtl = new AbortController();
-  const metaT = setTimeout(() => metaCtl.abort(), REQUEST_TIMEOUT_MS);
-  let r;
-  try {
-    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-      method: "POST",
-      signal: metaCtl.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "local",
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        temperature: 0.7,
-        max_tokens: 50000,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-    });
-  } finally { clearTimeout(metaT); }
-  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
+    model: "local",
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    temperature: 0.7,
+    max_tokens: 1000,
+    chat_template_kwargs: { enable_thinking: false },
+  }, { tag: "craft-meta" });
   let text = d.choices?.[0]?.message?.content || "";
   text = text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "").trim();
   const m = text.match(/\{[\s\S]*\}/);
@@ -3606,25 +3660,13 @@ async function craftMasterPrompt({ description = "", presetId, presetRules } = {
       : []),
     "Write the Master Prompt (cinematic key-visual of the main character).",
   ].join("\n\n");
-  const masterCtl = new AbortController();
-  const masterT = setTimeout(() => masterCtl.abort(), REQUEST_TIMEOUT_MS);
-  let r;
-  try {
-    r = await fetch(`${LLM_BASE}/v1/chat/completions`, {
-      method: "POST",
-      signal: masterCtl.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "local",
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        temperature: 0.7,
-        max_tokens: 50000,
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-    });
-  } finally { clearTimeout(masterT); }
-  if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
+    model: "local",
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    temperature: 0.7,
+    max_tokens: 800,
+    chat_template_kwargs: { enable_thinking: false },
+  }, { tag: "craft-master" });
   let text = String(d.choices?.[0]?.message?.content || "").trim();
   // Strip fences/quotes if the model adds them despite the instructions.
   text = text.replace(/^\s*```(?:\w+)?\s*/, "").replace(/\s*```\s*$/, "").trim();
@@ -3643,6 +3685,63 @@ async function craftMasterPrompt({ description = "", presetId, presetRules } = {
   text = text.split(/\n\s*\n/)[0].trim().replace(/\s+/g, " ");
   if (!text) throw new Error("LLM returned an empty master prompt");
   return { masterPrompt: text.slice(0, 2000) };
+}
+
+/**
+ * AI merge of one Master Prompt addition into one scene's keyframe image
+ * prompt. Stateless — used by the "Apply to All Scenes" popup, which calls
+ * it once per scene so the popup can show per-scene progress.
+ *
+ * - Verbatim fast path: scene already contains the master text -> unchanged.
+ * - Otherwise the local LLM decides placement: character traits go next to
+ *   the character mention, style/lighting tokens at the end, objects or
+ *   locations where the scene mentions them. Scene specifics are never
+ *   dropped; motion is never touched (caller only sends/uses `image`).
+ * - Returns { image, changed, skipped, reason }. On LLM failure the caller
+ *   falls back to the naive append (same rule as applyMasterToBeats).
+ */
+async function mergeMasterIntoScene(master, beat) {
+  const m = String(master ?? "").trim();
+  const img = String(beat?.image ?? "");
+  if (!m) return { image: img, changed: false, skipped: true, reason: "empty master" };
+  if (!img.trim()) return { image: m, changed: true, skipped: false, reason: "empty scene prompt — master used as-is" };
+  if (img.includes(m)) return { image: img.trim(), changed: false, skipped: true, reason: "master already present verbatim" };
+  const system = [
+    "You edit Flux text-to-image keyframe prompts. Output ONLY a JSON object, no prose, no markdown fences.",
+    'Schema: { "image": string, "changed": boolean, "reason": string }.',
+    "Rules:",
+    "- `image` = the FULL updated keyframe prompt (one dense paragraph).",
+    "- First check whether every visual detail of the master addition is ALREADY in the scene prompt (exact words OR a clear paraphrase, e.g. 'crimson beak' covers 'red beak'). If yes, return the scene prompt unchanged with changed=false.",
+    "- If not, insert ONLY the missing detail(s) at the natural place: character traits (e.g. 'parrot red beak') right after that character/subject is mentioned, style/lighting/mood tokens at the end, objects/locations where the scene mentions them.",
+    "- Never drop or paraphrase the scene's own action, setting, or composition. Never invent new characters or story beats. Never touch motion/camera (not provided).",
+    "- Keep it one paragraph, comma-joined, no trailing period required.",
+  ].join(" ");
+  const user = JSON.stringify({
+    master_addition: m.slice(0, 2000),
+    scene_title: String(beat?.title ?? "").slice(0, 120),
+    scene_image_prompt: img.slice(0, 4000),
+  });
+  const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
+    model: "local",
+    messages: [{ role: "system", content: system }, { role: "user", content: user }],
+    temperature: 0.2,
+    max_tokens: 2000,
+    chat_template_kwargs: { enable_thinking: false },
+  }, { tag: "apply-master-scene" });
+  let text = String(d.choices?.[0]?.message?.content || "").trim();
+  text = text.replace(/^\s*```(?:json)?\s*/, "").replace(/\s*```\s*$/, "").trim();
+  const mt = text.match(/\{[\s\S]*\}/);
+  if (!mt) throw new Error("LLM returned no JSON object");
+  const out = JSON.parse(mt[0]);
+  const nextImg = String(out.image ?? "").trim();
+  if (!nextImg) throw new Error("LLM returned an empty image prompt");
+  const changed = out.changed !== false && nextImg !== img.trim();
+  return {
+    image: nextImg.slice(0, 4000),
+    changed,
+    skipped: !changed,
+    reason: String(out.reason || (changed ? "merged missing detail" : "already present")).slice(0, 300),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -3716,6 +3815,9 @@ async function outputsPayload(name) {
     const vm = versionMap(dir, prefixFor(name), cfg.sequence);
     mains.ref = vm.refMain;
     mains.pinned.ref = !!vm.refPinned;
+    // Explicit deselect (gallery main toggled off): no reference is main, so
+    // nothing below may fall back to latest — keyframes run text-only.
+    mains.refOff = !!vm.refOff;
     for (const [n, b] of Object.entries(vm.beats)) {
       versions.beats[n] = { keyframe: b.keyframe, clip: b.clip };
       mains.beats[n] = { keyframe: b.keyframeMain, clip: b.clipMain };
@@ -3744,9 +3846,16 @@ async function outputsPayload(name) {
           versions.ref = [...byFile.entries()]
             .map(([file, v]) => ({ file, v }))
             .sort((a, b) => a.v - b.v || (a.file < b.file ? -1 : 1));
-          const main = refs.find((r) => r.is_main) ?? refs[refs.length - 1];
-          mains.ref = main.file;
-          mains.pinned.ref = !!main.pinned;
+          if (mains.refOff) {
+            // Deselected: keep mains.ref null even though rows exist.
+            mains.ref = null;
+            mains.pinned.ref = false;
+          } else {
+            // Explicit-only: an is_main row or nothing — never auto-latest.
+            const main = refs.find((r) => r.is_main) ?? null;
+            mains.ref = main ? main.file : null;
+            mains.pinned.ref = !!main?.pinned;
+          }
           refMeta = Object.fromEntries(refs.map((r) => [r.file, {
             prompt: r.prompt, source: r.source, pinned: r.pinned,
           }]));
@@ -3832,6 +3941,96 @@ const server = http.createServer(async (req, res) => {
           createdAt: createdMap.has(r.name) ? createdMap.get(r.name) : null,
         };
       }).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || b.mtimeMs - a.mtimeMs)); // favorites first, then latest edited
+    }
+    // Import an external storyboard/project JSON file as a first-class
+    // project. Body: { project: {...raw storyboard...}, name?: "override",
+    // overwrite?: true }. The converter (lib/project_import.mjs) maps
+    // scenes[] (scene_number/name/timestamp/camera_angle/visual_assets/
+    // character_actions/on_screen_text/audio_cues + any extra keys) into a
+    // canonical Scenario; every storyboard field is kept verbatim on the
+    // beat / top-level config (JSONB columns), so unknown extras survive
+    // with NO schema change. Persistence then follows the exact same path
+    // as PUT /api/scenario/:name (scenarios row + prompts JSON + projects
+    // row + versioned project_assets rows).
+    if (p === "/api/scenarios/import" && req.method === "POST") {
+      let body;
+      try { body = await readJson(req); }
+      catch { return json(res, 400, { error: "bad json" }); }
+      const raw = body && typeof body === "object" && body.project && typeof body.project === "object"
+        ? body.project
+        : body;
+      let converted;
+      try { converted = storyboardToScenario(raw); }
+      catch (e) { return json(res, 400, { error: e instanceof Error ? e.message : "invalid project JSON" }); }
+      const wanted = body && typeof body.name === "string" && body.name.trim() ? body.name.trim() : converted.name;
+      if (!isSafe(wanted)) return json(res, 400, { error: "bad name" });
+      const overwrite = !!(body && body.overwrite);
+      let prevRaw = null;
+      try { prevRaw = await dbGetScenario(wanted); }
+      catch (e) { return json(res, 503, { error: "database unavailable" }); }
+      if (prevRaw !== null && !overwrite) {
+        return json(res, 409, { error: `project "${wanted}" already exists`, exists: true, name: wanted });
+      }
+      const cfg = converted.config;
+      const explicitType = explicitProjectType(cfg);
+      if (cfg && typeof cfg === "object") delete cfg.project_type;
+      if (cfg && typeof cfg === "object") { delete cfg.topic; delete cfg.requirements; }
+      const storedFolder = pgUp ? await getFolderNameFromRow(wanted) : null;
+      let folder = storedFolder;
+      if (!folder && pgUp) {
+        folder = await ensureUniqueFolder(wanted, wanted);
+        try {
+          await pgPool.query(
+            "UPDATE projects SET folder_name = $2 WHERE name = $1 AND (folder_name IS NULL OR folder_name = '')",
+            [wanted, folder]);
+        } catch { /* row may not exist yet — claimed on version save */ }
+      }
+      if (typeof cfg === "object" && cfg) {
+        if (!storedFolder || !cfg.folder_name) cfg.folder_name = folder || folderName(wanted);
+      }
+      if (USE_SQLITE) {
+        await dbSaveScenario(wanted, cfg);
+        fs.writeFileSync(path.join(PROMPTS, wanted + ".json"), JSON.stringify(cfg, null, 2));
+        pgSaveScenarioMirror(wanted, cfg).catch((e) => console.warn("[pg] scenario mirror failed:", e.message));
+      } else {
+        if (!pgUp) return json(res, 503, { error: "database unavailable" });
+        await dbSaveScenario(wanted, cfg);
+        fs.writeFileSync(path.join(PROMPTS, wanted + ".json"), JSON.stringify(cfg, null, 2));
+      }
+      let version = null;
+      let project_id = null;
+      if (pgUp) {
+        try {
+          let prevCfg = null;
+          try { prevCfg = prevRaw != null ? JSON.parse(prevRaw) : null; }
+          catch { prevCfg = null; }
+          const latestRow = await pgPool.query(
+            "SELECT max(version) AS v FROM scenario_versions WHERE name = $1", [wanted]);
+          const latest = latestVersionOf(latestRow.rows[0]?.v);
+          if (latest == null) {
+            const saved = await pgSaveVersionDelta(wanted, prevCfg, cfg, explicitType);
+            version = saved.version;
+            project_id = saved.projectId;
+          } else {
+            const saved = await pgSaveVersionInPlace(wanted, latest, prevCfg, cfg, explicitType);
+            version = saved.version;
+            project_id = saved.projectId;
+          }
+          try { await pgUpsertProjectSong(wanted, cfg, project_id, folder); }
+          catch (e) { console.warn("[pg] song upsert failed:", e.message); }
+          try { await pgLinkDirectorBoards(wanted, project_id); }
+          catch (e) { console.warn("[pg] director board link failed:", e.message); }
+          try { await pgLinkDocBoards(wanted, project_id); }
+          catch (e) { console.warn("[pg] documentary board link failed:", e.message); }
+        } catch (e) { console.warn("[pg] version save failed:", e.message); }
+      }
+      return json(res, 200, {
+        ok: true, name: wanted, version, project_id,
+        scenes: Array.isArray(cfg.sequence) ? cfg.sequence.length : 0,
+        duration: cfg.duration ?? null,
+        warnings: converted.warnings ?? [],
+        overwritten: prevRaw !== null,
+      });
     }
     if (p === "/api/favorites" && req.method === "POST") {
       const { name, on } = await readJson(req);
@@ -4158,6 +4357,7 @@ const server = http.createServer(async (req, res) => {
             lipsync: body.lipsync === "musetalk-comfy" || body.lipsync === "musetalk" ? "musetalk-comfy"
               : body.lipsync === "wav2lip" ? "wav2lip" : undefined,
           songModel: body.songModel === "ace-step" || body.songModel === "minimax" ? body.songModel : undefined,
+          imageMode: typeof body.imageMode === "string" ? body.imageMode : undefined,
           storageFolder: folder,
           configName: body.scenario,
         });
@@ -4207,21 +4407,31 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/outputs/select" && req.method === "POST") {
       const body = await readJson(req);
       const { scenario, kind, index, file } = body;
-      if (!isSafe(scenario) || typeof file !== "string") return json(res, 400, { error: "bad body" });
+      if (!isSafe(scenario) || (typeof file !== "string" && file != null)) return json(res, 400, { error: "bad body" });
       const storDir = await storageDirFor(scenario);
       const dir = path.join(OUTPUTS, storDir);
       if (!fs.existsSync(dir)) return json(res, 404, { error: "no outputs" });
-      // A manual pick pins the main: it keeps winning on reloads until a
-      // regen records a fresh auto main.
-      setMain(dir, prefixFor(storDir), kind, kind === "ref" ? 0 : index, null, file, { pinned: true });
+      // Empty file on a ref clears the main (toggle off): keyframes generate
+      // from text only until the next explicit pick. Other kinds always need
+      // a file (their auto-latest fallback has no "none" state).
+      const clearing = kind === "ref" && (file == null || file === "");
+      if (clearing) {
+        clearRefMain(dir);
+      } else {
+        if (typeof file !== "string" || !file) return json(res, 400, { error: "bad body" });
+        // A manual pick is explicit-only and pins the main: only a picked
+        // reference is ever served as input (fresh generations never take
+        // main by themselves).
+        setMain(dir, prefixFor(storDir), kind, kind === "ref" ? 0 : index, null, file, { pinned: true });
+      }
       // Reference picks also flip the project_references main (+pin), which
-      // is what the Reference section displays.
+      // is what the Reference section displays. A clear flips every row off.
       if (kind === "ref" && pgUp) {
         try {
           const { base } = splitDirSuffix(scenario);
           const owner = (await displayNameForFolder(base)) || cfgNameFor(scenario);
           const pid = await pgProjectId(owner);
-          if (pid != null) await pgSetReferenceMain({ projectId: pid, dir: storDir, file, engine: engineForDir(storDir) });
+          if (pid != null) await pgSetReferenceMain({ projectId: pid, dir: storDir, file: clearing ? null : file, engine: engineForDir(storDir) });
         } catch (e) { console.warn("[pg] reference main flip failed:", e.message); }
       }
       return json(res, 200, await outputsPayload(storDir));
@@ -4874,23 +5084,17 @@ const server = http.createServer(async (req, res) => {
     async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null }) {
       const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
       if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), timeoutMs);
+      // Tag retries per batch file so the server log shows which plan step
+      // dropped and reconnected (e.g. [llm:story_scenes_1]).
+      const tag = rawTag ? String(rawTag).replace(/^_raw_/, "").replace(/\.log$/, "").slice(0, 60) : "director";
       try {
-        const r = await fetch(`${base}/v1/chat/completions`, {
-          method: "POST",
-          signal: ctl.signal,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "local",
-            messages: [{ role: "system", content: system }, { role: "user", content: user }],
-            temperature,
-            max_tokens: maxTokens,
-            chat_template_kwargs: { enable_thinking: false },
-          }),
-        });
-        if (!r.ok) throw new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
-        const d = await r.json();
+        const d = await llmPostChat(`${base}/v1/chat/completions`, {
+          model: "local",
+          messages: [{ role: "system", content: system }, { role: "user", content: user }],
+          temperature,
+          max_tokens: maxTokens,
+          chat_template_kwargs: { enable_thinking: false },
+        }, { timeoutMs, tag });
         const text = String(d.choices?.[0]?.message?.content ?? "");
         try {
           return stripJson(text);
@@ -4906,7 +5110,7 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
         throw e;
-      } finally { clearTimeout(t); }
+      }
     }
     const directorBoardFile = (id) => path.join(DIRECTOR, `${id}.json`);
     const readDirectorBoard = (id) => {
@@ -5219,6 +5423,54 @@ const server = http.createServer(async (req, res) => {
           if (patch.input && typeof patch.input === "object") {
             const nt = String(patch.input.title || "").trim().slice(0, 120);
             if (nt) board.input.title = nt;
+            // Full input view/edit from the storyboard UI (📝 Inputs popup on
+            // the open board + saved cards). Story/style/durations only steer
+            // FUTURE scene batches — already-planned bible entries and scenes
+            // are kept as-is (regenerate per scene, or re-analyze for a fresh
+            // bible). Song attachment itself is never edited here (read-only).
+            if (typeof patch.input.story === "string") {
+              const st = patch.input.story.trim().slice(0, 10000);
+              if (st.length >= 3) board.input.story = patch.input.story.trim().slice(0, 10000);
+            }
+            if (typeof patch.input.language === "string" && DIRECTOR_LANGS.includes(patch.input.language))
+              board.input.language = patch.input.language;
+            if (typeof patch.input.genre === "string" && DIRECTOR_GENRES.includes(patch.input.genre))
+              board.input.genre = patch.input.genre;
+            if (typeof patch.input.genreCustom === "string")
+              board.input.genreCustom = patch.input.genreCustom.trim().slice(0, 40);
+            if (typeof patch.input.visualStyle === "string" && DIRECTOR_STYLES.includes(patch.input.visualStyle)) {
+              board.input.visualStyle = patch.input.visualStyle;
+              // Keep the server-side style lock in step so future batches
+              // ground on the newly chosen style.
+              try { board.styleLock = styleLockFor(board.input.visualStyle, board.input.styleCustom); } catch { /* keep old lock */ }
+            }
+            if (typeof patch.input.styleCustom === "string") {
+              board.input.styleCustom = patch.input.styleCustom.trim().slice(0, 120);
+              try { board.styleLock = styleLockFor(board.input.visualStyle, board.input.styleCustom); } catch { /* keep old lock */ }
+            }
+            // Song boards lock their timeline to the uploaded song length —
+            // ignore target edits there (scene pacing stays editable).
+            const hasSong = !!(board.input.song && board.input.song.durationSeconds);
+            if (!hasSong && patch.input.targetSeconds != null) {
+              const t = Math.floor(Number(patch.input.targetSeconds));
+              if (Number.isFinite(t)) board.input.targetSeconds = Math.max(15, Math.min(3600, t));
+            }
+            if (patch.input.sceneSeconds != null) {
+              const s = Math.floor(Number(patch.input.sceneSeconds));
+              if (Number.isFinite(s)) board.input.sceneSeconds = Math.max(1, Math.min(30, s));
+            }
+            if (typeof patch.input.aspectRatio === "string" && DIRECTOR_ASPECTS.includes(patch.input.aspectRatio))
+              board.input.aspectRatio = patch.input.aspectRatio;
+            if (typeof patch.input.instructions === "string")
+              board.input.instructions = patch.input.instructions.trim().slice(0, 2000);
+            // Fresh estimate boards (no scenes yet) follow duration edits so
+            // the "x/y scenes" cap never shows a stale total.
+            if (!board.scenes.length) {
+              try {
+                const nc = sceneCountFor(board.input.targetSeconds, board.input.sceneSeconds);
+                if (nc) board.sceneCount = nc;
+              } catch { /* keep old cap */ }
+            }
             // Board-level toggles from the storyboard header (dialogues on/off,
             // connected scenes on/off). Old boards without the keys gain them
             // here so approve/prompt behaviour stays explicit.
@@ -5262,6 +5514,8 @@ const server = http.createServer(async (req, res) => {
           }
           board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
           board.error = null;
+          // Manual edits supersede the last batch's grounding report.
+          board.warn = null;
           return json(res, 200, writeDirectorBoard(board));
         }
       }
@@ -5415,8 +5669,14 @@ const server = http.createServer(async (req, res) => {
       // stored scene keeps only its own actual dialogue (action-only scenes
       // keep empty dialogue instead of filler).
       const seen = new Set(priorDialogue.map((l) => String(l || "").toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, " ").trim()).filter(Boolean));
-      for (let i = 0; i < got.length && board.scenes.length < board.sceneCount; i++) {
-        const normed = normalizeScene(got[i], board.scenes.length + 1, board.input.sceneSeconds);
+      // Landed scenes of THIS batch (numbered sequentially from done+1).
+      // Grounding + exact-dupe guards run before anything is stored, so a
+      // batch can never persist hallucinated cast, free-text places that
+      // break grounding, or verbatim repeat scenes.
+      const landed = [];
+      const groundNotes = [];
+      for (let i = 0; i < got.length && done + landed.length < board.sceneCount; i++) {
+        const normed = normalizeScene(got[i], done + landed.length + 1, board.input.sceneSeconds);
         // Silent-film board: the model sometimes still emits lines despite the
         // DISABLED instruction — strip them server-side so Generate stays
         // silent (no voice, no lip-sync, no clip growth).
@@ -5495,7 +5755,37 @@ const server = http.createServer(async (req, res) => {
             sh.dialogue = normalizeDialogue(fresh);
           }
         }
-          board.scenes.push(normed);
+        // Bible-id grounding: canonicalize characters/location (+ shots) to
+        // exact bible ids — free-text places, objects parked in the location
+        // slot, and hallucinated cast are repaired/dropped here so every
+        // stored scene actually grounds downstream (see canonicalizeSceneRefs).
+        try {
+          const { repairs } = canonicalizeSceneRefs(normed, board.blueprint);
+          for (const r of repairs.slice(0, 3)) {
+            if (groundNotes.length < 6) groundNotes.push(r);
+          }
+        } catch (e) {
+          console.warn(`[director:${id}] grounding failed for batch scene ${normed.scene_number}: ${e && e.message ? e.message : e}`);
+        }
+        landed.push(normed);
+        }
+        // Exact-duplicate scene guard (same title + action as an
+        // already-planned scene — the "same scene generated twice" defect):
+        // repeats are skipped, never stored, so the plan advances.
+        const { kept, dropped } = dedupeScenes(board.scenes, landed);
+        for (const s of kept) board.scenes.push(s);
+        // Visible grounding report for the storyboard UI (board.warn renders
+        // as a ⚠️ hint; overwritten every batch, null when the batch is
+        // clean). Manual PUT edits clear it (see the PUT route).
+        const warnBits = [];
+        if (dropped > 0) warnBits.push(`${dropped} repeat scene${dropped === 1 ? "" : "s"} skipped (same title + action as an earlier scene)`);
+        if (groundNotes.length) warnBits.push(...groundNotes);
+        if (warnBits.length > 4) warnBits.splice(4, warnBits.length - 4, `…and ${warnBits.length - 4} more grounding notes (see server log)`);
+        if (warnBits.length) {
+          for (const w of warnBits) console.warn(`[director:${id}] grounding: ${w}`);
+          board.warn = `Grounding fixes in the latest batch — ${warnBits.join("; ")}. Regenerate flagged scenes if the staging looks off.`;
+        } else {
+          board.warn = null;
         }
         // Defensive dedupe: keep the first scene per scene_number and renumber
         // sequentially, so no duplicate records can ever be stored or migrated.
@@ -5551,7 +5841,10 @@ const server = http.createServer(async (req, res) => {
     // AI append: generate exactly ONE new bible entry (character | location |
     // object) from the master input (title + story/lyrics + genre/style +
     // instructions + song) plus the ALREADY generated bible, then append it.
-    // Nothing existing is rewritten — the client keeps its current boxes.
+    // Nothing existing is rewritten — except the story beats, which are
+    // refreshed (stable + extended where the new entry participates) so later
+    // scene batches plan with the new location/object/character in context.
+    // A failed beats refresh never fails the add — the old beats are kept.
     if (p.match(/^\/api\/director\/boards\/[^/]+\/add-entry$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
@@ -5613,6 +5906,44 @@ const server = http.createServer(async (req, res) => {
           n++;
         }
         board.blueprint.objects.push(next);
+      }
+      // Beats refresh: fold the just-added entry into the story beats (kept
+      // stable, extended where the new entry participates). Best-effort — a
+      // failed/offline refresh keeps the existing beats and never fails the
+      // add itself.
+      try {
+        const added = kind === "character"
+          ? board.blueprint.characters[board.blueprint.characters.length - 1]
+          : kind === "location"
+            ? board.blueprint.locations[board.blueprint.locations.length - 1]
+            : board.blueprint.objects[board.blueprint.objects.length - 1];
+        const beatsRaw = await llmChatJson({
+          system: DIRECTOR_SYSTEM,
+          user: buildBeatsRefreshPrompt({ input: board.input, blueprint: board.blueprint, kind, newEntry: added }),
+          maxTokens: 3000,
+          temperature: 0.5,
+          timeoutMs: REQUEST_TIMEOUT_MS,
+          rawTag: `_raw_${id}_beats_refresh.log`,
+        });
+        const beatsList = Array.isArray(beatsRaw.beats) ? beatsRaw.beats : (Array.isArray(beatsRaw) ? beatsRaw : []);
+        if (beatsList.length) {
+          board.blueprint.beats = beatsList.map((x, i) => {
+            const o = x && typeof x === "object" ? x : {};
+            const v = (k2, fb) => (o[k2] == null ? fb : String(o[k2]));
+            const out = { n: Number(o.n) || i + 1, title: v("title", `Beat ${i + 1}`), summary: v("summary", "") };
+            const loc = typeof o.location === "string" ? o.location.trim() : "";
+            if (loc) out.location = loc;
+            const objs = Array.isArray(o.objects)
+              ? o.objects.filter((y) => typeof y === "string" || typeof y === "number").map((y) => String(y).trim()).filter(Boolean).slice(0, 6)
+              : [];
+            if (objs.length) out.objects = objs;
+            return out;
+          });
+        } else {
+          console.warn(`[director:${id}] beats refresh returned no beats after add ${kind} — keeping existing beats`);
+        }
+      } catch (e) {
+        console.warn(`[director:${id}] beats refresh failed after add ${kind} — keeping existing beats: ${e && e.message ? e.message : e}`);
       }
       board.error = null;
       return json(res, 200, writeDirectorBoard(board));
@@ -5815,6 +6146,15 @@ const server = http.createServer(async (req, res) => {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
       if (!board.scenes.length) throw new Error("nothing to approve — generate scenes first");
+      // Story QA gate (§21): same checklist as the Story page client, so a
+      // board with unknown speakers, missing emotion/expression or broken
+      // scene order cannot reach boardToScenario/generation.
+      try {
+        const qa = validateStoryBoard(board);
+        if (qa && Array.isArray(qa.errors) && qa.errors.length) {
+          return json(res, 400, { error: `story QA failed: ${qa.errors[0]}`, errors: qa.errors.slice(0, 20), warnings: (qa.warnings || []).slice(0, 20) });
+        }
+      } catch { /* validator never blocks on internal failure — approve proceeds */ }
       const config = boardToScenario(board);
       // Partial-migration flow: the first approve claims a project name (the
       // story title verbatim, _2-suffixed on collision); every later
@@ -5889,18 +6229,80 @@ const server = http.createServer(async (req, res) => {
     });
     const docSlug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || `doc_${Date.now().toString(36)}`;
     if (p === "/api/documentary/boards" && req.method === "POST") {
-      const brief = validateDocBrief(await readJson(req));
-      const id = docSlug(brief.title);
+      // Blank/Auto brief fields are detected automatically (heuristic,
+      // instant + offline-safe); manual typing always wins. Duration is
+      // never typed — estimated from the source text when absent.
+      // validateDocBrief stays the final fallback for anything still empty.
+      const rawBody = await readJson(req);
+      if (rawBody.targetMinutes == null && rawBody.targetSeconds == null) {
+        rawBody.targetSeconds = heuristicEstimateDuration(rawBody);
+      }
+      // Topic is never typed either — derived from the pasted story/poem.
+      if (!String(rawBody.topic || "").trim()) {
+        rawBody.topic = heuristicTopicText(rawBody.sourceMaterial || rawBody.story, rawBody.title);
+      }
+      const brief = validateDocBrief(fillDocBriefAuto(rawBody));
+      // Unique board id: a repeated title must never overwrite an existing
+      // board (mirrors the approve-time scenario dedup below).
+      const base = docSlug(brief.title);
+      let id = base;
+      for (let i = 2; ; i++) {
+        let taken = fs.existsSync(docBoardFile(id));
+        if (!taken && pgUp) {
+          try {
+            const r = await pgPool.query("SELECT 1 FROM documentary_boards WHERE board_id = $1", [id]);
+            taken = r.rows.length > 0;
+          } catch { taken = false; }
+        }
+        if (!taken) break;
+        id = `${base}_${i}`;
+      }
       const now = new Date().toISOString();
       const board = writeDocBoard({
         id, brief, status: "brief",
         chapters: [], characters: [], locations: [], musicBeds: [],
+        analysis: null,
+        stage_approvals: {},
+        stage_history: [],
         styleLock: brief.visualStyle,
         sceneCount: 0, shotCount: 0,
         scenarioName: null, project_id: null,
         error: null, createdAt: now, updatedAt: now,
       });
       return json(res, 200, board);
+    }
+    // Brief auto-detection preview (Documentary-only): the full brief form
+    // needs only title/topic/source — tone, audience, visual style,
+    // narration, music, source type, language, characters, events and
+    // locations come back detected (LLM, heuristic offline). Nothing stored.
+    if (p === "/api/documentary/detect-brief" && req.method === "POST") {
+      const body = await readJson(req);
+      const input = {
+        title: String(body.title ?? ""),
+        topic: String(body.topic ?? ""),
+        sourceMaterial: String(body.sourceMaterial ?? body.story ?? ""),
+      };
+      if (!input.title.trim() && !input.topic.trim() && !input.sourceMaterial.trim()) {
+        return json(res, 400, { error: "title, topic or source material required" });
+      }
+      try {
+        const raw = await llmChatJson({
+          system: DOCUMENTARY_DIRECTOR_SYSTEM,
+          user: buildDocBriefDetectPrompt(input),
+          maxTokens: 1500, temperature: 0.3, timeoutMs: REQUEST_TIMEOUT_MS,
+          rawTag: `_raw_doc_detect_brief.log`,
+        });
+        const detected = normalizeDocDetectedBrief(raw);
+        const filled = { ...detected };
+        const heur = heuristicDetectBrief(input);
+        for (const k of Object.keys(filled)) {
+          if (!String(filled[k] ?? "").trim() && String(heur[k] ?? "").trim()) filled[k] = heur[k];
+        }
+        return json(res, 200, { detected: filled, source: "llm" });
+      } catch (e) {
+        console.warn(`[documentary] detect-brief LLM failed, heuristic fallback: ${e.message}`);
+        return json(res, 200, { detected: normalizeDocDetectedBrief(heuristicDetectBrief(input)), source: "heuristic" });
+      }
     }
     if (p === "/api/documentary/boards" && req.method === "GET") {
       fs.mkdirSync(DOCUMENTARY, { recursive: true });
@@ -5960,6 +6362,11 @@ const server = http.createServer(async (req, res) => {
           }
           if (Array.isArray(patch.characters)) board.characters = patch.characters.map(normalizeDocCharacter);
           if (Array.isArray(patch.locations)) board.locations = patch.locations.map(normalizeDocLocation);
+          // Per-stage Approve verdicts from the stage tabs (Documentary-only).
+          // Replaced whole (client sends the full map); unknown stages dropped.
+          if (patch.stageApprovals && typeof patch.stageApprovals === "object" && !Array.isArray(patch.stageApprovals)) {
+            board.stage_approvals = normalizeDocStageApprovals(patch.stageApprovals);
+          }
           if (patch.shot && typeof patch.shot === "object") {
             const { shot_id, ...fields } = patch.shot;
             let found = null;
@@ -5970,11 +6377,52 @@ const server = http.createServer(async (req, res) => {
             if (typeof fields.flux_prompt === "string") found.flux_prompt = fields.flux_prompt.slice(0, 4000);
             if (typeof fields.ltx_prompt === "string") { found.ltx_prompt = fields.ltx_prompt.slice(0, 2000); found.motion = found.ltx_prompt; }
             if (typeof fields.title === "string") found.title = fields.title.slice(0, 200);
+            if (typeof fields.duration_seconds === "number" && Number.isFinite(fields.duration_seconds)) {
+              found.duration_seconds = Math.min(60, Math.max(3, Math.round(fields.duration_seconds)));
+              // Duration change -> timing/audio may be stale: reopen the shot.
+              found.status = "WAITING"; found.approved = false;
+            }
             if (Array.isArray(fields.narration_lines)) {
               found.narration_lines = fields.narration_lines.map((x) => String(x)).filter(Boolean).slice(0, 8);
               // Narration change -> timing/audio may be stale: reopen the shot.
               found.status = "WAITING"; found.approved = false;
             }
+            // Micro-timing fields (dialogue / emotion / time / action / visual
+            // meaning / cast / staging): same caps as normalizeDocShot.
+            // Spoken-line changes reopen the shot; pure metadata does not.
+            if (Array.isArray(fields.dialogue_lines)) {
+              found.dialogue_lines = fields.dialogue_lines.map((x) => String(x)).filter(Boolean).slice(0, 8);
+              found.status = "WAITING"; found.approved = false;
+            }
+            if (typeof fields.emotion === "string") found.emotion = fields.emotion.slice(0, 120);
+            if (typeof fields.time_of_day === "string") found.time_of_day = fields.time_of_day.slice(0, 40);
+            if (Array.isArray(fields.actions)) {
+              found.actions = fields.actions.map((x) => String(x)).filter(Boolean).slice(0, 8);
+            }
+            if (typeof fields.visual_meaning === "string") found.visual_meaning = fields.visual_meaning.slice(0, 500);
+            if (Array.isArray(fields.characters)) {
+              found.characters = fields.characters.map((x) => String(x)).filter(Boolean);
+            }
+            if (typeof fields.location === "string") found.location = fields.location.slice(0, 120);
+            if (typeof fields.visual_type === "string") found.visual_type = fields.visual_type.slice(0, 40);
+            if (typeof fields.lighting === "string") found.lighting = fields.lighting.slice(0, 500);
+            if (typeof fields.pacing === "string") found.pacing = fields.pacing.slice(0, 40);
+            if (typeof fields.motion === "string") { found.motion = fields.motion.slice(0, 2000); found.ltx_prompt = found.motion; }
+            if (fields.camera && typeof fields.camera === "object") {
+              for (const k of ["shot_type", "angle", "movement"]) {
+                if (typeof fields.camera[k] === "string") found.camera[k] = fields.camera[k].slice(0, 60);
+              }
+            }
+            if (fields.audio && typeof fields.audio === "object") {
+              if (typeof fields.audio.music === "boolean") found.audio.music = fields.audio.music;
+              if (typeof fields.audio.sfx === "boolean") found.audio.sfx = fields.audio.sfx;
+              if (typeof fields.audio.sfx_kind === "string") found.audio.sfx_kind = fields.audio.sfx_kind.slice(0, 120);
+            }
+            // Re-fit: spoken lines must fit the shot (same rule as normalize).
+            try {
+              const refit = normalizeDocShot(found, found.chapter, found.sequence, 1, found.global_index, found.duration_seconds);
+              found.duration_seconds = refit.duration_seconds;
+            } catch { /* keep edited duration on normalizer failure */ }
             if (typeof fields.approved === "boolean") found.approved = fields.approved;
             if (typeof fields.status === "string" && ["WAITING", "SKIPPED", "FAILED"].includes(fields.status)) found.status = fields.status;
           }
@@ -5995,19 +6443,47 @@ const server = http.createServer(async (req, res) => {
         }
       }
     }
-    // Plan: bible + chapters + sequences first (LLM, else heuristic), then
-    // shots per chapter (LLM batches, else heuristic). Fully resumable: a
-    // planned board replans only what is missing.
+    // Plan: analysis (TASK 0/3) + bible + chapters + sequences first (LLM,
+    // else heuristic), then shots per chapter (LLM batches, else heuristic).
+    // Fully resumable: a planned board replans only what is missing.
+    // Documentary-only: no other workflow calls these builders.
     if (p.match(/^\/api\/documentary\/boards\/[^/]+\/plan$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDocBoard(id);
+      // Snapshot the previous execution for the stage tabs' past-runs view
+      // (only when something was planned/analyzed before — first Plan has no
+      // past). Taken before this run overwrites chapters/analysis.
+      const prevStages = (board.analysis || (Array.isArray(board.chapters) && board.chapters.length))
+        ? { at: board.updatedAt || new Date().toISOString(), source: (board.analysis && board.analysis.source) || "heuristic", stages: snapshotDocStages(board) }
+        : null;
       board.status = "planning";
       writeDocBoard(board);
+      // TASK 0/3 — source analysis (RAW POEM -> understanding pipeline):
+      // one LLM call over the raw source text; heuristic fallback offline.
+      // Stored on the board and fed as read-only context to the bible +
+      // shot planners below (empty context = their prompts byte-identical).
+      let analysis = null;
+      try {
+        const araw = await llmChatJson({
+          system: DOCUMENTARY_DIRECTOR_SYSTEM,
+          user: buildDocAnalysisPrompt(board.brief),
+          maxTokens: 4000, temperature: 0.3, timeoutMs: REQUEST_TIMEOUT_MS,
+          rawTag: `_raw_doc_${id}_analysis.log`,
+        });
+        analysis = normalizeDocAnalysis(araw);
+        analysis.source = "llm";
+      } catch (e) {
+        console.warn(`[documentary] analysis LLM failed, heuristic fallback: ${e.message}`);
+      }
+      if (!analysis) analysis = heuristicAnalyze(board.brief);
+      board.analysis = analysis;
+      writeDocBoard(board);
+      const actx = docAnalysisContext(analysis);
       let blueprint = null;
       try {
         const raw = await llmChatJson({
           system: DOCUMENTARY_DIRECTOR_SYSTEM,
-          user: buildDocBiblePrompt(board.brief),
+          user: buildDocBiblePrompt(board.brief, actx),
           maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
           rawTag: `_raw_doc_${id}_bible.log`,
         });
@@ -6025,10 +6501,32 @@ const server = http.createServer(async (req, res) => {
         // to heuristic shots for that chapter only (never aborts the board).
         let global = 0;
         for (const c of board.chapters) {
+          // A chapter with no sequences (LLM dropped them) gets heuristic
+          // sequences sized to its target duration — never an empty chapter.
+          if (!Array.isArray(c.sequences) || !c.sequences.length) {
+            const cDur = Number(c.target_duration_seconds) > 0 ? Math.round(c.target_duration_seconds) : 120;
+            const nSeq = Math.min(4, Math.max(2, Math.round(cDur / 60)));
+            const qDur = Math.floor(cDur / nSeq);
+            let rem = cDur;
+            c.sequences = Array.from({ length: nSeq }, (_, i) => {
+              const last = i === nSeq - 1;
+              const d = last ? rem : qDur;
+              rem -= d;
+              return normalizeDocSequence({
+                title: `${c.title} — भाग ${i + 1}`,
+                purpose: c.purpose || "",
+                narration: c.purpose || `${board.brief.topic} — ${c.title}`,
+                duration_seconds: d,
+                visual_goal: c.title,
+                pacing: "EXPLANATION",
+                shots: [],
+              }, c.chapter_number, i + 1, 0);
+            });
+          }
           try {
             const raw = await llmChatJson({
               system: DOCUMENTARY_DIRECTOR_SYSTEM,
-              user: buildDocShotsPrompt({ brief: board.brief, board, chapter: c, startGlobal: global }),
+              user: buildDocShotsPrompt({ brief: board.brief, board, chapter: c, startGlobal: global, analysisCtx: actx }),
               maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
               rawTag: `_raw_doc_${id}_ch${c.chapter_number}.log`,
             });
@@ -6043,17 +6541,20 @@ const server = http.createServer(async (req, res) => {
             console.warn(`[documentary] chapter ${c.chapter_number} shots LLM failed, heuristic fill: ${e.message}`);
           }
           // Any sequence still shot-less gets heuristic shots sized to its duration.
+          // Each shot voices only its own narration chunk so durations derive
+          // from their own lines (same rule as heuristicPlan).
           for (const q of c.sequences) {
             if (!Array.isArray(q.shots) || !q.shots.length) {
               const nShots = Math.min(12, Math.max(2, Math.round((q.duration_seconds || 40) / 12)));
-              const d = Math.max(6, Math.min(15, Math.round((q.duration_seconds || 40) / nShots)));
+              const chunks = splitNarrationForShots(q.narration, nShots);
+              const d = Math.max(3, Math.min(15, Math.round((q.duration_seconds || 40) / nShots)));
               const main = board.characters[0];
               const loc = board.locations[0];
               const devotionalFill = isDevotionalBrief(board.brief);
               q.shots = Array.from({ length: nShots }, (_, hi) => normalizeDocShot({
                 title: `${q.title} — shot ${hi + 1}`,
                 duration_seconds: d,
-                narration_lines: q.narration ? [`${q.narration} (भाग ${hi + 1})`] : [],
+                narration_lines: chunks[hi] ? [chunks[hi]] : [],
                 visual_type: hi === 0 ? "establishing" : "character",
                 characters: main ? [main.character_id] : [],
                 location: loc ? loc.location_id : "",
@@ -6065,6 +6566,12 @@ const server = http.createServer(async (req, res) => {
                 audio: { music: true, sfx: false },
               }, c.chapter_number, q.seq, hi + 1, 0, d));
             }
+          }
+          // Re-sync: post-shot-planning, sequence durations are the sum of
+          // their (dialogue-driven) shots — never the stale bible estimate.
+          for (const q of c.sequences) {
+            const sum = q.shots.reduce((a, s) => a + (Number(s.duration_seconds) || 0), 0);
+            if (sum > 0) q.duration_seconds = Math.round(sum * 10) / 10;
           }
           global += c.sequences.reduce((a, q) => a + q.shots.length, 0);
         }
@@ -6082,6 +6589,14 @@ const server = http.createServer(async (req, res) => {
       }
       board.shotCount = countBoardShots(board);
       board.error = null;
+      // New execution -> past run remembered (capped), prior stage approvals
+      // are stale -> cleared for re-approval from the stage tabs.
+      if (prevStages) {
+        const hist = Array.isArray(board.stage_history) ? board.stage_history : [];
+        hist.unshift(prevStages);
+        board.stage_history = hist.slice(0, DOC_HISTORY_CAP);
+      }
+      board.stage_approvals = {};
       return json(res, 200, writeDocBoard(board));
     }
     // Approve: flatten to a standard scenario config; the CLIENT persists via
@@ -6188,7 +6703,7 @@ const server = http.createServer(async (req, res) => {
           }
         } catch (e) { console.warn("[documentary] export write failed:", e.message); }
       }
-      return json(res, 200, { ...manifest, subtitles: srt.slice(0, 2000), wrote });
+      return json(res, 200, { ...manifest, srtPreview: srt.slice(0, 2000), wrote });
     }
     if (p === "/api/outputs/stitch" && req.method === "POST") {
       const body = await readJson(req);
@@ -6353,6 +6868,50 @@ const server = http.createServer(async (req, res) => {
       if (!cfg || !Array.isArray(cfg.sequence)) return json(res, 400, { error: "config with sequence required" });
       return json(res, 200, { sequence: applyMasterToBeats(cfg.sequence, body.master ?? "") });
     }
+    // AI variant of the Master Prompt fan-out, one scene at a time. The
+    // "Apply to All Scenes" popup calls this once per scene so it can show
+    // per-scene progress ("working on scene N…"). The LLM checks semantic
+    // presence first (paraphrase counts) and inserts only missing details at
+    // the natural place in the keyframe prompt. Motion is never touched.
+    // On LLM failure falls back to the naive append so the popup never
+    // hard-fails mid-run — the response carries fallback:true in that case.
+    if (p === "/api/apply-master-scene" && req.method === "POST") {
+      const body = await readJson(req);
+      const master = String(body.master ?? "").trim();
+      const beat = body.beat && typeof body.beat === "object" ? body.beat : null;
+      if (!beat) return json(res, 400, { error: "beat required" });
+      if (!master) {
+        return json(res, 200, {
+          image: String(beat.image ?? ""), changed: false, skipped: true,
+          reason: "empty master", fallback: false,
+        });
+      }
+      try {
+        const r = await mergeMasterIntoScene(master, beat);
+        return json(res, 200, { ...r, fallback: false });
+      } catch (e) {
+        console.warn("[apply-master-scene] LLM failed, naive-append fallback:", e.message);
+        const s = String(beat.image ?? "").trim();
+        if (!s) {
+          return json(res, 200, {
+            image: master, changed: true, skipped: false,
+            reason: `LLM offline — used master as-is (${String(e.message || e).slice(0, 120)})`,
+            fallback: true,
+          });
+        }
+        if (s.includes(master)) {
+          return json(res, 200, {
+            image: s, changed: false, skipped: true,
+            reason: "master already present verbatim", fallback: true,
+          });
+        }
+        return json(res, 200, {
+          image: `${s}, ${master}`, changed: true, skipped: false,
+          reason: `LLM offline — appended at end (${String(e.message || e).slice(0, 120)})`,
+          fallback: true,
+        });
+      }
+    }
     // Publishing metadata (title / description / hashtags) for a scenario,
     // drafted by the local LLM from the scenario JSON. Stateless — nothing
     // is persisted; the UI caches it per project in localStorage.
@@ -6470,6 +7029,82 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         console.warn("[director-estimate] LLM failed, heuristic fallback:", e.message);
         return json(res, 200, { duration: heuristic(), source: "heuristic" });
+      }
+    }
+    // Director instructions suggestion for the AI Story Director: the local LLM
+    // reads the story/lyrics (+ title/genre/style/language) and drafts concise
+    // Additional director instructions. Stateless — the director form fills its
+    // textarea with the result; nothing is persisted. Small local models often
+    // answer with a plain-text list instead of JSON, so a non-JSON reply is
+    // cleaned and used as-is (never a 502 for a usable answer) — only a
+    // missing LLM, an HTTP/timeout failure or an empty reply errors.
+    if (p === "/api/director-instructions" && req.method === "POST") {
+      const body = await readJson(req);
+      const story = String(body.story || "").trim();
+      const title = String(body.title || "").trim().slice(0, 120);
+      if (story.length < 20 && !title) {
+        return json(res, 400, { error: "paste the story (20+ characters) or give it a title first" });
+      }
+      const existing = String(body.existing || body.instructions || "").trim().slice(0, 2000);
+      // Plain-text fallback: strip fences, surrounding quotes and a leading
+      // "instructions:" label so a non-JSON model reply still fills the box.
+      const cleanInstructionsText = (t) => {
+        let s = String(t || "").trim();
+        const fence = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (fence) s = fence[1].trim();
+        s = s.replace(/^["'\s]+|["'\s]+$/g, "").trim();
+        s = s.replace(/^(?:director\s+)?instructions\s*:\s*/i, "").trim();
+        // Drop a trailing JSON-ish reasoning tail if the model mixed formats.
+        s = s.replace(/\{\s*"reasoning"[\s\S]*$/i, "").trim();
+        return s.slice(0, 2000).trim();
+      };
+      try {
+        const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+        if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
+        let text = "";
+        try {
+          const d = await llmPostChat(`${base}/v1/chat/completions`, {
+            model: "local",
+            messages: [
+              { role: "system", content: "You are an assistant film director for AI video generation. Reply with JSON only: {\"instructions\": \"<3-6 short imperative lines, newline-separated>\", \"reasoning\": \"<one short sentence>\"}. Suggest concrete visual-storytelling instructions tailored to the story (character consistency, mood, pacing, what to emphasize or avoid). Keep each line under 140 characters. Never repeat the story back." },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  title,
+                  genre: String(body.genre || "Kids").slice(0, 40),
+                  visualStyle: String(body.visualStyle || body.style || "3D Preschool Animation").slice(0, 120),
+                  language: String(body.language || "English").slice(0, 24),
+                  ...(existing ? { existingInstructions: existing } : {}),
+                  story: story.slice(0, 6000),
+                }),
+              },
+            ],
+            temperature: 0.7,
+            max_tokens: 500,
+            chat_template_kwargs: { enable_thinking: false },
+          }, { tag: "suggest-instructions" });
+          text = String(d.choices?.[0]?.message?.content ?? "");
+        } catch (e) {
+          if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
+          throw e;
+        }
+        // Preferred: structured JSON. Fallback: usable plain-text list.
+        let instructions = "";
+        let reasoning = "";
+        try {
+          const raw = stripJson(text);
+          instructions = String(raw.instructions || "").trim().slice(0, 2000);
+          if (typeof raw.reasoning === "string" && raw.reasoning.trim()) reasoning = raw.reasoning.trim().slice(0, 200);
+        } catch {
+          instructions = cleanInstructionsText(text);
+        }
+        if (!instructions) throw new Error("LLM returned an empty response — try again.");
+        const out = { instructions, source: "llm" };
+        if (reasoning) out.reasoning = reasoning;
+        return json(res, 200, out);
+      } catch (e) {
+        console.warn("[director-instructions] LLM failed:", e.message);
+        return json(res, 502, { error: String(e.message || "AI request failed") });
       }
     }
     // Predefined video-type presets (system-owned presets/*.md defaults).

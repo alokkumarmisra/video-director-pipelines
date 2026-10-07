@@ -186,10 +186,13 @@ export interface MainsInfo {
   final?: string | null;
   // Whether each main is a user pin (manual pick / upload — survives reload)
   // or the auto latest (selected on regen and reload). Absent = auto.
+  // The reference main is explicit-only (never auto-latest): refOff is true
+  // once the user deselects it, until the next explicit pick.
   pinned?: {
     ref: boolean;
     beats: Record<string, { keyframe: boolean; clip: boolean }>;
   } | null;
+  refOff?: boolean;
 }
 
 export interface OutputsInfo {

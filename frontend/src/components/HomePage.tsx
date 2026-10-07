@@ -7,13 +7,15 @@ import {
   outputUrl,
   saveScenario,
   startRun,
+  type ImportResult,
 } from "../api";
 import type { DashboardProject, DashboardResponse, OutputsInfo } from "../types";
 import CreateProjectDialog from "./CreateProjectDialog";
 import EditProjectDialog from "./EditProjectDialog";
+import ImportProjectDialog from "./ImportProjectDialog";
 import ProjectCard from "./ProjectCard";
 import { useDialog } from "./Dialog";
-import { IconAlert, IconClapper, IconPlus, IconRefresh, IconSearch, Spinner } from "./Icons";
+import { IconAlert, IconClapper, IconPlus, IconRefresh, IconSearch, IconUpload, Spinner } from "./Icons";
 
 type LoadState = "loading" | "success" | "empty" | "error";
 type Filter = "all" | DashboardProject["status"];
@@ -75,6 +77,8 @@ export default function HomePage({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editName, setEditName] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  // Import Project popup (paste JSON / pick .json file).
+  const [importOpen, setImportOpen] = useState(false);
   const dialog = useDialog();
 
   const load = useCallback(async (quiet = false) => {
@@ -258,6 +262,24 @@ export default function HomePage({
     }
   }, [busyAction, dialog]);
 
+  // After a successful import (via the Import popup): refresh lists,
+  // summarize what landed, and open the new project.
+  const handleImported = useCallback(
+    async (result: ImportResult) => {
+      onProjectsChanged();
+      await load(true);
+      const warn = result.warnings?.length ? `\n\nNotes:\n- ${result.warnings.join("\n- ")}` : "";
+      await dialog.alert(
+        `Imported "${result.name}" — ${result.scenes} scene${result.scenes === 1 ? "" : "s"}${
+          result.duration != null ? `, ${result.duration}s total` : ""
+        }${result.overwritten ? " (replaced the existing project)" : ""}.${warn}`,
+        { title: "Import complete", tone: "info" }
+      );
+      onOpen(result.name);
+    },
+    [dialog, load, onOpen, onProjectsChanged]
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = (data?.projects ?? []).filter(
@@ -291,6 +313,13 @@ export default function HomePage({
         <div className="hero-side">
           <button className="primary hero-cta" onClick={() => setDialogOpen(true)}>
             <IconPlus size={14} /> Create New Project
+          </button>
+          <button
+            className="ghost hero-cta"
+            title="Paste a storyboard/project JSON or pick a .json file — scenes, camera motion, visuals and audio cues become a new project"
+            onClick={() => setImportOpen(true)}
+          >
+            <IconUpload size={14} /> Import Project
           </button>
         </div>
       </section>
@@ -367,6 +396,9 @@ export default function HomePage({
             <button className="primary" onClick={() => setDialogOpen(true)}>
               <IconPlus size={14} /> Create New Project
             </button>
+            <button className="ghost" onClick={() => setImportOpen(true)}>
+              <IconUpload size={13} /> Import Project
+            </button>
           </div>
         )}
         {state === "success" && visible.length === 0 && (
@@ -419,6 +451,12 @@ export default function HomePage({
           onProjectsChanged();
           load();
         }}
+      />
+      <ImportProjectDialog
+        open={importOpen}
+        takenNames={(data?.projects ?? []).map((p) => p.name)}
+        onClose={() => setImportOpen(false)}
+        onImported={(r) => void handleImported(r)}
       />
     </div>
   );
