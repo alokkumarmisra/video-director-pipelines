@@ -1326,6 +1326,31 @@ button.pill-btn:disabled { cursor: default; opacity: 0.6; }
 .dir-shot-meta { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .dir-scene-row.generating { border-color: rgba(185, 28, 28, 0.65); animation: genBoxDark 1.6s ease-in-out infinite; }
 .dir-scene-row.is-queued { opacity: 0.75; }
+.dir-scene-row.typing { border-color: var(--accent-line); }
+/* Live-typing caret for newly planned storyboard scenes (TypedText). */
+.typing-caret {
+  display: inline-block; width: 2px; height: 1em; margin-left: 1px;
+  vertical-align: -0.15em; background: currentColor;
+  animation: typingBlink 0.8s step-end infinite;
+}
+@keyframes typingBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .typing-caret { animation: none; }
+}
+/* Director live stream panel (read-only LLM progress while a batch runs). */
+.dir-scene-row.typing.live { height: 500px; overflow-y: auto; }
+.live-pill { white-space: nowrap; }
+.live-scene { display: flex; gap: 8px; align-items: baseline; margin-top: 6px; }
+.live-scene-num {
+  font: 700 11px var(--mono); color: var(--accent-2);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.live-scene-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.live-scene-title { font-weight: 700; font-size: 12px; color: var(--accent); white-space: normal; word-break: break-word; }
+.live-scene-text { font-size: 12px; color: var(--accent); white-space: normal; word-break: break-word; }
+.live-tail {
+  font-family: var(--mono); font-size: 11px; color: var(--accent); white-space: pre-wrap; word-break: break-word;
+}
 .dir-shot-edit { border-top: 1px dashed var(--line-2); padding-top: 8px; margin-top: 8px; }
 .dir-shot-edit + .dir-shot-edit { margin-top: 10px; }
 

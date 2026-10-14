@@ -6,7 +6,15 @@ Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
 every write; `director/<slug>.json` files remain as the offline fallback).
 Two LLM calls via the shared llama-server convention (`llmChatJson` in
 `server.mjs`): (1) bible (analysis + character/location/object bibles + beats),
-(2) scene batches of ≤12 (`SCENE_BATCH`) with identity-string context only.
+(2) scene batches of ≤10 (`SCENE_BATCH`) with identity-string context only.
+Scene batches stream (`llmChatJsonLive`, same payload + `stream:true` — same
+prompt/tokens/compute, deltas only flushed over the wire) into a per-board
+memory buffer served read-only by `GET /api/director/boards/:id/live`
+(completed scenes via `extractPartialScenes` + trailing fragment tail); the
+storyboard polls it ~1s while planning for the 🔴 LIVE panel. Polling never
+touches the model, so planning is unaffected. Newly landed rows also replay
+with a client-side typewriter (`TypedText`); `prefers-reduced-motion` renders
+static text.
 `APPROVE` returns a standard scenario config; the client persists it through
 the existing `saveScenario` PUT and opens the workspace — image/video/merge/
 progress/resume are 100% the existing pipeline. Style lock is appended
@@ -28,8 +36,9 @@ location/object rotation + anti-repeat mandate (ids only — free-text places,
 objects in the location slot, and invented cast are forbidden); beats carry
 `location`/`objects` place-props. The server enforces it per batch
 (`canonicalizeSceneRefs`/`dedupeScenes` in `lib/director.mjs`: display names
-resolve to ids, objects parked in `location` move to `continuity_refs`,
-hallucinated cast and exact-duplicate scenes are skipped) and reports repairs
+resolve to ids, bible objects parked in `location` OR `characters` move to
+`continuity_refs` (lossless — server-logged in `notes`, never warned),
+truly-unknown cast and exact-duplicate scenes are skipped) and reports losses
 in `board.warn` (⚠️ hint in the storyboard header, cleared by manual edits).
 Dynamic planning: Generate Scenes is duration-driven, not count-driven —
 each batch gets numbered source lines sliced to its time window

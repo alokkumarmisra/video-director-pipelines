@@ -794,8 +794,15 @@ CREATE INDEX IF NOT EXISTS idx_documentary_boards_updated ON documentary_boards(
 // revision is auto-migrated in pgInit(); the old wide table still needs a
 // one-time DROP TABLE public.project_assets; to be recreated.
 async function pgProbe() {
+  // SQLite mode is fully standalone (see USE_SQLITE above): never touch
+  // Postgres, so /api/health + /api/db polling can't spam warnings.
+  if (USE_SQLITE) { pgUp = false; return false; }
   try { await pgPool.query("SELECT 1"); pgUp = true; }
-  catch (e) { pgUp = false; console.warn(`[pg] unreachable: ${e.message} — gallery falls back to disk`); }
+  catch (e) {
+    pgUp = false;
+    const detail = String((e && e.message) || e || "").trim() || "connection failed";
+    console.warn(`[pg] unreachable: ${detail} — gallery falls back to disk`);
+  }
   return pgUp;
 }
 // Final-cut filename -> 1-based stitch version:
@@ -2409,7 +2416,7 @@ pgInit();
 
 const DIST = path.join(__dirname, "dist");
 const PORT = Number(process.env.PORT || 8790);
-const LLM_BASE = (process.env.LLM_BASE || "https://furian-1.tailb2c0b0.ts.net").replace(/\/+$/, "");
+const LLM_BASE = (process.env.LLM_BASE || "").replace(/\/+$/, "");
 // Maximum timeout for ALL requests (LLM + ComfyUI + probes): 30 min.
 const REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -2443,6 +2450,7 @@ function llmRetryableFetchError(e) {
 // Returns the parsed JSON. Throws the last transport error annotated with the
 // attempt count, or the caller's domain error for non-retryable cases.
 async function llmPostChat(url, payload, { timeoutMs = REQUEST_TIMEOUT_MS, tag = "llm" } = {}) {
+  if (!LLM_BASE) throw new Error("LLM_BASE not set — set it in the project root .env or environment.");
   const attempts = 1 + LLM_RETRIES;
   let lastErr = null;
   for (let n = 1; n <= attempts; n++) {
@@ -2478,6 +2486,121 @@ async function llmPostChat(url, payload, { timeoutMs = REQUEST_TIMEOUT_MS, tag =
   // window instead of a generic failure: transport drops (refused / reset /
   // hang up) and 502/503/504 from the local backend mean the AI service is
   // down. 429 (rate limit) and 4xx/model errors keep their plain LLM prefix.
+  const offline = llmRetryableFetchError(lastErr) ||
+    /LLM HTTP (502|503|504)\b/.test(String((lastErr && lastErr.message) || lastErr || ""));
+  err.message = `${offline ? "LLM API offline: " : ""}${err.message} (after ${attempts} attempts)`;
+  throw err;
+}
+
+// Director live stream (read-only LLM progress view): per-board rolling
+// buffer of the CURRENT scene-batch's raw streamed tokens. The streamed LLM
+// request is identical to the non-streamed one except stream:true (same
+// prompt, same tokens, same compute — deltas are only flushed over the wire
+// as they generate). Polling GET .../live reads this Node-side buffer only,
+// never the model, so the live view cannot impact planning. Cleared when the
+// batch finishes (success, salvage or error).
+const directorLive = new Map(); // boardId -> { active, phase, batchFrom, batchTo, startedAt, text }
+const liveBegin = (id, info) => {
+  directorLive.set(id, { active: true, startedAt: Date.now(), text: "", ...info });
+};
+const liveAppend = (id, chunk) => {
+  const st = directorLive.get(id);
+  if (st && st.active) st.text += chunk;
+};
+const liveReset = (id, note) => {
+  const st = directorLive.get(id);
+  if (st) st.text = note ? `${note}\n` : "";
+};
+const liveEnd = (id) => { directorLive.delete(id); };
+// Streaming twin of llmChatJson for director scene batches: same payload +
+// stream:true, same retry policy (transport drops re-issue the whole request,
+// exactly like the non-streamed path), same stripJson + rawTag outcome.
+// Only the director scenes route uses this — every other caller keeps the
+// untouched llmPostChat/llmChatJson above.
+async function llmChatJsonLive({ system, user, maxTokens = 16000, temperature = 0.5, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null, liveId = null, tag = "director" }) {
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
+  const attempts = 1 + LLM_RETRIES;
+  let lastErr = null;
+  for (let n = 1; n <= attempts; n++) {
+    if (n > 1 && liveId) liveReset(liveId, `(retry ${n}/${attempts} — reconnected, stream restarted)`);
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${base}/v1/chat/completions`, {
+        method: "POST",
+        signal: ctl.signal,
+        headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+        body: JSON.stringify({
+          model: "local",
+          messages: [{ role: "system", content: system }, { role: "user", content: user }],
+          temperature,
+          max_tokens: maxTokens,
+          stream: true,
+          chat_template_kwargs: { enable_thinking: false },
+        }),
+      });
+      if (!r.ok) {
+        const err = new Error(`LLM HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        if (!LLM_RETRYABLE_STATUS.has(r.status)) throw err;
+        lastErr = err;
+        if (n >= attempts) break; // exhausted — fall through to the annotated throw below
+      } else {
+        let text = "";
+        const ct = String(r.headers.get("content-type") || "");
+        if (ct.includes("text/event-stream") && r.body) {
+          // OpenAI-compatible SSE: "data: {...}" per token-batch, "data: [DONE]" at the end.
+          let buf = "";
+          for await (const chunk of r.body) {
+            buf += Buffer.from(chunk).toString("utf8");
+            const lines = buf.split("\n");
+            buf = lines.pop();
+            for (const line of lines) {
+              const m = line.match(/^\s*data:\s*(.*)\s*$/);
+              if (!m || m[1] === "[DONE]") continue;
+              let payload = null;
+              try { payload = JSON.parse(m[1]); } catch { continue; }
+              const delta = payload?.choices?.[0]?.delta?.content
+                ?? payload?.choices?.[0]?.message?.content ?? "";
+              if (delta) {
+                text += delta;
+                if (liveId) liveAppend(liveId, String(delta));
+              }
+            }
+          }
+        } else {
+          // Backend ignored stream:true and answered one-shot — same content.
+          const d = await r.json();
+          text = String(d.choices?.[0]?.message?.content ?? "");
+          if (liveId && text) { liveReset(liveId); liveAppend(liveId, text); }
+        }
+        try {
+          return stripJson(text);
+        } catch (e) {
+          if (rawTag) {
+            try {
+              fs.mkdirSync(DIRECTOR, { recursive: true });
+              fs.writeFileSync(path.join(DIRECTOR, rawTag), text);
+            } catch { /* raw save is best-effort */ }
+          }
+          throw new Error(`${e.message}${rawTag ? ` (raw response saved to director/${rawTag})` : ""}`);
+        }
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
+      // Parse/save errors are meaningful (the scenes route runs its salvage
+      // path on them) — never retried. Transport drops retry the whole
+      // request, exactly like the non-streamed path.
+      if (/^LLM JSON|LLM returned|raw response saved/.test(String((e && e.message) || ""))) throw e;
+      if (!llmRetryableFetchError(e)) throw e;
+      lastErr = e;
+      if (n >= attempts) break; // exhausted — fall through to the annotated throw below
+    } finally { clearTimeout(t); }
+    const wait = Math.min(30000, LLM_RETRY_BASE_MS * 2 ** (n - 1)) + Math.floor(Math.random() * 1000);
+    console.warn(`[llm:${tag}] attempt ${n}/${attempts} failed (${String((lastErr && lastErr.message) || lastErr).slice(0, 160)}) — retrying in ${wait}ms`);
+    await sleep(wait);
+  }
+  const err = lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   const offline = llmRetryableFetchError(lastErr) ||
     /LLM HTTP (502|503|504)\b/.test(String((lastErr && lastErr.message) || lastErr || ""));
   err.message = `${offline ? "LLM API offline: " : ""}${err.message} (after ${attempts} attempts)`;
@@ -5520,6 +5643,180 @@ const server = http.createServer(async (req, res) => {
         }
       }
     }
+    // Director live stream (read-only): what the backend LLM is writing RIGHT
+    // NOW for this board's running scene batch — completed scenes so far
+    // (scene by scene) plus the trailing in-progress fragment (word by word).
+    // Polls a Node-side buffer only; the model is never touched, so planning
+    // is unaffected. { active:false } when no batch is running.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/live$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const st = directorLive.get(id);
+      if (!st || !st.active) return json(res, 200, { active: false, scenes: [], tail: "" });
+      const scenes = extractPartialScenes(st.text).slice(-SCENE_BATCH).map((s) => ({
+        scene_number: Number(s.scene_number) || 0,
+        title: String(s.title || "").slice(0, 120),
+        action: String(s.action || "").slice(0, 200),
+        shots: Array.isArray(s.shots) ? s.shots.slice(0, 8).map((sh) => ({
+          shot_id: String((sh && sh.shot_id) || ""),
+          text: String((sh && (sh.lyric_segment || sh.action)) || "").slice(0, 160),
+        })) : [],
+        dialogue: Array.isArray(s.dialogue) ? s.dialogue.slice(0, 4).map((d) => ({
+          speaker: String((d && d.speaker) || ""),
+          line: String((d && d.line) || "").slice(0, 160),
+        })) : [],
+      }));
+      return json(res, 200, {
+        active: true,
+        phase: st.phase || "scenes",
+        batchFrom: st.batchFrom ?? null,
+        batchTo: st.batchTo ?? null,
+        startedAt: st.startedAt,
+        chars: st.text.length,
+        scenes,
+        tail: st.text.slice(-900),
+      });
+    }
+    // Shared batch planner: computes EXACTLY what the next Continue would
+    // send to the LLM (same count, budget, line window, prior dialogue) —
+    // used by POST .../scenes for the real call and by GET
+    // .../prompt-preview for the dry-run popup. No model call here.
+    // Returns { ready:true, board, write } when planning is done (answer
+    // immediately), else { ready:false, ...spec } for the LLM call.
+    const nextSceneBatchSpec = (board, countOverride, id) => {
+      // A batch that finished while this request was queued already advanced
+      // scenes.length — continuing from the fresh count skips duplicates
+      // instead of re-planning the same range.
+      const done = board.scenes.length;
+      // Duration-driven planning: the timeline (not the scene cap) is the
+      // source of truth. Close enough counts as covered so a 299.5s plan
+      // never spawns another scene for half a second.
+      const songTarget = board.input && board.input.song && board.input.song.durationSeconds
+        ? Math.round(Number(board.input.song.durationSeconds)) : null;
+      const planTarget = songTarget || Math.round(Number(board.input.targetSeconds)) || 0;
+      const prog = planProgress(board.scenes, planTarget);
+      const avgScene = Math.max(1, Number(board.input.sceneSeconds) || 3);
+      const DONE_TOL = Math.max(1, avgScene / 2);
+      const timeCovered = planTarget > 0 && (planTarget - prog.plannedSeconds) <= DONE_TOL;
+      let remaining = board.sceneCount - done;
+      if (timeCovered) {
+        board.sceneCount = board.scenes.length;
+        board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
+        board.error = null;
+        return { ready: true, board, write: true };
+      }
+      if (remaining <= 0) {
+        if (!board.scenes.length) return { ready: true, board, write: false };
+        // Recovery: finalized early by a premature complete=true (now
+        // verified by verifyPlanComplete) while still owing timeline —
+        // extend the cap from the remaining seconds instead of dead-ending
+        // at x/x ready.
+        const owed = Math.max(avgScene, planTarget > 0 ? planTarget - prog.plannedSeconds : avgScene);
+        board.sceneCount = board.scenes.length + sceneCountFor(owed, avgScene);
+        remaining = board.sceneCount - done;
+        console.warn(`[director:${id}] reopened early-finalized plan (${done} scenes, ${prog.plannedSeconds}s/${planTarget || "?"}s) — cap extended to ${board.sceneCount}`);
+        if (remaining <= 0) return { ready: true, board, write: false };
+      }
+      // planBatchHint: after a total stall the board remembers a small batch
+      // size, so the next Continue goes straight to small batches instead of
+      // failing a full 10-scene batch again. Cleared on the next clean batch.
+      const hinted = Math.floor(Number(board.planBatchHint));
+      const hintCap = hinted >= 1 ? Math.min(hinted, SCENE_BATCH) : SCENE_BATCH;
+      const wanted = Math.floor(Number(countOverride));
+      const n = Number.isFinite(wanted) && wanted >= 1
+        ? Math.min(wanted, SCENE_BATCH, remaining)
+        : Math.min(hintCap, remaining);
+      // This batch's time slice: cover ~n average-scenes worth of story,
+      // never budgeting far past the remaining timeline.
+      const remainingSecs = planTarget > 0 ? Math.max(0, planTarget - prog.plannedSeconds) : n * avgScene;
+      const budget = planTarget > 0
+        ? Math.max(avgScene, Math.min(n * avgScene, remainingSecs + avgScene / 2))
+        : n * avgScene;
+      const beats = (board.blueprint.beats || []).slice();
+      const prevScene = done > 0 ? board.scenes[done - 1] : null;
+      // Prior spoken lines so the prompt can forbid verbatim repeats (late
+      // batches used to re-plan the opening and copy scene-1 dialogue).
+      // Multi-shot scenes speak per shot, so shot lines count too.
+      const priorDialogue = [];
+      for (const s of board.scenes) {
+        for (const d of (s.dialogue || [])) {
+          if (d && d.line) priorDialogue.push(String(d.line));
+        }
+        for (const sh of (s.shots || [])) {
+          for (const d of (sh.dialogue || [])) {
+            if (d && d.line) priorDialogue.push(String(d.line));
+          }
+        }
+      }
+      // Line-by-line context: timed line list so the scene batch analyzes
+      // its source lines in order. Songs use the lyric timing; stories get
+      // the same word-proportional estimate over their story lines. The
+      // batch receives only the lines overlapping its time window.
+      let lyricTiming = [];
+      let lineRange = [];
+      try {
+        const song = board.input && board.input.song;
+        if (song && song.hasLyrics !== false) {
+          const parsed = parseLyricLines(board.input.story);
+          if (parsed.length) {
+            // Prefer the bible's own line analysis when present; fall back
+            // to the parsed lines so timing always exists.
+            const bibleLines = Array.isArray(board.blueprint.lyric_lines) && board.blueprint.lyric_lines.length
+              ? board.blueprint.lyric_lines
+              : parsed;
+            lyricTiming = estimateLyricTiming(
+              bibleLines,
+              song.durationSeconds || board.input.targetSeconds);
+          }
+        } else if (planTarget > 0) {
+          const storyLines = parseLyricLines(board.input.story || "");
+          if (storyLines.length) {
+            lyricTiming = estimateLyricTiming(storyLines, planTarget);
+          }
+        }
+        if (lyricTiming.length && planTarget > 0) {
+          lineRange = linesForTimeWindow(lyricTiming, prog.plannedSeconds, prog.plannedSeconds + budget);
+          if (!lineRange.length) lineRange = lyricTiming.slice();
+        }
+      } catch { /* line timing is best-effort; the batch runs without it */ }
+      return { ready: false, done, planTarget, prog, avgScene, remaining, n, budget, beats, prevScene, priorDialogue, lyricTiming, lineRange };
+    };
+    // Prompt preview (dry run): the EXACT system + user messages the next
+    // Continue would send to the LLM — built by the same planner above, but
+    // no model call and nothing saved. Powers Show prompt popup.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/prompt-preview$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.blueprint) return json(res, 400, { error: "analyze the story first" });
+      const countQ = Number(u.searchParams.get("count"));
+      const spec = nextSceneBatchSpec(board, Number.isFinite(countQ) ? countQ : undefined, id);
+      if (spec.ready) {
+        return json(res, 200, {
+          ready: true, scenes: board.scenes.length, sceneCount: board.sceneCount,
+          note: "plan complete — Continue would send nothing",
+        });
+      }
+      const user = buildScenesPrompt({
+        input: board.input, blueprint: board.blueprint, beats: spec.beats, prevScene: spec.prevScene,
+        startNumber: spec.done + 1, count: spec.n, styleLock: board.styleLock,
+        totalScenes: board.sceneCount, priorDialogue: spec.priorDialogue,
+        lyricLines: Array.isArray(board.blueprint.lyric_lines) ? board.blueprint.lyric_lines : [],
+        lyricTiming: spec.lyricTiming,
+        lineRange: spec.lineRange, budgetSeconds: spec.budget,
+        plannedSeconds: spec.prog.plannedSeconds, targetSeconds: spec.planTarget || null,
+        totalLines: spec.lyricTiming.length || null,
+      });
+      return json(res, 200, {
+        ready: false,
+        system: DIRECTOR_SYSTEM,
+        user,
+        startNumber: spec.done + 1,
+        count: spec.n,
+        batchSeconds: spec.budget,
+        systemChars: DIRECTOR_SYSTEM.length,
+        userChars: user.length,
+        approxTokens: Math.round((DIRECTOR_SYSTEM.length + user.length) / 4),
+      });
+    }
     if (p.match(/^\/api\/director\/boards\/[^/]+\/scenes$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       if (directorPlanning.has(id)) {
@@ -5530,136 +5827,105 @@ const server = http.createServer(async (req, res) => {
         const board = readDirectorBoard(id);
         if (!board.blueprint) throw new Error("analyze the story first");
         const body = await readJson(req).catch(() => ({}));
-        // Re-read inside the lock: a batch that finished while this request
-        // was queued already advanced scenes.length — continuing from the
-        // fresh count skips duplicates instead of re-planning the same range.
-        const done = board.scenes.length;
-        // Duration-driven planning: the timeline (not the scene cap) is the
-        // source of truth. Close enough counts as covered so a 299.5s plan
-        // never spawns another scene for half a second.
-        const songTarget = board.input && board.input.song && board.input.song.durationSeconds
-          ? Math.round(Number(board.input.song.durationSeconds)) : null;
-        const planTarget = songTarget || Math.round(Number(board.input.targetSeconds)) || 0;
-        const prog = planProgress(board.scenes, planTarget);
-        const avgScene = Math.max(1, Number(board.input.sceneSeconds) || 3);
-        const DONE_TOL = Math.max(1, avgScene / 2);
-        const timeCovered = planTarget > 0 && (planTarget - prog.plannedSeconds) <= DONE_TOL;
-        let remaining = board.sceneCount - done;
-        if (timeCovered) {
-          board.sceneCount = board.scenes.length;
-          board.status = board.scenes.length ? "ready" : (board.blueprint ? "analyzed" : board.status);
-          board.error = null;
-          return json(res, 200, writeDirectorBoard(board));
-        }
-        if (remaining <= 0) {
-          if (!board.scenes.length) return json(res, 200, board);
-          // Recovery: finalized early by a premature complete=true (now
-          // verified by verifyPlanComplete) while still owing timeline —
-          // extend the cap from the remaining seconds instead of dead-ending
-          // at x/x ready.
-          const owed = Math.max(avgScene, planTarget > 0 ? planTarget - prog.plannedSeconds : avgScene);
-          board.sceneCount = board.scenes.length + sceneCountFor(owed, avgScene);
-          remaining = board.sceneCount - done;
-          console.warn(`[director:${id}] reopened early-finalized plan (${done} scenes, ${prog.plannedSeconds}s/${planTarget || "?"}s) — cap extended to ${board.sceneCount}`);
-          if (remaining <= 0) return json(res, 200, board);
-        }
-        const n = Math.min(Math.max(1, Math.floor(Number(body.count)) || SCENE_BATCH), SCENE_BATCH, remaining);
-        // This batch's time slice: cover ~n average-scenes worth of story,
-        // never budgeting far past the remaining timeline.
-        const remainingSecs = planTarget > 0 ? Math.max(0, planTarget - prog.plannedSeconds) : n * avgScene;
-        const budget = planTarget > 0
-          ? Math.max(avgScene, Math.min(n * avgScene, remainingSecs + avgScene / 2))
-          : n * avgScene;
-        const beats = (board.blueprint.beats || []).slice();
-        const prevScene = done > 0 ? board.scenes[done - 1] : null;
-        // Prior spoken lines so the prompt can forbid verbatim repeats (late
-        // batches used to re-plan the opening and copy scene-1 dialogue).
-        // Multi-shot scenes speak per shot, so shot lines count too.
-        const priorDialogue = [];
-        for (const s of board.scenes) {
-          for (const d of (s.dialogue || [])) {
-            if (d && d.line) priorDialogue.push(String(d.line));
-          }
-          for (const sh of (s.shots || [])) {
-            for (const d of (sh.dialogue || [])) {
-              if (d && d.line) priorDialogue.push(String(d.line));
-            }
-          }
-        }
-        // Line-by-line context: timed line list so the scene batch analyzes
-        // its source lines in order. Songs use the lyric timing; stories get
-        // the same word-proportional estimate over their story lines. The
-        // batch receives only the lines overlapping its time window.
-        let lyricTiming = [];
-        let lineRange = [];
-        try {
-          const song = board.input && board.input.song;
-          if (song && song.hasLyrics !== false) {
-            const parsed = parseLyricLines(board.input.story);
-            if (parsed.length) {
-              // Prefer the bible's own line analysis when present; fall back
-              // to the parsed lines so timing always exists.
-              const bibleLines = Array.isArray(board.blueprint.lyric_lines) && board.blueprint.lyric_lines.length
-                ? board.blueprint.lyric_lines
-                : parsed;
-              lyricTiming = estimateLyricTiming(
-                bibleLines,
-                song.durationSeconds || board.input.targetSeconds);
-            }
-          } else if (planTarget > 0) {
-            const storyLines = parseLyricLines(board.input.story || "");
-            if (storyLines.length) {
-              lyricTiming = estimateLyricTiming(storyLines, planTarget);
-            }
-          }
-          if (lyricTiming.length && planTarget > 0) {
-            lineRange = linesForTimeWindow(lyricTiming, prog.plannedSeconds, prog.plannedSeconds + budget);
-            if (!lineRange.length) lineRange = lyricTiming.slice();
-          }
-        } catch { /* line timing is best-effort; the batch runs without it */ }
+        const spec = nextSceneBatchSpec(board, body.count, id);
+        if (spec.ready) return json(res, 200, spec.write ? writeDirectorBoard(spec.board) : spec.board);
+        const { done, planTarget, prog, avgScene, remaining, n, budget, beats, prevScene, priorDialogue, lyricTiming, lineRange } = spec;
         const scenesRawTag = `_raw_${id}_scenes_${done + 1}.log`;
         // Huge batches can get cut off mid-array (model hits max_tokens /
         // context). Salvage path: bind every COMPLETED scene from the raw
         // text and continue the plan from there, instead of 500ing with
-        // zero progress after minutes of generation.
+        // zero progress after minutes of generation. When NOTHING usable
+        // arrives (cut off inside the first scene object), step down twice —
+        // halved batch, then ONE compact scene with terse prompts — because
+        // a small local model often dies partway through a 10-scene
+        // completion but finishes a small one cleanly.
         let raw = null;
         let salvageNote = null;
         // Dynamic planning: the AI decides scene boundaries, counts and
         // durations inside this batch's time budget and reports complete=true
         // when the story ends (salvage path never counts as complete).
         let batchComplete = false;
+        // Live view: stream the batch tokens into the per-board buffer so the
+        // storyboard can show scene-by-scene progress (GET .../live polls it).
+        // Same prompt/tokens/compute as before — only flushed over the wire.
+        let attemptN = n;
+        let attemptTag = scenesRawTag;
+        let attemptCompact = false;
+        liveBegin(id, { phase: "scenes", batchFrom: done + 1, batchTo: done + n });
+        for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          raw = await llmChatJson({
+          raw = await llmChatJsonLive({
             system: DIRECTOR_SYSTEM,
             user: buildScenesPrompt({
               input: board.input, blueprint: board.blueprint, beats, prevScene,
-              startNumber: done + 1, count: n, styleLock: board.styleLock,
+              startNumber: done + 1, count: attemptN, styleLock: board.styleLock,
               totalScenes: board.sceneCount, priorDialogue,
               lyricLines: Array.isArray(board.blueprint.lyric_lines) ? board.blueprint.lyric_lines : [],
               lyricTiming,
               lineRange, budgetSeconds: budget,
               plannedSeconds: prog.plannedSeconds, targetSeconds: planTarget || null,
               totalLines: lyricTiming.length || null,
+              compact: attemptCompact,
             }),
             maxTokens: 16000,
             temperature: 0.5,
             timeoutMs: REQUEST_TIMEOUT_MS,
-            rawTag: scenesRawTag,
+            rawTag: attemptTag,
+            liveId: id,
+            tag: `story_scenes_${done + 1}`,
           });
           batchComplete = raw && raw.complete === true;
+          break;
         } catch (e) {
           const msg = String((e && e.message) || "");
+          // Always log the real cause: the stall error below is generic and
+          // otherwise masks transport/timeout failures (no raw file is even
+          // written for those, so the log line is the only diagnosis).
+          console.warn(`[director:${id}] scene batch attempt ${attempt} failed: ${msg.slice(0, 300)}`);
           let salvaged = [];
           if (/truncated|unbalanced|parse failed|no JSON/i.test(msg)) {
             try {
-              const rawText = fs.readFileSync(path.join(DIRECTOR, scenesRawTag), "utf8");
+              const rawText = fs.readFileSync(path.join(DIRECTOR, attemptTag), "utf8");
               salvaged = extractPartialScenes(rawText);
             } catch { /* raw re-read is best-effort */ }
           }
-          if (!salvaged.length) throw e;
-          console.warn(`[director:${id}] truncated batch — salvaged ${salvaged.length}/${n} scenes, resume continues from scene ${done + salvaged.length + 1}`);
-          raw = { scenes: salvaged };
-          salvageNote = `Partial batch: kept ${salvaged.length} of ${n} scenes (the AI output was cut off) — press Continue to plan the rest.`;
+          if (salvaged.length) {
+            console.warn(`[director:${id}] truncated batch — salvaged ${salvaged.length}/${attemptN} scenes, resume continues from scene ${done + salvaged.length + 1}`);
+            raw = { scenes: salvaged };
+            salvageNote = `Partial batch: kept ${salvaged.length} of ${attemptN} scenes (the AI output was cut off) — press Continue to plan the rest.`;
+            break;
+          }
+          if (attempt === 1 && attemptN > 1 && /truncated|unbalanced/i.test(msg)) {
+            attemptN = Math.max(1, Math.floor(attemptN / 2));
+            attemptTag = scenesRawTag.replace(/\.log$/, `_retry${attemptN}.log`);
+            console.warn(`[director:${id}] batch of ${n} truncated with 0 usable scenes — retrying with ${attemptN} (raw kept at director/${scenesRawTag})`);
+            liveReset(id, `(batch of ${n} was cut off with nothing usable — retrying with ${attemptN} scenes)`);
+            continue;
+          }
+          if (attempt === 2 && attemptN > 1 && /truncated|unbalanced/i.test(msg)) {
+            // Last resort: exactly one scene with terse prompts — fits even a
+            // tiny output window. Same schema, so it normalizes/grounds equally.
+            attemptN = 1;
+            attemptCompact = true;
+            attemptTag = scenesRawTag.replace(/\.log$/, `_compact1.log`);
+            console.warn(`[director:${id}] batch of ${n} truncated again with 0 usable scenes — retrying one compact scene (raw kept at director/${attemptTag})`);
+            liveReset(id, `(still cut off — retrying a single compact scene)`);
+            continue;
+          }
+          // Total stall: remember a small batch size AND persist the note, so
+          // the next Continue resumes small (instead of failing 12 again).
+          // Report the REAL cause: output-limit text only fits parse/cut-off
+          // failures — transport/timeout errors (which write no raw file) keep
+          // their own message so the UI doesn't mislead.
+          board.planBatchHint = 1;
+          if (/truncated|unbalanced|parse failed|no JSON/i.test(msg)) {
+            board.error = `Scene planning stalled at scene ${done + 1}: the model output was unusable (${msg.slice(0, 120)}; raw: director/${attemptTag}). The output limit is on the LLM side — raise Context Length / Max Tokens in LM Studio (or load a larger model), then press Continue.`;
+          } else {
+            board.error = `Scene planning stalled at scene ${done + 1}: ${msg.slice(0, 250)} — partial scenes are kept, fix the cause and press Continue.`;
+          }
+          try { writeDirectorBoard(board); } catch { /* error text is best-effort */ }
+          throw new Error(board.error);
+        }
         }
         const got = Array.isArray(raw.scenes) ? raw.scenes : (Array.isArray(raw) ? raw : []);
         if (!got.length) throw new Error("director returned no scenes — try again");
@@ -5760,10 +6026,13 @@ const server = http.createServer(async (req, res) => {
         // slot, and hallucinated cast are repaired/dropped here so every
         // stored scene actually grounds downstream (see canonicalizeSceneRefs).
         try {
-          const { repairs } = canonicalizeSceneRefs(normed, board.blueprint);
+          const { repairs, notes } = canonicalizeSceneRefs(normed, board.blueprint);
           for (const r of repairs.slice(0, 3)) {
             if (groundNotes.length < 6) groundNotes.push(r);
           }
+          // Lossless object moves change nothing on screen — server log only,
+          // never the storyboard ⚠️ hint.
+          for (const note of (notes || []).slice(0, 3)) console.warn(`[director:${id}] grounding note: ${note}`);
         } catch (e) {
           console.warn(`[director:${id}] grounding failed for batch scene ${normed.scene_number}: ${e && e.message ? e.message : e}`);
         }
@@ -5812,6 +6081,9 @@ const server = http.createServer(async (req, res) => {
         // mid-story). The pure-timeline path uses the same DONE_TOL close-
         // enough rule as the route top. Otherwise planning continues; the cap
         // only shrinks to what was truly planned so the UI reads x/x.
+        // (Same close-enough rule as nextSceneBatchSpec above; DONE_TOL lives
+        // in that closure's scope, so recompute it here from avgScene.)
+        const DONE_TOL = Math.max(1, avgScene / 2);
         const nowCovered = planTarget > 0 &&
           (planTarget - planProgress(board.scenes, planTarget).plannedSeconds) <= DONE_TOL;
         const completeOk = verifyPlanComplete(board.scenes, {
@@ -5833,8 +6105,12 @@ const server = http.createServer(async (req, res) => {
         // A salvaged partial batch keeps its note so the UI explains why the
         // plan stopped short; clean batches clear any stale error.
         board.error = salvageNote || null;
+        // A clean full batch proves the model handles this size again —
+        // drop the stall hint so planning returns to full batches.
+        if (!salvageNote) board.planBatchHint = null;
         return json(res, 200, writeDirectorBoard(board));
       } finally {
+        liveEnd(id);
         directorPlanning.delete(id);
       }
     }
@@ -7138,8 +7414,9 @@ const server = http.createServer(async (req, res) => {
     // Combined health for the Home page (one round trip). Each service is
     // probed independently — an offline LLM/ComfyUI never blocks project data.
     if (p === "/api/health" && req.method === "GET") {
+      // SQLite mode is standalone: the DB is always "up", no pg probe.
       const [dbUp, comfy, llm] = await Promise.all([
-        pgProbe().catch(() => false),
+        USE_SQLITE ? true : pgProbe().catch(() => false),
         comfyStatus().catch(() => ({ up: false, error: "status check failed" })),
         llmStatus().catch(() => ({ up: false, error: "status check failed" })),
       ]);
@@ -7488,7 +7765,8 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true, version, scene: n, dialogue, segmented: needsSegmentation(dialogue), invalidated });
     }
-    if (p === "/api/db" && req.method === "GET") {      if (!(await pgProbe())) return json(res, 200, { up: false });
+    if (p === "/api/db" && req.method === "GET") {      if (USE_SQLITE) return json(res, 200, { up: true, store: "sqlite" });
+      if (!(await pgProbe())) return json(res, 200, { up: false });
       const [s, pj, pa, pr] = await Promise.all([
         pgPool.query("SELECT count(*)::int AS n FROM scenarios"),
         pgPool.query("SELECT count(*)::int AS n FROM projects").catch(() => ({ rows: [{ n: null }] })),
@@ -7534,4 +7812,7 @@ server.on("error", (e) => {
   }
   throw e;
 });
-server.listen(PORT, () => console.log(`frontend server on http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`frontend server on http://localhost:${PORT}`);
+  console.log(`[env] LLM_BASE=${process.env.LLM_BASE || "(not set)"} COMFY_BASE=${process.env.COMFY_BASE || "(not set)"}`);
+});

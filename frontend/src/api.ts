@@ -1072,6 +1072,50 @@ export const directorScenes = (id: string, count?: number, signal?: AbortSignal)
     ...(signal ? { signal } : {}),
   }).then(directorOk<DirectorBoard>("scene planning failed"));
 
+// Prompt preview (dry run): the exact system + user messages the next
+// Continue would send to the LLM — no model call, nothing saved.
+export interface DirectorPromptPreview {
+  ready: boolean;
+  system?: string;
+  user?: string;
+  startNumber?: number;
+  count?: number;
+  batchSeconds?: number;
+  systemChars?: number;
+  userChars?: number;
+  approxTokens?: number;
+  scenes?: number;
+  sceneCount?: number;
+  note?: string;
+}
+export const directorPromptPreview = (id: string, count?: number) =>
+  get<DirectorPromptPreview>(
+    `/api/director/boards/${encodeURIComponent(id)}/prompt-preview${count != null ? `?count=${count}` : ""}`,
+  );
+
+// Director live stream (read-only): what the backend LLM is writing right now
+// for the running scene batch. Polled ~1s while planning; touches only a
+// Node-side buffer, never the model, so planning is unaffected.
+export interface DirectorLiveScene {
+  scene_number: number;
+  title: string;
+  action: string;
+  shots: { shot_id: string; text: string }[];
+  dialogue: { speaker: string; line: string }[];
+}
+export interface DirectorLive {
+  active: boolean;
+  phase?: string;
+  batchFrom?: number | null;
+  batchTo?: number | null;
+  startedAt?: number;
+  chars?: number;
+  scenes: DirectorLiveScene[];
+  tail: string;
+}
+export const directorLive = (id: string) =>
+  get<DirectorLive>(`/api/director/boards/${encodeURIComponent(id)}/live`);
+
 export const directorUpdateBoard = (id: string, patch: Record<string, unknown>) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
     method: "PUT",

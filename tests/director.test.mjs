@@ -228,7 +228,8 @@ describe("prompts", () => {
       input: { ...base, chainContinuity: false }, blueprint: bp, beats: bp.beats,
       prevScene: prev, startNumber: 2, count: 2, styleLock: "LOCK", totalScenes: 2,
     });
-    assert.ok(!offBatch.includes("PREVIOUS SCENE"), "OFF batches omit the continue-from-it block");
+    assert.ok(offBatch.includes("PREVIOUS SCENE (what just happened"), "OFF batches keep the story bridge");
+    assert.ok(!offBatch.includes("PREVIOUS SCENE (end state"), "OFF batches still omit the end-state anchor");
     const onBatch = buildScenesPrompt({
       input: { ...base, chainContinuity: true }, blueprint: bp, beats: bp.beats,
       prevScene: prev, startNumber: 2, count: 2, styleLock: "LOCK", totalScenes: 2,
@@ -245,6 +246,35 @@ describe("prompts", () => {
       prevScene: prev, nextScene: null, styleLock: "LOCK",
     });
     assert.ok(onRegen.includes("continue from its end state"), "ON regen keeps the anchor");
+  });
+  it("batch prompts bridge previous and next beats", () => {
+    const bp = normalizeBlueprint({
+      characters: [], locations: [], objects: [],
+      beats: [
+        { n: 1, title: "B1", summary: "s1" },
+        { n: 2, title: "B2", summary: "s2" },
+        { n: 3, title: "B3", summary: "s3" },
+        { n: 4, title: "B4", summary: "s4" },
+      ],
+    });
+    const prev = { scene_number: 1, title: "Prev", action: "waves", characters: ["c1"] };
+    const base = {
+      title: "T", story: "x", language: "Hindi", genre: "Kids",
+      visualStyle: "Anime", targetSeconds: 20, sceneSeconds: 5,
+    };
+    const first = buildScenesPrompt({
+      input: { ...base, chainContinuity: false }, blueprint: bp, beats: bp.beats,
+      prevScene: null, startNumber: 1, count: 1, styleLock: "LOCK", totalScenes: 4,
+    });
+    assert.ok(!first.includes("PREVIOUS SCENE (what just happened"), "first batch has no previous scene");
+    assert.ok(first.includes("COMING NEXT"), "first batch previews upcoming beats");
+    assert.ok(!first.includes("Beat 1: B1 — s1\n- Beat") || first.includes("Beat 2: B2"), "preview covers beats after the batch range");
+    const mid = buildScenesPrompt({
+      input: { ...base, chainContinuity: false }, blueprint: bp, beats: bp.beats,
+      prevScene: prev, startNumber: 2, count: 1, styleLock: "LOCK", totalScenes: 4,
+    });
+    assert.ok(mid.includes('PREVIOUS SCENE (what just happened') && mid.includes('"Prev"'), "mid batch summarizes the previous scene");
+    assert.ok(mid.includes("COMING NEXT") && mid.includes("do NOT plan scenes for these"), "mid batch stages toward upcoming beats");
   });
   it("identityContext compacts bibles", () => {
     const bp = normalizeBlueprint({ characters: [{ name: "M", visual_identity_prompt: "id" }] });
@@ -824,10 +854,21 @@ describe("bible-id grounding (locations/objects actually used)", () => {
 
   it("canonicalizeSceneRefs moves objects parked in location into visible refs", () => {
     const s = normalizeScene({ title: "A", characters: ["bandar"], location: "apple_tree" }, 1, 3);
-    const { scene, repairs } = canonicalizeSceneRefs(s, blueprint());
+    const { scene, repairs, notes } = canonicalizeSceneRefs(s, blueprint());
     assert.equal(scene.location, "");
     assert.ok(scene.continuity_refs.includes("apple_tree"), "object still grounds the frame");
-    assert.ok(repairs.length > 0);
+    assert.deepEqual(repairs, [], "lossless move raises no warning");
+    assert.ok(notes.some((n) => n.includes("moved to visible objects")), "move is logged server-side");
+  });
+
+  it("canonicalizeSceneRefs moves bible objects parked in cast into visible refs", () => {
+    const s = normalizeScene({ title: "A", characters: ["bandar", "apple_tree", "ghost_xyz"], location: "jungle" }, 1, 3);
+    const { scene, repairs, notes } = canonicalizeSceneRefs(s, blueprint());
+    assert.deepEqual(scene.characters, ["bandar"], "object leaves the cast");
+    assert.ok(scene.continuity_refs.includes("apple_tree"), "object stays visible");
+    assert.ok(notes.some((n) => n.includes('"apple_tree"') && n.includes("object, not a character")), "move is logged, not warned");
+    assert.ok(!repairs.some((r) => r.includes("apple_tree")), "bible object is never reported as unknown");
+    assert.ok(repairs.some((r) => r.includes("ghost_xyz")), "truly unknown cast still warns");
   });
 
   it("canonicalizeSceneRefs drops hallucinated cast, keeps unresolvable places as text", () => {

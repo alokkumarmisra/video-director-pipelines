@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   alertServiceError, directorAddEntry, directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
-  directorDuplicateBoard, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
-  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorScene, type DirectorShot, type DirectorSong, type ImageMode,
+  directorDuplicateBoard, directorLive, directorPromptPreview, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
+  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorLive, type DirectorPromptPreview, type DirectorScene, type DirectorShot, type DirectorSong, type ImageMode,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconFolder, IconPanel, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
@@ -95,6 +95,53 @@ const sceneCoverage = (s: DirectorScene, lines: string[]): string | null => {
   }
   const beat = str(s.story_beat);
   return beat ? beat.slice(0, 140) : null;
+};
+
+// --- Line-by-line live typing for newly planned storyboard scenes ---
+// Newly landed scenes reveal their row text progressively (title → shot
+// segments/action → source coverage), one line after another with a typing
+// caret, instead of popping in all at once. Purely client-side: the batch
+// already landed, we just replay its text with a typewriter effect.
+const TYPE_CHAR_MS = 14;
+const TYPE_LINE_GAP_MS = 320;
+
+function TypedText({ text, animate, delayMs = 0, className, style, title }: {
+  text: string; animate: boolean; delayMs?: number; className?: string; style?: CSSProperties; title?: string;
+}) {
+  const full = str(text);
+  const [shown, setShown] = useState(animate ? 0 : full.length);
+  useEffect(() => {
+    if (!animate) { setShown(full.length); return; }
+    setShown(0);
+    let iv: number | null = null;
+    const t = window.setTimeout(() => {
+      iv = window.setInterval(() => {
+        setShown((n) => {
+          if (n >= full.length) { if (iv != null) window.clearInterval(iv); return n; }
+          return n + 1;
+        });
+      }, TYPE_CHAR_MS);
+    }, Math.max(0, delayMs));
+    return () => { window.clearTimeout(t); if (iv != null) window.clearInterval(iv); };
+  }, [animate, delayMs, full]);
+  const done = shown >= full.length;
+  return (
+    <span className={className} style={style} title={title}>
+      {full.slice(0, shown)}
+      {animate && !done && <span className="typing-caret" aria-hidden="true" />}
+    </span>
+  );
+}
+
+// Rough replay budget for a scene row (title + shot segments/action +
+// coverage), so the typing flag clears once the animation must be done.
+const sceneTypeBudget = (s: DirectorScene): number => {
+  const shots = sceneShots(s);
+  const segs = shots.length
+    ? shots.map((sh) => str(sh.lyric_segment) || str(sh.action))
+    : [str(s.action)];
+  const chars = str(s.title).length + segs.reduce((a, t) => a + Math.min(t.length, 400), 0) + 200;
+  return chars * TYPE_CHAR_MS + (segs.length + 2) * TYPE_LINE_GAP_MS;
 };
 
 // "speaker: line" per line (optional "(expression)" after the speaker) —
@@ -231,6 +278,40 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   // Scene boxes currently being planned by the AI (rendered as Generating…;
   // every later box renders as To be Generated until its batch lands).
   const [generatingRange, setGeneratingRange] = useState<{ from: number; to: number } | null>(null);
+  // Storyboard live typing: scene_numbers currently replaying their row text
+  // line by line (see TypedText). Detected by diffing landed scenes per open
+  // board — opening a board seeds the seen set, so old boards never replay.
+  const [typingScenes, setTypingScenes] = useState<number[]>([]);
+  const seenSceneNumsRef = useRef<{ boardId: string; nums: Set<number> } | null>(null);
+  const reduceMotion = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches)[0];
+  useEffect(() => {
+    if (!board || reduceMotion) return;
+    const nums = board.scenes.map((s) => s.scene_number);
+    const seen = seenSceneNumsRef.current;
+    if (!seen || seen.boardId !== board.id) {
+      seenSceneNumsRef.current = { boardId: board.id, nums: new Set(nums) };
+      setTypingScenes([]);
+      return;
+    }
+    const fresh = nums.filter((n) => !seen.nums.has(n));
+    if (!fresh.length) return;
+    for (const n of fresh) seen.nums.add(n);
+    setTypingScenes((cur) => [...cur.filter((n) => !fresh.includes(n)), ...fresh]);
+  }, [board, reduceMotion]);
+  // Typing is a replay with a known budget — clear the flag once it must be
+  // done so rows settle to static text (TypedText already hides the caret).
+  useEffect(() => {
+    if (!typingScenes.length || !board) return;
+    let budget = 0;
+    for (const n of typingScenes) {
+      const s = board.scenes.find((x) => x.scene_number === n);
+      if (s) budget = Math.max(budget, sceneTypeBudget(s));
+    }
+    const t = window.setTimeout(() => setTypingScenes([]), Math.min(25000, budget + 1200));
+    return () => window.clearTimeout(t);
+  }, [typingScenes, board]);
   const [stoppedNote, setStoppedNote] = useState<string | null>(null);
   const cancelRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -251,6 +332,24 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     const t = setInterval(() => setDirNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [planPhase]);
+  // Live LLM view: while planning, poll the read-only stream buffer (~1s) so
+  // the storyboard shows what the backend is writing scene-by-scene,
+  // word-by-word. Best-effort — a failed poll never disturbs planning.
+  const [live, setLive] = useState<DirectorLive | null>(null);
+  const liveBoardId = board?.id ?? null;
+  useEffect(() => {
+    if (!planPhase || !liveBoardId) { setLive(null); return; }
+    let dead = false;
+    const tick = async () => {
+      try {
+        const s = await directorLive(liveBoardId);
+        if (!dead) setLive(s && s.active ? s : null);
+      } catch { /* live view is best-effort */ }
+    };
+    void tick();
+    const t = window.setInterval(tick, 1000);
+    return () => { dead = true; window.clearInterval(t); };
+  }, [planPhase, liveBoardId]);
   // Editing + master-detail selection (compact cards + one full detail section).
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [editingScene, setEditingScene] = useState<number | null>(null);
@@ -500,6 +599,23 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
   };
 
+  // Show prompt (dry run): the exact system + user messages the next
+  // Continue would send to the LLM — fetched without calling the model,
+  // nothing planned or saved. Read-only, so it works even mid-planning.
+  const [promptPreview, setPromptPreview] = useState<DirectorPromptPreview | null>(null);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const onShowPrompt = async () => {
+    if (!board || promptLoading) return;
+    setPromptLoading(true);
+    try {
+      setPromptPreview(await directorPromptPreview(board.id));
+    } catch (e) {
+      reportError(e, "");
+    } finally {
+      setPromptLoading(false);
+    }
+  };
+
   // Generate scenes in batches until the plan is complete. Resumable: the
   // server appends from scenes.length, so Stop / retry continues from the
   // next scene, never restarts (e.g. Stop during 61–72 resumes at 73).
@@ -536,8 +652,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         // per shot), so the total tracks projected beats, not just scene rows.
         const beatsDone = boardBeats(b.scenes);
         const beatsTotal = boardBeatsTotal(b.scenes, b.sceneCount);
-        setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 12)} of ${b.sceneCount} · 🎞 ${beatsDone}/${beatsTotal} shots`);
-        setGeneratingRange({ from: b.scenes.length + 1, to: Math.min(b.sceneCount, b.scenes.length + 12) });
+        setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 10)} of ${b.sceneCount} · 🎞 ${beatsDone}/${beatsTotal} shots`);
+        setGeneratingRange({ from: b.scenes.length + 1, to: Math.min(b.sceneCount, b.scenes.length + 10) });
         const ctl = new AbortController();
         abortRef.current = ctl;
         const prevLen = b.scenes.length;
@@ -618,6 +734,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     try {
       const b = await directorRegenScene(board.id, index);
       setBoard(b);
+      // Replay the rewritten scene with live typing, like a fresh batch.
+      const num = b.scenes[index]?.scene_number ?? board.scenes[index]?.scene_number;
+      if (num != null && !reduceMotion) {
+        const seen = seenSceneNumsRef.current;
+        if (seen && seen.boardId === b.id) seen.nums.delete(num);
+        else seenSceneNumsRef.current = {
+          boardId: b.id, nums: new Set(b.scenes.map((s) => s.scene_number).filter((n) => n !== num)),
+        };
+        setTypingScenes((cur) => (cur.includes(num) ? cur : [...cur, num]));
+      }
     } catch (e) {
       reportError(e);
     } finally {
@@ -1576,9 +1702,14 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         )}
         <span className="spacer" />
         {board && (
-          <button className="ghost" onClick={() => { setBoard(null); setError(""); void refreshBoards(); }} title="Back to the story form and saved boards">
-            Boards
-          </button>
+          <span style={{ display: "inline-flex", flexDirection: "column", gap: 4 }}>
+            <button className="ghost" onClick={() => { setBoard(null); setError(""); void refreshBoards(); }} title="Back to the story form and saved boards">
+              Boards
+            </button>
+            <button className="ghost" onClick={() => void onShowPrompt()} disabled={promptLoading} title="Show the exact prompt the next Continue would send to the LLM (no planning, nothing saved)">
+              {promptLoading ? "Loading…" : "Show prompt"}
+            </button>
+          </span>
         )}
         <button
           className="icon-btn"
@@ -2375,13 +2506,25 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     const dlgCount = (s.dialogue ?? []).length
                       + shots.reduce((a, sh) => a + ((sh.dialogue ?? []) as unknown[]).length, 0);
                     const cov = sceneCoverage(s, lines);
+                    // Live typing for freshly landed scenes: cumulative start
+                    // delays replay the row line by line (title → shots/action
+                    // → coverage). Older scenes render static text as before.
+                    const typing = !reduceMotion && typingScenes.includes(s.scene_number);
+                    let typeAt = 0;
+                    const typeDelay = (len: number) => {
+                      const cur = typeAt;
+                      typeAt += Math.min(Math.max(0, len), 400) * TYPE_CHAR_MS + TYPE_LINE_GAP_MS;
+                      return cur;
+                    };
                     return (
-                      <div className={`dir-scene-row${selected ? " selected" : ""}`} key={s.scene_number} id={`dir-scene-${s.scene_number}`}>
+                      <div className={`dir-scene-row${selected ? " selected" : ""}${typing ? " typing" : ""}`} key={s.scene_number} id={`dir-scene-${s.scene_number}`}>
                         <div className="dir-scene-row-head">
                           <span className="pill" aria-hidden="true" title={`Scene ${s.scene_number} of ${board.sceneCount}`}>
                             {s.scene_number}/{board.sceneCount}
                           </span>
-                          <span className="dir-scene-row-title" title={s.title}>{s.title}</span>
+                          <span className="dir-scene-row-title" title={s.title}>
+                            <TypedText text={s.title} animate={typing} delayMs={typeDelay(str(s.title).length)} />
+                          </span>
                           <span className="muted" style={{ fontSize: 11 }} title={shots.length ? "Scene timeline = sum of its shots" : "Scene duration"}>
                             ⏱ {fmtT(s.duration_seconds)}{shots.length ? ` · ${shots.length} shot${shots.length === 1 ? "" : "s"}` : ""}
                             {dlgCount ? ` · 🎙 ${dlgCount}` : ""}
@@ -2440,7 +2583,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                                   <span>{s.scene_number}.{k + 1}{sh.shot_id ? ` · ${sh.shot_id}` : ""}</span>
                                   <span className="dir-shot-time">{fmtRange(sh.start_time, sh.end_time)}</span>
                                 </div>
-                                <div className="dir-shot-seg" title={seg}>{seg}</div>
+                                <div className="dir-shot-seg" title={seg}>
+                                  <TypedText text={seg} animate={typing} delayMs={typeDelay(seg.length)} />
+                                </div>
                                 <span className="dir-shot-meta">
                                   {sh.camera?.shot_type ?? ""}{sh.camera?.movement ? ` · ${sh.camera.movement}` : ""} · {fmtT(sh.duration_seconds)}
                                   {dlg ? ` · 🎙 ${dlg}` : ""}
@@ -2470,7 +2615,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                                 <span>{s.scene_number}.1</span>
                                 <span className="dir-shot-time">{fmtT(s.duration_seconds)}</span>
                               </div>
-                              <div className="dir-shot-seg" title={s.action || ""}>{s.action || "—"}</div>
+                              <div className="dir-shot-seg" title={s.action || ""}>
+                                <TypedText text={s.action || "—"} animate={typing} delayMs={typeDelay(str(s.action).length)} />
+                              </div>
                               <span className="dir-shot-meta">
                                 {s.camera?.shot_type ?? ""}{s.camera?.movement ? ` · ${s.camera.movement}` : ""} · {fmtT(s.duration_seconds)}
                                 {Array.isArray(s.dialogue) && s.dialogue.length ? ` · 🎙 ${s.dialogue.length}` : ""}
@@ -2478,15 +2625,55 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                             </div>
                           )}
                         </div>
-                        {cov && (
-                          <p className="hint" style={{ margin: "6px 0 0" }} title={`Source lines covered by Scene ${s.scene_number}: ${cov}`}>
-                            📖 {cov.length > 160 ? `${cov.slice(0, 160)}…` : cov}
-                          </p>
-                        )}
+                        {cov && (() => {
+                          const covText = cov.length > 160 ? `${cov.slice(0, 160)}…` : cov;
+                          return (
+                            <p className="hint" style={{ margin: "6px 0 0" }} title={`Source lines covered by Scene ${s.scene_number}: ${cov}`}>
+                              📖 <TypedText text={covText} animate={typing} delayMs={typeDelay(covText.length)} />
+                            </p>
+                          );
+                        })()}
                       </div>
                     );
                     });
                   })()}
+                  {live?.active && (
+                    <div
+                      className="dir-scene-row typing live"
+                      aria-live="polite"
+                      title="Read-only live view of the running LLM batch — planning is unaffected"
+                    >
+                      <div className="dir-scene-row-head">
+                        <span className="pill live-pill" aria-hidden="true">🔴 LIVE</span>
+                        <span className="dir-scene-row-title">
+                          Scenes {live.batchFrom ?? "…"}–{live.batchTo ?? "…"} writing…
+                          {live.scenes.length > 0 && ` · ${live.scenes.length} scene${live.scenes.length === 1 ? "" : "s"} complete in stream`}
+                        </span>
+                        <span className="muted" style={{ fontSize: 11 }}>read-only · planning unaffected</span>
+                      </div>
+                      {live.scenes.map((ps, k) => (
+                        <div className="live-scene" key={ps.scene_number || `live-${k}`}>
+                          <span className="live-scene-num" aria-hidden="true">
+                            {ps.scene_number ? `S${ps.scene_number}` : "S…"}
+                          </span>
+                          <span className="live-scene-body">
+                            <span className="live-scene-title" title={ps.title}>
+                              {ps.title || `Scene ${ps.scene_number || "…"}`}
+                            </span>
+                            {ps.action && (
+                              <span className="live-scene-text" title={ps.action}>{ps.action}</span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                      {!!live.tail && (
+                        <p className="hint live-tail" style={{ margin: "6px 0 0" }}>
+                          {live.tail}
+                          <span className="typing-caret" aria-hidden="true" />
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {Array.from({ length: Math.max(0, board.sceneCount - board.scenes.length) }, (_, k) => {
                     const num = board.scenes.length + 1 + k;
                     const isGen = generatingRange != null && num >= generatingRange.from && num <= generatingRange.to;
@@ -2859,6 +3046,50 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
           </p>
         </section>
       )
+    )}
+    {/* 🔍 Prompt preview popup: the exact system + user messages the next
+        Continue would send to the LLM (dry run — no model call, nothing
+        saved). Built server-side by the same batch planner as the real call. */}
+    {promptPreview && (
+      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Next LLM prompt preview" onClick={() => setPromptPreview(null)}>
+        <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 860 }}>
+          <h3 className="dlg-title">
+            🔍 Next prompt —{" "}
+            {promptPreview.ready
+              ? "plan complete"
+              : `scenes ${promptPreview.startNumber}–${(promptPreview.startNumber ?? 1) + (promptPreview.count ?? 1) - 1} (~${promptPreview.approxTokens ?? "?"} tokens)`}
+          </h3>
+          <p className="dlg-message">
+            {promptPreview.ready
+              ? (promptPreview.note || "Nothing left to plan.")
+              : `Exactly what Continue sends next: system (${promptPreview.systemChars ?? "?"} chars) + user brief (${promptPreview.userChars ?? "?"} chars, ~${promptPreview.batchSeconds ?? "?"}s batch). Nothing was sent or saved.`}
+          </p>
+          {!promptPreview.ready && (
+            <>
+              <details open>
+                <summary><b>USER message</b> — the batch brief</summary>
+                <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 320, overflowY: "auto", background: "rgba(0,0,0,0.25)", padding: 10, borderRadius: 8 }}>{promptPreview.user || "(empty)"}</pre>
+              </details>
+              <details style={{ marginTop: 8 }}>
+                <summary><b>SYSTEM message</b> — the shared director rules</summary>
+                <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 320, overflowY: "auto", background: "rgba(0,0,0,0.25)", padding: 10, borderRadius: 8 }}>{promptPreview.system || "(empty)"}</pre>
+              </details>
+            </>
+          )}
+          <div className="dlg-actions" style={{ marginTop: 12 }}>
+            {!promptPreview.ready && promptPreview.user && (
+              <button
+                className="ghost"
+                onClick={() => { try { void navigator.clipboard.writeText(`SYSTEM:\n${promptPreview.system || ""}\n\nUSER:\n${promptPreview.user || ""}`); } catch { /* clipboard unavailable */ } }}
+                title="Copy system + user prompt to clipboard"
+              >
+                Copy
+              </button>
+            )}
+            <button className="primary" onClick={() => setPromptPreview(null)} title="Close preview">Close</button>
+          </div>
+        </div>
+      </div>
     )}
     {/* 📝 Directing-inputs popup: what was saved before directing (project
         name, story/lyrics, language, genre, style, durations, instructions).
