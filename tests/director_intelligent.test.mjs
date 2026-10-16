@@ -268,6 +268,8 @@ describe("kids readiness: staging rules, safety scan, calm pacing", () => {
     assert.deepEqual(kidsContentWarnings(violent), []);
     const gentle = { input: { genre: "Kids" }, scenes: [{ scene_number: 1, action: "The bunny hops and waves hello", dialogue: [{ speaker: "bunny", line: "Hello friends!" }] }] };
     assert.deepEqual(kidsContentWarnings(gentle), []);
+    const substrings = { input: { genre: "Kids", story: "We learn new skills and change colors together." }, scenes: [{ action: "Bunny changes the game" }] };
+    assert.deepEqual(kidsContentWarnings(substrings), [], "unsafe terms do not match inside harmless words");
     // Style-lock words in image prompts must NOT trip the scan.
     const styley = { input: { genre: "Kids" }, scenes: [{ scene_number: 1, action: "Bunny hops", image_prompt: "dramatic lighting, cinematic" }] };
     assert.deepEqual(kidsContentWarnings(styley), []);

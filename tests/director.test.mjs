@@ -1090,6 +1090,7 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     assert.equal(one("P", "parrot", "red fur parrot").length, 1, "bird with fur flags");
     assert.equal(one("Sh", "lion", "lion, bare skin, no fur").length, 1, "fur-less lion flags");
     assert.deepEqual(one("S", "snake", "limbless serpentine snake, green scales"), []);
+    assert.deepEqual(one("S", "snake", "green scales, no fur or feathers"), [], "negative covering text stays clean");
     assert.deepEqual(one("Sh", "lion", "golden fur lion, four legs"), []);
     assert.deepEqual(one("E", "elephant", "grey bare skin, four legs"), []);
   });
@@ -1097,6 +1098,10 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     assert.ok(validateBibleAnatomy({ characters: [{ name: "कुत्ता", species: "कुत्ता, limbless serpentine body", visual_identity_prompt: "snake body" }] }).length);
     assert.ok(validateBibleAnatomy({ characters: [{ name: "छिपकली", species: "छिपकली", visual_identity_prompt: "furry lizard" }] }).length);
     assert.ok(validateBibleAnatomy({ characters: [{ name: "हाथी", species: "हाथी", visual_identity_prompt: "grey fur" }] }).length);
+    assert.ok(validateBibleAnatomy({ characters: [{ name: "Doggy", species: "", visual_identity_prompt: "limbless serpentine body" }] }).length,
+      "species-name fallback catches missing species fields");
+    assert.equal(anatomyLockFor({ name: "Doggy", species: "", visual_identity_prompt: "limbless serpentine body" }), null,
+      "missing species must not cement snake anatomy from identity text");
   });
   it("scene-level kids validator catches impossible actions and coverings", () => {
     const board = {
