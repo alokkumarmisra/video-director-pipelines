@@ -80,6 +80,7 @@ import {
   genreDirectingNotes,
   isKidsGenre,
   kidsContentWarnings,
+  learningReviewChecklist,
   MIN_KIDS_SHOT_SECONDS,
   normalizeStoryPlan,
   buildStoryPlan,
@@ -6352,7 +6353,7 @@ const server = http.createServer(async (req, res) => {
         issues: scored.issues,
         coverage: scored.coverage,
         errors: gate.errors,
-        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board)],
+        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board)],
         continuity: detectContinuityIssues(board.scenes),
         genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
       });

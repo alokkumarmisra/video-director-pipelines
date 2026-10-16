@@ -275,6 +275,19 @@ Generic runners (a new scenario = one new `prompts/<scenario>.json`):
   deleted so status honestly returns to PENDING — TTS + lip-sync regen, clip kept).
   The Video LipSync page shows 🎙/🎬/👄/🎞 pills + SEG badge from that endpoint.
   Test scenario: `prompts/rabbit_lion_dialogue.json` (Rabbit+Lion Hindi E2E).
+- `verify_learning.mjs <scenario> [--focus alphabet|counting|auto] [--beats 1,3]` —
+  **letterform/numeral verifier** for ABC + counting boards, run AFTER keyframes
+  exist but BEFORE clips generate. Extracts planned hero letters/counts per beat
+  (`extractLearningExpectations` in `lib/director.mjs`: `A for Apple`, `letter B`,
+  `अक्षर अ`, `5 ducks`, `५ तारे`, `तीन बिल्लियाँ`…) from beat titles + dialogue,
+  resolves each beat's main keyframe via `resolveMain` (latest version wins),
+  OCRs it with Tesseract (`--psm 8` then `6`, `eng+hin` with `eng` fallback) and
+  compares via `verifyOcrText`. Exit 0 = all pass, 1 = missing letter/numeral
+  (regenerate the keyframe), 2 = usage or Tesseract missing (install hint, never
+  a silent pass). Emits `[asset] {"type":"learning-verify",…}` lines so a future
+  UI run mode surfaces results. The Validate panel already carries the
+  zero-dependency half: `learningReviewChecklist` (per-scene must-show lines for
+  alphabet/counting boards) rides in validate `warnings`.
 - `generate_song.mjs [folder]` — Create Song tab renderer (triggered via
   `POST /api/runs` with `{ mode: "song" }`). Two engines by `audio.songPreset`:
   song presets render **sung** via the selected audio model (`audio.songModel`:

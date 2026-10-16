@@ -23,6 +23,11 @@ import {
   isKidsGenre,
   kidsDirectingRules,
   kidsContentWarnings,
+  learningFocus,
+  extractLearningExpectations,
+  sceneLearningTexts,
+  learningReviewChecklist,
+  verifyOcrText,
   buildBiblePrompt,
   buildScenesPrompt,
   splitSceneTimeline,
@@ -319,5 +324,42 @@ describe("kids readiness: staging rules, safety scan, calm pacing", () => {
     assert.deepEqual(w([{ scene_number: 1, action: "चूहा कमरे में नाचा" }]), []);
     assert.deepEqual(w([{ scene_number: 1, action: "बिल्ली डर गई और भागी" }]), []);
     assert.deepEqual(w([{ scene_number: 1, action: "खून और हत्या" }], "Adventure"), []);
+  });
+
+  it("learning verify: focus, expectations, OCR compare, review checklist", () => {
+    assert.equal(learningFocus("Custom", "abc learning"), "alphabet");
+    assert.equal(learningFocus("Custom", "गिनती"), "counting");
+    assert.equal(learningFocus("Kids", ""), "kids");
+    assert.equal(learningFocus("Adventure", ""), null);
+    // Alphabet extraction (English + Hindi).
+    assert.deepEqual(extractLearningExpectations(["A for Apple", "letter B"], "alphabet").letters, ["A", "B"]);
+    assert.deepEqual(extractLearningExpectations(["अक्षर अ", "इ से इमली"], "alphabet").letters, ["अ", "इ"]);
+    assert.deepEqual(extractLearningExpectations(["A for Apple"], "counting"), { letters: [], counts: [] });
+    // Count extraction (digits, Devanagari digits, EN + HI words; "one day" ignored).
+    assert.deepEqual(extractLearningExpectations(["Five ducks swim", "number 5"], "counting").counts, [5]);
+    assert.deepEqual(extractLearningExpectations(["५ तारे चमके"], "counting").counts, [5]);
+    assert.deepEqual(extractLearningExpectations(["तीन बिल्लियाँ खेलती हैं"], "counting").counts, [3]);
+    assert.deepEqual(extractLearningExpectations(["One day a duck came"], "counting").counts, []);
+    // OCR compare.
+    assert.deepEqual(verifyOcrText({ letters: ["B"], counts: [5] }, "B\nBALL 5"), { ok: true, missingLetters: [], missingCounts: [] });
+    const bad = verifyOcrText({ letters: ["B"], counts: [5] }, "R\nCAT 3");
+    assert.equal(bad.ok, false);
+    assert.deepEqual(bad.missingLetters, ["B"]);
+    assert.deepEqual(bad.missingCounts, [5]);
+    assert.deepEqual(verifyOcrText({ counts: [5] }, "५ तारे").missingCounts, []);
+    // Checklist: advisory per-scene lines, capped, silent off-focus.
+    const board = {
+      input: { genre: "Custom", genreCustom: "abc learning" },
+      scenes: [
+        { scene_number: 1, title: "A for Apple" },
+        { scene_number: 2, title: "running around" },
+      ],
+    };
+    const list = learningReviewChecklist(board);
+    assert.ok(list[0].includes('letter "A"') && list[0].includes("verify_learning"));
+    assert.ok(list[1].includes("Scene 2") && list[1].includes("no hero letter"));
+    assert.deepEqual(learningReviewChecklist({ input: { genre: "Adventure" }, scenes: [{ title: "A for Apple" }] }), []);
+    const flood = { input: { genre: "Custom", genreCustom: "numbers learning" }, scenes: Array.from({ length: 20 }, (_, i) => ({ scene_number: i + 1, title: "counting fun" })) };
+    assert.equal(learningReviewChecklist(flood).length, 12);
   });
 });
