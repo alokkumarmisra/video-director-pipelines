@@ -82,6 +82,7 @@ import {
   kidsContentWarnings,
   learningReviewChecklist,
   validateBibleAnatomy,
+  validateKidsScenePhysics,
   MIN_KIDS_SHOT_SECONDS,
   normalizeStoryPlan,
   buildStoryPlan,
@@ -5884,7 +5885,9 @@ const server = http.createServer(async (req, res) => {
     // passes undefined and normalizes exactly as before.
     function kidsShotOpts(board) {
       const input = board && board.input ? board.input : {};
-      return isKidsGenre(input.genre, input.genreCustom) ? { minShotSeconds: MIN_KIDS_SHOT_SECONDS } : undefined;
+      return isKidsGenre(input.genre, input.genreCustom)
+        ? { minShotSeconds: MIN_KIDS_SHOT_SECONDS, minSceneSeconds: 4 }
+        : undefined;
     }
     // Song upload for the Director's music-video mode: base64 audio -> file
     // in director/ + ffprobe duration (drives the storyboard timeline).
@@ -6354,7 +6357,7 @@ const server = http.createServer(async (req, res) => {
         issues: scored.issues,
         coverage: scored.coverage,
         errors: gate.errors,
-        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board), ...validateBibleAnatomy(board.blueprint)],
+        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board), ...validateBibleAnatomy(board.blueprint), ...validateKidsScenePhysics(board)],
         continuity: detectContinuityIssues(board.scenes),
         genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
       });
@@ -6535,6 +6538,8 @@ const server = http.createServer(async (req, res) => {
       if (!board.blueprint) return json(res, 400, { error: "analyze the story first" });
       const anatomyErrors = validateBibleAnatomy(board.blueprint);
       if (anatomyErrors.length) return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
+      const contentErrors = kidsContentWarnings(board);
+      if (contentErrors.length) return json(res, 400, { error: contentErrors[0], errors: contentErrors });
       const countQ = Number(u.searchParams.get("count"));
       const spec = nextSceneBatchSpec(board, Number.isFinite(countQ) ? countQ : undefined, id);
       if (spec.ready) {
@@ -6578,6 +6583,8 @@ const server = http.createServer(async (req, res) => {
         if (anatomyErrors.length) {
           return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
         }
+        const contentErrors = kidsContentWarnings(board);
+        if (contentErrors.length) return json(res, 400, { error: contentErrors[0], errors: contentErrors });
         const body = await readJson(req).catch(() => ({}));
         const spec = nextSceneBatchSpec(board, body.count, id);
         if (spec.ready) return json(res, 200, spec.write ? writeDirectorBoard(spec.board) : spec.board);
@@ -7183,6 +7190,14 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, {
           error: `character bible anatomy failed: ${anatomyErrors[0]}`,
           errors: anatomyErrors,
+          warnings: [],
+        });
+      }
+      const kidsErrors = [...kidsContentWarnings(board), ...validateKidsScenePhysics(board)];
+      if (kidsErrors.length) {
+        return json(res, 400, {
+          error: `kids-content review failed: ${kidsErrors[0]}`,
+          errors: kidsErrors.slice(0, 20),
           warnings: [],
         });
       }

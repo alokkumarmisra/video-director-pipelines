@@ -92,7 +92,9 @@ Anatomy-latch guard (a real dog board once got the full snake template on
 every character): the bible rule is conditional (limbless template ONLY for
 snake/serpent/worm/eel, explicitly FORBIDDEN words for legged species),
 `anatomyLockFor` returns null for legged species even when poisoned, and
-`validateBibleAnatomy` flags latched bibles in validate warnings.
+`validateBibleAnatomy` flags latched bibles in validate warnings and blocks
+scene planning + approval; kids approval also blocks detected unsafe text and
+`validateKidsScenePhysics` catches scene-level anatomy/covering contradictions.
 SKIN COVERING is part of the same rule (snake/lizard/fish/turtle = scales,
 birds = feathers, elephant/buffalo/human = bare skin, lion/dog/cat = fur) and
 is checked by the same validator.
@@ -118,20 +120,27 @@ rhyme/alphabet/counting/animals) is injected into the bible, scene-batch and
 single-scene regen prompts on kids-genre boards only (other boards
 byte-identical); `kidsContentWarnings` scans scene action/titles/dialogue —
 never image prompts (style locks would false-positive) — for
-violence/horror/adult themes and rides in validate `warnings` (advisory,
-never blocks Approve, capped at 10); calm pacing is enforced three-deep —
+violence/horror/adult themes from story/lyrics + scene text and rides in
+validate `warnings` (capped at 10) and kids approval blocks detected matches;
+this keyword scan is a tripwire, not a guarantee. Calm pacing is enforced —
 UI auto-defaults kids boards to 5s scenes (until the user touches the
 selector), `directorValidateInput` floors kids `sceneSeconds` at 4s, and all
-four `normalizeScene` call sites pass `{ minShotSeconds:
-MIN_KIDS_SHOT_SECONDS }` (1.5s) via `kidsShotOpts(board)` so sub-1.5s AI
-shots are redistributed by `splitSceneTimeline` instead of trusted.
+four `normalizeScene` call sites pass `{ minSceneSeconds: 4, minShotSeconds:
+MIN_KIDS_SHOT_SECONDS }` via `kidsShotOpts(board)`; infeasible multi-shot
+scenes are lengthened so the 1.5s shot floor is real, not just a hint.
 Hindi/Hinglish input is first-class: `isKidsGenre` matches Devanagari
 (बच्चों/लोरी/अक्षर/गिनती/जानवर/पंचतंत्र…) and romanized (balgeet/lori/ginti)
-genre text, the rhyme/alphabet/counting/animals sub-rules trigger on Hindi
-custom genres, and `kidsContentWarnings` scans Devanagari with explicit
-guards so innocent compounds (हमारा, राजकुमार, बीमार, कमरा, मार्ग) never
-flag while खून/मारा/चुड़ैल do — plus severe-only Hinglish tripwires
-(khoon/maut/bandook).
+genre text, the rhyme/alphabet/counting/animals sub-rules and anatomy/covering
+validators recognize Hindi species names; `kidsContentWarnings` scans
+Devanagari with explicit guards so innocent compounds (हमारा, राजकुमार,
+बीमार, कमरा, मार्ग) never flag while खून/मारा/चुड़ैल do — plus Hinglish
+tripwires (khoon/maut/bandook).
+`boardToScenario` carries the Director language into TTS defaults; `voiceFor`
+chooses paired English/Hindi voices and respects explicit per-cast overrides.
+Learning OCR (`verify_learning.mjs`) matches standalone OCR letter tokens and
+planned lyric metadata, rejects missing expectations/keyframes for explicit
+alphabet/counting focus, and reports object counts as unverified (human visual
+review remains necessary; OCR cannot count depicted objects).
 
 ## AI Story Director (Story-to-Video)
 Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in

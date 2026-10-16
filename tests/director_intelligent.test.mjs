@@ -342,6 +342,7 @@ describe("kids readiness: staging rules, safety scan, calm pacing", () => {
     assert.deepEqual(extractLearningExpectations(["One day a duck came"], "counting").counts, []);
     // OCR compare.
     assert.deepEqual(verifyOcrText({ letters: ["B"], counts: [5] }, "B\nBALL 5"), { ok: true, missingLetters: [], missingCounts: [] });
+    assert.deepEqual(verifyOcrText({ letters: ["B"] }, "BALL").missingLetters, ["B"], "incidental letter inside a word is not a hero-letter hit");
     const bad = verifyOcrText({ letters: ["B"], counts: [5] }, "R\nCAT 3");
     assert.equal(bad.ok, false);
     assert.deepEqual(bad.missingLetters, ["B"]);

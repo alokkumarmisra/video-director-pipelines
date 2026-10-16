@@ -33,13 +33,21 @@ const opt = (k, fb = null) => {
   const i = args.indexOf(k);
   return i >= 0 && i + 1 < args.length ? args[i + 1] : fb;
 };
-const scenario = args.find((a) => !a.startsWith("--"));
+const valuedFlags = new Set(["--focus", "--beats", "--lang"]);
+let scenario = null;
+for (let i = 0; i < args.length; i++) {
+  if (valuedFlags.has(args[i])) { i++; continue; }
+  if (!args[i].startsWith("--") && !scenario) scenario = args[i];
+}
 const focusOpt = (opt("--focus", "auto") || "auto").toLowerCase();
 const beatsOpt = opt("--beats", "");
 const langOpt = opt("--lang", "eng+hin");
 
 if (!scenario) { console.error("usage: node scripts/verify_learning.mjs <scenario> [--focus alphabet|counting|auto] [--beats 1,3]"); process.exit(2); }
 if (!["alphabet", "counting", "auto"].includes(focusOpt)) { console.error("--focus must be alphabet|counting|auto"); process.exit(2); }
+if (scenario === "." || scenario === ".." || path.basename(scenario) !== scenario || /[\\/:]/.test(scenario)) {
+  console.error("scenario must be a plain project name (no path separators)"); process.exit(2);
+}
 
 const cfgPath = path.join(ROOT, "prompts", `${scenario}.json`);
 const outDir = path.join(ROOT, "outputs", scenario);
@@ -79,7 +87,8 @@ beats.forEach((b, i) => {
   const n = i + 1;
   if (only.size && !only.has(n)) return;
   const title = String((b && b.title) || `beat${n}`);
-  const texts = [title, ...((b && Array.isArray(b.dialogue) ? b.dialogue : []).map((d) => d && d.line))];
+  const texts = [title, b && b.lyric_text, b && b.lyric_segment, b && b.semantic_meaning,
+    b && b.visual_event, ...((b && Array.isArray(b.dialogue) ? b.dialogue : []).map((d) => d && d.line))];
   const focuses = focusOpt === "auto" ? ["alphabet", "counting"] : [focusOpt];
   const expected = { letters: [], counts: [] };
   for (const f of focuses) {
@@ -91,11 +100,25 @@ beats.forEach((b, i) => {
   expected.counts.sort((a, c) => a - c);
   const file = resolveMain(outDir, prefix, "seq", n, ".png", title, state);
   if (!expected.letters.length && !expected.counts.length) {
+    if (focusOpt !== "auto") {
+      failed++;
+      checked++;
+      console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, ok: false, reason: "no expected teaching text found" })}`);
+      console.log(`Beat ${n}: FAIL no expected letter/count extracted — add the teaching target to the beat title/lyrics/dialogue`);
+      return;
+    }
     console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, skipped: true, reason: "no teaching content" })}`);
     console.log(`Beat ${n}: SKIP (no letter/count in plan)`);
     return;
   }
   if (!file) {
+    if (focusOpt !== "auto") {
+      failed++;
+      checked++;
+      console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, ok: false, reason: "no keyframe" })}`);
+      console.log(`Beat ${n}: FAIL (expected teaching target has no keyframe)`);
+      return;
+    }
     console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, skipped: true, reason: "no keyframe" })}`);
     console.log(`Beat ${n}: SKIP (no keyframe on disk yet)`);
     return;
@@ -117,8 +140,8 @@ beats.forEach((b, i) => {
     ...expected.counts.map((c) => `count ${c}`),
   ].join(", ");
   if (res.ok) {
-    console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, file, ok: true })}`);
-    console.log(`Beat ${n} (${file}): PASS ${detail}`);
+    console.log(`[asset] ${JSON.stringify({ type: "learning-verify", beat: n, file, ocrTextPresent: true, objectCountVerified: false })}`);
+    console.log(`Beat ${n} (${file}): OCR TEXT FOUND ${detail}; visually confirm letter shape, prominence, and actual object count (OCR cannot verify those).`);
   } else {
     failed++;
     const missing = [

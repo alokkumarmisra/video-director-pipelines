@@ -100,12 +100,21 @@ describe("boardToScenario dialogue handoff", () => {
     assert.equal(cfg.sequence[0].duration, 5);
     assert.ok(cfg.tts && typeof cfg.tts.voices === "object");
   });
+  it("uses the Director input language for default TTS voice and preserves overrides", () => {
+    const cfg = boardToScenario({ ...board, input: { ...board.input, language: "English", tts: { voices: { chiku: "custom-voice" } } } });
+    assert.equal(cfg.tts.language, "English");
+    assert.equal(cfg.tts.defaultVoice, "en-IN-NeerjaNeural");
+    assert.equal(cfg.tts.voices.chiku, "custom-voice");
+  });
 });
 
 describe("voiceFor casting", () => {
   it("auto-casts rabbit young/female, lion deep/male", () => {
     assert.equal(voiceFor("chiku", {}), HINDI_FEMALE);
     assert.equal(voiceFor("sheraj", {}), HINDI_MALE);
+    assert.equal(voiceFor("lion", {}), HINDI_MALE, "lion matcher has no leading-space bug");
+    assert.equal(voiceFor("lion", { language: "English" }), "en-IN-PrabhatNeural");
+    assert.equal(voiceFor("narrator", { language: "English" }), "en-IN-NeerjaNeural");
   });
   it("explicit scenario voices win", () => {
     assert.equal(voiceFor("chiku", { voices: { chiku: "en-IN-NeerjaNeural" } }), "en-IN-NeerjaNeural");

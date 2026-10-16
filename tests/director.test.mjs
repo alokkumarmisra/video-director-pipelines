@@ -42,6 +42,7 @@ import {
   anatomyLockFor,
   withAnatomyLock,
   validateBibleAnatomy,
+  validateKidsScenePhysics,
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
@@ -1091,5 +1092,41 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     assert.deepEqual(one("S", "snake", "limbless serpentine snake, green scales"), []);
     assert.deepEqual(one("Sh", "lion", "golden fur lion, four legs"), []);
     assert.deepEqual(one("E", "elephant", "grey bare skin, four legs"), []);
+  });
+  it("Hindi species are recognized by anatomy and covering checks", () => {
+    assert.ok(validateBibleAnatomy({ characters: [{ name: "कुत्ता", species: "कुत्ता, limbless serpentine body", visual_identity_prompt: "snake body" }] }).length);
+    assert.ok(validateBibleAnatomy({ characters: [{ name: "छिपकली", species: "छिपकली", visual_identity_prompt: "furry lizard" }] }).length);
+    assert.ok(validateBibleAnatomy({ characters: [{ name: "हाथी", species: "हाथी", visual_identity_prompt: "grey fur" }] }).length);
+  });
+  it("scene-level kids validator catches impossible actions and coverings", () => {
+    const board = {
+      input: { genre: "Kids" },
+      blueprint: { characters: [
+        { character_id: "dog", name: "Dog", species: "dog" },
+        { character_id: "snake", name: "Snake", species: "snake" },
+        { character_id: "elephant", name: "Elephant", species: "elephant" },
+      ] },
+      scenes: [
+        { scene_number: 1, characters: ["dog"], action: "The dog slithers across the floor", image_prompt: "limbless serpentine dog" },
+        { scene_number: 2, characters: ["snake"], action: "The snake walks on four legs", image_prompt: "furry snake" },
+        { scene_number: 3, characters: ["elephant"], action: "The elephant waves", image_prompt: "elephant covered in fur" },
+      ],
+    };
+    const errors = validateKidsScenePhysics(board);
+    assert.ok(errors.some((x) => x.includes("Dog") && /snake-like/i.test(x)));
+    assert.ok(errors.some((x) => x.includes("Snake") && /limbless/i.test(x)));
+    assert.ok(errors.some((x) => x.includes("Snake") && /scales/i.test(x)));
+    assert.ok(errors.some((x) => x.includes("Elephant") && /bare skin/i.test(x)));
+    assert.deepEqual(validateKidsScenePhysics({ input: { genre: "Adventure" }, scenes: board.scenes }), []);
+  });
+  it("kids scene duration floor is enforced and shot floor remains feasible", () => {
+    const short = normalizeScene({ duration_seconds: 1, shots: [{ duration_seconds: 0.2 }, { duration_seconds: 0.8 }] }, 1, 5,
+      { minShotSeconds: 1.5, minSceneSeconds: 4 });
+    assert.equal(short.duration_seconds, 4);
+    assert.ok(short.shots.every((x) => x.duration_seconds >= 1.5));
+    const many = normalizeScene({ duration_seconds: 4, shots: Array.from({ length: 5 }, (_, i) => ({ shot_id: `1-${i}`, duration_seconds: 0.8 })) }, 1, 5,
+      { minShotSeconds: 1.5, minSceneSeconds: 4 });
+    assert.equal(many.duration_seconds, 7.5, "lengthens scene so every shot can meet the minimum");
+    assert.ok(many.shots.every((x) => x.duration_seconds >= 1.5));
   });
 });
