@@ -256,7 +256,9 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [autoTargetSeconds, setAutoTargetSeconds] = useState(60);
   const [estimatingTarget, setEstimatingTarget] = useState(false);
   const [targetNote, setTargetNote] = useState<string | null>(null);
-  const [sceneOpt, setSceneOpt] = useState(3);
+  // The initial genre is Kids, so initialize at the calm kids default rather
+  // than 3s (which the server later clamps to 4s, contradicting the UI).
+  const [sceneOpt, setSceneOpt] = useState(5);
   const [sceneCustom, setSceneCustom] = useState("4");
   // Kids pacing default: selecting a kids-ish genre auto-switches the scene
   // duration to 5s (COPPA-calm — fast cutting overstimulates toddlers),
