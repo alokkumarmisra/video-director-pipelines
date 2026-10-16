@@ -1,0 +1,1489 @@
+{
+  "id": "snake2",
+  "input": {
+    "title": "Snake2",
+    "story": "**[Intro – प्यारी सी धुन]**\n\nआया आया, कौन है आया?\nहरे रंग का साँप है आया!\nगोल-मटोल और बड़ा निराला,\nसबका प्यारा, सबसे मतवाला!\n\n**[Verse 1]**\n\nनन्हा-मुन्ना साँप हमारा,\nलगता है कितना प्यारा!\nबल-बल करके चलता जाए,\nअपनी पूँछ को खूब हिलाए!\n\nफन-फन नहीं, बस मुस्काए,\nसब बच्चों को खूब हँसाए!\nआँखें इसकी गोल-मटोल,\nमीठी इसकी मीठी बोल!\n\n**[Chorus – सब मिलकर गाएँ]**\n\nसाँपू राजा, साँपू राजा,\nतुम हो कितने प्यारे!\nसर्र-सर्र करके चलने वाले,\nलगते सबसे न्यारे!\n\nहिल-हिल, डुल-डुल, नाचो जी,\nगोल-गोल तुम घूमो जी!\nसाँपू राजा, मेरे भाई,\nतुमने सबकी हँसी बढ़ाई!\n\n**[Verse 2]**\n\nफूलों वाले बाग में जाए,\nतितली के संग खेल रचाए!\nलाल गुलाबी फूलों के पास,\nकरता प्यारा डांस ज़रा खास!\n\nमेंढक बोला, टर्र-टर्र-टर्र,\nसाँपू बोला, सर्र-सर्र-सर्र!\nबंदर बोला, आओ नाचें,\nमिलकर सारे ताली बजाएँ!\n\n**[Chorus – तेज़ और मज़ेदार]**\n\nसाँपू राजा, साँपू राजा,\nतुम हो कितने प्यारे!\nसर्र-सर्र करके चलने वाले,\nलगते सबसे न्यारे!\n\nहिल-हिल, डुल-डुल, नाचो जी,\nगोल-गोल तुम घूमो जी!\nसाँपू राजा, मेरे भाई,\nतुमने सबकी हँसी बढ़ाई!\n\n**[Verse 3 – प्यारा सा ट्विस्ट]**\n\nरात हुई तो चाँद ने बोला,\nसाँपू ने अपना बिस्तर खोला!\nतारों को करके बाय-बाय,\nमीठे सपनों में खो जाए!\n\nसुबह हुई तो फिर मुस्काए,\nनई कहानी लेकर आए!\nछोटे बच्चों, हाथ हिलाओ,\nसाँपू संग तुम गीत सुनाओ!\n\n**[Outro]**\n\nबाय-बाय, प्यारे साँप,\nफिर आना तुम मेरे पास!\nहँसते-गाते रहना तुम,\nसबके प्यारे बनना तुम!\n\nटाटा-बाय, टाटा-बाय,\nसाँपू राजा, बाय-बाय! 🎵",
+    "language": "Hindi",
+    "genre": "Kids",
+    "genreCustom": "",
+    "visualStyle": "3D Preschool Animation",
+    "styleCustom": "",
+    "targetSeconds": 180,
+    "sceneSeconds": 3,
+    "aspectRatio": "16:9",
+    "instructions": "",
+    "includeDialogue": true,
+    "chainContinuity": true
+  },
+  "status": "scenes-partial",
+  "blueprint": {
+    "logline": "A playful snake prince brings joy and laughter to the children of a flower-filled garden through his dance and songs.",
+    "analysis": {
+      "plot": "The story revolves around Snake, who entertains children in a garden through dance and song, bringing them joy and laughter. The narrative progresses from an introduction, verses about Snake's playful nature, a chorus emphasizing his role as king, another verse showing Snake’s activities in the garden with other animals, and concludes with Snake wishing everyone happiness.",
+      "beginning": "Snake introduces himself as a friendly green snake in a playful manner to catch children's attention.",
+      "middle": "Snake engages in fun activities like dancing, singing, and playing with flowers and friends in the garden.",
+      "climax": "The climax is reached during the chorus when Snake’s dance and music bring joy to all the animals and children in the garden.",
+      "ending": "The story concludes with a warm goodbye from Snake as he promises to visit again soon.",
+      "main_character": "snake",
+      "supporting_characters": [
+        "snake",
+        "butterfly",
+        "bunny",
+        "bird"
+      ],
+      "antagonist": null,
+      "objects": [
+        "flowers",
+        "dance_rings",
+        "music_instruments"
+      ],
+      "locations": [
+        "garden",
+        "flower_bushes"
+      ],
+      "events": [
+        "snake_introduces_himself",
+        "dancing_and_singing",
+        "playing_with_flowers",
+        "children_laughing"
+      ],
+      "relationships": "Snake forms a bond with the children and other animals through his interactions, making them happy.",
+      "emotional_progression": "Playful -> Joyful -> Happy",
+      "timeline": "Introduction -> Verses 1-2 -> Chorus -> Verse 3 -> Outro",
+      "visual_moments": [
+        "snake_introduces_himself",
+        "dancing_and_singing",
+        "playing_with_flowers",
+        "children_laughing"
+      ]
+    },
+    "characters": [
+      {
+        "character_id": "snake",
+        "name": "Snake",
+        "role": "main_character",
+        "species": "Green Snake",
+        "age": "Young Adult",
+        "appearance": {
+          "body": "One continuous elongated limbless serpentine body, slim and supple, with smooth green skin tapering to a tail.",
+          "fur": "",
+          "eyes": "Large black eyes with a hint of mischief.",
+          "ears": "none"
+        },
+        "clothing": {
+          "top": "A shimmering green jacket",
+          "bottom": "Floral patterned skirt"
+        },
+        "personality": [
+          "playful",
+          "kind",
+          "enthusiastic"
+        ],
+        "visual_identity_prompt": "Green Snake, limbless serpentine body: one continuous elongated smooth coiled body, no legs, no arms, no hands, no feet, no ears, no external ears, no wings, slim and supple, large black eyes with a hint of mischief, smooth green skin, wearing a shimmering green jacket and floral patterned skirt.",
+        "consistency_rules": [
+          "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
+          "Keep the exact same body, species traits and proportions in every scene.",
+          "Keep the exact species body plan — never add legs, arms, hands, feet, ears, wings or human parts the species lacks (a snake stays one continuous limbless serpentine body); stage only physically possible actions.",
+          "Keep the exact same clothing, colors and accessories unless the story explicitly changes them.",
+          "Paste the visual_identity_prompt verbatim into every image_prompt — never paraphrase or shorten it.",
+          "Keep the same art style and rendering for this character across all scenes.",
+          "Stage speaking scenes front-facing so the face stays clearly visible."
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "location_id": "garden",
+        "name": "Flower-Filled Garden",
+        "description": "A vibrant garden filled with colorful flowers and buzzing insects.",
+        "visual_identity_prompt": "A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background.",
+        "time_of_day": "Afternoon",
+        "lighting": "Natural sunlight filtering through the trees, creating soft shadows.",
+        "color_palette": "Bright greens, pinks, yellows, and purples."
+      },
+      {
+        "location_id": "flower_bushes",
+        "name": "Flower Bushes",
+        "description": "A cluster of colorful flower bushes in the middle of the garden.",
+        "visual_identity_prompt": "Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+        "time_of_day": "",
+        "lighting": "",
+        "color_palette": ""
+      }
+    ],
+    "objects": [
+      {
+        "object_id": "flowers",
+        "name": "Flowers",
+        "description": "Various colorful flowers blooming in the garden.",
+        "visual_identity_prompt": "Colorful, vibrant flowers with petals of various colors like pink, purple, and yellow."
+      },
+      {
+        "object_id": "dance_rings",
+        "name": "Dance Rings",
+        "description": "Small rings used for snake dances.",
+        "visual_identity_prompt": "Small, shiny dance rings with intricate designs"
+      },
+      {
+        "object_id": "music_instruments",
+        "name": "Music Instruments",
+        "description": "Simple musical instruments like small drums and flutes.",
+        "visual_identity_prompt": "Small, simple musical instruments such as drums and flutes."
+      }
+    ],
+    "lyric_lines": [],
+    "beats": [
+      {
+        "n": 1,
+        "title": "Snake's Introduction",
+        "summary": "Snake introduces himself to the children.",
+        "location": "garden",
+        "objects": [
+          "flowers"
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Dancing and Singing",
+        "summary": "Snake dances around, playing his flute and rings, making everyone laugh.",
+        "location": "flower_bushes",
+        "objects": [
+          "dance_rings",
+          "music_instruments"
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Playing with Flowers",
+        "summary": "Children join Snake in dancing and playing with flowers.",
+        "location": "garden",
+        "objects": [
+          "flowers"
+        ]
+      },
+      {
+        "n": 4,
+        "title": "Chorus of Laughter",
+        "summary": "Everyone laughs as Snake's music and dance bring joy to all.",
+        "location": "flower_bushes",
+        "objects": [
+          "dance_rings",
+          "music_instruments"
+        ]
+      }
+    ]
+  },
+  "storyPlan": {
+    "version": 1,
+    "logline": "A playful snake prince brings joy and laughter to the children of a flower-filled garden through his dance and songs.",
+    "theme": "Playful -> Joyful -> Happy",
+    "structure": {
+      "beginning": "Snake introduces himself as a friendly green snake in a playful manner to catch children's attention.",
+      "development": "Snake engages in fun activities like dancing, singing, and playing with flowers and friends in the garden.",
+      "climax": "The climax is reached during the chorus when Snake’s dance and music bring joy to all the animals and children in the garden.",
+      "resolution": "The story concludes with a warm goodbye from Snake as he promises to visit again soon."
+    },
+    "narrativeOutline": [
+      "Snake introduces himself as a friendly green snake in a playful manner to catch children's attention.",
+      "Snake engages in fun activities like dancing, singing, and playing with flowers and friends in the garden.",
+      "The climax is reached during the chorus when Snake’s dance and music bring joy to all the animals and children in the garden.",
+      "The story concludes with a warm goodbye from Snake as he promises to visit again soon.",
+      "Snake introduces himself to the children.",
+      "Snake dances around, playing his flute and rings, making everyone laugh.",
+      "Children join Snake in dancing and playing with flowers.",
+      "Everyone laughs as Snake's music and dance bring joy to all."
+    ],
+    "characterRoster": [
+      {
+        "character_id": "snake",
+        "name": "Snake",
+        "role": "main_character",
+        "motivation": ""
+      }
+    ],
+    "uncertainties": [],
+    "productionTasks": [
+      {
+        "id": "analyze-story",
+        "label": "Analyze story (bible + beats)",
+        "stage": "story-analysis",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "lyric-semantics",
+        "label": "Decompose lyrics into singable lines",
+        "stage": "lyric-semantics",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "scene-breakdown",
+        "label": "Plan scene breakdown covering all lines",
+        "stage": "scene-breakdown",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "shot-direction",
+        "label": "Direct every shot (camera + action + prompts)",
+        "stage": "shot-direction",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "coverage-check",
+        "label": "Check lyric coverage + quality score",
+        "stage": "coverage-validation",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "repair-flagged",
+        "label": "Repair flagged shots",
+        "stage": "coverage-validation",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "approve-plan",
+        "label": "Approve plan for production",
+        "stage": "coverage-validation",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "generate-keyframes",
+        "label": "Generate keyframes (image stage)",
+        "stage": "image-generation",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "generate-clips",
+        "label": "Generate clips (video/motion stage)",
+        "stage": "video-motion",
+        "status": "pending",
+        "dependsOn": []
+      },
+      {
+        "id": "assemble-final",
+        "label": "Assemble + validate final cut",
+        "stage": "final-assembly",
+        "status": "pending",
+        "dependsOn": []
+      }
+    ],
+    "approvals": {},
+    "revisions": 0
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Snake's Introduction",
+      "story_beat": "Beat 1: Snake introduces himself to the children.",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "moving around, looking at children curiously",
+      "emotion": "excited",
+      "expression": "smiling widely with big eyes",
+      "body_language": "slithering gracefully, tail swaying side to side",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "Snake stops in front of children, ready to introduce himself",
+      "dialogue": [],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake slithering gracefully in the garden, focusing on children and smiling widely. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 1,
+      "line_to": 2,
+      "shots": [
+        {
+          "shot_id": "1-A",
+          "shot_number": 1,
+          "lyric_segment": "",
+          "semantic_meaning": "Snake entering the garden and looking at children curiously",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "slithering towards children, stopping to observe them",
+          "emotion": "excited",
+          "expression": "smiling widely with big eyes",
+          "body_language": "slithering gracefully, tail swaying side to side",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake slithering gracefully in the garden, focusing on children and smiling widely. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "title": "Snake's Arrival",
+      "story_beat": "Line 2: आया आया, कौन है आया?",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "repeating the question, looking around",
+      "emotion": "curious",
+      "expression": "wide eyes with a slight smile",
+      "body_language": "slithering back and forth, turning his head to look at children",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "Snake repeats his question to the children, waiting for a response",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "आया आया, कौन है आया?",
+          "expression": "wide eyes with a slight smile",
+          "emotion": "curious",
+          "pitch": "medium"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake repeating his question to the children with wide eyes and a slight smile. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "2-A",
+          "shot_number": 1,
+          "lyric_segment": "आया आया, कौन है आया?",
+          "semantic_meaning": "Snake asking who is there in the garden",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "repeating the question, looking around",
+          "emotion": "curious",
+          "expression": "wide eyes with a slight smile",
+          "body_language": "slithering back and forth, turning his head to look at children",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake repeating his question to the children with wide eyes and a slight smile. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "title": "Snake's Arrival Confirmation",
+      "story_beat": "Line 4: हरे रंग का साँप है आया!",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "nodding and confirming, looking at children",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering towards the children, nodding in confirmation",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "Snake confirms his arrival to the children with a big smile",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "हरे रंग का साँप है आया!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake confirming his arrival to the children with a big smile and nodding in confirmation. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 6,
+      "shots": [
+        {
+          "shot_id": "3-A",
+          "shot_number": 1,
+          "lyric_segment": "हरे रंग का साँप है आया!",
+          "semantic_meaning": "Snake confirming his arrival in the garden",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "nodding and confirming, looking at children",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering towards the children, nodding in confirmation",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake confirming his arrival to the children with a big smile and nodding in confirmation. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 4,
+      "title": "Snake's Description",
+      "story_beat": "Line 3: हरे रंग का साँप है आया!",
+      "duration_seconds": 2,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "slithering and nodding",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering towards the children, nodding in confirmation",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "गोल-मटोल और बड़ा निराला, सबका प्यारा, सबसे मतवाला!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake slithering and nodding towards the children with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 3,
+      "line_to": 4,
+      "shots": [
+        {
+          "shot_id": "4-A",
+          "shot_number": 1,
+          "lyric_segment": "हरे रंग का साँप है आया!",
+          "semantic_meaning": "Snake confirming his arrival in the garden",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "slithering and nodding towards children",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering towards the children, nodding in confirmation",
+          "camera": {
+            "shot_type": "Medium Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake confirming his arrival to the children with a big smile and nodding in confirmation. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 2,
+          "start_time": 0,
+          "end_time": 2,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 5,
+      "title": "Snake's Description (Continued)",
+      "story_beat": "Line 4: गोल-मटोल और बड़ा निराला, सबका प्यारा, सबसे मतवाला!",
+      "duration_seconds": 2,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "nodding and smiling",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "nodding in confirmation, slithering towards the children",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake nodding and smiling with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 5,
+      "line_to": 6,
+      "shots": [
+        {
+          "shot_id": "5-A",
+          "shot_number": 1,
+          "lyric_segment": "गोल-मटोल और बड़ा निराला, सबका प्यारा, सबसे मतवाला!",
+          "semantic_meaning": "Snake confirming his arrival and describing himself",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "nodding and smiling towards children",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "nodding in confirmation, slithering towards the children",
+          "camera": {
+            "shot_type": "Medium Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake nodding and smiling with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 2,
+          "start_time": 0,
+          "end_time": 2,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 6,
+      "title": "Verse Introduction",
+      "story_beat": "Line 6: [Verse 1]",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "nodding and smiling",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "nodding in confirmation, slithering towards the children",
+      "camera": {
+        "shot_type": "Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake nodding and smiling with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 7,
+      "line_to": 8,
+      "shots": [
+        {
+          "shot_id": "6-A",
+          "shot_number": 1,
+          "lyric_segment": "[Verse 1]",
+          "semantic_meaning": "Introduction to the verse about Snake",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "nodding and smiling towards children",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "nodding in confirmation, slithering towards the children",
+          "camera": {
+            "shot_type": "Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake nodding and smiling with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 7,
+      "title": "Snake's Actions",
+      "story_beat": "Line 11: फन-फन नहीं, बस मुस्काए",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "smiling and moving gently",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering gently, smiling",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "फन-फन नहीं, बस मुस्काए, सब बच्चों को खूब हँसाए!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake smiling and moving gently with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 11,
+      "line_to": 12,
+      "shots": [
+        {
+          "shot_id": "8-A",
+          "shot_number": 1,
+          "lyric_segment": "फन-फन नहीं, बस मुस्काए, सब बच्चों को खूब हँसाए!",
+          "semantic_meaning": "Snake smiling and making the children laugh",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "smiling and moving gently, making the children laugh",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering gently, smiling",
+          "camera": {
+            "shot_type": "Medium Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake smiling and moving gently with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 8,
+      "title": "Children's Reaction",
+      "story_beat": "Line 12: सब बच्चों को खूब हँसाए!",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "making the children laugh",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering gently, making the children laugh",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "सब बच्चों को खूब हँसाए!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake making the children laugh with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 13,
+      "line_to": 14,
+      "shots": [
+        {
+          "shot_id": "9-A",
+          "shot_number": 1,
+          "lyric_segment": "सब बच्चों को खूब हँसाए!",
+          "semantic_meaning": "Children laughing and enjoying the snake's presence",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "making the children laugh, slithering gently",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering gently, making the children laugh",
+          "camera": {
+            "shot_type": "Medium Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake making the children laugh with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 9,
+      "title": "Snake's Introduction",
+      "story_beat": "Beat 1: Snake's Introduction — Snake introduces himself to the children.",
+      "duration_seconds": 3,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "garden",
+      "time_of_day": "day",
+      "action": "introducing himself, slithering gently",
+      "emotion": "enthusiastic",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering gently, making the children laugh",
+      "camera": {
+        "shot_type": "Medium Close-Up",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-run from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "नन्हा-मुन्ना साँप हमारा, लगता है कितना प्यारा!",
+          "expression": "big smile with big eyes",
+          "emotion": "enthusiastic",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake introducing himself with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 7,
+      "line_to": 8,
+      "shots": [
+        {
+          "shot_id": "9-A",
+          "shot_number": 1,
+          "lyric_segment": "नन्हा-मुन्ना साँप हमारा, लगता है कितना प्यारा!",
+          "semantic_meaning": "Snake introduces himself as Nanna Munna and says he is very lovable",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "garden",
+          "time_of_day": "",
+          "action": "slithering gently, making the children laugh",
+          "emotion": "enthusiastic",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering gently, making the children laugh",
+          "camera": {
+            "shot_type": "Medium Close-Up",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "a colorful flower-filled garden with vibrant blooms and fluttering butterflies",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. A lush, flower-filled garden with colorful blossoms, green leaves, and fluttering butterflies. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake introducing himself with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 3,
+          "start_time": 0,
+          "end_time": 3,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 10,
+      "title": "Snake's Dance",
+      "story_beat": "Beat 2: Dancing and Singing — Snake dances around, playing his flute and rings, making everyone laugh.",
+      "duration_seconds": 7,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "flower_bushes",
+      "time_of_day": "day",
+      "action": "dancing and playing music, making children laugh",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering around, playing dance rings and flute, making the children laugh",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+      "continuity_from_previous_scene": "",
+      "transition_to_next_scene": "",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "बल-बल करके चलता जाए, अपनी पूँछ को खूब हिलाए!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        },
+        {
+          "speaker": "snake",
+          "line": "आँखें इसकी गोल-मटोल, मीठी इसकी मीठी बोल!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        },
+        {
+          "speaker": "snake",
+          "line": "साँपू राजा, साँपू राजा!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake dancing and playing music with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 9,
+      "line_to": 16,
+      "shots": [
+        {
+          "shot_id": "10-A",
+          "shot_number": 1,
+          "lyric_segment": "बल-बल करके चलता जाए, अपनी पूँछ को खूब हिलाए!",
+          "semantic_meaning": "Snake slithers and wiggles his tail",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "slithering and wiggling his tail",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering and wiggling his tail",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake slithering and wiggling his tail with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 2.1,
+          "start_time": 0,
+          "end_time": 2.1,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-B",
+          "shot_number": 2,
+          "lyric_segment": "फन-फन नहीं, बस मुस्काए, सब बच्चों को खूब हँसाए!",
+          "semantic_meaning": "Snake smiles and makes the children laugh",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "smiling and making children laugh",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "smiling and making children laugh",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake smiling and making children laugh with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 2.1,
+          "start_time": 2.1,
+          "end_time": 4.2,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-C",
+          "shot_number": 3,
+          "lyric_segment": "आँखें इसकी गोल-मटोल, मीठी इसकी मीठी बोल!",
+          "semantic_meaning": "Snake's eyes are round and his voice is sweet",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "playing music and singing",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "playing dance rings and flute, making the children laugh",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake playing music and singing with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 1.7,
+          "start_time": 4.2,
+          "end_time": 5.9,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "10-D",
+          "shot_number": 4,
+          "lyric_segment": "साँपू राजा, साँपू राजा!",
+          "semantic_meaning": "Snake is the king of snakes",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "playing music and singing",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "playing dance rings and flute, making the children laugh",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake playing music and singing with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 1.1,
+          "start_time": 5.9,
+          "end_time": 7,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    },
+    {
+      "scene_number": 11,
+      "title": "Snake's Tail Wiggling and Children Laughing",
+      "story_beat": "Beat N: Snake continues to dance and make children laugh.",
+      "duration_seconds": 4,
+      "characters": [
+        "snake"
+      ],
+      "characters_detailed": [],
+      "dramatic_purpose": "",
+      "location": "flower_bushes",
+      "time_of_day": "day",
+      "action": "Snake continues to wiggle his tail and make children laugh.",
+      "emotion": "joyful",
+      "expression": "big smile with big eyes",
+      "body_language": "slithering around, playing dance rings and flute, making the children laugh",
+      "camera": {
+        "shot_type": "Medium Shot",
+        "angle": "Eye Level",
+        "movement": "Static"
+      },
+      "lighting": "soft sunlight filtering through leaves",
+      "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+      "continuity_from_previous_scene": "same forest clearing, Snake mid-dance from the last frame, camera holds the Medium Shot",
+      "transition_to_next_scene": "Snake continues to dance and make children laugh as the scene transitions to the chorus of laughter.",
+      "dialogue": [
+        {
+          "speaker": "snake",
+          "line": "अपनी पूँछ को खूब हिलाए!",
+          "expression": "big smile with big eyes",
+          "emotion": "joyful",
+          "pitch": "high"
+        }
+      ],
+      "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+      "video_prompt": "Snake slithering and wiggling his tail with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+      "lyric_line_id": null,
+      "parent_line_id": null,
+      "lyric_text": "",
+      "lyric_segment": "",
+      "semantic_meaning": "",
+      "visual_event": "",
+      "shot_id": null,
+      "shot_number": 1,
+      "song_start_time": null,
+      "song_end_time": null,
+      "continuity_required": false,
+      "reference_source": "NONE",
+      "continuity_refs": [],
+      "line_from": 10,
+      "line_to": 12,
+      "shots": [
+        {
+          "shot_id": "11-A",
+          "shot_number": 1,
+          "lyric_segment": "अपनी पूँछ को खूब हिलाए!",
+          "semantic_meaning": "Snake wiggles his tail joyfully.",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "wiggling snake's tail",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "slithering and wiggling his tail",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake wiggling his tail with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 1.6,
+          "start_time": 0,
+          "end_time": 1.6,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        },
+        {
+          "shot_id": "11-B",
+          "shot_number": 2,
+          "lyric_segment": "फन-फन नहीं, बस मुस्काए, सब बच्चों को खूब हँसाए!",
+          "semantic_meaning": "Snake smiles and makes children laugh.",
+          "visual_event": "",
+          "characters": [
+            "snake"
+          ],
+          "characters_detailed": [],
+          "dramatic_purpose": "",
+          "location": "flower_bushes",
+          "time_of_day": "",
+          "action": "smiling and making children laugh",
+          "emotion": "joyful",
+          "expression": "big smile with big eyes",
+          "body_language": "smiling and making children laugh",
+          "camera": {
+            "shot_type": "Medium Shot",
+            "angle": "Eye Level",
+            "movement": "Static"
+          },
+          "lighting": "soft sunlight filtering through leaves",
+          "environment": "colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms.",
+          "continuity_from_previous_scene": "",
+          "transition_to_next_scene": "",
+          "dialogue": [],
+          "image_prompt": "Green Snake with a slim and supple body, large black eyes, smooth skin with a hint of mischief, wearing a shimmering green jacket and floral patterned skirt. Colorful flower bushes with various blooms in shades of pink, purple, and yellow. The leaves are fresh and green. Butterflies and bees flit among the blossoms. The sun shines brightly, casting dappled light on the petals. Birds chirp in the background. Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering. Ultra-detailed 8k uhd, highly clear, sharp focus, no distortion, no deformed faces, no extra/missing limbs, no blurry, no low quality, no watermark",
+          "video_prompt": "Snake smiling and making children laugh with a big smile and joyful expression. Highly clear 8k uhd quality with smooth natural motion, no distortion, no morphing, no flicker.",
+          "duration_seconds": 2.4,
+          "start_time": 1.6,
+          "end_time": 4,
+          "lyric_line_id": null,
+          "parent_line_id": null,
+          "lyric_text": "",
+          "song_start_time": null,
+          "song_end_time": null,
+          "continuity_required": false,
+          "reference_source": "NONE",
+          "continuity_refs": []
+        }
+      ]
+    }
+  ],
+  "sceneCount": 60,
+  "styleLock": "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "scenarioName": null,
+  "error": "Partial batch: kept 1 of 10 scenes (the AI output was cut off) — press Continue to plan the rest.",
+  "createdAt": "2026-10-16T07:10:23.149Z",
+  "updatedAt": "2026-10-16T07:19:24.973Z",
+  "warn": null,
+  "planBatchHint": null
+}

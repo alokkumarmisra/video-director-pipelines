@@ -42,14 +42,14 @@ export default function CreateProjectDialog({
     }
   }, [open ]);
 
+  // The dialog closes only via its Cancel / close buttons — no
+  // backdrop-click or Escape dismiss, so stray clicks can't lose input.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   if (!open) return null;
 
@@ -112,7 +112,7 @@ export default function CreateProjectDialog({
   };
 
   return (
-    <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="overlay">
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="create-title">
         <div className="dialog-head">
           <h2 id="create-title">Create New Project</h2>

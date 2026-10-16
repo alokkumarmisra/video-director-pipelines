@@ -132,7 +132,6 @@ export default function GenerateReference({
       {showPreview && (
         <div
           className="dlg-overlay"
-          onClick={() => setShowPreview(false)}
           role="presentation"
         >
           <div

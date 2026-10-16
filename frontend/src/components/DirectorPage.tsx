@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
-  alertServiceError, directorAddEntry, directorAnalyze, directorApprove, directorBoard, directorBoards, directorDeleteBoard,
-  directorDuplicateBoard, directorLive, directorPromptPreview, directorRegenEntry, directorRegenScene, directorScenes, directorSongUrl, directorUpdateBoard, directorUploadSong, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
-  type DirectorBoard, type DirectorBoardMeta, type DirectorEntryKind, type DirectorInput, type DirectorLive, type DirectorPromptPreview, type DirectorScene, type DirectorShot, type DirectorSong, type ImageMode,
+  alertServiceError, directorAddEntry, directorAnalyze, directorApprove, directorApproveStage, directorAssets, directorBoard, directorBoards, directorCinematography, directorCoverage, directorDeleteBoard,
+  directorDuplicateBoard, directorLive, directorMotionAudio, directorPlan, directorPromptPreview, directorRegenEntry, directorRegenScene, directorRepair, directorScenes, directorShotPrompts, directorSongUrl, directorUpdateBoard, directorUploadSong, directorValidate, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
+  type DirectorAssetMap, type DirectorBoard, type DirectorBoardMeta, type DirectorCinematography, type DirectorCoverage, type DirectorEntryKind, type DirectorInput, type DirectorLive, type DirectorMotionAudio, type DirectorPlan, type DirectorPromptPreview, type DirectorScene, type DirectorShotPrompts, type DirectorShot, type DirectorSong, type DirectorValidation, type ImageMode,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconFolder, IconPanel, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
@@ -313,6 +313,28 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     return () => window.clearTimeout(t);
   }, [typingScenes, board]);
   const [stoppedNote, setStoppedNote] = useState<string | null>(null);
+  // Intelligent Director panels (spec §13): lyric coverage map + 0–100
+  // quality-control validation for the open board. Fetched on demand (no LLM,
+  // no board mutation); cleared whenever another board opens.
+  const [coverage, setCoverage] = useState<DirectorCoverage | null>(null);
+  const [validation, setValidation] = useState<DirectorValidation | null>(null);
+  const [intelBusy, setIntelBusy] = useState<"check" | "repair" | null>(null);
+  const [intelOpen, setIntelOpen] = useState<{ coverage: boolean; quality: boolean }>({ coverage: true, quality: true });
+  // Chief Director Story Plan + stage pipeline: the authoritative narrative
+  // source with per-stage status and explicit approval checkpoints.
+  // Read-only fetch (no LLM); approvals persist via the board PUT route.
+  const [plan, setPlan] = useState<DirectorPlan | null>(null);
+  const [planBusy, setPlanBusy] = useState<"load" | string | null>(null);
+  const [planOpen, setPlanOpen] = useState(true);
+  // Production dashboard (Phase 6): asset/cine/motion/prompt read-only plans
+  // for the open board. Loaded on demand alongside plan/coverage/validate;
+  // cleared whenever another board opens.
+  const [assetMap, setAssetMap] = useState<DirectorAssetMap | null>(null);
+  const [cine, setCine] = useState<DirectorCinematography | null>(null);
+  const [motion, setMotion] = useState<DirectorMotionAudio | null>(null);
+  const [shotPrompts, setShotPrompts] = useState<DirectorShotPrompts | null>(null);
+  const [prodBusy, setProdBusy] = useState(false);
+  const [prodOpen, setProdOpen] = useState(true);
   const cancelRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   // Planning progress for the menu's Progress Status (total + per-scene Time
@@ -541,6 +563,10 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const openBoard = async (id: string) => {
     setError("");
     setStoppedNote(null);
+    setCoverage(null);
+    setValidation(null);
+    setPlan(null);
+    setAssetMap(null); setCine(null); setMotion(null); setShotPrompts(null);
     try {
       const b = await directorBoard(id);
       setBoard(b);
@@ -551,6 +577,109 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       setSceneModal(null);
     }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+
+  // Intelligent Director check (spec §12/§13): lyric coverage map + 0–100
+  // validation in one pass. Read-only — no LLM call, no board mutation.
+  const doIntelCheck = async () => {
+    if (!board || intelBusy) return;
+    setIntelBusy("check");
+    setError("");
+    try {
+      const [cov, val] = await Promise.all([directorCoverage(board.id), directorValidate(board.id)]);
+      setCoverage(cov);
+      setValidation(val);
+    }
+    catch (e) { reportError(e); }
+    finally { setIntelBusy(null); }
+  };
+
+  // Intelligent Director staged repair (spec §15.9): re-plans ONLY the
+  // flagged scenes via the reasoning engine; approved neighbours are kept.
+  const doIntelRepair = async () => {
+    if (!board || intelBusy) return;
+    setIntelBusy("repair");
+    setError("");
+    try {
+      const r = await directorRepair(board.id);
+      setBoard(r.board);
+      await refreshBoards();
+      const [cov, val, pl] = await Promise.all([directorCoverage(board.id), directorValidate(board.id), plan ? directorPlan(board.id) : Promise.resolve(null)]);
+      setCoverage(cov);
+      setValidation(val);
+      if (pl) setPlan(pl);
+    }
+    catch (e) { reportError(e); }
+    finally { setIntelBusy(null); }
+  };
+
+  // Chief Director Story Plan: load the authoritative plan + stage pipeline
+  // (read-only, no LLM). Falls back to the bible-derived plan for old boards.
+  const doPlanLoad = async () => {
+    if (!board || planBusy) return;
+    setPlanBusy("load");
+    setError("");
+    try {
+      setPlan(await directorPlan(board.id));
+    }
+    catch (e) { reportError(e); }
+    finally { setPlanBusy(null); }
+  };
+
+  // Chief Director approval checkpoint: sign off one pipeline stage via the
+  // dependency-checked endpoint (blocked stages 400 unless forced). Revision
+  // bumps on the Story Plan; the board list refreshes to reflect status.
+  const doApproveStage = async (stage: string, force = false) => {
+    if (!board || planBusy) return;
+    setPlanBusy(stage);
+    setError("");
+    try {
+      const p = await directorApproveStage(board.id, stage, force);
+      setPlan(p);
+      const b = await directorBoard(board.id);
+      setBoard(b);
+      await refreshBoards();
+    }
+    catch (e) { reportError(e); }
+    finally { setPlanBusy(null); }
+  };
+
+  // Production dashboard (Phase 6): one pass loads every read-only plan for
+  // the open board (story plan + coverage + quality + assets + cinematography
+  // + motion/audio + prompt preview). No LLM, no mutation; selective
+  // regeneration stays on the existing Repair / regen-scene buttons.
+  const doProdLoad = async () => {
+    if (!board || prodBusy) return;
+    setProdBusy(true);
+    setError("");
+    try {
+      const [pl, cov, val, am, ci, mo, sp] = await Promise.all([
+        directorPlan(board.id),
+        board.scenes.length ? directorCoverage(board.id) : Promise.resolve(null),
+        board.scenes.length ? directorValidate(board.id) : Promise.resolve(null),
+        directorAssets(board.id),
+        directorCinematography(board.id),
+        directorMotionAudio(board.id),
+        directorShotPrompts(board.id),
+      ]);
+      setPlan(pl); setCoverage(cov); setValidation(val);
+      setAssetMap(am); setCine(ci); setMotion(mo); setShotPrompts(sp);
+    }
+    catch (e) { reportError(e); }
+    finally { setProdBusy(false); }
+  };
+
+  // Jump from a coverage phrase to its shot (lyric -> shot navigation).
+  const jumpToShot = (sceneNumber: number | string, shotId: string | null) => {
+    if (!board) return;
+    const si = board.scenes.findIndex((s) => s.scene_number === Number(sceneNumber));
+    if (si < 0) return;
+    if (shotId) {
+      const shots = sceneShots(board.scenes[si]);
+      const ki = shots.findIndex((sh) => String(sh.shot_id) === String(shotId));
+      if (ki >= 0) { openShotDetails(si, ki); return; }
+    }
+    openSceneDetails(si);
   };
 
   const doAnalyze = async () => {
@@ -936,47 +1065,27 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       setSavingChar(false);
     }
   };
-  // Lock background scroll + Esc to close while the popup is open.
+  // Lock background scroll while the popup is open. Popups close only
+  // via their Cancel / close buttons — no backdrop-click or Escape dismiss.
   useEffect(() => {
     if (editingChar == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setEditingChar(null);
-    };
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [editingChar]);
   // Same lock for the scene Details/Edit popup.
   useEffect(() => {
     if (sceneModal == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeSceneModal();
-    };
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [sceneModal]);
   // Same lock for the directing-inputs popup.
   useEffect(() => {
     if (inputBoard == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeInputs();
-    };
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [inputBoard]);
 
   const doRenameBoard = async () => {
@@ -1148,8 +1257,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     const beats = boardBeats(board.scenes);
     const total = boardBeatsTotal(board.scenes, board.sceneCount);
     const shotNote = ` Multi-shot scenes flatten to ${beats} timed clips (one image + video per shot) — shots generate as scenes.`
+    const qcWarn = validation
+      ? (validation.score < 60 || validation.issues.length > 0
+        ? ` WARNING: quality ${validation.score}/100 with ${validation.issues.length} open issue${validation.issues.length === 1 ? "" : "s"}${coverage ? ` (coverage ${coverage.summary.coveredPhrases}/${coverage.summary.totalPhrases})` : ""} — Run "Check coverage & quality" and Repair flagged shots first, or approve anyway to shoot with gaps.`
+        : "")
+      : " (Tip: run Check coverage & quality before rolling — no LLM call, nothing is changed.)";
     const ok = await dialog.confirm(
-      `Creates project "${board.input.title}" with ${board.scenes.length} scenes (${beats}/${total} shots), then opens it in the workspace for generation (images → videos → final cut).${shotNote}${songNote}${dlgNote}${chainNote}`,
+      `Creates project "${board.input.title}" with ${board.scenes.length} scenes (${beats}/${total} shots), then opens it in the workspace for generation (images → videos → final cut).${shotNote}${songNote}${dlgNote}${chainNote}${qcWarn}`,
       { title: `Approve storyboard for "${board.input.title}"?`, tone: "info", okText: "Approve", cancelText: "Keep editing" }
     );
     if (!ok) return;
@@ -1382,25 +1496,39 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   // and the shot-focused popup). Includes Details/Edit jump buttons unless
   // already inside that shot's own popup (hideSelf).
   const renderShotDetails = (d: DirectorScene, i: number, k: number, sh: DirectorShot, hideSelf = false) => (
-    <div key={str(sh.shot_id) || k} style={{ borderLeft: "2px solid var(--line-2)", paddingLeft: 8, marginBottom: 8 }}>
-      <p style={{ margin: "2px 0" }}>
+    <div key={str(sh.shot_id) || k} className="shot-detail-card" style={{ borderLeft: "2px solid var(--line-2)", paddingLeft: 8, marginBottom: 8 }}>
+      <p className="shot-detail-title" style={{ margin: "2px 0" }}>
         <b>{d.scene_number}.{k + 1}{sh.shot_id ? ` (${sh.shot_id})` : ""}</b>
         {` · ${fmtRange(sh.start_time, sh.end_time)} · ${fmtT(sh.duration_seconds)}`}
         {sh.camera?.shot_type ? ` · ${sh.camera.shot_type}` : ""}
+        {sh.camera?.movement ? ` · ${sh.camera.movement}` : ""}
+        {(sh as DirectorShot & { lighting?: string }).lighting ? ` · 💡 ${str((sh as DirectorShot & { lighting?: string }).lighting).slice(0, 40)}` : ""}
       </p>
-      <p style={{ margin: "2px 0" }}>
+      <p className="shot-detail-seg" style={{ margin: "2px 0" }}>
         {(str(sh.lyric_segment) || str(sh.action) || "—")}
         {sh.semantic_meaning ? ` → ${sh.semantic_meaning}` : ""}
       </p>
-      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }}>
+      {str((sh as DirectorShot & { dramatic_purpose?: string }).dramatic_purpose) && (
+        <p className="muted shot-detail-line" style={{ margin: "2px 0", fontSize: 12 }} title="Why this shot exists">
+          🎯 {str((sh as DirectorShot & { dramatic_purpose?: string }).dramatic_purpose)}
+        </p>
+      )}
+      {((sh as DirectorShot & { characters_detailed?: { character_id: string; role?: string; emotion?: string; gaze_target?: string; action?: string }[] }).characters_detailed ?? []).length > 0 && (
+        <p className="muted shot-detail-line" style={{ margin: "2px 0", fontSize: 12 }} title="Per-character action, gaze and role (Notice → Orient → Approach → Act → React → Resolve)">
+          {(sh as DirectorShot & { characters_detailed?: { character_id: string; role?: string; emotion?: string; gaze_target?: string; action?: string }[] }).characters_detailed!.map((c) =>
+            `🧍 ${c.character_id}${c.role ? ` (${c.role})` : ""}${c.action ? `: ${c.action}` : ""}${c.gaze_target ? ` 👀 ${c.gaze_target}` : ""}${c.emotion ? ` · ${c.emotion}` : ""}`,
+          ).join("  |  ")}
+        </p>
+      )}
+      <p className="muted shot-detail-line" style={{ margin: "2px 0", fontSize: 12 }}>
         {[(sh.characters ?? []).join(", ") || null, sh.location || null].filter(Boolean).join(" · ") || "—"}
         {(sh.dialogue ?? []).length ? ` · 🎙 ${(sh.dialogue ?? []).map((x) => `${x.speaker || "voice"}: ${x.line}`).join(" / ")}` : ""}
       </p>
-      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }} title={sh.image_prompt || ""}>
-        🖼 {str(sh.image_prompt).slice(0, 160) || "—"}{str(sh.image_prompt).length > 160 ? "…" : ""}
+      <p className="muted shot-detail-line shot-detail-prompt" style={{ margin: "2px 0", fontSize: 12 }} title={sh.image_prompt || ""}>
+        🖼 {str(sh.image_prompt).slice(0, 2000) || "—"}{str(sh.image_prompt).length > 2000 ? "…" : ""}
       </p>
-      <p className="muted" style={{ margin: "2px 0", fontSize: 11 }} title={sh.video_prompt || ""}>
-        🎬 {str(sh.video_prompt).slice(0, 160) || "—"}{str(sh.video_prompt).length > 160 ? "…" : ""}
+      <p className="muted shot-detail-line shot-detail-prompt" style={{ margin: "2px 0", fontSize: 12 }} title={sh.video_prompt || ""}>
+        🎬 {str(sh.video_prompt).slice(0, 2000) || "—"}{str(sh.video_prompt).length > 2000 ? "…" : ""}
       </p>
       {!hideSelf && (
         <div className="row" style={{ marginTop: 4, gap: 4 }}>
@@ -2184,6 +2312,338 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               </div>
             )}
 
+            {/* Chief Director Story Plan: the authoritative narrative source
+                every downstream stage traces to — outline, roster, stage
+                pipeline with approval checkpoints, uncertainties. Read-only
+                until a stage is approved; approvals persist as plan revisions. */}
+            {board.blueprint && (
+              <div className="beat-meta-box" style={{ marginBottom: 12 }}>
+                <div className="row" style={{ alignItems: "center" }}>
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => setPlanOpen((o) => !o)}
+                    aria-expanded={planOpen}
+                    title="Story Plan: narrative outline, roster, stage pipeline, uncertainties"
+                  >
+                    {planOpen ? "▾" : "▸"} 📋 Story Plan
+                  </button>
+                  <span className="spacer" />
+                  {plan != null && plan.stages.map((s) => (
+                    <span
+                      key={s.stage}
+                      className="pill"
+                      title={`${s.stage}: ${s.status}${s.approvedAt ? ` (approved ${s.approvedAt})` : ""}${s.detail ? ` — ${s.detail}` : ""}`}
+                    >
+                      {s.status === "approved" ? "✅" : s.status === "done" ? "🟢" : s.status === "ready" ? "🟡" : "⚪"} {s.stage}
+                    </span>
+                  ))}
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doPlanLoad()}
+                    disabled={planBusy != null || busy != null}
+                    title="Load the Story Plan + stage pipeline (no LLM call, nothing is changed)"
+                  >
+                    {planBusy === "load" ? <Spinner size={11} /> : <span aria-hidden="true">📋</span>}
+                    {planBusy === "load" ? "Loading…" : plan ? "Refresh plan" : "Show story plan"}
+                  </button>
+                </div>
+                {planOpen && plan != null && (
+                  <div style={{ marginTop: 8 }}>
+                    {(plan.storyPlan.logline || plan.storyPlan.theme) && (
+                      <p className="hint" style={{ margin: "4px 0 0" }}>
+                        {plan.storyPlan.logline}{plan.storyPlan.theme ? ` — ${plan.storyPlan.theme}` : ""}
+                      </p>
+                    )}
+                    <div className="row" style={{ flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                      {(["beginning", "development", "climax", "resolution"] as const).map((k) => (
+                        plan.storyPlan.structure[k] ? (
+                          <span key={k} className="pill" title={`${k}: ${plan.storyPlan.structure[k]}`}>
+                            {k}: {plan.storyPlan.structure[k].slice(0, 60)}{plan.storyPlan.structure[k].length > 60 ? "…" : ""}
+                          </span>
+                        ) : null
+                      ))}
+                    </div>
+                    {plan.storyPlan.characterRoster.length > 0 && (
+                      <div style={{ marginTop: 6 }}>
+                        <div className="shotlist-detail-label">Roster · {plan.storyPlan.characterRoster.length}</div>
+                        <div className="row" style={{ flexWrap: "wrap", gap: 4, marginTop: 2 }}>
+                          {plan.storyPlan.characterRoster.map((r) => (
+                            <span key={r.character_id} className="pill" title={r.motivation ? `${r.name} — ${r.role}: ${r.motivation}` : `${r.name}${r.role ? ` — ${r.role}` : ""}`}>
+                              🎭 {r.name}{r.role ? ` · ${r.role}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {plan.storyPlan.uncertainties.length > 0 && (
+                      <div style={{ marginTop: 6 }}>
+                        <div className="shotlist-detail-label">Open questions · {plan.storyPlan.uncertainties.length}</div>
+                        {plan.storyPlan.uncertainties.map((u, i) => (
+                          <p key={i} className="hint warn-text" style={{ margin: "2px 0 0" }}>❓ {u}</p>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 6 }}>
+                      <div className="shotlist-detail-label">Pipeline · rev {plan.storyPlan.revisions}</div>
+                      {plan.stages.map((s) => (
+                        <div key={s.stage} className="row" style={{ alignItems: "center", gap: 6, marginTop: 2 }}>
+                          <span className="pill" title={s.detail || s.stage}>
+                            {s.status === "approved" ? "✅" : s.status === "done" ? "🟢" : s.status === "ready" ? "🟡" : "⚪"} {s.stage}
+                          </span>
+                          <span className="hint" style={{ margin: 0, flex: 1, minWidth: 0 }}>
+                            {s.status === "approved" ? `approved ${s.approvedAt}` : s.status === "done" ? (s.detail || "artefact ready") : s.status === "ready" ? "ready to work" : "waiting on the previous stage"}
+                          </span>
+                          {(s.status === "ready" || s.status === "done") && (
+                            <button
+                              className="ghost shotlist-btn"
+                              onClick={() => void doApproveStage(s.stage)}
+                              disabled={planBusy != null || busy != null}
+                              title={`Chief Director sign-off for ${s.stage} (recorded on the Story Plan)`}
+                            >
+                              {planBusy === s.stage ? <Spinner size={11} /> : <span aria-hidden="true">✓</span>}
+                              {planBusy === s.stage ? "Approving…" : "Approve"}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Intelligent Director (spec §13): story understanding, lyric
+                coverage view, validation panel, staged repair. Read-only
+                until Repair — approved scenes are never touched otherwise. */}
+            {board.blueprint && (
+              <div className="beat-meta-box" style={{ marginBottom: 12 }}>
+                <div className="row" style={{ alignItems: "center" }}>
+                  <div className="section-label" style={{ margin: 0 }}>🎬 Intelligent Director</div>
+                  <span className="spacer" />
+                  {validation != null && (
+                    <span
+                      className="pill"
+                      title={`Quality score: ${Object.entries(validation.breakdown).map(([k, v]) => `${k} ${v}`).join(" · ")}`}
+                    >
+                      {validation.score >= 80 ? "🟢" : validation.score >= 60 ? "🟡" : "🔴"} Quality {validation.score}/100
+                    </span>
+                  )}
+                  {coverage != null && (
+                    <span className="pill" title="Meaningful lyric phrases with a visible shot">
+                      📖 Coverage {coverage.summary.coveredPhrases}/{coverage.summary.totalPhrases} ({coverage.summary.pct}%)
+                    </span>
+                  )}
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doIntelCheck()}
+                    disabled={intelBusy != null || busy != null || !board.scenes.length}
+                    title="Lyric coverage map + 0–100 quality check (no LLM call, nothing is changed)"
+                  >
+                    {intelBusy === "check" ? <Spinner size={11} /> : <span aria-hidden="true">✓</span>}
+                    {intelBusy === "check" ? "Checking…" : "Check coverage & quality"}
+                  </button>
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doIntelRepair()}
+                    disabled={intelBusy != null || busy != null || validation == null || !validation.issues.length}
+                    title="Re-plan ONLY the flagged scenes with the AI — approved neighbours are kept"
+                  >
+                    {intelBusy === "repair" ? <Spinner size={11} /> : <span aria-hidden="true">🛠</span>}
+                    {intelBusy === "repair" ? "Repairing…" : "Repair flagged shots"}
+                  </button>
+                </div>
+                {validation != null && (
+                  <p className="hint" style={{ margin: "6px 0 0" }} title="Genre directing register">
+                    🎭 {validation.genreNote}
+                  </p>
+                )}
+                {board.blueprint.logline && (
+                  <p className="hint" style={{ margin: "6px 0 0" }} title="Story understanding — the single source of truth for all downstream shots">
+                    📜 {board.blueprint.logline}
+                  </p>
+                )}
+                {validation != null && (
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      className="ghost shotlist-btn"
+                      onClick={() => setIntelOpen((o) => ({ ...o, quality: !o.quality }))}
+                      aria-expanded={intelOpen.quality}
+                    >
+                      {intelOpen.quality ? "▾" : "▸"} Validation {validation.issues.length ? `· ${validation.issues.length} issue${validation.issues.length === 1 ? "" : "s"}` : "· clean"}
+                      {validation.errors.length ? ` · ⛔ ${validation.errors.length} blocking` : ""}
+                    </button>
+                    {intelOpen.quality && (
+                      <div style={{ marginTop: 6 }}>
+                        <div className="row" style={{ flexWrap: "wrap", gap: 4 }}>
+                          {Object.entries(validation.breakdown).map(([k, v]) => (
+                            <span key={k} className="pill" title={`${k}: ${v}/100`}>
+                              {k.replace(/([A-Z])/g, " $1").trim()} {v}
+                            </span>
+                          ))}
+                        </div>
+                        {validation.errors.length > 0 && (
+                          <div style={{ marginTop: 6 }}>
+                            <div className="shotlist-detail-label">Blocking (approve gate)</div>
+                            {validation.errors.slice(0, 8).map((m, i) => (
+                              <p key={i} className="hint warn-text" style={{ margin: "2px 0 0" }}>⛔ {m}</p>
+                            ))}
+                          </div>
+                        )}
+                        {validation.issues.length > 0 ? (
+                          <div style={{ marginTop: 6 }}>
+                            <div className="shotlist-detail-label">Actionable issues</div>
+                            {validation.issues.slice(0, 12).map((m, i) => (
+                              <p key={i} className="hint" style={{ margin: "2px 0 0" }}>• {m}</p>
+                            ))}
+                            {validation.issues.length > 12 && (
+                              <p className="hint" style={{ margin: "2px 0 0" }}>…and {validation.issues.length - 12} more.</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="hint" style={{ margin: "6px 0 0" }}>✅ No issues — every check passes.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {coverage != null && coverage.lines.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      className="ghost shotlist-btn"
+                      onClick={() => setIntelOpen((o) => ({ ...o, coverage: !o.coverage }))}
+                      aria-expanded={intelOpen.coverage}
+                    >
+                      {intelOpen.coverage ? "▾" : "▸"} Lyric coverage · {coverage.lines.length} lines
+                    </button>
+                    {intelOpen.coverage && (
+                      <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                        {coverage.lines.map((l) => (
+                          <div key={l.lyric_line_id}>
+                            <div className="row" style={{ alignItems: "baseline", gap: 6 }}>
+                              <span className="pill" title="Lyric line id">L{l.lyric_line_id}</span>
+                              <span style={{ flex: 1, minWidth: 0 }}>“{l.lyric_text}”</span>
+                              <span
+                                className="pill"
+                                title={l.status === "covered" ? "Every meaningful phrase has a visible shot" : l.status === "partial" ? "Some phrases still need a shot" : "No shot covers this line yet"}
+                              >
+                                {l.status === "covered" ? "🟢 covered" : l.status === "partial" ? "🟡 partial" : l.status === "empty" ? "⚪ empty" : "🔴 uncovered"}
+                              </span>
+                            </div>
+                            <div className="row" style={{ flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                              {l.phrases.map((p, pi) => (
+                                <button
+                                  key={pi}
+                                  className="ghost shotlist-btn"
+                                  disabled={!p.shotIds.length && !p.sceneIds.length}
+                                  onClick={() => p.sceneIds.length && jumpToShot(p.sceneIds[0], p.shotIds[0] ?? null)}
+                                  title={p.coveredByShot
+                                    ? `“${p.text}” → ${(p.shotIds.length ? p.shotIds : p.sceneIds.map((s) => `scene ${s}`)).join(", ")} (click to open the shot)`
+                                    : `“${p.text}” has no visible shot yet`}
+                                >
+                                  {p.coveredByShot ? "🎬" : "⚪"} {p.text.slice(0, 42)}{p.text.length > 42 ? "…" : ""}
+                                  {p.shotIds.length ? ` → ${p.shotIds[0]}` : p.sceneIds.length ? ` → scene ${p.sceneIds[0]}` : ""}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Production Dashboard (Phase 6): stages + approvals, asset refs,
+                cinematography / motion / prompt summaries. All read-only
+                except Approve (dependency-checked) and the existing
+                Repair / regen-scene selective regeneration. */}
+            {board.blueprint && (
+              <div className="beat-meta-box" style={{ marginBottom: 12 }}>
+                <div className="row" style={{ alignItems: "center" }}>
+                  <div className="section-label" style={{ margin: 0 }}>🏭 Production Dashboard</div>
+                  <span className="spacer" />
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doProdLoad()}
+                    disabled={prodBusy || busy != null}
+                    title="Load every production plan at once (story plan, coverage, quality, assets, camera, motion, prompts)"
+                  >
+                    {prodBusy ? <Spinner size={11} /> : <span aria-hidden="true">📊</span>}
+                    {prodBusy ? "Loading…" : "Load dashboard"}
+                  </button>
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => setProdOpen((o) => !o)}
+                    aria-expanded={prodOpen}
+                  >
+                    {prodOpen ? "▾" : "▸"} Details
+                  </button>
+                </div>
+                {prodOpen && plan && (
+                  <div style={{ marginTop: 8 }}>
+                    <div className="shotlist-detail-label">Stages & approvals (rev {plan.storyPlan.revisions})</div>
+                    <div className="row" style={{ flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      {plan.stages.map((s) => (
+                        <span key={s.stage} className="pill" title={s.detail || s.stage}>
+                          {s.status === "approved" ? "✅" : s.status === "done" ? "🟢" : s.status === "ready" ? "🟡" : "⛔"} {s.stage}
+                          {s.approvedAt ? ` ${s.approvedAt.slice(0, 10)}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="row" style={{ flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                      {plan.stages.filter((s) => s.status === "ready" || s.status === "done").slice(0, 3).map((s) => (
+                        <button
+                          key={s.stage}
+                          className="ghost shotlist-btn"
+                          onClick={() => void doApproveStage(s.stage)}
+                          disabled={planBusy != null}
+                          title={`Chief Director sign-off for ${s.stage} (blocked stages reject without force)`}
+                        >
+                          Approve {s.stage}
+                        </button>
+                      ))}
+                    </div>
+                    {plan.storyPlan.productionTasks.length > 0 && (
+                      <p className="hint" style={{ margin: "6px 0 0" }}>
+                        🗂 {plan.storyPlan.productionTasks.filter((t) => t.status !== "pending").length}/{plan.storyPlan.productionTasks.length} tasks active
+                        {plan.storyPlan.uncertainties.length ? ` · ❓ ${plan.storyPlan.uncertainties.length} open questions` : " · ✅ no open questions"}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {prodOpen && (assetMap || cine || motion || shotPrompts) && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                    {assetMap && (
+                      <p className="hint" style={{ margin: 0 }}>
+                        🧍 {assetMap.map.characters.length} cast · 📍 {assetMap.map.locations.length} locations · 🧺 {assetMap.map.props.length} props
+                        {assetMap.duplicates.length ? ` · ⚠️ ${assetMap.duplicates.length} duplicates to merge` : ""}
+                        {assetMap.issues.length ? ` · 🟡 ${assetMap.issues.length} asset issues` : " · ✅ assets clean"}
+                      </p>
+                    )}
+                    {cine && (
+                      <p className="hint" style={{ margin: 0 }}>
+                        🎥 {cine.shots.length} shots
+                        {cine.issues.length ? ` · 🟡 ${cine.issues.length} cinematography notes` : " · ✅ coverage varied"}
+                      </p>
+                    )}
+                    {motion && (
+                      <p className="hint" style={{ margin: 0 }}>
+                        🎙 {motion.lipsync.length} voice lines · ⏱ {motion.audioTiming.filter((a) => a.timing_confidence === "measured").length}/{motion.audioTiming.length} measured timing
+                        {motion.issues.length ? ` · 🟡 ${motion.issues.length} motion notes` : ""}
+                      </p>
+                    )}
+                    {shotPrompts && (
+                      <p className="hint" style={{ margin: 0 }}>
+                        🖼 {shotPrompts.shots.length} prompt pairs ·{" "}
+                        {shotPrompts.shots.filter((s) => !s.image_issues.length && !s.video_issues.length).length} clean
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {board.blueprint && (
               <>
                 <div className="row" style={{ alignItems: "center", marginTop: 4 }}>
@@ -2245,7 +2705,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   ))}
                 </div>
                 {editingChar != null && chars[editingChar] && (
-                  <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Character consistency" onClick={() => setEditingChar(null)}>
+                  <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Character consistency">
                     <div className="dlg-box char-popup" onClick={(e) => e.stopPropagation()}>
                       <h3 className="dlg-title">
                         🔒 {str(chars[editingChar].name) || `Character ${editingChar + 1}`} — Character Consistency
@@ -2726,13 +3186,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   // Shot-focused bodies (single shot + shot navigation).
                   if (focusShot != null && fShot) {
                     return (
-                      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={`${isEdit ? "Edit" : "Details of"} Shot ${d.scene_number}.${focusShot + 1}`} onClick={() => closeSceneModal()}>
-                        <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()}>
-                          <div className="row" style={{ alignItems: "center", marginBottom: 8 }}>
+                      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={`${isEdit ? "Edit" : "Details of"} Shot ${d.scene_number}.${focusShot + 1}`}>
+                        <div className="dlg-box scene-popup shot-popup" onClick={(e) => e.stopPropagation()}>
+                          <div className="row shot-popup-head" data-drag-handle style={{ alignItems: "center", marginBottom: 8 }}>
                             <h3 className="dlg-title" style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
                               {headTitle} — {isEdit ? str(sceneDraft.title ?? d.title) || d.title : d.title}
                             </h3>
-                            <button className="icon-btn" onClick={() => closeSceneModal()} title="Close popup (Esc)" aria-label="Close popup">
+                            <button className="icon-btn" onClick={() => closeSceneModal()} title="Close popup" aria-label="Close popup">
                               ✕
                             </button>
                           </div>
@@ -2781,7 +3241,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                                 >
                                   Edit shot
                                 </button>
-                                <button className="primary" onClick={() => closeSceneModal()} title="Close popup (Esc)">
+                                <button className="primary" onClick={() => closeSceneModal()} title="Close popup">
                                   Close
                                 </button>
                               </div>
@@ -2792,13 +3252,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                     );
                   }
                   return (
-                    <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? `Edit Scene ${d.scene_number}` : `Scene ${d.scene_number} details`} onClick={() => closeSceneModal()}>
+                    <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? `Edit Scene ${d.scene_number}` : `Scene ${d.scene_number} details`}>
                       <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()}>
                         <div className="row" style={{ alignItems: "center", marginBottom: 8 }}>
                           <h3 className="dlg-title" style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
                             {isEdit ? `✏️ Edit Scene ${d.scene_number}/${board.sceneCount}` : `🎬 Scene ${d.scene_number}/${board.sceneCount}`} — {isEdit ? str(sceneDraft.title ?? d.title) || d.title : d.title}
                           </h3>
-                          <button className="icon-btn" onClick={() => closeSceneModal()} title="Close popup (Esc)" aria-label="Close popup">
+                          <button className="icon-btn" onClick={() => closeSceneModal()} title="Close popup" aria-label="Close popup">
                             ✕
                           </button>
                         </div>
@@ -2908,6 +3368,20 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                             </div>
                             <div className="shotlist-detail-label">Action</div>
                             <p>{d.action || "—"}</p>
+                            {(d as DirectorScene & { dramatic_purpose?: string }).dramatic_purpose && (
+                              <>
+                                <div className="shotlist-detail-label">Dramatic purpose</div>
+                                <p>🎯 {(d as DirectorScene & { dramatic_purpose?: string }).dramatic_purpose}</p>
+                              </>
+                            )}
+                            {Array.isArray((d as DirectorScene & { characters_detailed?: { character_id: string; role?: string; emotion?: string; gaze_target?: string; action?: string }[] }).characters_detailed) && (d as DirectorScene & { characters_detailed?: { character_id: string; role?: string; emotion?: string; gaze_target?: string; action?: string }[] }).characters_detailed!.length > 0 && (
+                              <>
+                                <div className="shotlist-detail-label">Per-character direction</div>
+                                <p>{(d as DirectorScene & { characters_detailed?: { character_id: string; role?: string; emotion?: string; gaze_target?: string; action?: string }[] }).characters_detailed!.map((c) =>
+                                  `🧍 ${c.character_id}${c.role ? ` (${c.role})` : ""}${c.action ? `: ${c.action}` : ""}${c.gaze_target ? ` 👀 ${c.gaze_target}` : ""}${c.emotion ? ` · ${c.emotion}` : ""}`,
+                                ).join("  |  ")}</p>
+                              </>
+                            )}
                             <div className="shotlist-detail-label">Expression / body language</div>
                             <p>{[d.expression, d.body_language].filter(Boolean).join(" · ") || "—"}</p>
                             <div className="shotlist-detail-label">Camera</div>
@@ -2965,7 +3439,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                               >
                                 Edit scene
                               </button>
-                              <button className="primary" onClick={() => closeSceneModal()} title="Close popup (Esc)">
+                              <button className="primary" onClick={() => closeSceneModal()} title="Close popup">
                                 Close
                               </button>
                             </div>
@@ -3051,7 +3525,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         Continue would send to the LLM (dry run — no model call, nothing
         saved). Built server-side by the same batch planner as the real call. */}
     {promptPreview && (
-      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Next LLM prompt preview" onClick={() => setPromptPreview(null)}>
+      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Next LLM prompt preview">
         <div className="dlg-box scene-popup" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 860 }}>
           <h3 className="dlg-title">
             🔍 Next prompt —{" "}
@@ -3097,7 +3571,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         scene batches only — planned characters/scenes stay until regenerated;
         song boards lock the target to the song length. */}
     {inputBoard && (
-      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Directing inputs" onClick={() => closeInputs()}>
+      <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Directing inputs">
         <div className="dlg-box char-popup" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
           <h3 className="dlg-title">
             📝 Directing inputs — {str(inputBoard.input.title) || inputBoard.id}
@@ -3137,7 +3611,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               <div className="shotlist-detail-label" style={{ marginTop: 8 }}>Additional director instructions</div>
               <p style={{ whiteSpace: "pre-wrap" }}>{str(inputBoard.input.instructions) || "—"}</p>
               <div className="dlg-actions">
-                <button className="ghost" onClick={() => closeInputs()} title="Close (Esc)">
+                <button className="ghost" onClick={() => closeInputs()} title="Close">
                   Close
                 </button>
                 <button className="primary" onClick={() => setInputEditing(true)} disabled={busy != null} title="Edit these directing inputs">

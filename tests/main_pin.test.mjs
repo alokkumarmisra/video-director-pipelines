@@ -163,12 +163,16 @@ describe("main pins", () => {
 
   it("resolveRefForRun skips sibling fallbacks when ref is off", async () => {
     const { resolveRefForRun } = await import("../lib/sequence.mjs");
+    const { setMain } = await import("../lib/sequence_state.mjs");
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), "ref-off-"));
     const own = path.join(parent, "proj");
     const sib = path.join(parent, "proj_wan");
     fs.mkdirSync(own, { recursive: true });
     fs.mkdirSync(sib, { recursive: true });
     fs.writeFileSync(path.join(sib, "proj_wan_ref.png"), "x");
+    // Sibling ref is explicit-only too: an upload/pick records the main,
+    // then the sibling cut's ref serves as input.
+    setMain(sib, "proj_wan", "ref", 0, null, "proj_wan_ref.png", { pinned: true });
     // No own ref and nothing deselected -> sibling cut's ref serves as input.
     assert.equal(resolveRefForRun(own, "proj").file, "proj_wan_ref.png");
     // Deselected in the own dir -> no input at all, siblings included.

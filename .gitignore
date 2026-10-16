@@ -2,6 +2,7 @@
 outputs/
 resources/
 reface/
+devotional/
 workflows/merged_pipeline.json
 node_modules/
 *.log

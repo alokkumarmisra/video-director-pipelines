@@ -50,14 +50,14 @@ export default function EditProjectDialog({
       .finally(() => setLoading(false));
   }, [name]);
 
+  // The dialog closes only via its Cancel / close buttons — no
+  // backdrop-click or Escape dismiss, so stray clicks can't lose edits.
   useEffect(() => {
     if (!name) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [name, busy, onClose]);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [name]);
 
   if (!name) return null;
 
@@ -97,7 +97,7 @@ export default function EditProjectDialog({
   };
 
   return (
-    <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy && !loading) onClose(); }}>
+    <div className="overlay">
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="edit-title">
         <div className="dialog-head">
           <h2 id="edit-title">Edit Project</h2>

@@ -14,15 +14,18 @@ import SceneTools from "./components/SceneTools";
 import HomePage from "./components/HomePage";
 import ResourcePage from "./components/ResourcePage";
 import DirectorPage from "./components/DirectorPage";
+import DevotionalPage from "./components/DevotionalPage";
 import StoryPage from "./components/StoryPage";
 import CreateSongPage from "./components/CreateSongPage";
 import VideoLipSyncPage from "./components/VideoLipSyncPage";
 import DocumentaryPage from "./components/DocumentaryPage";
 import RefacePage from "./components/RefacePage";
+import DatabasePage from "./components/DatabasePage";
 import ComponentsPage from "./components/ComponentsPage";
 import ViewBoundary from "./components/ViewBoundary";
 import Login from "./components/Login";
 import { DialogProvider, useDialog } from "./components/Dialog";
+import { installGlobalDialogDrag } from "./components/draggableDialogs";
 import { IconCheck, IconChevronDown, IconBlocks, IconClapper, IconClipboard, IconDatabase, IconFilm, IconFolder, IconLayers, IconLogOut, IconMic, IconMoon, IconMusic, IconPanel, IconRefresh, IconSearch, IconSparkles, IconStar, IconSun, IconTrash, IconUser, Spinner } from "./components/Icons";
 
 export type Theme = "dark" | "light";
@@ -119,6 +122,9 @@ function avatarTone(name: string): number {
 }
 
 export default function App() {
+  // All popups draggable by their title bars (one global installer covers
+  // every .dlg-box / .dialog / .db-modal, present and future).
+  useEffect(() => installGlobalDialogDrag(), []);
   const [auth, setAuth] = useState<AuthUser | null>(null);
   const [checking, setChecking] = useState(true);
   const [theme, setTheme] = useState<Theme>(() =>
@@ -346,7 +352,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   const boxBgFallback = theme === "dark" ? DEFAULT_BG_DARK : DEFAULT_BG_LIGHT;
   const boxBtnFallback = theme === "dark" ? DEFAULT_BTN_DARK : DEFAULT_BTN_LIGHT;
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
-  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "story" | "song" | "lipsync" | "documentary" | "reface" | "components">("home");
+  const [view, setView] = useState<"home" | "workspace" | "resource" | "director" | "devotional" | "story" | "song" | "lipsync" | "documentary" | "reface" | "database" | "components">("home");
   const [name, setName] = useState("");
   const [cfg, setCfg] = useState<Scenario | null>(null);
   const [cfgLoading, setCfgLoading] = useState(false);
@@ -1037,14 +1043,13 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
     }
   };
 
-  // Escape dismisses the delete popup.
+  // The delete popup closes only via its Keep / Delete buttons (no
+  // backdrop-click or Escape dismiss — same rule as every other popup).
   useEffect(() => {
     if (!confirmDelete) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setConfirmDelete(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
   }, [confirmDelete]);
   // Project bar order: create-date descending (newest project first);
   // createdAt when the server knows it, else integer project_id descending
@@ -1427,6 +1432,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
                 { key: "cur", label: "Director", icon: <IconFilm size={13} aria-hidden="true" />, tone: "ci-director", current: true },
               ];
+            } else if (view === "devotional") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Devotional", icon: <IconStar size={13} aria-hidden="true" />, tone: "ci-director", current: true },
+              ];
             } else if (view === "story") {
               crumbs = [
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
@@ -1454,6 +1464,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               crumbs = [
                 { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
                 { key: "cur", label: "Reface", icon: <IconUser size={13} aria-hidden="true" />, tone: "ci-reface", current: true },
+              ];
+            } else if (view === "database") {
+              crumbs = [
+                { key: "home", label: "Home", title: "Go to Home", onGo: goHome, icon: homeIcon, tone: "ci-home" },
+                { key: "cur", label: "Database", icon: <IconDatabase size={13} aria-hidden="true" />, tone: "ci-database", current: true },
               ];
             } else {
               crumbs = [
@@ -1706,6 +1721,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               <span className="sidenav-label">Director</span>
             </button>
             <button
+              className={`sidenav-btn nav-devotional ${view === "devotional" ? "on" : ""}`}
+              onClick={() => setView("devotional")}
+              aria-current={view === "devotional" ? "page" : undefined}
+              title="Open the Devotional Studio (characters, locations, props, styles)"
+            >
+              <span className="sidenav-icon"><IconStar size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Devotional</span>
+            </button>
+            <button
               className={`sidenav-btn nav-story ${view === "story" ? "on" : ""}`}
               onClick={() => setView("story")}
               aria-current={view === "story" ? "page" : undefined}
@@ -1759,6 +1783,15 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               <span className="sidenav-icon"><IconUser size={16} aria-hidden="true" /></span>
               <span className="sidenav-label">Reface</span>
             </button>
+            <button
+              className={`sidenav-btn nav-database ${view === "database" ? "on" : ""}`}
+              onClick={() => setView("database")}
+              aria-current={view === "database" ? "page" : undefined}
+              title="Open the Database view"
+            >
+              <span className="sidenav-icon"><IconDatabase size={16} aria-hidden="true" /></span>
+              <span className="sidenav-label">Database</span>
+            </button>
           </div>
           <button
             className="sidenav-pin"
@@ -1778,7 +1811,7 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
           (and Craft keeps its spinner) when flipping between Home and the
           workspace. Workspace content renders from the last loaded project,
           so switching projects never unmounts/remounts the page. */}
-        <div className={`shell${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "story" ? " is-story" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "documentary" ? " is-documentary" : ""}${view === "reface" ? " is-reface" : ""}${view === "components" ? " is-components" : ""}`}>
+        <div className={`shell${rightCollapsed ? " no-right" : ""}${view === "resource" ? " is-resource" : ""}${view === "director" ? " is-director" : ""}${view === "devotional" ? " is-devotional" : ""}${view === "story" ? " is-story" : ""}${view === "song" ? " is-song" : ""}${view === "lipsync" ? " is-lipsync" : ""}${view === "documentary" ? " is-documentary" : ""}${view === "reface" ? " is-reface" : ""}${view === "database" ? " is-database" : ""}${view === "components" ? " is-components" : ""}`}>
         {/* Projects rail tab — always visible (except Home): clicking slides
             only the container out over the content, clicking again collapses
             it. Nothing ever shrinks (same pattern as the Scene Tools dock). */}
@@ -1825,6 +1858,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
               imageMode={imageMode}
               onImageMode={setImageMode}
             />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "devotional" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Devotional">
+            <DevotionalPage />
           </ViewBoundary>
         </div>
         <div className="col" style={view !== "story" ? { display: "none" } : undefined}>
@@ -1882,6 +1920,11 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
         <div className="col" style={view !== "reface" ? { display: "none" } : undefined}>
           <ViewBoundary name="Reface">
             <RefacePage onOpenProject={openProject} />
+          </ViewBoundary>
+        </div>
+        <div className="col" style={view !== "database" ? { display: "none" } : undefined}>
+          <ViewBoundary name="Database">
+            <DatabasePage />
           </ViewBoundary>
         </div>
         {sidebarOpen && (
@@ -2343,7 +2386,6 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
           role="alertdialog"
           aria-modal="true"
           aria-label={`Delete project ${confirmDelete}`}
-          onClick={() => !deleting && setConfirmDelete(null)}
         >
           <div className="dlg-box" data-tone="error" onClick={(e) => e.stopPropagation()}>
             <div className="dlg-icon" data-tone="error" aria-hidden="true">

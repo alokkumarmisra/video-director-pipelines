@@ -8,7 +8,7 @@ export interface PreviewItem {
 }
 
 // Fullscreen preview overlay for any generated image/video.
-// Closes on backdrop click, the X button, or Escape.
+// Closes only via the X button (no backdrop-click or Escape dismiss).
 // When `items` (the full gallery for the current section) is provided with
 // `index` + `onIndexChange`, Left/Right arrows and the on-screen ‹ › buttons
 // step through every image/video without closing the overlay.
@@ -37,7 +37,6 @@ export default function Lightbox({
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onClose(); return; }
       const t = e.target as HTMLElement | null;
       // Never hijack arrows while typing in a field.
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
@@ -59,13 +58,12 @@ export default function Lightbox({
       role="dialog"
       aria-modal="true"
       aria-label={current.alt || "media preview"}
-      onClick={onClose}
     >
       <button
         className="lightbox-close"
         onClick={onClose}
         aria-label="Close preview"
-        title="Close (Esc)"
+        title="Close"
       >
         <IconX size={16} />
       </button>

@@ -75,7 +75,7 @@
         "species": "snake",
         "age": "adult",
         "appearance": {
-          "body": "long, smooth, slightly curved, flexible body",
+          "body": "one continuous elongated limbless serpentine body, smooth, slightly curved, flexible, tapering to a tail",
           "fur": "none",
           "eyes": "big, round, glowing green eyes, expressive, with soft inner light",
           "ears": "none"
@@ -91,7 +91,7 @@
           "kind",
           "energetic"
         ],
-        "visual_identity_prompt": "STATIC portrait only: species + body + face + eyes + colors + clothing, comma-separated, no action, no pose, no scene, no emotion — written so it can be pasted into every image_prompt verbatim: long, smooth, slightly curved, flexible body, big, round, glowing green eyes, expressive, with soft inner light, none fur, none ears, none top, none bottom, green body, glowing green eyes",
+        "visual_identity_prompt": "STATIC portrait only: species + body + face + eyes + colors + clothing, comma-separated, no action, no pose, no scene, no emotion — written so it can be pasted into every image_prompt verbatim: limbless serpentine snake body: one continuous elongated smooth coiled body, no legs, no arms, no hands, no feet, no ears, no external ears, no wings, green body, big, round, glowing green eyes, expressive, with soft inner light",
         "consistency_rules": [
           "Keep the exact same face: shape, eyes, nose, lips, jawline and skin tone in every scene.",
           "Keep the exact same body, species traits and proportions in every scene.",

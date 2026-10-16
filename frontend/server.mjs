@@ -71,6 +71,39 @@ import {
   validateLyricPlan,
   validateStoryBoard,
   extractPartialScenes,
+  buildLyricCoverageMap,
+  coverageSummary,
+  boardLyricLines,
+  scoreDirectorPlan,
+  detectContinuityIssues,
+  buildDirectionRepairPrompt,
+  genreDirectingNotes,
+  normalizeStoryPlan,
+  buildStoryPlan,
+  stageStatus,
+  approveGate,
+  chiefApproveStage,
+  uncoveredPhrases,
+  buildShotList,
+  buildCameraMotionPlan,
+  buildLightingPlan,
+  buildBlockingPlan,
+  buildTransitionPlan,
+  validateCinematography,
+  buildCharacterActionPlan,
+  buildInteractionPlan,
+  buildMotionTimeline,
+  buildAudioTimingMap,
+  buildActionSyncPlan,
+  buildLipSyncInstructions,
+  validateMotionPrompts,
+  buildShotPrompts,
+  validateImagePrompt,
+  validateVideoPrompt,
+  buildEditPlan,
+  buildAssemblyTimeline,
+  buildRenderJob,
+  buildQCReport,
 } from "../lib/director.mjs";
 import { storyboardToScenario } from "../lib/project_import.mjs";
 import {
@@ -82,8 +115,7 @@ import {
   writeRefaceMeta,
 } from "../lib/reface.mjs";
 import {
-  DOC_STATUSES,
-  validateDocBrief,
+  DOC_STATUSES,  validateDocBrief,
   normalizeDocCharacter,
   normalizeDocLocation,
   normalizeDocShot,
@@ -120,6 +152,29 @@ import {
   withDevotionalRealism,
   isDevotionalBrief,
 } from "../lib/documentary.mjs";
+import {
+  DEVOTIONAL_KINDS,
+  DEVOTIONAL_STATUSES,
+  DEVOTIONAL_FILE_KINDS,
+  DEVOTIONAL_SCHEMA,
+  makeAssetId,
+  safeFolder,
+  isSafeSegment,
+  normalizeKind,
+  normalizeStatus,
+  canTransition,
+  normalizeAliases,
+  normalizeAsset,
+  validateAssetPayload,
+  describeAssetForPrompt,
+  buildDevotionalScenePrompt,
+  resolveSceneAssets,
+  SEED_SUGGESTIONS,
+  buildAssetReferenceMap,
+  findDuplicateAssets,
+  buildVisualStyleGuide,
+  validateAssetContinuity,
+} from "../lib/devotional.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -589,6 +644,117 @@ const pgPool = new Pool({
   connectionTimeoutMillis: 3000,
 });
 let pgUp = false;
+// ---------------------------------------------------------------- devotional sqlite fallback
+// Devotional Studio works without Postgres: when pgUp is false every
+// devotional route below uses this local SQLite store instead
+// (data/devotional.sqlite, same binaries under devotional/). SQLite is the
+// canonical store in USE_SQLITE=true mode (pgProbe never enables pgUp
+// there); when Postgres is up it stays canonical and SQLite idles.
+const DEVOTIONAL_DB = path.join(DATA_DIR, "devotional.sqlite");
+let devDb = null;
+const DEVOTIONAL_SQLITE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS devotional_assets (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('character','location','prop','style')),
+  parent_id TEXT,
+  name TEXT NOT NULL,
+  aliases TEXT NOT NULL DEFAULT '[]',
+  category TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  identity TEXT NOT NULL DEFAULT '{}',
+  style_id TEXT,
+  negative_prompt TEXT NOT NULL DEFAULT '',
+  prompt TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','generating','review','approved','archived')),
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  locked INTEGER NOT NULL DEFAULT 0,
+  continuity TEXT NOT NULL DEFAULT '',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_devotional_kind_status_lite ON devotional_assets(kind, status);
+CREATE INDEX IF NOT EXISTS idx_devotional_parent_lite ON devotional_assets(parent_id);
+CREATE TABLE IF NOT EXISTS devotional_asset_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  snapshot TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (asset_id, version)
+);
+CREATE TABLE IF NOT EXISTS devotional_asset_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_kind TEXT NOT NULL DEFAULT 'master',
+  source TEXT NOT NULL DEFAULT 'upload' CHECK (source IN ('generated','upload')),
+  prompt TEXT,
+  workflow TEXT,
+  model TEXT,
+  seed INTEGER,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_devotional_files_asset_lite ON devotional_asset_files(asset_id);
+CREATE TABLE IF NOT EXISTS devotional_jobs (
+  id TEXT PRIMARY KEY,
+  asset_id TEXT,
+  kind TEXT NOT NULL DEFAULT 'reference',
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSING','COMPLETED','FAILED')),
+  prompt TEXT,
+  workflow TEXT,
+  model TEXT,
+  error_message TEXT,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE TABLE IF NOT EXISTS devotional_scene_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  board_id TEXT NOT NULL,
+  scene_number INTEGER NOT NULL,
+  asset_id TEXT NOT NULL,
+  asset_version INTEGER NOT NULL DEFAULT 1,
+  role TEXT NOT NULL CHECK (role IN ('character','location','prop','style')),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (board_id, scene_number, asset_id, role)
+);
+CREATE INDEX IF NOT EXISTS idx_devotional_links_board_lite ON devotional_scene_links(board_id);
+CREATE INDEX IF NOT EXISTS idx_devotional_links_asset_lite ON devotional_scene_links(asset_id);
+CREATE TABLE IF NOT EXISTS devotional_project_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project TEXT NOT NULL,
+  asset_id TEXT NOT NULL,
+  asset_version INTEGER NOT NULL DEFAULT 1,
+  scenes TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (project, asset_id)
+);
+`;
+try {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  devDb = new DatabaseSync(DEVOTIONAL_DB);
+  devDb.exec(DEVOTIONAL_SQLITE_SCHEMA);
+  // Existing installs predate the saved-prompt column — add it once.
+  try { devDb.exec(`ALTER TABLE devotional_assets ADD COLUMN prompt TEXT NOT NULL DEFAULT ''`); }
+  catch { /* column already exists */ }
+} catch (e) {
+  console.warn("[devotional] sqlite fallback unavailable:", e.message);
+  devDb = null;
+}
+// SQLite stores JSON columns as TEXT — parse them back to the API shape.
+// node-pg returns arrays/objects natively; both shapes are accepted here.
+const devJson = (v, fb) => {
+  if (v == null) return fb;
+  if (typeof v !== "string") return v;
+  try { return JSON.parse(v); } catch { return fb; }
+};
+const devNow = () => new Date().toISOString();
+// True when a devotional database (Postgres or SQLite) can serve requests.
+const devStore = () => (pgUp ? "pg" : (devDb ? "sqlite" : null));
 const PG_SCHEMA = `
 CREATE TABLE IF NOT EXISTS scenarios (
   name TEXT PRIMARY KEY,
@@ -2160,6 +2326,12 @@ async function pgInit() {
   if (!(await pgProbe())) return;
   try {
     await pgPool.query(PG_SCHEMA);
+    // Devotional Studio library tables (idempotent — safe on every boot).
+    try { await pgPool.query(DEVOTIONAL_SCHEMA); }
+    catch (e) { console.warn("[pg] devotional schema failed:", e.message); }
+    // Saved generation-prompt override (existing installs predate the column).
+    try { await pgPool.query(`ALTER TABLE devotional_assets ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT ''`); }
+    catch (e) { console.warn("[pg] devotional prompt migration failed:", e.message); }
     // Legacy `assets` catalog is retired (project_assets + project_references
     // + disk are canonical) — drop it on existing installs.
     await pgPool.query(`DROP TABLE IF EXISTS public.assets`);
@@ -2417,6 +2589,12 @@ pgInit();
 const DIST = path.join(__dirname, "dist");
 const PORT = Number(process.env.PORT || 8790);
 const LLM_BASE = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+// Reasoning-engine model id for the OpenAI-compatible chat endpoint above.
+// Points at Muse Spark 1.3 where the deployment serves it (e.g.
+// LLM_BASE=<spark-compatible endpoint> + LLM_MODEL=muse-spark-1.3); defaults
+// to the historical literal "local" (LM Studio / llama-server) so existing
+// setups behave byte-identically.
+const LLM_MODEL = String(process.env.LLM_MODEL || "").trim() || "local";
 // Maximum timeout for ALL requests (LLM + ComfyUI + probes): 30 min.
 const REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -2532,7 +2710,7 @@ async function llmChatJsonLive({ system, user, maxTokens = 16000, temperature = 
         signal: ctl.signal,
         headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
         body: JSON.stringify({
-          model: "local",
+          model: LLM_MODEL,
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
           temperature,
           max_tokens: maxTokens,
@@ -2703,7 +2881,7 @@ async function captionImageWithVision(dataUrl) {
   }
   try {
     const d = await llmPostChat(`${base}/v1/chat/completions`, {
-      model: "local",
+      model: LLM_MODEL,
       messages: [
         {
           role: "system",
@@ -2750,6 +2928,148 @@ async function captionResource(entry) {
 function serveResource(res, file) {
   const p = path.join(RESOURCES, file);
   if (!isSafe(file) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { res.writeHead(404); return res.end(); }
+  res.writeHead(200, { "Content-Type": MIME[path.extname(p).toLowerCase()] || "application/octet-stream", "Cache-Control": "no-store" });
+  fs.createReadStream(p).pipe(res);
+}
+
+// ---------------------------------------------------------------- devotional studio
+// Reusable devotional filmmaking library (characters, locations, props,
+// styles). Binaries live under devotional/<KindPlural>/<AssetId>/ (gitignored
+// working storage, same discipline as resources/); all metadata, versions,
+// approvals and scene links live in Postgres when it is up (DEVOTIONAL_SCHEMA in
+// lib/devotional.mjs) and in data/devotional.sqlite otherwise — every route
+// below branches on devStore(). Stable asset IDs (CHAR_/LOC_/PROP_/STYLE_) are the
+// primary identifiers — folder names are derived, never authoritative.
+const DEVOTIONAL_DIR = process.env.DEVOTIONAL_DIR
+  ? path.resolve(process.env.DEVOTIONAL_DIR)
+  : path.join(ROOT, "devotional");
+const DEVOTIONAL_KIND_DIR = { character: "Characters", location: "Locations", prop: "Props", style: "Styles_And_Presets" };
+const DEVOTIONAL_UPLOAD_EXT = {
+  "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+};
+// Next free NN suffix for a stable asset id (<PREFIX>_<PART>_<NN>).
+async function devNextAssetId(kind, name) {
+  for (let n = 1; n < 1000; n++) {
+    const id = makeAssetId(kind, name, n);
+    try {
+      if (pgUp) {
+        const r = await pgPool.query("SELECT 1 FROM devotional_assets WHERE id = $1", [id]);
+        if (!r.rowCount) return id;
+      } else if (devDb) {
+        const r = devDb.prepare("SELECT 1 FROM devotional_assets WHERE id = ?").get(id);
+        if (!r) return id;
+      } else {
+        return id;
+      }
+    } catch { return id; }
+  }
+  return makeAssetId(kind, name, Date.now() % 100000);
+}
+function devAssetDir(asset) {
+  const kindDir = DEVOTIONAL_KIND_DIR[asset.kind] || "Other";
+  return path.join(DEVOTIONAL_DIR, kindDir, safeFolder(asset.name), String(asset.id));
+}
+// Row -> API shape (aliases[] arrive from PG as a JS array via node-pg,
+// from SQLite as a JSON string — both are accepted).
+// List responses also carry lightweight previews (latest existing still +
+// latest existing clip per asset) so library cards can render generated
+// media without N+1 detail fetches — see devAttachPreviews(). image_versions
+// / video_versions carry every existing still/clip (newest-first, { id, url,
+// file_kind }) so cards can render Keyframes→clips-style v1/v2 version chips.
+function devAttachPreviews(assets, fileRows) {
+  const byId = new Map();
+  for (const a of assets) byId.set(a.id, { image: null, video: null, count: 0, images: [], videos: [] });
+  // fileRows are expected newest-first (ORDER BY id DESC) so the first
+  // existing image/video seen per asset is the latest.
+  for (const f of fileRows || []) {
+    const slot = byId.get(f.asset_id);
+    if (!slot) continue;
+    slot.count += 1;
+    let full = null;
+    try { full = path.join(DEVOTIONAL_DIR, f.file_path); } catch { full = null; }
+    if (!full || !fs.existsSync(full)) continue;
+    const fp = String(f.file_path || "");
+    const isVideo = String(f.file_kind || "").toLowerCase() === "video" || /\.(mp4|webm|mov)$/i.test(fp);
+    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(fp);
+    const url = `/devotional/${fp}`;
+    if (isVideo) {
+      const entry = { id: f.id, url, file_kind: f.file_kind || "video" };
+      slot.videos.push(entry);
+      if (!slot.video) slot.video = { url, file_kind: f.file_kind || "video", id: f.id };
+    } else if (isImage) {
+      const entry = { id: f.id, url, file_kind: f.file_kind || "master" };
+      slot.images.push(entry);
+      if (!slot.image) slot.image = { url, file_kind: f.file_kind || "master", id: f.id };
+    }
+  }
+  return assets.map((a) => {
+    const slot = byId.get(a.id) || { image: null, video: null, count: 0, images: [], videos: [] };
+    return {
+      ...a,
+      preview_image: slot.image ? slot.image.url : null,
+      preview_image_kind: slot.image ? slot.image.file_kind : null,
+      preview_video: slot.video ? slot.video.url : null,
+      file_count: slot.count,
+      image_versions: slot.images,
+      video_versions: slot.videos,
+    };
+  });
+}
+function devRow(r) {
+  const aliases = Array.isArray(r.aliases) ? r.aliases : devJson(r.aliases, []);
+  const identity = (r.identity && typeof r.identity === "object") ? r.identity : devJson(r.identity, {});
+  const metadata = (r.metadata && typeof r.metadata === "object") ? r.metadata : devJson(r.metadata, {});
+  return {
+    id: r.id, kind: r.kind, parent_id: r.parent_id, name: r.name,
+    aliases: Array.isArray(aliases) ? aliases : [],
+    category: r.category, description: r.description,
+    identity: identity && typeof identity === "object" && !Array.isArray(identity) ? identity : {},
+    style_id: r.style_id, negative_prompt: r.negative_prompt,
+    prompt: r.prompt ?? "",
+    status: r.status, version: Number(r.version), locked: r.locked === true || r.locked === 1 || r.locked === "1" || r.locked === "t" || r.locked === "true" || r.locked === "TRUE",
+    continuity: r.continuity, metadata: metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {},
+    created_at: r.created_at, updated_at: r.updated_at,
+  };
+}
+// SQLite row helpers: files carry a JSON metadata string, jobs carry a JSON
+// metadata string (PG returns objects natively).
+function devFileRow(f) {
+  return {
+    ...f,
+    metadata: (f.metadata && typeof f.metadata === "object") ? f.metadata : devJson(f.metadata, {}),
+    url: `/devotional/${f.file_path}`,
+    exists: fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)),
+  };
+}
+function devJobRow(j) {
+  return { ...j, metadata: (j.metadata && typeof j.metadata === "object") ? j.metadata : devJson(j.metadata, {}) };
+}
+// Snapshot the current row into devotional_asset_versions (durable audit trail).
+async function devSnapshot(id, version, note = "") {
+  const cleanNote = String(note || "").slice(0, 300);
+  if (pgUp) {
+    const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id]);
+    if (!r.rows[0]) return;
+    await pgPool.query(
+      `INSERT INTO devotional_asset_versions (asset_id, version, snapshot, note)
+       VALUES ($1, $2, $3::jsonb, $4) ON CONFLICT (asset_id, version) DO NOTHING`,
+      [id, version, JSON.stringify(devRow(r.rows[0])), cleanNote]);
+    return;
+  }
+  if (!devDb) return;
+  const r = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+  if (!r) return;
+  devDb.prepare(
+    "INSERT OR IGNORE INTO devotional_asset_versions (asset_id, version, snapshot, note) VALUES (?, ?, ?, ?)"
+  ).run(id, version, JSON.stringify(devRow(r)), cleanNote);
+}
+function serveDevotional(res, rel) {
+  const parts = String(rel || "").split("/");
+  if (parts.some((s) => !isSafeSegment(s))) { res.writeHead(400); return res.end(); }
+  const p = path.join(DEVOTIONAL_DIR, ...parts);
+  if (!p.startsWith(DEVOTIONAL_DIR) || !fs.existsSync(p) || !fs.statSync(p).isFile()) {
+    res.writeHead(404); return res.end();
+  }
   res.writeHead(200, { "Content-Type": MIME[path.extname(p).toLowerCase()] || "application/octet-stream", "Cache-Control": "no-store" });
   fs.createReadStream(p).pipe(res);
 }
@@ -2971,6 +3291,174 @@ const readRaw = (req, maxBytes) => new Promise((res, rej) => {
 // opts.count    -> repeat a `ref` regen this many times (each pass writes a new
 //                  _vN version to pick from); anything else always runs once.
 const runs = new Map(); // id -> { scenario, folder, status, log, startedAt, proc, subs:Set<res> }
+// Devotional reference jobs: one background Flux still at a time, serial with
+// the main runs above (the ComfyUI queue is serial). PENDING jobs wait for a
+// free queue instead of failing — the pump runs on enqueue + on main-run exit.
+const devotionalProcs = new Map(); // jobId -> ChildProcess
+let devPumping = false;
+async function devPumpJobs() {
+  const store = devStore();
+  if (devPumping || !store) return;
+  devPumping = true;
+  // Store-aware accessors so the pump works identically on PG and SQLite.
+  const liteGet = (sql, ...args) => {
+    try { return devDb.prepare(sql).get(...args) ?? null; } catch { return null; }
+  };
+  const liteRun = (sql, ...args) => {
+    try { devDb.prepare(sql).run(...args); } catch (e) { console.warn("[devotional] sqlite write failed:", e.message); }
+  };
+  try {
+    if ([...runs.values()].some((r) => r.status === "running")) return;
+    if ([...devotionalProcs.values()].some((p) => p.exitCode === null)) return;
+    let job = null;
+    if (store === "pg") {
+      const q = await pgPool.query(
+        "SELECT * FROM devotional_jobs WHERE status = 'PENDING' ORDER BY created_at LIMIT 1").catch(() => null);
+      job = q?.rows?.[0] ?? null;
+      if (job) job = devJobRow(job);
+    } else {
+      job = liteGet("SELECT * FROM devotional_jobs WHERE status = 'PENDING' ORDER BY created_at LIMIT 1");
+      if (job) job = devJobRow(job);
+    }
+    if (!job) return;
+    let assetRow = null;
+    if (store === "pg") {
+      const ar = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [job.asset_id]).catch(() => null);
+      assetRow = ar?.rows?.[0] ?? null;
+    } else {
+      assetRow = liteGet("SELECT * FROM devotional_assets WHERE id = ?", job.asset_id);
+    }
+    const asset = assetRow ? devRow(assetRow) : null;
+    if (!asset) {
+      if (store === "pg") {
+        await pgPool.query("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'asset deleted', updated_at = now() WHERE id = $1", [job.id]);
+      } else {
+        liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'asset deleted', updated_at = ? WHERE id = ?", devNow(), job.id);
+      }
+      return;
+    }
+    const meta = job.metadata && typeof job.metadata === "object" ? job.metadata : {};
+    const isVideo = job.kind === "video";
+    const fileKind = isVideo ? "video" : (DEVOTIONAL_FILE_KINDS.includes(String(meta.fileKind || "").toLowerCase())
+      ? String(meta.fileKind).toLowerCase() : "master");
+    const duration = isVideo ? Math.max(2, Math.min(8, Number(meta.duration) || 3)) : 0;
+    const dir = devAssetDir(asset);
+    fs.mkdirSync(dir, { recursive: true });
+    // Video jobs animate the latest existing still; reference jobs render one.
+    let srcImage = null;
+    if (isVideo) {
+      const rows = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id DESC", [job.asset_id]).catch(() => null))?.rows ?? []
+        : (() => { try { return devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id DESC").all(job.asset_id); } catch { return []; } })();
+      srcImage = rows.map((f) => path.join(DEVOTIONAL_DIR, f.file_path))
+        .find((full) => /\.(png|jpe?g|webp)$/i.test(full) && fs.existsSync(full)) ?? null;
+      if (!srcImage) {
+        const msg = "no reference image yet — the still must finish first";
+        if (store === "pg") {
+          await pgPool.query("UPDATE devotional_jobs SET status = 'FAILED', error_message = $2, updated_at = now() WHERE id = $1", [job.id, msg]);
+        } else {
+          liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = ?, updated_at = ? WHERE id = ?", msg, devNow(), job.id);
+        }
+        return;
+      }
+    }
+    const base = isVideo ? `${String(asset.id).toLowerCase()}_video` : `${String(asset.id).toLowerCase()}_${fileKind}`;
+    const outExt = isVideo ? ".mp4" : ".png";
+    let file = `${base}${outExt}`, n = 2;
+    while (fs.existsSync(path.join(dir, file))) file = `${base}_v${n++}${outExt}`;
+    const outFile = path.join(dir, file);
+    if (store === "pg") {
+      await pgPool.query("UPDATE devotional_jobs SET status = 'PROCESSING', metadata = $2::jsonb, updated_at = now() WHERE id = $1",
+        [job.id, JSON.stringify({ ...meta, file })]);
+    } else {
+      liteRun("UPDATE devotional_jobs SET status = 'PROCESSING', metadata = ?, updated_at = ? WHERE id = ?",
+        JSON.stringify({ ...meta, file }), devNow(), job.id);
+    }
+    const procArgs = isVideo
+      ? ["scripts/devotional_video.mjs", "--image", srcImage,
+         "--out", outFile, "--prompt", String(job.prompt || ""), "--duration", String(duration)]
+      : ["scripts/devotional_reference.mjs", "--prompt", String(job.prompt || ""),
+         "--out", outFile, "--width", "1024", "--height", "1024", "--steps", "4"];
+    const proc = spawn(process.execPath, procArgs,
+      { cwd: ROOT, env: process.env, windowsHide: true });
+    devotionalProcs.set(job.id, proc);
+    let log = "";
+    proc.stdout?.on("data", (d) => (log += d.toString()));
+    proc.stderr?.on("data", (d) => (log += d.toString()));
+    proc.on("close", async (code) => {
+      devotionalProcs.delete(job.id);
+      try {
+        const activePg = pgUp;
+        if (code === 0 && fs.existsSync(outFile)) {
+          const rel = path.relative(DEVOTIONAL_DIR, outFile).split(path.sep).join("/");
+          if (activePg) {
+            if (isVideo) {
+              await pgPool.query(
+                `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata)
+                 VALUES ($1,$2,$3,'generated',$4,'ltx-i2v','ltx-2.5-22b-distilled',$5::jsonb)`,
+                [job.asset_id, rel, "video", String(job.prompt || ""),
+                 JSON.stringify({ job: job.id, duration })]);
+            } else {
+              await pgPool.query(
+                `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata)
+                 VALUES ($1,$2,$3,'generated',$4,'flux-t2i','flux-2-klein-9b-fp8',$5::jsonb)`,
+                [job.asset_id, rel, fileKind, String(job.prompt || ""),
+                 JSON.stringify({ job: job.id })]);
+            }
+            await pgPool.query("UPDATE devotional_jobs SET status = 'COMPLETED', updated_at = now() WHERE id = $1", [job.id]);
+            if (!isVideo) {
+              await pgPool.query(
+                "UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1 AND status = 'generating'",
+                [job.asset_id]);
+            }
+          } else if (devDb) {
+            if (isVideo) {
+              liteRun(
+                "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata) VALUES (?, ?, ?, 'generated', ?, 'ltx-i2v', 'ltx-2.5-22b-distilled', ?)",
+                job.asset_id, rel, "video", String(job.prompt || ""), JSON.stringify({ job: job.id, duration }));
+            } else {
+              liteRun(
+                "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata) VALUES (?, ?, ?, 'generated', ?, 'flux-t2i', 'flux-2-klein-9b-fp8', ?)",
+                job.asset_id, rel, fileKind, String(job.prompt || ""), JSON.stringify({ job: job.id }));
+            }
+            liteRun("UPDATE devotional_jobs SET status = 'COMPLETED', updated_at = ? WHERE id = ?", devNow(), job.id);
+            if (!isVideo) {
+              liteRun("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ? AND status = 'generating'", devNow(), job.asset_id);
+            }
+          }
+        } else {
+          const err = (log.match(/\[asset\][\s\S]*$/) ? log.slice(-2000) : log.slice(-2000)) || `exit ${code}`;
+          const msg = isVideo && !String(err).includes("reference generation failed")
+            ? `showcase clip failed: ${String(err).trim().slice(-500) || "unknown error"} — check COMFY_BASE and retry`
+            : `reference generation failed: ${String(err).trim().slice(-500) || "unknown error"} — check COMFY_BASE and retry, or upload manually`;
+          // Guarded to PROCESSING so a user cancel (already FAILED with
+          // 'cancelled by user') is never overwritten by the proc tail.
+          if (activePg) {
+            await pgPool.query(
+              "UPDATE devotional_jobs SET status = 'FAILED', error_message = $2, updated_at = now() WHERE id = $1 AND status = 'PROCESSING'",
+              [job.id, msg]);
+            // A failed job never corrupts the asset: back to review/draft.
+            if (!isVideo) {
+              await pgPool.query(
+                "UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1 AND status = 'generating'",
+                [job.asset_id]);
+            }
+          } else if (devDb) {
+            liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = ?, updated_at = ? WHERE id = ? AND status = 'PROCESSING'", msg, devNow(), job.id);
+            if (!isVideo) {
+              liteRun("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ? AND status = 'generating'", devNow(), job.asset_id);
+            }
+          }
+        }
+      } catch (e) { console.warn("[devotional] job finish failed:", e.message); }
+      void devPumpJobs(); // chain the next PENDING job
+    });
+  } catch (e) {
+    console.warn("[devotional] pump failed:", e.message);
+  } finally {
+    devPumping = false;
+  }
+}
 // Boards with a scene-planning LLM call in flight. A second POST while one
 // is running is rejected (409) so two overlapping batches can never append
 // duplicate scenes — the client retries/continues from scenes.length.
@@ -3070,6 +3558,8 @@ function startRun(scenario, opts = {}) {
     const dirName = outDirName(run.folder, run.engine, run.format);
     pgRefreshProjectFiles(run.scenario, dirName)
       .catch((e) => console.warn("[pg] sync failed:", e.message));
+    // A freed ComfyUI queue lets waiting devotional reference jobs through.
+    void devPumpJobs();
   };
   const launch = () => {
     run.pass += 1;
@@ -3514,7 +4004,7 @@ async function craftScenario({ description = "", masterPrompt = "", topic = "", 
   const { idea, details, noRules, preset, customRules, system } = brief;
   const user = String(userPrompt ?? "").trim() ? String(userPrompt).trim() : brief.user;
   const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
-    model: "local",
+    model: LLM_MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     temperature: 0.7,
     max_tokens: 8000,
@@ -3611,7 +4101,7 @@ ${JSON.stringify({
 
 Write the next beat (beat ${existing.length + 1}).`;
   const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
-    model: "local",
+    model: LLM_MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     temperature: 0.7,
     max_tokens: 2000,
@@ -3711,7 +4201,7 @@ ${JSON.stringify({
 
 Write the publishing metadata.`;
   const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
-    model: "local",
+    model: LLM_MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     temperature: 0.7,
     max_tokens: 1000,
@@ -3784,7 +4274,7 @@ async function craftMasterPrompt({ description = "", presetId, presetRules } = {
     "Write the Master Prompt (cinematic key-visual of the main character).",
   ].join("\n\n");
   const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
-    model: "local",
+    model: LLM_MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     temperature: 0.7,
     max_tokens: 800,
@@ -3845,7 +4335,7 @@ async function mergeMasterIntoScene(master, beat) {
     scene_image_prompt: img.slice(0, 4000),
   });
   const d = await llmPostChat(`${LLM_BASE}/v1/chat/completions`, {
-    model: "local",
+    model: LLM_MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
     temperature: 0.2,
     max_tokens: 2000,
@@ -4021,7 +4511,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Everything below (API + generated outputs) requires a session.
-    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/") || p.startsWith("/reface/")) && !authedUser(req))
+    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/") || p.startsWith("/reface/") || p.startsWith("/devotional/")) && !authedUser(req))
       return json(res, 401, { error: "unauthorized" });
 
     if (p === "/api/scenarios" && req.method === "GET") {
@@ -5201,7 +5691,7 @@ const server = http.createServer(async (req, res) => {
     // local LLM; APPROVE hands a standard scenario config to the EXISTING
     // save/generation pipeline (client calls saveScenario, then opens the
     // workspace). No separate image/video implementation exists here.
-    // Shared LLM call reusing the craft-endpoint convention (model "local",
+    // Shared LLM call reusing the craft-endpoint convention (LLM_MODEL,
     // thinking disabled). Parse failures save the raw response for debugging
     // and throw a useful error — nothing is silently discarded.
     async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null }) {
@@ -5212,7 +5702,7 @@ const server = http.createServer(async (req, res) => {
       const tag = rawTag ? String(rawTag).replace(/^_raw_/, "").replace(/\.log$/, "").slice(0, 60) : "director";
       try {
         const d = await llmPostChat(`${base}/v1/chat/completions`, {
-          model: "local",
+          model: LLM_MODEL,
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
           temperature,
           max_tokens: maxTokens,
@@ -5502,6 +5992,9 @@ const server = http.createServer(async (req, res) => {
         input,
         status: "analyzed",
         blueprint,
+        // Chief Director Story Plan: derived from the fresh bible so every
+        // downstream stage traces to this authoritative narrative source.
+        storyPlan: buildStoryPlan({ input, blueprint }),
         scenes: [],
         sceneCount: sceneCountFor(input.targetSeconds, input.sceneSeconds),
         styleLock: styleLockFor(input.visualStyle, input.styleCustom),
@@ -5613,6 +6106,24 @@ const server = http.createServer(async (req, res) => {
           if (patch.blueprint && typeof patch.blueprint === "object") {
             const nb = normalizeBlueprint({ ...board.blueprint, ...patch.blueprint });
             board.blueprint = nb;
+          }
+          // Intelligent Director story plan (spec §2/§15): staged analysis
+          // artefacts (story summary, lyric semantics, coverage snapshots)
+          // persist on the board JSON so a failed stage never forces a full
+          // restart. Merged (not replaced) so persisting stage N never drops
+          // the artefacts of earlier stages. The canonical scenes above
+          // remain the executable source of truth. Approvals accumulate per
+          // stage; any other plan edit bumps the revision counter.
+          if (patch.storyPlan && typeof patch.storyPlan === "object" && !Array.isArray(patch.storyPlan)) {
+            const prev = (board.storyPlan && typeof board.storyPlan === "object") ? board.storyPlan : {};
+            const prevNorm = normalizeStoryPlan(prev);
+            const merged = normalizeStoryPlan({
+              ...prevNorm, ...patch.storyPlan,
+              structure: { ...prevNorm.structure, ...((patch.storyPlan.structure && typeof patch.storyPlan.structure === "object") ? patch.storyPlan.structure : {}) },
+              approvals: { ...prevNorm.approvals, ...((patch.storyPlan.approvals && typeof patch.storyPlan.approvals === "object") ? patch.storyPlan.approvals : {}) },
+            });
+            merged.revisions = prevNorm.revisions + 1;
+            board.storyPlan = merged;
           }
           // Full-array replace for bible edits from the storyboard UI:
           // the client sends the complete next array, so deletes (shorter
@@ -5783,6 +6294,225 @@ const server = http.createServer(async (req, res) => {
     // Prompt preview (dry run): the EXACT system + user messages the next
     // Continue would send to the LLM — built by the same planner above, but
     // no model call and nothing saved. Powers Show prompt popup.
+    // Chief Director Story Plan + stage pipeline — read-only. Returns the
+    // authoritative plan (built lazily from the bible for pre-plan boards,
+    // never persisted by this route) plus per-stage done/ready/blocked
+    // status. Powers the storyboard's Story Plan panel. No LLM, no mutation.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/plan$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const storyPlan = (board.storyPlan && typeof board.storyPlan === "object" && Object.keys(board.storyPlan).length)
+        ? normalizeStoryPlan(board.storyPlan)
+        : (board.blueprint ? buildStoryPlan({ input: board.input, blueprint: board.blueprint }) : normalizeStoryPlan(null));
+      return json(res, 200, { board_id: id, storyPlan, stages: stageStatus({ ...board, storyPlan }) });
+    }
+    // Intelligent Director: Lyric Coverage Map (spec §3) — read-only.
+    // Every lyric line with its meaningful phrases, assigned scenes/shots and
+    // coverage status, plus the phrase totals. Powers the UI coverage view and
+    // lyric<->shot navigation. No LLM, no board mutation.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/coverage$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const map = buildLyricCoverageMap(board.scenes, boardLyricLines(board));
+      return json(res, 200, { board_id: id, lines: map, summary: coverageSummary(map) });
+    }
+    // Intelligent Director: quality-control validation pass (spec §12) —
+    // configurable 0–100 score with explicit rule-based breakdown (lyric
+    // coverage, action clarity, continuity, timing, prompt completeness) plus
+    // the structural story-board gate. Read-only; issues are actionable.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/validate$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const scored = scoreDirectorPlan({ ...board, blueprint: { ...(board.blueprint || {}), lyric_lines: boardLyricLines(board) } });
+      const gate = validateStoryBoard(board);
+      const lyric = validateLyricPlan(
+        board.scenes,
+        boardLyricLines(board),
+        board.input && board.input.song && board.input.song.durationSeconds
+          ? Number(board.input.song.durationSeconds) : Number(board.input && board.input.targetSeconds) || null,
+      );
+      return json(res, 200, {
+        board_id: id,
+        score: scored.score,
+        breakdown: scored.breakdown,
+        issues: scored.issues,
+        coverage: scored.coverage,
+        errors: gate.errors,
+        warnings: [...gate.warnings, ...lyric],
+        continuity: detectContinuityIssues(board.scenes),
+        genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
+      });
+    }
+    // Chief Director approval checkpoint — sign off one DIRECTOR_STAGES stage.
+    // Body: { stage: string, force?: boolean }. Enforces dependency order via
+    // stageStatus(); persists the approval timestamp into storyPlan.approvals
+    // (board JSONB, no schema migration). Powers approval controls.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/approve-stage$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const body = await readJson(req).catch(() => ({}));
+      const { plan, error } = chiefApproveStage(board, body && body.stage, { force: !!(body && body.force) });
+      if (error) return json(res, 400, { error });
+      board.storyPlan = plan;
+      const saved = writeDirectorBoard(board);
+      return json(res, 200, { board_id: id, storyPlan: plan, stages: stageStatus(saved) });
+    }
+    // Chief Director uncovered-phrase gate — phrases with no staged visual
+    // event, enriched with estimated timing. Read-only; powers selective
+    // regeneration of the exact shots that leave meaning uncovered.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/uncovered$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      return json(res, 200, { board_id: id, uncovered: uncoveredPhrases(board) });
+    }
+    // World & Asset Intelligence (Phase 2) — read-only reference map over the
+    // board's bible + scenes: character/location/prop scene lists, duplicate
+    // asset flags, visual style guide, continuity issues. Powers Character and
+    // Asset References + Validation panels. No DB change, no mutation.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/assets$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const bp = board.blueprint || {};
+      const dupes = [
+        ...findDuplicateAssets(bp.characters),
+        ...findDuplicateAssets(bp.locations),
+        ...findDuplicateAssets(bp.objects),
+      ];
+      return json(res, 200, {
+        board_id: id,
+        map: buildAssetReferenceMap(board),
+        duplicates: dupes,
+        styleGuide: buildVisualStyleGuide(board),
+        issues: validateAssetContinuity(board),
+      });
+    }
+    // Cinematography & shot planning (Phase 3) — read-only plans derived
+    // from approved shot direction: shot list, camera motion, lighting,
+    // blocking, transitions + validation. Powers Storyboard/Timeline and
+    // the Shot Inspector. No mutation, no DB change.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/cinematography$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      return json(res, 200, {
+        board_id: id,
+        shots: buildShotList(board),
+        camera: buildCameraMotionPlan(board),
+        lighting: buildLightingPlan(board),
+        blocking: buildBlockingPlan(board),
+        transitions: buildTransitionPlan(board),
+        issues: validateCinematography(board),
+      });
+    }
+    // Acting, motion & audio sync (Phase 4) — read-only: character actions,
+    // interactions, motion timeline, audio timing (measured wins, estimated
+    // flagged), action sync, lip-sync instructions + motion validation.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/motion-audio$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      return json(res, 200, {
+        board_id: id,
+        actions: buildCharacterActionPlan(board),
+        interactions: buildInteractionPlan(board),
+        timeline: buildMotionTimeline(board),
+        audioTiming: buildAudioTimingMap(board),
+        sync: buildActionSyncPlan(board),
+        lipsync: buildLipSyncInstructions(board),
+        issues: validateMotionPrompts(board),
+      });
+    }
+    // Prompt preview (Phase 5) — dry run of what Flux (image) and LTX/Wan
+    // (video) receive: per-shot prompts assembled with the same bible
+    // identities + locks approve enforces, plus checklist issues. No ComfyUI
+    // call, no mutation, no node IDs/parameters here (adapters own those).
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/prompts$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      return json(res, 200, { board_id: id, shots: buildShotPrompts(board) });
+    }
+    // Delivery (Phase 7) — read-only edit plan, assembly timeline, resumable
+    // render-job spec (existing runners consume it unchanged) + gated QC
+    // report with selective regen targets. No generation, no mutation.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/delivery$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const q = Object.fromEntries(new URL(req.url, "http://x").searchParams.entries());
+      const beatsParam = q.beats != null && String(q.beats).trim() ? String(q.beats).split(",").map((x) => x.trim()).filter(Boolean) : null;
+      return json(res, 200, {
+        board_id: id,
+        editPlan: buildEditPlan(board),
+        timeline: buildAssemblyTimeline(board),
+        renderJob: buildRenderJob(board, { format: q.format, beats: beatsParam }),
+        qc: buildQCReport(board, { minScore: Number(q.minScore) || 60 }),
+      });
+    }
+    // Intelligent Director: staged repair (spec §15.9) — re-plans ONLY the
+    // flagged scenes/shots via the reasoning engine, preserving ids and
+    // approved neighbours. Body: { scene_numbers?: number[] } (default: all
+    // scenes named in the current validation issues). Persists + returns board.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/repair$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      if (!board.blueprint) return json(res, 400, { error: "analyze the story first" });
+      if (!Array.isArray(board.scenes) || !board.scenes.length) return json(res, 400, { error: "no scenes to repair" });
+      const body = await readJson(req).catch(() => ({}));
+      const scored = scoreDirectorPlan({ ...board, blueprint: { ...(board.blueprint || {}), lyric_lines: boardLyricLines(board) } });
+      let targets = Array.isArray(body.scene_numbers)
+        ? body.scene_numbers.map((n) => Number(n)).filter((n) => Number.isFinite(n))
+        : [];
+      if (!targets.length) {
+        const nums = new Set();
+        for (const m of scored.issues) {
+          const hit = String(m).match(/scene (\d+)/i) || String(m).match(/shot (\d+)-/i);
+          if (hit) nums.add(Number(hit[1]));
+        }
+        targets = [...nums];
+      }
+      if (!targets.length) return json(res, 200, { board_id: id, repaired: [], score: scored.score, board });
+      const picked = board.scenes.filter((s) => targets.includes(Number(s.scene_number)));
+      if (!picked.length) return json(res, 400, { error: "no matching scenes for scene_numbers" });
+      const user = buildDirectionRepairPrompt({
+        input: board.input, blueprint: board.blueprint, scenes: picked, issues: scored.issues,
+      });
+      const raw = await llmChatJson({
+        system: DIRECTOR_SYSTEM, user, maxTokens: 6000, temperature: 0.5,
+        rawTag: `_raw_${id}_repair.log`,
+      });
+      const fixed = (Array.isArray(raw.scenes) ? raw.scenes : []).map((s, i) => {
+        const num = Number(s && s.scene_number) || targets[i] || 0;
+        const normed = normalizeScene(s, num || 1, board.input && board.input.sceneSeconds);
+        // Same post-processing as a planned batch: silent-film boards stay
+        // silent, independent-shots boards stay independent, lyric_text is
+        // re-joined, and bible-id grounding drops hallucinated cast — so a
+        // repair can never reintroduce what planning guards remove.
+        if (board.input && board.input.includeDialogue === false) normed.dialogue = [];
+        if (!board.input || board.input.chainContinuity !== true) scrubSceneContinuity(normed);
+        try {
+          const timed = boardLyricLines(board);
+          const joinLine = (lid) => timed.find((l) => Number(l.lyric_line_id) === Number(lid));
+          if (normed.lyric_line_id && !normed.lyric_text && timed.length) {
+            const line = joinLine(normed.lyric_line_id);
+            if (line && line.lyric_text) normed.lyric_text = String(line.lyric_text);
+          }
+          // Repaired multi-shot scenes carry their own per-shot linkage — join
+          // lyric_text per shot exactly like a planned batch does.
+          for (const sh of (Array.isArray(normed.shots) ? normed.shots : [])) {
+            if (sh && sh.lyric_line_id && !sh.lyric_text && timed.length) {
+              const line = joinLine(sh.lyric_line_id);
+              if (line && line.lyric_text) sh.lyric_text = String(line.lyric_text);
+            }
+          }
+        } catch { /* lyric join is best-effort */ }
+        try { canonicalizeSceneRefs(normed, board.blueprint); } catch { /* grounding is best-effort */ }
+        // Preserve the repaired scene_number even when the model omits it.
+        if (num) normed.scene_number = num;
+        return normed;
+      });
+      const byNum = new Map(fixed.map((s) => [Number(s.scene_number), s]));
+      board.scenes = board.scenes.map((s) => byNum.get(Number(s.scene_number)) || s);
+      board.warn = null;
+      const next = scoreDirectorPlan({ ...board, blueprint: { ...(board.blueprint || {}), lyric_lines: boardLyricLines(board) } });
+      return json(res, 200, { board_id: id, repaired: targets, score: next.score, board: writeDirectorBoard(board) });
+    }
     if (p.match(/^\/api\/director\/boards\/[^/]+\/prompt-preview$/) && req.method === "GET") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
@@ -6421,14 +7151,16 @@ const server = http.createServer(async (req, res) => {
     if (p.match(/^\/api\/director\/boards\/[^/]+\/approve$/) && req.method === "POST") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
-      if (!board.scenes.length) throw new Error("nothing to approve — generate scenes first");
-      // Story QA gate (§21): same checklist as the Story page client, so a
-      // board with unknown speakers, missing emotion/expression or broken
-      // scene order cannot reach boardToScenario/generation.
+      if (!Array.isArray(board.scenes) || !board.scenes.length) throw new Error("nothing to approve — generate scenes first");
+      // Story QA gate (§21 + Chief Director approveGate): same checklist as
+      // the Story page client, so a board with unknown speakers, missing
+      // emotion/expression or broken scene order cannot reach
+      // boardToScenario/generation. Structural errors block; lyric/quality
+      // findings are advisory warnings returned alongside.
       try {
-        const qa = validateStoryBoard(board);
-        if (qa && Array.isArray(qa.errors) && qa.errors.length) {
-          return json(res, 400, { error: `story QA failed: ${qa.errors[0]}`, errors: qa.errors.slice(0, 20), warnings: (qa.warnings || []).slice(0, 20) });
+        const gate = approveGate(board);
+        if (gate && Array.isArray(gate.errors) && gate.errors.length) {
+          return json(res, 400, { error: `story QA failed: ${gate.errors[0]}`, errors: gate.errors.slice(0, 20), warnings: (gate.warnings || []).slice(0, 20), score: gate.score });
         }
       } catch { /* validator never blocks on internal failure — approve proceeds */ }
       const config = boardToScenario(board);
@@ -7340,7 +8072,7 @@ const server = http.createServer(async (req, res) => {
         let text = "";
         try {
           const d = await llmPostChat(`${base}/v1/chat/completions`, {
-            model: "local",
+            model: LLM_MODEL,
             messages: [
               { role: "system", content: "You are an assistant film director for AI video generation. Reply with JSON only: {\"instructions\": \"<3-6 short imperative lines, newline-separated>\", \"reasoning\": \"<one short sentence>\"}. Suggest concrete visual-storytelling instructions tailored to the story (character consistency, mood, pacing, what to emphasize or avoid). Keep each line under 140 characters. Never repeat the story back." },
               {
@@ -7765,6 +8497,1214 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true, version, scene: n, dialogue, segmented: needsSegmentation(dialogue), invalidated });
     }
+    // ------------------------------------------------- devotional studio
+    // Reusable devotional asset library (characters / locations / props /
+    // styles). Metadata + versions + approvals + scene links live in Postgres
+    // when it is up, else in the SQLite fallback (see devStore);
+    // binaries live under DEVOTIONAL_DIR. All list
+    // responses are paginated; every statistic below comes from live data.
+    if (p === "/api/devotional/stats" && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      let byKindRows, fileN, jobRows, recentRows, usageN;
+      if (store === "pg") {
+        const byKind = await pgPool.query(
+          `SELECT kind, status, count(*)::int AS n FROM devotional_assets GROUP BY kind, status`);
+        const files = await pgPool.query("SELECT count(*)::int AS n FROM devotional_asset_files")
+          .catch(() => ({ rows: [{ n: 0 }] }));
+        const jobs = await pgPool.query(
+          `SELECT status, count(*)::int AS n FROM devotional_jobs GROUP BY status`)
+          .catch(() => ({ rows: [] }));
+        const recent = await pgPool.query(
+          `SELECT id, kind, name, status, version, updated_at FROM devotional_assets
+           ORDER BY updated_at DESC LIMIT 8`).catch(() => ({ rows: [] }));
+        const usage = await pgPool.query(
+          `SELECT COUNT(DISTINCT project_id)::int AS n FROM devotional_project_usage`)
+          .catch(() => ({ rows: [{ n: 0 }] }));
+        byKindRows = byKind.rows; fileN = files.rows[0]?.n ?? 0;
+        jobRows = jobs.rows; recentRows = recent.rows; usageN = usage.rows[0]?.n ?? 0;
+      } else {
+        try {
+          byKindRows = devDb.prepare(
+            "SELECT kind, status, count(*) AS n FROM devotional_assets GROUP BY kind, status").all();
+          fileN = devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files").get()?.n ?? 0;
+          jobRows = devDb.prepare("SELECT status, count(*) AS n FROM devotional_jobs GROUP BY status").all();
+          recentRows = devDb.prepare(
+            "SELECT id, kind, name, status, version, updated_at FROM devotional_assets ORDER BY updated_at DESC LIMIT 8").all();
+          usageN = devDb.prepare("SELECT COUNT(DISTINCT project) AS n FROM devotional_project_usage").get()?.n ?? 0;
+        } catch {
+          byKindRows = []; fileN = 0; jobRows = []; recentRows = []; usageN = 0;
+        }
+      }
+      const counts = { character: 0, location: 0, prop: 0, style: 0 };
+      let approved = 0, drafts = 0;
+      for (const r of byKindRows) {
+        if (counts[r.kind] != null) counts[r.kind] += Number(r.n) || 0;
+        if (r.status === "approved") approved += Number(r.n) || 0;
+        if (r.status === "draft" || r.status === "review" || r.status === "generating") drafts += Number(r.n) || 0;
+      }
+      const jobCounts = {};
+      for (const r of jobRows) jobCounts[r.status] = Number(r.n) || 0;
+      return json(res, 200, {
+        counts, approved, drafts,
+        files: Number(fileN) || 0,
+        jobs: jobCounts,
+        failedJobs: (jobCounts.FAILED || 0) + (jobCounts.PENDING || 0),
+        projectsUsing: Number(usageN) || 0,
+        recent: recentRows,
+      });
+    }
+    if (p === "/api/devotional/assets" && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const kind = u.searchParams.get("kind");
+      const status = u.searchParams.get("status");
+      const category = u.searchParams.get("category");
+      const search = String(u.searchParams.get("search") || "").trim().slice(0, 120);
+      const sort = String(u.searchParams.get("sort") || "updated").toLowerCase();
+      const page = Math.max(1, Number(u.searchParams.get("page")) || 1);
+      const pageSize = Math.max(1, Math.min(100, Number(u.searchParams.get("pageSize")) || 24));
+      const order = sort === "name" ? "name ASC" : sort === "created" ? "created_at DESC" : "updated_at DESC";
+      if (store === "pg") {
+        const conds = [];
+        const params = [];
+        if (normalizeKind(kind)) { params.push(kind.toLowerCase()); conds.push(`kind = $${params.length}`); }
+        if (normalizeStatus(status)) { params.push(status.toLowerCase()); conds.push(`status = $${params.length}`); }
+        if (category) { params.push(category); conds.push(`category = $${params.length}`); }
+        if (search) {
+          params.push(`%${search}%`);
+          conds.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length} OR category ILIKE $${params.length} OR EXISTS (SELECT 1 FROM unnest(aliases) a WHERE a ILIKE $${params.length}) OR id ILIKE $${params.length})`);
+        }
+        const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+        const total = (await pgPool.query(`SELECT count(*)::int AS n FROM devotional_assets ${where}`, params)).rows[0].n;
+        params.push(pageSize, (page - 1) * pageSize);
+        const rows = (await pgPool.query(
+          `SELECT * FROM devotional_assets ${where} ORDER BY ${order} LIMIT $${params.length - 1} OFFSET $${params.length}`,
+          params)).rows.map(devRow);
+        // Attach latest still + clip per asset so each tab can render
+        // generated media below the cards (no N+1 detail fetches).
+        let fileRows = [];
+        if (rows.length) {
+          try {
+            fileRows = (await pgPool.query(
+              "SELECT * FROM devotional_asset_files WHERE asset_id = ANY($1) ORDER BY id DESC",
+              [rows.map((r) => r.id)])).rows;
+          } catch { fileRows = []; }
+        }
+        return json(res, 200, { total, page, pageSize, assets: devAttachPreviews(rows, fileRows) });
+      }
+      // SQLite: LIKE is case-insensitive for ASCII (NOCASE); aliases live in
+      // a JSON string column so a substring match covers them.
+      const conds = [];
+      const params = [];
+      if (normalizeKind(kind)) { params.push(kind.toLowerCase()); conds.push("kind = ?"); }
+      if (normalizeStatus(status)) { params.push(status.toLowerCase()); conds.push("status = ?"); }
+      if (category) { params.push(category); conds.push("category = ? COLLATE NOCASE"); }
+      if (search) {
+        params.push(`%${search}%`);
+        conds.push("(name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\' OR aliases LIKE ? ESCAPE '\\' OR id LIKE ? ESCAPE '\\')");
+        const like = params.pop();
+        params.push(like, like, like, like, like);
+      }
+      const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+      const total = devDb.prepare(`SELECT count(*) AS n FROM devotional_assets ${where}`).get(...params)?.n ?? 0;
+      const rows = devDb.prepare(
+        `SELECT * FROM devotional_assets ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, pageSize, (page - 1) * pageSize).map(devRow);
+      let fileRows = [];
+      if (rows.length) {
+        try {
+          const marks = rows.map(() => "?").join(",");
+          fileRows = devDb.prepare(
+            `SELECT * FROM devotional_asset_files WHERE asset_id IN (${marks}) ORDER BY id DESC`).all(...rows.map((r) => r.id));
+        } catch { fileRows = []; }
+      }
+      return json(res, 200, { total: Number(total) || 0, page, pageSize, assets: devAttachPreviews(rows, fileRows) });
+    }
+    if (p === "/api/devotional/assets" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => null);
+      if (!body || typeof body !== "object") return json(res, 400, { error: "body must be an asset object" });
+      const { ok, errors, asset } = validateAssetPayload(body);
+      if (!ok) return json(res, 400, { error: errors.join("; ") });
+      if (!asset.kind || !asset.name) return json(res, 400, { error: "kind and name are required" });
+      const id = asset.id || await devNextAssetId(asset.kind, asset.name);
+      if (!/^[A-Z0-9_]{3,64}$/.test(id)) return json(res, 400, { error: "bad asset id" });
+      if (asset.parent_id) {
+        const prow = store === "pg"
+          ? (await pgPool.query("SELECT kind FROM devotional_assets WHERE id = $1", [asset.parent_id])).rows[0]
+          : devDb.prepare("SELECT kind FROM devotional_assets WHERE id = ?").get(asset.parent_id);
+        if (!prow) return json(res, 400, { error: "no such parent asset" });
+        if (prow.kind !== asset.kind) return json(res, 400, { error: "variant parent must be the same kind" });
+      }
+      try {
+        let row;
+        if (store === "pg") {
+          const r = await pgPool.query(
+            `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
+               identity, style_id, negative_prompt, status, version, locked, continuity, metadata, prompt)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,'draft',1,$11,$12,$13::jsonb,$14)
+             RETURNING *`,
+            [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
+             asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
+             asset.negative_prompt || "", !!asset.locked, asset.continuity || "",
+             JSON.stringify(asset.metadata || {}), asset.prompt || ""]);
+          row = r.rows[0];
+        } else {
+          const now = devNow();
+          devDb.prepare(
+            `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
+               identity, style_id, negative_prompt, status, version, locked, continuity, metadata, prompt, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?, ?, ?)`
+          ).run(id, asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
+            asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
+            asset.style_id || null, asset.negative_prompt || "", asset.locked ? 1 : 0,
+            asset.continuity || "", JSON.stringify(asset.metadata || {}), asset.prompt || "", now, now);
+          row = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+        }
+        await devSnapshot(id, 1, "created");
+        return json(res, 200, devRow(row));
+      } catch (e) {
+        if (String(e.message || "").includes("duplicate") || String(e.message || "").includes("UNIQUE") || e.code === "23505" || e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
+          return json(res, 409, { error: `asset ${id} already exists — rename or use a new id (never overwritten)` });
+        }
+        throw e;
+      }
+    }
+    // Seed the starter library (suggested deities / places / props / styles).
+    // Conflict-safe: existing ids are skipped and reported, never overwritten.
+    if (p === "/api/devotional/seed" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const created = [], skipped = [];
+      for (const kind of DEVOTIONAL_KINDS) {
+        for (const s of SEED_SUGGESTIONS[kind] || []) {
+          const id = await devNextAssetId(kind, s.name);
+          try {
+            if (store === "pg") {
+              await pgPool.query(
+                `INSERT INTO devotional_assets (id, kind, name, category, description, status, version)
+                 VALUES ($1,$2,$3,$4,$5,'draft',1)`,
+                [id, kind, s.name, s.category || "", s.description || ""]);
+            } else {
+              const now = devNow();
+              devDb.prepare(
+                "INSERT INTO devotional_assets (id, kind, name, category, description, status, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'draft', 1, ?, ?)"
+              ).run(id, kind, s.name, s.category || "", s.description || "", now, now);
+            }
+            await devSnapshot(id, 1, "seeded");
+            created.push(id);
+          } catch (e) {
+            if (e.code === "23505" || String(e.message || "").includes("UNIQUE")) skipped.push(id);
+            else throw e;
+          }
+        }
+      }
+      return json(res, 200, { ok: true, created, skipped });
+    }
+    if (p === "/api/devotional/jobs" && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const status = String(u.searchParams.get("status") || "").toUpperCase();
+      const limit = Math.max(1, Math.min(100, Number(u.searchParams.get("limit")) || 30));
+      const valid = status && ["PENDING", "PROCESSING", "COMPLETED", "FAILED"].includes(status);
+      // ?ids=a,b,c — precise lookup for live progress trackers (one-click
+      // media polls its own queued jobs; never subject to the LIMIT window).
+      const ids = String(u.searchParams.get("ids") || "").split(",")
+        .map((s) => s.trim()).filter((s) => /^[\w-]{1,80}$/.test(s)).slice(0, 20);
+      if (ids.length) {
+        if (store === "pg") {
+          const r = await pgPool.query("SELECT * FROM devotional_jobs WHERE id = ANY($1)", [ids]);
+          return json(res, 200, r.rows.map(devJobRow));
+        }
+        const marks = ids.map(() => "?").join(",");
+        return json(res, 200, devDb.prepare(
+          `SELECT * FROM devotional_jobs WHERE id IN (${marks})`).all(...ids).map(devJobRow));
+      }
+      if (store === "pg") {
+        const r = valid
+          ? await pgPool.query("SELECT * FROM devotional_jobs WHERE status = $1 ORDER BY created_at DESC LIMIT $2", [status, limit])
+          : await pgPool.query("SELECT * FROM devotional_jobs ORDER BY created_at DESC LIMIT $1", [limit]);
+        return json(res, 200, r.rows);
+      }
+      const rows = valid
+        ? devDb.prepare("SELECT * FROM devotional_jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?").all(status, limit)
+        : devDb.prepare("SELECT * FROM devotional_jobs ORDER BY created_at DESC LIMIT ?").all(limit);
+      return json(res, 200, rows.map(devJobRow));
+    }
+    // Director integration: resolve a scene to approved canonical assets.
+    // Body: { scene: { devotional_characters[], devotional_location,
+    // devotional_props[], devotional_style } }. Unresolved ids are reported
+    // for the review step — never silently substituted.
+    if (p === "/api/devotional/resolve" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => ({}));
+      const scene = body && typeof body === "object" ? body.scene || body : {};
+      const ids = new Set([
+        ...(Array.isArray(scene.devotional_characters) ? scene.devotional_characters : []),
+        ...(Array.isArray(scene.devotional_props) ? scene.devotional_props : []),
+        scene.devotional_location, scene.devotional_style,
+      ].filter(Boolean).map((x) => String(x).toUpperCase()));
+      const lib = {};
+      if (ids.size) {
+        if (store === "pg") {
+          const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = ANY($1)", [[...ids]]);
+          for (const row of r.rows) lib[row.id] = devRow(row);
+        } else {
+          const list = [...ids];
+          const marks = list.map(() => "?").join(",");
+          for (const row of devDb.prepare(`SELECT * FROM devotional_assets WHERE id IN (${marks})`).all(...list)) {
+            lib[row.id] = devRow(row);
+          }
+        }
+      }
+      return json(res, 200, resolveSceneAssets(scene, lib));
+    }
+    // Director integration: assemble the final image prompt from canonical
+    // assets + scene action (identity and action stay separate).
+    if (p === "/api/devotional/prompt" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => ({}));
+      const scene = body && typeof body === "object" ? body.scene || {} : {};
+      const fetchAssets = async (list) => {
+        const out = [];
+        for (const id of (Array.isArray(list) ? list : []).filter(Boolean)) {
+          const key = String(id).toUpperCase();
+          const row = store === "pg"
+            ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [key])).rows[0]
+            : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(key);
+          if (row) out.push(devRow(row));
+        }
+        return out;
+      };
+      const one = async (id) => (await fetchAssets(id ? [id] : []))[0] || null;
+      const characters = await fetchAssets(scene.devotional_characters);
+      const props = await fetchAssets(scene.devotional_props);
+      const location = await one(scene.devotional_location);
+      const style = await one(scene.devotional_style);
+      return json(res, 200, {
+        ...buildDevotionalScenePrompt({ characters, location, props, style, scene }),
+        assets: {
+          characters: characters.map((a) => ({ id: a.id, version: a.version })),
+          location: location ? { id: location.id, version: location.version } : null,
+          props: props.map((a) => ({ id: a.id, version: a.version })),
+          style: style ? { id: style.id, version: style.version } : null,
+        },
+      });
+    }
+    // Record which approved asset versions a Director scene uses (durable
+    // reference — later canonical edits never rewrite history).
+    if (p === "/api/devotional/scene-links" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => null);
+      const board_id = String(body?.board_id || "").trim();
+      const scene_number = Number(body?.scene_number);
+      const links = Array.isArray(body?.links) ? body.links : [];
+      if (!board_id || !Number.isInteger(scene_number) || scene_number < 1) {
+        return json(res, 400, { error: "board_id and scene_number are required" });
+      }
+      const saved = [];
+      for (const l of links) {
+        const role = String(l?.role || "").toLowerCase();
+        const asset_id = String(l?.asset_id || "").toUpperCase();
+        if (!["character", "location", "prop", "style"].includes(role) || !asset_id) continue;
+        if (store === "pg") {
+          const ar = await pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [asset_id]);
+          if (!ar.rows[0]) continue; // unknown assets are skipped, never invented
+          await pgPool.query(
+            `INSERT INTO devotional_scene_links (board_id, scene_number, asset_id, asset_version, role)
+             VALUES ($1,$2,$3,$4,$5)
+             ON CONFLICT (board_id, scene_number, asset_id, role) DO UPDATE SET asset_version = EXCLUDED.asset_version`,
+            [board_id, scene_number, asset_id, Number(ar.rows[0].version) || 1, role]);
+        } else {
+          const ar = devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(asset_id);
+          if (!ar) continue; // unknown assets are skipped, never invented
+          devDb.prepare(
+            `INSERT INTO devotional_scene_links (board_id, scene_number, asset_id, asset_version, role)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT (board_id, scene_number, asset_id, role) DO UPDATE SET asset_version = excluded.asset_version`
+          ).run(board_id, scene_number, asset_id, Number(ar.version) || 1, role);
+        }
+        saved.push({ board_id, scene_number, asset_id, role });
+      }
+      return json(res, 200, { ok: true, saved });
+    }
+    if (p.startsWith("/api/devotional/boards/") && p.endsWith("/links") && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const boardId = pathName(p.split("/")[4] || "");
+      if (!boardId) return json(res, 400, { error: "bad board id" });
+      const rows = store === "pg"
+        ? (await pgPool.query(
+          "SELECT * FROM devotional_scene_links WHERE board_id = $1 ORDER BY scene_number, role", [boardId])).rows
+        : devDb.prepare(
+          "SELECT * FROM devotional_scene_links WHERE board_id = ? ORDER BY scene_number, role").all(boardId);
+      return json(res, 200, rows);
+    }
+    // Explicit project usage record (which approved versions a project uses).
+    // SQLite mode has no projects table, so the project NAME is stored
+    // directly (UNIQUE(project, asset_id)); Postgres keeps project_id.
+    if (p === "/api/devotional/project-usage" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => null);
+      const name = String(body?.project || "").trim();
+      const assets = Array.isArray(body?.assets) ? body.assets : [];
+      if (!name || !isSafe(name)) return json(res, 400, { error: "project is required" });
+      const assetVersion = (asset_id) => store === "pg"
+        ? pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [asset_id]).then((r) => r.rows[0])
+        : devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(asset_id);
+      if (store === "pg") {
+        const pid = await pgProjectId(name);
+        if (pid == null) return json(res, 404, { error: "no such project" });
+        let saved = 0;
+        for (const a of assets) {
+          const asset_id = String(a?.asset_id || "").toUpperCase();
+          const scenes = Array.isArray(a?.scenes) ? a.scenes.map(Number).filter((n) => Number.isInteger(n)) : [];
+          const ar = await assetVersion(asset_id);
+          if (!ar) continue;
+          await pgPool.query(
+            `INSERT INTO devotional_project_usage (project_id, asset_id, asset_version, scenes, updated_at)
+             VALUES ($1,$2,$3,$4,now())
+             ON CONFLICT (project_id, asset_id) DO UPDATE SET asset_version = EXCLUDED.asset_version,
+               scenes = EXCLUDED.scenes, updated_at = now()`,
+            [pid, asset_id, Number(ar.version) || 1, scenes]);
+          saved++;
+        }
+        return json(res, 200, { ok: true, saved });
+      }
+      let saved = 0;
+      for (const a of assets) {
+        const asset_id = String(a?.asset_id || "").toUpperCase();
+        const scenes = Array.isArray(a?.scenes) ? a.scenes.map(Number).filter((n) => Number.isInteger(n)) : [];
+        if (!asset_id) continue;
+        const ar = assetVersion(asset_id);
+        if (!ar) continue;
+        const now = devNow();
+        devDb.prepare(
+          `INSERT INTO devotional_project_usage (project, asset_id, asset_version, scenes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT (project, asset_id) DO UPDATE SET asset_version = excluded.asset_version,
+             scenes = excluded.scenes, updated_at = excluded.updated_at`
+        ).run(name, asset_id, Number(ar.version) || 1, JSON.stringify(scenes), now, now);
+        saved++;
+      }
+      return json(res, 200, { ok: true, saved });
+    }
+    // Metadata backup (library metadata + references; binaries stay on disk).
+    if (p === "/api/devotional/export" && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      if (store === "pg") {
+        const assets = (await pgPool.query("SELECT * FROM devotional_assets ORDER BY kind, name")).rows.map(devRow);
+        const files = (await pgPool.query("SELECT * FROM devotional_asset_files ORDER BY asset_id, id")).rows;
+        const links = (await pgPool.query("SELECT * FROM devotional_scene_links ORDER BY board_id, scene_number")).rows;
+        return json(res, 200, { exported_at: new Date().toISOString(), assets, files, links });
+      }
+      const assets = devDb.prepare("SELECT * FROM devotional_assets ORDER BY kind, name").all().map(devRow);
+      const files = devDb.prepare("SELECT * FROM devotional_asset_files ORDER BY asset_id, id").all().map(devFileRow);
+      const links = devDb.prepare("SELECT * FROM devotional_scene_links ORDER BY board_id, scene_number").all();
+      return json(res, 200, { exported_at: new Date().toISOString(), assets, files, links });
+    }
+    // Restore library metadata (conflict-safe: existing ids skipped unless
+    // { overwrite: true } is set explicitly).
+    if (p === "/api/devotional/import" && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req).catch(() => null);
+      const list = Array.isArray(body?.assets) ? body.assets : null;
+      if (!list) return json(res, 400, { error: "body must be { assets: [...] }" });
+      const overwrite = body.overwrite === true;
+      const created = [], updated = [], skipped = [];
+      for (const raw of list.slice(0, 500)) {
+        const { ok, asset } = validateAssetPayload(raw || {});
+        if (!ok || !asset.kind || !asset.name) { skipped.push(String(raw?.id || raw?.name || "?")); continue; }
+        const id = asset.id || await devNextAssetId(asset.kind, asset.name);
+        const exists = store === "pg"
+          ? (await pgPool.query("SELECT 1 FROM devotional_assets WHERE id = $1", [id])).rowCount
+          : devDb.prepare("SELECT 1 FROM devotional_assets WHERE id = ?").get(id);
+        if (exists && !overwrite) { skipped.push(id); continue; }
+        if (exists) {
+          if (store === "pg") {
+            await pgPool.query(
+              `UPDATE devotional_assets SET kind=$2, parent_id=$3, name=$4, aliases=$5, category=$6,
+                 description=$7, identity=$8::jsonb, style_id=$9, negative_prompt=$10, continuity=$11,
+                 metadata=$12::jsonb, prompt=$13, updated_at=now() WHERE id=$1`,
+              [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
+               asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
+               asset.negative_prompt || "", asset.continuity || "", JSON.stringify(asset.metadata || {}),
+               asset.prompt || ""]);
+          } else {
+            devDb.prepare(
+              `UPDATE devotional_assets SET kind=?, parent_id=?, name=?, aliases=?, category=?,
+                 description=?, identity=?, style_id=?, negative_prompt=?, continuity=?,
+                 metadata=?, prompt=?, updated_at=? WHERE id=?`
+            ).run(asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
+              asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
+              asset.style_id || null, asset.negative_prompt || "", asset.continuity || "",
+              JSON.stringify(asset.metadata || {}), asset.prompt || "", devNow(), id);
+          }
+          updated.push(id);
+        } else {
+          if (store === "pg") {
+            await pgPool.query(
+              `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
+                 identity, style_id, negative_prompt, status, version, continuity, metadata, prompt)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,'draft',1,$11,$12::jsonb,$13)`,
+              [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
+               asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
+               asset.negative_prompt || "", asset.continuity || "", JSON.stringify(asset.metadata || {}),
+               asset.prompt || ""]);
+          } else {
+            const now = devNow();
+            devDb.prepare(
+              `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
+                 identity, style_id, negative_prompt, status, version, continuity, metadata, prompt, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?, ?, ?)`
+            ).run(id, asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
+              asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
+              asset.style_id || null, asset.negative_prompt || "", asset.continuity || "",
+              JSON.stringify(asset.metadata || {}), asset.prompt || "", now, now);
+          }
+          await devSnapshot(id, 1, "imported");
+          created.push(id);
+        }
+      }
+      return json(res, 200, { ok: true, created, updated, skipped });
+    }
+    // Integration health: database, ComfyUI reachability, storage writability.
+    // db.up is true when EITHER Postgres or the SQLite fallback can serve.
+    if (p === "/api/devotional/health" && req.method === "GET") {
+      const storage = (() => {
+        try {
+          fs.mkdirSync(DEVOTIONAL_DIR, { recursive: true });
+          const probe = path.join(DEVOTIONAL_DIR, ".write_probe");
+          fs.writeFileSync(probe, "ok");
+          fs.unlinkSync(probe);
+          return { up: true, root: DEVOTIONAL_DIR };
+        } catch (e) { return { up: false, error: e.message, root: DEVOTIONAL_DIR }; }
+      })();
+      let comfy = { up: false };
+      try { comfy = await comfyStatus(); } catch (e) { comfy = { up: false, error: String(e.message || e) }; }
+      return json(res, 200, { db: { up: !!devStore() }, comfy: { up: !!comfy.up, error: comfy.error || null }, storage });
+    }
+    if (p.startsWith("/api/devotional/assets/") && req.method === "GET" && !p.endsWith("/files") && !p.endsWith("/versions") && !p.endsWith("/usage")) {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      if (!/^[A-Z0-9_]{3,64}$/.test(id)) return json(res, 400, { error: "bad asset id" });
+      let row, fileRows, versionRows, childRows;
+      if (store === "pg") {
+        const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id]);
+        if (!r.rows[0]) return json(res, 404, { error: "no such asset" });
+        row = r.rows[0];
+        fileRows = (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id", [id])).rows;
+        versionRows = (await pgPool.query(
+          "SELECT asset_id, version, note, created_at FROM devotional_asset_versions WHERE asset_id = $1 ORDER BY version", [id])).rows;
+        childRows = (await pgPool.query("SELECT id, name, status FROM devotional_assets WHERE parent_id = $1 ORDER BY name", [id])).rows;
+      } else {
+        row = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+        if (!row) return json(res, 404, { error: "no such asset" });
+        fileRows = devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id").all(id);
+        versionRows = devDb.prepare(
+          "SELECT asset_id, version, note, created_at FROM devotional_asset_versions WHERE asset_id = ? ORDER BY version").all(id);
+        childRows = devDb.prepare("SELECT id, name, status FROM devotional_assets WHERE parent_id = ? ORDER BY name").all(id);
+      }
+      const asset = devRow(row);
+      const files = fileRows.map(devFileRow);
+      const missing = files.filter((f) => !f.exists).map((f) => f.file_path);
+      return json(res, 200, { ...asset, files, versions: versionRows, children: childRows, missing });
+    }
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/files") && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const rows = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id", [id])).rows
+        : devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id").all(id);
+      return json(res, 200, rows.map(devFileRow));
+    }
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/versions") && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const rows = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_asset_versions WHERE asset_id = $1 ORDER BY version", [id])).rows
+        : devDb.prepare("SELECT * FROM devotional_asset_versions WHERE asset_id = ? ORDER BY version").all(id)
+          .map((v) => ({ ...v, snapshot: devJson(v.snapshot, {}) }));
+      return json(res, 200, rows);
+    }
+    // Where an asset is used: linked Director scenes + recorded projects.
+    // SQLite usage rows carry the project NAME (no projects table there).
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/usage") && req.method === "GET") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      let scenes, projects;
+      if (store === "pg") {
+        scenes = (await pgPool.query(
+          "SELECT board_id, scene_number, asset_version, role FROM devotional_scene_links WHERE asset_id = $1 ORDER BY board_id, scene_number", [id])).rows;
+        projects = (await pgPool.query(
+          `SELECT p.name, u.asset_version, u.scenes FROM devotional_project_usage u
+           JOIN projects p ON p.project_id = u.project_id WHERE u.asset_id = $1`, [id])).rows;
+      } else {
+        scenes = devDb.prepare(
+          "SELECT board_id, scene_number, asset_version, role FROM devotional_scene_links WHERE asset_id = ? ORDER BY board_id, scene_number").all(id);
+        projects = devDb.prepare(
+          "SELECT project AS name, asset_version, scenes FROM devotional_project_usage WHERE asset_id = ?").all(id)
+          .map((u) => ({ name: u.name, asset_version: u.asset_version, scenes: devJson(u.scenes, []) }));
+      }
+      return json(res, 200, { asset_id: id, scenes, projects });
+    }
+    // Edit metadata. Approved + locked assets need { unlock: true } to change
+    // canonical fields (name/description/identity) — the lock is explicit.
+    if (p.startsWith("/api/devotional/assets/") && req.method === "PUT" && p.split("/").length === 5) {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const curRow = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
+        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      if (!curRow) return json(res, 404, { error: "no such asset" });
+      const body = await readJson(req).catch(() => null);
+      if (!body || typeof body !== "object") return json(res, 400, { error: "body must be an asset object" });
+      const { ok, errors, asset } = validateAssetPayload(body, { isUpdate: true });
+      if (!ok) return json(res, 400, { error: errors.join("; ") });
+      const prev = devRow(curRow);
+      const touchesCanonical = body.name !== undefined || body.description !== undefined || body.identity !== undefined
+        || body.prompt !== undefined || body.negative_prompt !== undefined || body.continuity !== undefined;
+      if (prev.status === "approved" && prev.locked && touchesCanonical && body.unlock !== true) {
+        return json(res, 403, { error: "canonical identity is locked — approve a new version or unlock explicitly" });
+      }
+      if (body.status !== undefined && body.status.toLowerCase() !== prev.status && !canTransition(prev.status, body.status)) {
+        return json(res, 400, { error: `illegal transition ${prev.status} -> ${body.status}` });
+      }
+      const next = {
+        ...prev,
+        name: body.name !== undefined ? String(body.name).trim().slice(0, 120) : prev.name,
+        aliases: body.aliases !== undefined ? normalizeAliases(body.aliases) : prev.aliases,
+        category: body.category !== undefined ? String(body.category).trim().slice(0, 80) : prev.category,
+        description: body.description !== undefined ? String(body.description).trim().slice(0, 4000) : prev.description,
+        identity: body.identity !== undefined && typeof body.identity === "object" ? body.identity : prev.identity,
+        style_id: body.style_id !== undefined
+          ? (String(body.style_id).trim() ? String(body.style_id).trim().toUpperCase().slice(0, 64) : null) : prev.style_id,
+        negative_prompt: body.negative_prompt !== undefined ? String(body.negative_prompt).trim().slice(0, 2000) : prev.negative_prompt,
+        prompt: body.prompt !== undefined ? String(body.prompt).trim().slice(0, 2000) : prev.prompt,
+        status: body.status !== undefined ? body.status.toLowerCase() : prev.status,
+        locked: body.locked !== undefined ? !!body.locked : prev.locked,
+        continuity: body.continuity !== undefined ? String(body.continuity).trim().slice(0, 2000) : prev.continuity,
+        metadata: body.metadata !== undefined && typeof body.metadata === "object" ? body.metadata : prev.metadata,
+      };
+      if (!next.name) return json(res, 400, { error: "name must not be empty" });
+      let out;
+      if (store === "pg") {
+        const r = await pgPool.query(
+          `UPDATE devotional_assets SET name=$2, aliases=$3, category=$4, description=$5, identity=$6::jsonb,
+             style_id=$7, negative_prompt=$8, status=$9, locked=$10, continuity=$11, metadata=$12::jsonb, prompt=$13,
+             updated_at=now() WHERE id=$1 RETURNING *`,
+          [id, next.name, next.aliases, next.category, next.description, JSON.stringify(next.identity || {}),
+           next.style_id, next.negative_prompt, next.status, next.locked, next.continuity,
+           JSON.stringify(next.metadata || {}), next.prompt || ""]);
+        out = r.rows[0];
+      } else {
+        devDb.prepare(
+          `UPDATE devotional_assets SET name=?, aliases=?, category=?, description=?, identity=?,
+             style_id=?, negative_prompt=?, status=?, locked=?, continuity=?, metadata=?, prompt=?,
+             updated_at=? WHERE id=?`
+        ).run(next.name, JSON.stringify(next.aliases || []), next.category, next.description,
+          JSON.stringify(next.identity || {}), next.style_id, next.negative_prompt, next.status,
+          next.locked ? 1 : 0, next.continuity, JSON.stringify(next.metadata || {}), next.prompt || "", devNow(), id);
+        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      }
+      return json(res, 200, devRow(out));
+    }
+    // Lifecycle transition with validation (approve / reject / regenerate-flow).
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/status") && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const body = await readJson(req).catch(() => ({}));
+      const to = normalizeStatus(body?.status);
+      if (!to) return json(res, 400, { error: "status is required" });
+      const from = store === "pg"
+        ? (await pgPool.query("SELECT status FROM devotional_assets WHERE id = $1", [id])).rows[0]?.status
+        : devDb.prepare("SELECT status FROM devotional_assets WHERE id = ?").get(id)?.status;
+      if (!from) return json(res, 404, { error: "no such asset" });
+      if (from !== to && !canTransition(from, to)) {
+        return json(res, 400, { error: `illegal transition ${from} -> ${to}` });
+      }
+      if (to === "approved") {
+        const n = store === "pg"
+          ? (await pgPool.query("SELECT count(*)::int AS n FROM devotional_asset_files WHERE asset_id = $1", [id])).rows[0].n
+          : devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files WHERE asset_id = ?").get(id)?.n ?? 0;
+        if (!Number(n)) return json(res, 400, { error: "approve needs at least one reference file — generate or upload first" });
+      }
+      let out;
+      if (store === "pg") {
+        const r = await pgPool.query(
+          "UPDATE devotional_assets SET status = $2, updated_at = now() WHERE id = $1 RETURNING *", [id, to]);
+        if (to === "approved") {
+          await pgPool.query("UPDATE devotional_assets SET locked = TRUE WHERE id = $1", [id]);
+          r.rows[0].locked = true;
+        }
+        out = r.rows[0];
+      } else {
+        devDb.prepare("UPDATE devotional_assets SET status = ?, updated_at = ? WHERE id = ?").run(to, devNow(), id);
+        if (to === "approved") {
+          devDb.prepare("UPDATE devotional_assets SET locked = 1 WHERE id = ?").run(id);
+        }
+        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      }
+      return json(res, 200, devRow(out));
+    }
+    if (p.startsWith("/api/devotional/assets/") && (p.endsWith("/lock") || p.endsWith("/unlock")) && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const lock = p.endsWith("/lock");
+      let out;
+      if (store === "pg") {
+        const r = await pgPool.query(
+          "UPDATE devotional_assets SET locked = $2, updated_at = now() WHERE id = $1 RETURNING *", [id, lock]);
+        if (!r.rows[0]) return json(res, 404, { error: "no such asset" });
+        out = r.rows[0];
+      } else {
+        devDb.prepare("UPDATE devotional_assets SET locked = ?, updated_at = ? WHERE id = ?").run(lock ? 1 : 0, devNow(), id);
+        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+        if (!out) return json(res, 404, { error: "no such asset" });
+      }
+      return json(res, 200, devRow(out));
+    }
+    // New canonical version: snapshot current, bump version number.
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/version") && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const body = await readJson(req).catch(() => ({}));
+      const curRow = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
+        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      if (!curRow) return json(res, 404, { error: "no such asset" });
+      const prev = devRow(curRow);
+      await devSnapshot(id, prev.version, String(body?.note || ""));
+      let out;
+      if (store === "pg") {
+        const r = await pgPool.query(
+          "UPDATE devotional_assets SET version = version + 1, status = 'review', updated_at = now() WHERE id = $1 RETURNING *", [id]);
+        out = r.rows[0];
+      } else {
+        devDb.prepare("UPDATE devotional_assets SET version = version + 1, status = 'review', updated_at = ? WHERE id = ?").run(devNow(), id);
+        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      }
+      await devSnapshot(id, Number(devRow(out).version), "version opened");
+      return json(res, 200, devRow(out));
+    }
+    // Restore an earlier snapshot (safe: current state is snapshotted first,
+    // scene links keep pointing at the versions they recorded).
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/restore") && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const body = await readJson(req).catch(() => ({}));
+      const version = Number(body?.version);
+      if (!Number.isInteger(version) || version < 1) return json(res, 400, { error: "version is required" });
+      const snapRaw = store === "pg"
+        ? (await pgPool.query(
+          "SELECT snapshot FROM devotional_asset_versions WHERE asset_id = $1 AND version = $2", [id, version])).rows[0]?.snapshot
+        : devDb.prepare("SELECT snapshot FROM devotional_asset_versions WHERE asset_id = ? AND version = ?").get(id, version)?.snapshot;
+      if (snapRaw == null) return json(res, 404, { error: "no such version" });
+      const curVersion = store === "pg"
+        ? (await pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [id])).rows[0]?.version
+        : devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(id)?.version;
+      if (curVersion == null) return json(res, 404, { error: "no such asset" });
+      const s = (typeof snapRaw === "string" ? devJson(snapRaw, {}) : snapRaw) || {};
+      await devSnapshot(id, Number(curVersion), `pre-restore of v${version}`);
+      const sAliases = Array.isArray(s.aliases) ? s.aliases : devJson(s.aliases, []);
+      let out;
+      if (store === "pg") {
+        const r = await pgPool.query(
+          `UPDATE devotional_assets SET name=$2, aliases=$3, category=$4, description=$5, identity=$6::jsonb,
+             style_id=$7, negative_prompt=$8, continuity=$9, metadata=$10::jsonb,
+             version=version+1, status='review', updated_at=now() WHERE id=$1 RETURNING *`,
+          [id, String(s.name || "restored").slice(0, 120), Array.isArray(s.aliases) ? s.aliases : [],
+           String(s.category || "").slice(0, 80), String(s.description || "").slice(0, 4000),
+           JSON.stringify(s.identity || {}), s.style_id || null, String(s.negative_prompt || "").slice(0, 2000),
+           String(s.continuity || "").slice(0, 2000), JSON.stringify(s.metadata || {})]);
+        out = r.rows[0];
+      } else {
+        devDb.prepare(
+          `UPDATE devotional_assets SET name=?, aliases=?, category=?, description=?, identity=?,
+             style_id=?, negative_prompt=?, continuity=?, metadata=?,
+             version=version+1, status='review', updated_at=? WHERE id=?`
+        ).run(String(s.name || "restored").slice(0, 120), JSON.stringify(Array.isArray(sAliases) ? sAliases : []),
+          String(s.category || "").slice(0, 80), String(s.description || "").slice(0, 4000),
+          JSON.stringify(s.identity || {}), s.style_id || null, String(s.negative_prompt || "").slice(0, 2000),
+          String(s.continuity || "").slice(0, 2000), JSON.stringify(s.metadata || {}), devNow(), id);
+        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      }
+      await devSnapshot(id, Number(devRow(out).version), `restored from v${version}`);
+      return json(res, 200, devRow(out));
+    }
+    // Import an image (base64 data URL) as a reference file. Never overwrites:
+    // identical filenames gain a _vN suffix.
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/upload") && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const assetRow = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
+        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      if (!assetRow) return json(res, 404, { error: "no such asset" });
+      const body = await readJson(req).catch(() => null);
+      const data = String(body?.data || "");
+      const m = data.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/s);
+      if (!m) return json(res, 400, { error: "body.data must be a png/jpeg/webp data URL" });
+      const buf = Buffer.from(m[2], "base64");
+      if (!buf.length || buf.length > 25 * 1024 * 1024) return json(res, 400, { error: "image must be 1 byte..25MB" });
+      let fileKind = String(body?.fileKind || "master").toLowerCase();
+      if (!DEVOTIONAL_FILE_KINDS.includes(fileKind)) fileKind = "master";
+      const asset = devRow(assetRow);
+      const dir = devAssetDir(asset);
+      fs.mkdirSync(dir, { recursive: true });
+      const base = `${id.toLowerCase()}_${fileKind}`;
+      const ext = DEVOTIONAL_UPLOAD_EXT[m[1].toLowerCase()] || ".png";
+      let file = base + ext, n = 2;
+      while (fs.existsSync(path.join(dir, file))) file = `${base}_v${n++}${ext}`;
+      fs.writeFileSync(path.join(dir, file), buf);
+      const rel = path.relative(DEVOTIONAL_DIR, path.join(dir, file)).split(path.sep).join("/");
+      let frow;
+      if (store === "pg") {
+        const fr = await pgPool.query(
+          `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, metadata)
+           VALUES ($1,$2,$3,'upload',$4::jsonb) RETURNING *`,
+          [id, rel, fileKind, JSON.stringify({ bytes: buf.length })]);
+        frow = fr.rows[0];
+        if (asset.status === "draft") {
+          await pgPool.query("UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1", [id]);
+        }
+      } else {
+        const info = devDb.prepare(
+          "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, metadata) VALUES (?, ?, ?, 'upload', ?)"
+        ).run(id, rel, fileKind, JSON.stringify({ bytes: buf.length }));
+        frow = devDb.prepare("SELECT * FROM devotional_asset_files WHERE id = ?").get(Number(info.lastInsertRowid));
+        if (asset.status === "draft") {
+          devDb.prepare("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ?").run(devNow(), id);
+        }
+      }
+      return json(res, 200, { ...devFileRow(frow), url: `/devotional/${rel}`, exists: true });
+    }
+    // Queue a Flux reference generation (background child process — never
+    // blocks API requests; serial with main runs via the pump below).
+    // With { both: true } this becomes the one-click media button: a still
+    // is queued only when the asset has no reference image yet, and a short
+    // LTX showcase clip (kind 'video') is always queued behind it.
+    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/generate") && req.method === "POST") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const assetRow = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
+        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      if (!assetRow) return json(res, 404, { error: "no such asset" });
+      const body = await readJson(req).catch(() => ({}));
+      const asset = devRow(assetRow);
+      // Per-request prompt wins; otherwise the asset's saved prompt; blank
+      // saved prompt falls back to the canonical auto description.
+      const prompt = String(body?.prompt || asset.prompt || describeAssetForPrompt(asset)).trim().slice(0, 2000);
+      if (!prompt) return json(res, 400, { error: "prompt is required (or fill the asset description first)" });
+      let fileKind = String(body?.fileKind || "master").toLowerCase();
+      if (!DEVOTIONAL_FILE_KINDS.includes(fileKind) || fileKind === "video") fileKind = "master";
+      const both = body?.both === true;
+      // { only: "video" } = clip-only regen (no still, no status change) —
+      // the per-kind regen buttons in the Image & video section.
+      const onlyVideo = String(body?.only || "").toLowerCase() === "video";
+      const duration = Math.max(2, Math.min(8, Number(body?.duration) || 3));
+      const newJobId = () => `dev_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 6)}`;
+      const enqueue = async (kind, workflow, model, meta) => {
+        const jobId = newJobId();
+        if (store === "pg") {
+          await pgPool.query(
+            `INSERT INTO devotional_jobs (id, asset_id, kind, status, prompt, workflow, model, metadata)
+             VALUES ($1,$2,$3,'PENDING',$4,$5,$6,$7::jsonb)`,
+            [jobId, id, kind, prompt, workflow, model, JSON.stringify(meta)]);
+        } else {
+          const now = devNow();
+          devDb.prepare(
+            "INSERT INTO devotional_jobs (id, asset_id, kind, status, prompt, workflow, model, metadata, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?)"
+          ).run(jobId, id, kind, prompt, workflow, model, JSON.stringify(meta), now, now);
+        }
+        return jobId;
+      };
+      const markGenerating = async () => {
+        if (store === "pg") {
+          await pgPool.query("UPDATE devotional_assets SET status = 'generating', updated_at = now() WHERE id = $1 AND status = 'draft'", [id]);
+        } else {
+          devDb.prepare("UPDATE devotional_assets SET status = 'generating', updated_at = ? WHERE id = ? AND status = 'draft'").run(devNow(), id);
+        }
+      };
+      const jobs = [];
+      let image = "skipped";
+      if (onlyVideo) {
+        jobs.push(await enqueue("video", "ltx-i2v", "ltx-2.5-22b-distilled", { fileKind, duration }));
+      } else if (!both) {
+        jobs.push(await enqueue("reference", "flux-t2i", "flux-2-klein-9b-fp8", { fileKind }));
+        image = "queued";
+        await markGenerating();
+      } else {
+        const hasImage = store === "pg"
+          ? (await pgPool.query("SELECT 1 FROM devotional_asset_files WHERE asset_id = $1 LIMIT 1", [id])).rowCount > 0
+          : !!devDb.prepare("SELECT 1 FROM devotional_asset_files WHERE asset_id = ? LIMIT 1").get(id);
+        if (!hasImage) {
+          jobs.push(await enqueue("reference", "flux-t2i", "flux-2-klein-9b-fp8", { fileKind }));
+          image = "queued";
+          await markGenerating();
+        } else {
+          image = "reused";
+        }
+        jobs.push(await enqueue("video", "ltx-i2v", "ltx-2.5-22b-distilled", { fileKind, duration }));
+      }
+      void devPumpJobs();
+      return json(res, 200, { ok: true, job: jobs[0], status: "PENDING", jobs, image });
+    }
+    if (p.startsWith("/api/devotional/jobs/") && req.method === "DELETE") {
+      const jobId = pathName(p.split("/")[4] || "");
+      if (!jobId) return json(res, 400, { error: "bad job id" });
+      const proc = devotionalProcs.get(jobId);
+      if (proc) { try { proc.kill(); } catch { /* already dead */ } }
+      if (pgUp) {
+        await pgPool.query(
+          "UPDATE devotional_jobs SET status = 'FAILED', error_message = 'cancelled by user', updated_at = now() WHERE id = $1 AND status IN ('PENDING','PROCESSING')",
+          [jobId]);
+      } else if (devDb) {
+        try {
+          devDb.prepare("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'cancelled by user', updated_at = ? WHERE id = ? AND status IN ('PENDING','PROCESSING')").run(devNow(), jobId);
+        } catch { /* already gone */ }
+      }
+      return json(res, 200, { ok: true });
+    }
+    if (p.startsWith("/api/devotional/files/") && req.method === "DELETE") {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const fileId = Number(pathName(p.split("/")[4] || ""));
+      if (!Number.isInteger(fileId)) return json(res, 400, { error: "bad file id" });
+      const frow = store === "pg"
+        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE id = $1", [fileId])).rows[0]
+        : devDb.prepare("SELECT * FROM devotional_asset_files WHERE id = ?").get(fileId);
+      if (!frow) return json(res, 404, { error: "no such file" });
+      const guardStatus = store === "pg"
+        ? (await pgPool.query(
+          "SELECT status FROM devotional_assets WHERE id = $1", [frow.asset_id])).rows[0]?.status
+        : devDb.prepare("SELECT status FROM devotional_assets WHERE id = ?").get(frow.asset_id)?.status;
+      const remaining = store === "pg"
+        ? (await pgPool.query(
+          "SELECT count(*)::int AS n FROM devotional_asset_files WHERE asset_id = $1 AND id <> $2",
+          [frow.asset_id, fileId])).rows[0].n
+        : devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files WHERE asset_id = ? AND id <> ?").get(frow.asset_id, fileId)?.n ?? 0;
+      if (guardStatus === "approved" && !Number(remaining)) {
+        return json(res, 400, { error: "cannot delete the last reference of an approved asset — restore or add one first" });
+      }
+      try {
+        const full = path.join(DEVOTIONAL_DIR, frow.file_path);
+        if (full.startsWith(DEVOTIONAL_DIR) && fs.existsSync(full)) fs.unlinkSync(full);
+      } catch { /* DB row is canonical */ }
+      if (store === "pg") {
+        await pgPool.query("DELETE FROM devotional_asset_files WHERE id = $1", [fileId]);
+      } else {
+        devDb.prepare("DELETE FROM devotional_asset_files WHERE id = ?").run(fileId);
+      }
+      return json(res, 200, { ok: true, deleted: fileId });
+    }
+    // Archive (default, reversible) or hard-delete (only when nothing
+    // references the asset) an entry.
+    if (p.startsWith("/api/devotional/assets/") && req.method === "DELETE" && p.split("/").length === 5) {
+      const store = devStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const id = pathName(p.split("/")[4] || "").toUpperCase();
+      const hard = u.searchParams.get("hard") === "1";
+      let curRow;
+      if (store === "pg") {
+        curRow = (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0];
+      } else {
+        curRow = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+      }
+      if (!curRow) return json(res, 404, { error: "no such asset" });
+      if (!hard) {
+        let out;
+        if (store === "pg") {
+          const r = await pgPool.query(
+            "UPDATE devotional_assets SET status = 'archived', updated_at = now() WHERE id = $1 RETURNING *", [id]);
+          out = r.rows[0];
+        } else {
+          devDb.prepare("UPDATE devotional_assets SET status = 'archived', updated_at = ? WHERE id = ?").run(devNow(), id);
+          out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
+        }
+        return json(res, 200, devRow(out));
+      }
+      const nLinks = store === "pg"
+        ? (await pgPool.query(
+          "SELECT count(*)::int AS n FROM devotional_scene_links WHERE asset_id = $1", [id])).rows[0].n
+        : devDb.prepare("SELECT count(*) AS n FROM devotional_scene_links WHERE asset_id = ?").get(id)?.n ?? 0;
+      const nUse = store === "pg"
+        ? (await pgPool.query(
+          "SELECT count(*)::int AS n FROM devotional_project_usage WHERE asset_id = $1", [id])).rows[0].n
+        : devDb.prepare("SELECT count(*) AS n FROM devotional_project_usage WHERE asset_id = ?").get(id)?.n ?? 0;
+      const nKids = store === "pg"
+        ? (await pgPool.query(
+          "SELECT count(*)::int AS n FROM devotional_assets WHERE parent_id = $1", [id])).rows[0].n
+        : devDb.prepare("SELECT count(*) AS n FROM devotional_assets WHERE parent_id = ?").get(id)?.n ?? 0;
+      if (Number(nLinks) || Number(nUse) || Number(nKids)) {
+        return json(res, 400, { error: "asset is referenced by scenes, projects or variants — archive instead" });
+      }
+      if (store === "pg") {
+        await pgPool.query("DELETE FROM devotional_assets WHERE id = $1", [id]);
+      } else {
+        // SQLite has no FK enforcement — delete dependents explicitly
+        // (mirrors the Postgres ON DELETE CASCADE behavior).
+        devDb.prepare("DELETE FROM devotional_asset_files WHERE asset_id = ?").run(id);
+        devDb.prepare("DELETE FROM devotional_asset_versions WHERE asset_id = ?").run(id);
+        devDb.prepare("DELETE FROM devotional_jobs WHERE asset_id = ?").run(id);
+        devDb.prepare("DELETE FROM devotional_scene_links WHERE asset_id = ?").run(id);
+        devDb.prepare("DELETE FROM devotional_project_usage WHERE asset_id = ?").run(id);
+        devDb.prepare("DELETE FROM devotional_assets WHERE id = ?").run(id);
+      }
+      return json(res, 200, { ok: true, deleted: id });
+    }
+// ---------------------------------------------------------------- database browser
+// Generic SQLite browser + row CRUD for the Database tab (below Reface).
+// Covers every user table in data/scenarios.sqlite + data/devotional.sqlite
+// (the canonical stores when USE_SQLITE=true). Identifiers are validated
+// against /^[A-Za-z_][A-Za-z0-9_]*$/ AND against the live schema, all values
+// are bound — no string-interpolated user input ever reaches SQL.
+const DB_BROWSER_FILES = { scenarios: DB, devotional: DEVOTIONAL_DB };
+const dbIdentOk = (s) => typeof s === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
+const dbFileOf = (key) => (key === "devotional" ? "devotional" : "scenarios");
+// A fresh short-lived handle per request (never touches the long-lived db /
+// devDb handles); closed before responding.
+const dbBrowserOpen = (key) => {
+  const file = DB_BROWSER_FILES[dbFileOf(key)];
+  if (!file || !fs.existsSync(file)) return null;
+  return new DatabaseSync(file);
+};
+const dbBrowserTables = (h) =>
+  h.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    .all().map((r) => r.name).filter(dbIdentOk);
+const dbBrowserColumns = (h, table) =>
+  h.prepare("SELECT name, type, [notnull], dflt_value, pk FROM pragma_table_info(?)").all(table);
+const dbBrowserPk = (cols) => cols.filter((c) => c.pk > 0).sort((a, b) => a.pk - b.pk).map((c) => c.name);
+// "" in a numeric column means NULL (SQLite affinity would otherwise store a
+// TEXT empty string in an INTEGER column).
+const dbCoerce = (cols, values) => {
+  const byName = new Map(cols.map((c) => [c.name, String(c.type || "").toUpperCase()]));
+  const out = {};
+  for (const [k, v] of Object.entries(values || {})) {
+    if (!byName.has(k)) continue;
+    const t = byName.get(k);
+    if (v === "" && /INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(t)) out[k] = null;
+    else out[k] = v === undefined ? null : v;
+  }
+  return out;
+};
+const dbReadRow = (h, table, keyCols, key) => {
+  const where = keyCols.map((c) => `"${c}" IS ?`).join(" AND ");
+  const vals = keyCols.map((c) => (key[c] === undefined ? null : key[c]));
+  return h.prepare(`SELECT * FROM "${table}" WHERE ${where}`).get(...vals) ?? null;
+};
+// Row keys arrive as JSON (form fields are strings): coerce numeric-looking
+// strings for numeric columns — `IS` (unlike `=`) applies no type affinity,
+// so "3" would never match an INTEGER 3 without this.
+const dbCoerceKey = (cols, key) => {
+  const byName = new Map(cols.map((c) => [c.name, String(c.type || "").toUpperCase()]));
+  const out = { ...(key || {}) };
+  for (const [k, v] of Object.entries(out)) {
+    const t = byName.get(k);
+    if (typeof v === "string" && t && /INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(t)
+        && v.trim() !== "" && Number.isFinite(Number(v))) out[k] = Number(v);
+  }
+  return out;
+};
+if (p === "/api/database" && req.method === "GET") {
+  const files = [];
+  for (const key of ["scenarios", "devotional"]) {
+    const h = dbBrowserOpen(key);
+    if (!h) continue;
+    try {
+      const tables = dbBrowserTables(h).map((name) => {
+        let rows = 0;
+        try { rows = h.prepare(`SELECT COUNT(*) AS n FROM "${name}"`).get()?.n ?? 0; } catch { rows = 0; }
+        return { name, rows };
+      });
+      files.push({
+        key,
+        file: path.relative(ROOT, DB_BROWSER_FILES[key]) || DB_BROWSER_FILES[key],
+        tables,
+      });
+    } finally { try { h.close(); } catch { /* ignore */ } }
+  }
+  return json(res, 200, { store: USE_SQLITE ? "sqlite" : "postgres", files });
+}
+if (p === "/api/database/rows" && req.method === "GET") {
+  const key = dbFileOf(u.searchParams.get("db"));
+  const table = u.searchParams.get("table") || "";
+  const h = dbBrowserOpen(key);
+  if (!h) return json(res, 503, { error: "database file unavailable" });
+  try {
+    if (!dbIdentOk(table) || !dbBrowserTables(h).includes(table))
+      return json(res, 404, { error: "unknown table" });
+    const cols = dbBrowserColumns(h, table);
+    const pk = dbBrowserPk(cols);
+    const search = (u.searchParams.get("search") || "").trim();
+    const where = [];
+    const args = [];
+    if (search) {
+      // Case-insensitive substring match across every column.
+      const ors = cols.map((c) => `CAST("${c.name}" AS TEXT) LIKE ? ESCAPE '\\'`);
+      where.push(`(${ors.join(" OR ")})`);
+      const esc = search.replace(/[\\%_]/g, (c) => `\\${c}`);
+      for (let i = 0; i < ors.length; i++) args.push(`%${esc}%`);
+    }
+    const w = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const total = h.prepare(`SELECT COUNT(*) AS n FROM "${table}" ${w}`).get(...args)?.n ?? 0;
+    let sort = u.searchParams.get("sort") || "";
+    if (sort && (!dbIdentOk(sort) || !cols.some((c) => c.name === sort))) sort = "";
+    const dir = String(u.searchParams.get("dir") || "").toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const order = sort ? `ORDER BY "${sort}" ${dir}` : "ORDER BY rowid DESC";
+    const limit = Math.max(1, Math.min(200, Number(u.searchParams.get("limit")) || 25));
+    const offset = Math.max(0, Number(u.searchParams.get("offset")) || 0);
+    const rows = h.prepare(`SELECT rowid AS _rowid, * FROM "${table}" ${w} ${order} LIMIT ? OFFSET ?`)
+      .all(...args, limit, offset);
+    return json(res, 200, {
+      db: key, table,
+      columns: cols.map((c) => ({ name: c.name, type: c.type, notnull: !!c.notnull, default: c.dflt_value ?? null, pk: c.pk > 0 })),
+      pk, total, limit, offset, rows,
+    });
+  } finally { try { h.close(); } catch { /* ignore */ } }
+}
+if (p === "/api/database/rows" && (req.method === "POST" || req.method === "PUT" || req.method === "DELETE")) {
+  const key = dbFileOf(u.searchParams.get("db"));
+  const table = u.searchParams.get("table") || "";
+  const h = dbBrowserOpen(key);
+  if (!h) return json(res, 503, { error: "database file unavailable" });
+  try {
+    if (!dbIdentOk(table) || !dbBrowserTables(h).includes(table))
+      return json(res, 404, { error: "unknown table" });
+    const cols = dbBrowserColumns(h, table);
+    const pk = dbBrowserPk(cols);
+    let body = {};
+    try { body = await readJson(req); } catch { return json(res, 400, { error: "bad json" }); }
+    const keyOf = (k) => {
+      // { col: val } object, or a scalar for single-column PK tables.
+      if (k != null && typeof k === "object" && !Array.isArray(k)) return k;
+      if (pk.length === 1) return { [pk[0]]: k };
+      return {};
+    };
+    if (req.method === "POST") {
+      const values = dbCoerce(cols, body.values || body);
+      if (table === "scenarios") {
+        if (!values.name || !String(values.name).trim()) return json(res, 400, { error: "name is required" });
+        if (values.config != null) {
+          try { JSON.parse(String(values.config)); }
+          catch { return json(res, 400, { error: "config must be valid JSON" }); }
+        }
+        if (values.updated_at == null) values.updated_at = Date.now();
+      }
+      // Column list is built AFTER table defaults are applied (the
+      // scenarios updated_at default above must reach the INSERT).
+      const names = Object.keys(values);
+      if (!names.length) return json(res, 400, { error: "no values" });
+      const placeholders = names.map(() => "?").join(", ");
+      const q = `INSERT INTO "${table}" (${names.map((n) => `"${n}"`).join(", ")}) VALUES (${placeholders})`;
+      let stmtInfo;
+      try {
+        stmtInfo = h.prepare(q).run(...names.map((n) => values[n]));
+      } catch (e) { return json(res, 400, { error: String(e.message || e) }); }
+      if (table === "scenarios") {
+        // Keep prompts/<name>.json in sync (CLI runners read it).
+        try {
+          fs.mkdirSync(PROMPTS, { recursive: true });
+          fs.writeFileSync(path.join(PROMPTS, `${values.name}.json`), String(values.config ?? "{}"));
+        } catch (e) { console.warn("[database] prompts mirror failed:", e.message); }
+      }
+      let row = null;
+      try {
+        if (pk.length === 1 && /INT/.test(String(cols.find((c) => c.name === pk[0])?.type || "").toUpperCase())) {
+          row = h.prepare(`SELECT rowid AS _rowid, * FROM "${table}" WHERE rowid IS ?`).get(stmtInfo.lastInsertRowid) ?? null;
+        } else if (pk.length) {
+          row = dbReadRow(h, table, pk, dbCoerceKey(cols, Object.fromEntries(pk.map((c) => [c, values[c] ?? null]))));
+        }
+      } catch { row = null; }
+      return json(res, 200, { ok: true, row });
+    }
+    if (req.method === "PUT") {
+      const keyVals = dbCoerceKey(cols, keyOf(body.key));
+      const values = dbCoerce(cols, body.values || {});
+      const names = Object.keys(values).filter((n) => !(pk.includes(n)));
+      const keyCols = pk.length ? pk : ["_rowid"];
+      const effKey = pk.length ? keyVals : { _rowid: Number(body.key?.rowid ?? body.key?._rowid ?? body.key) };
+      if (!names.length) return json(res, 400, { error: "no values to update" });
+      if (keyCols.some((c) => effKey[c] === undefined))
+        return json(res, 400, { error: "row key is required" });
+      if (table === "scenarios" && values.config != null) {
+        try { JSON.parse(String(values.config)); }
+        catch { return json(res, 400, { error: "config must be valid JSON" }); }
+      }
+      const set = names.map((n) => `"${n}" = ?`).join(", ");
+      const where = keyCols.map((c) => (c === "_rowid" ? "rowid IS ?" : `"${c}" IS ?`)).join(" AND ");
+      let info;
+      try {
+        info = h.prepare(`UPDATE "${table}" SET ${set} WHERE ${where}`)
+          .run(...names.map((n) => values[n]), ...keyCols.map((c) => (effKey[c] === undefined ? null : effKey[c])));
+      } catch (e) { return json(res, 400, { error: String(e.message || e) }); }
+      if (!info.changes) return json(res, 404, { error: "row not found" });
+      const row = pk.length
+        ? dbReadRow(h, table, pk, effKey)
+        : h.prepare(`SELECT rowid AS _rowid, * FROM "${table}" WHERE rowid IS ?`).get(effKey._rowid ?? null);
+      if (table === "scenarios" && row) {
+        try {
+          fs.mkdirSync(PROMPTS, { recursive: true });
+          fs.writeFileSync(path.join(PROMPTS, `${row.name}.json`), String(row.config ?? "{}"));
+        } catch (e) { console.warn("[database] prompts mirror failed:", e.message); }
+      }
+      return json(res, 200, { ok: true, updated: info.changes, row });
+    }
+    // DELETE — body { key } or ?key=<scalar> for single-PK tables.
+    const rawKey = body.key !== undefined ? body.key : u.searchParams.get("key");
+    let keyVals = dbCoerceKey(cols, keyOf(typeof rawKey === "string" && pk.length === 1 ? rawKey : rawKey));
+    if (pk.length === 1 && keyVals[pk[0]] === undefined && typeof rawKey === "string") {
+      const n = Number(rawKey);
+      keyVals = { [pk[0]]: rawKey !== "" && Number.isFinite(n) && String(n) === rawKey ? n : rawKey };
+    }
+    const keyCols = pk.length ? pk : ["_rowid"];
+    const effKey = pk.length ? keyVals : { _rowid: Number(rawKey) };
+    if (keyCols.some((c) => effKey[c] === undefined || (c === "_rowid" && !Number.isFinite(effKey[c]))))
+      return json(res, 400, { error: "row key is required" });
+    let doomed = null;
+    if (table === "scenarios") {
+      doomed = pk.length ? dbReadRow(h, table, pk, effKey) : null;
+    }
+    if (table === "devotional_assets" && pk.length) {
+      // SQLite has no FK enforcement — cascade like the asset DELETE route.
+      const aid = effKey[pk[0]];
+      for (const t of ["devotional_asset_files", "devotional_asset_versions", "devotional_jobs", "devotional_scene_links", "devotional_project_usage"]) {
+        try { h.prepare(`DELETE FROM "${t}" WHERE asset_id IS ?`).run(aid); } catch { /* table may predate */ }
+      }
+    }
+    const where = keyCols.map((c) => (c === "_rowid" ? "rowid IS ?" : `"${c}" IS ?`)).join(" AND ");
+    let info;
+    try {
+      info = h.prepare(`DELETE FROM "${table}" WHERE ${where}`)
+        .run(...keyCols.map((c) => (effKey[c] === undefined ? null : effKey[c])));
+    } catch (e) { return json(res, 400, { error: String(e.message || e) }); }
+    if (!info.changes) return json(res, 404, { error: "row not found" });
+    if (table === "scenarios" && doomed?.name) {
+      try { fs.unlinkSync(path.join(PROMPTS, `${doomed.name}.json`)); }
+      catch { /* prompt file may not exist */ }
+    }
+    return json(res, 200, { ok: true, deleted: info.changes });
+  } finally { try { h.close(); } catch { /* ignore */ } }
+}
     if (p === "/api/db" && req.method === "GET") {      if (USE_SQLITE) return json(res, 200, { up: true, store: "sqlite" });
       if (!(await pgProbe())) return json(res, 200, { up: false });
       const [s, pj, pa, pr] = await Promise.all([
@@ -7782,6 +9722,13 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith("/resources/")) {
       const [, , file] = p.split("/");
       return serveResource(res, decodeURIComponent(file));
+    }
+    if (p.startsWith("/devotional/")) {
+      // /devotional/<Kind>/<Name>/<Id>/<file> — library reference binaries.
+      const rel = p.slice("/devotional/".length).split("/").map((s) => {
+        try { return decodeURIComponent(s); } catch { return ""; }
+      }).join("/");
+      return serveDevotional(res, rel);
     }
     if (p.startsWith("/reface/")) {
       // /reface/<id>/file/<path...> — job media (source, thumbs, result).
@@ -7816,3 +9763,4 @@ server.listen(PORT, () => {
   console.log(`frontend server on http://localhost:${PORT}`);
   console.log(`[env] LLM_BASE=${process.env.LLM_BASE || "(not set)"} COMFY_BASE=${process.env.COMFY_BASE || "(not set)"}`);
 });
+

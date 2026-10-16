@@ -942,6 +942,19 @@ export interface DirectorScene {
   continuity_required?: boolean;
   reference_source?: string;
   continuity_refs?: string[];
+  // Intelligent Director direction (optional; absent on legacy scenes):
+  // rich per-character action/motion direction + dramatic purpose.
+  characters_detailed?: {
+    character_id: string;
+    role?: string;
+    emotion?: string;
+    gaze_target?: string;
+    starting_state?: string;
+    action?: string;
+    ending_state?: string;
+    expression?: string;
+  }[];
+  dramatic_purpose?: string;
   // Source-line coverage (line-by-line planning): numbered story/lyric lines
   // this scene covers. Null on old scenes.
   line_from?: number | null;
@@ -962,6 +975,18 @@ export interface DirectorShot {
   semantic_meaning?: string;
   visual_event?: string;
   characters: string[];
+  // Intelligent Director direction (optional; absent on legacy shots).
+  characters_detailed?: {
+    character_id: string;
+    role?: string;
+    emotion?: string;
+    gaze_target?: string;
+    starting_state?: string;
+    action?: string;
+    ending_state?: string;
+    expression?: string;
+  }[];
+  dramatic_purpose?: string;
   location: string;
   time_of_day?: string;
   action: string;
@@ -1012,6 +1037,10 @@ export interface DirectorBoard {
   // Grounding report for the latest scene batch (repaired/skipped cast or
   // places) — rendered as a ⚠️ hint; cleared by manual edits. Null when clean.
   warn?: string | null;
+  // Intelligent Director story plan (staged analysis artefacts: story
+  // summary, lyric semantics, coverage snapshots). Optional; scenes stay the
+  // executable source of truth.
+  storyPlan?: Record<string, unknown> | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -1115,6 +1144,198 @@ export interface DirectorLive {
 }
 export const directorLive = (id: string) =>
   get<DirectorLive>(`/api/director/boards/${encodeURIComponent(id)}/live`);
+
+// Intelligent Director: Lyric Coverage Map (read-only) — every lyric line
+// with its meaningful phrases, assigned scenes/shots and coverage status.
+export interface DirectorCoveragePhrase {
+  text: string;
+  meaning: string;
+  startMs: number | null;
+  endMs: number | null;
+  coveredByShot: boolean;
+  coverage: "covered" | "uncovered";
+  sceneIds: (number | string)[];
+  shotIds: string[];
+}
+export interface DirectorCoverageLine {
+  lyric_line_id: number;
+  lyric_text: string;
+  phrases: DirectorCoveragePhrase[];
+  status: "covered" | "partial" | "uncovered" | "empty";
+}
+export interface DirectorCoverage {
+  board_id: string;
+  lines: DirectorCoverageLine[];
+  summary: { totalPhrases: number; coveredPhrases: number; pct: number };
+}
+export const directorCoverage = (id: string) =>
+  get<DirectorCoverage>(`/api/director/boards/${encodeURIComponent(id)}/coverage`);
+
+// Intelligent Director: quality-control validation pass (read-only) — 0–100
+// rule-based score with breakdown, actionable issues, continuity findings and
+// the structural story-board gate.
+export interface DirectorValidation {
+  board_id: string;
+  score: number;
+  breakdown: {
+    lyricCoverage: number;
+    actionClarity: number;
+    continuity: number;
+    timing: number;
+    promptCompleteness: number;
+  };
+  issues: string[];
+  coverage: { totalPhrases: number; coveredPhrases: number; pct: number };
+  errors: string[];
+  warnings: string[];
+  continuity: string[];
+  genreNote: string;
+}
+export const directorValidate = (id: string) =>
+  get<DirectorValidation>(`/api/director/boards/${encodeURIComponent(id)}/validate`);
+
+// Chief Director Story Plan + stage pipeline (read-only) — the authoritative
+// narrative source with per-stage done/ready/blocked status and approvals.
+export interface DirectorPlanTask {
+  id: string;
+  label: string;
+  stage: string;
+  status: "pending" | "ready" | "done" | "approved";
+  dependsOn: string[];
+}
+export interface DirectorStageStatus {
+  stage: string;
+  status: "done" | "ready" | "blocked" | "approved";
+  approvedAt: string | null;
+  detail: string;
+}
+export interface DirectorPlan {
+  board_id: string;
+  storyPlan: {
+    version: number;
+    logline: string;
+    theme: string;
+    structure: { beginning: string; development: string; climax: string; resolution: string };
+    narrativeOutline: string[];
+    characterRoster: { character_id: string; name: string; role: string; motivation: string }[];
+    uncertainties: string[];
+    productionTasks: DirectorPlanTask[];
+    approvals: Record<string, string>;
+    revisions: number;
+    visualGuide?: string;
+    cinematography?: string;
+    motionPlan?: string;
+    audioSync?: string;
+    editPlan?: string;
+  };
+  stages: DirectorStageStatus[];
+}
+export const directorPlan = (id: string) =>
+  get<DirectorPlan>(`/api/director/boards/${encodeURIComponent(id)}/plan`);
+
+// Chief Director approval checkpoint — sign off one pipeline stage.
+// Enforces dependency order server-side (force overrides for user edits).
+export const directorApproveStage = (id: string, stage: string, force = false) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/approve-stage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stage, force }),
+  }).then(directorOk<DirectorPlan>("stage approval failed"));
+
+export interface DirectorUncovered {
+  board_id: string;
+  uncovered: {
+    lyric_line_id: number;
+    lyric_text: string;
+    phrase: string;
+    song_start_time: number | null;
+    song_end_time: number | null;
+    timing_confidence: string;
+  }[];
+}
+export const directorUncovered = (id: string) =>
+  get<DirectorUncovered>(`/api/director/boards/${encodeURIComponent(id)}/uncovered`);
+
+// World & Asset Intelligence (Phase 2) — reference map + duplicates +
+// style guide + continuity. Read-only.
+export interface DirectorAssetMap {
+  board_id: string;
+  map: {
+    characters: { id: string; name: string; scenes: number[]; shots: string[] }[];
+    locations: { id: string; name: string; scenes: number[]; shots: string[] }[];
+    props: { id: string; name: string; scenes: number[]; shots: string[] }[];
+    styles: { id: string; name: string; scenes: number[]; shots: string[] }[];
+  };
+  duplicates: { name: string; ids: string[] }[];
+  styleGuide: { style: string; characters: number; locations: number; palettes: string[]; lighting: string[]; layout: string };
+  issues: string[];
+}
+export const directorAssets = (id: string) =>
+  get<DirectorAssetMap>(`/api/director/boards/${encodeURIComponent(id)}/assets`);
+
+// Cinematography & shot planning (Phase 3) — read-only shot list, camera,
+// lighting, blocking, transitions + validation.
+export interface DirectorCinematography {
+  board_id: string;
+  shots: { scene_number: number; shot_id: string; lyric_line_id: number | null; lyric_segment: string; dramatic_purpose: string; shot_type: string; movement: string; duration_seconds: number }[];
+  camera: { shot_id: string; movement: string; speed: string; shot_type: string }[];
+  lighting: { scene_number: number; time_of_day: string; lighting: string; emphasis: string }[];
+  blocking: { shot_id: string; cast: { character_id: string; gaze_target: string; starting_state: string; action: string; ending_state: string }[] }[];
+  transitions: { scene_number: number; transition: string }[];
+  issues: string[];
+}
+export const directorCinematography = (id: string) =>
+  get<DirectorCinematography>(`/api/director/boards/${encodeURIComponent(id)}/cinematography`);
+
+// Acting, motion & audio sync (Phase 4) — read-only action/interaction/
+// timeline/audio/sync/lipsync plans + validation.
+export interface DirectorMotionAudio {
+  board_id: string;
+  actions: { shot_id: string; character_id: string; reference: string; starting_state: string; gaze_target: string; emotion: string; expression: string; action: string; ending_state: string; role: string }[];
+  interactions: { shot_id: string; initiator: string; responders: string[]; target: string; cause_effect: string }[];
+  timeline: { shot_id: string; start_time: number; end_time: number; phases: string[]; camera_movement: string }[];
+  audioTiming: { lyric_line_id: number; lyric_text: string; start_time: number | null; end_time: number | null; timing_confidence: string }[];
+  sync: { shot_id: string; lyric_line_id: number | null; lyric_segment: string; action: string; start_time: number | null; end_time: number | null; timing_confidence: string }[];
+  lipsync: { shot_id: string; speaker: string; line: string; estimated_seconds: number; timing_confidence: string }[];
+  issues: string[];
+}
+export const directorMotionAudio = (id: string) =>
+  get<DirectorMotionAudio>(`/api/director/boards/${encodeURIComponent(id)}/motion-audio`);
+
+// Prompt preview (Phase 5) — per-shot Flux image + LTX/Wan video prompts
+// with checklist issues. Dry run, no generation.
+export interface DirectorShotPrompts {
+  board_id: string;
+  shots: { shot_id: string; image_prompt: string; video_prompt: string; image_issues: string[]; video_issues: string[] }[];
+}
+export const directorShotPrompts = (id: string) =>
+  get<DirectorShotPrompts>(`/api/director/boards/${encodeURIComponent(id)}/prompts`);
+
+// Delivery (Phase 7) — edit plan, assembly timeline, render-job spec + QC.
+export interface DirectorDelivery {
+  board_id: string;
+  editPlan: { order: number; scene_number: number; shot_id: string; duration_seconds: number; transition_in: string; has_dialogue: boolean }[];
+  timeline: { order: number; scene_number: number; shot_id: string; duration_seconds: number; transition_in: string; has_dialogue: boolean; start_time: number; end_time: number }[];
+  renderJob: { format: string; beats: string[]; total_seconds: number; resumable: boolean; selective: string[] };
+  qc: { score: number | null; errors: string[]; issues: string[]; regenTargets: number[]; pass: boolean };
+}
+export const directorDelivery = (id: string, opts?: { format?: string; beats?: string; minScore?: number }) => {
+  const q = new URLSearchParams();
+  if (opts?.format) q.set("format", opts.format);
+  if (opts?.beats) q.set("beats", opts.beats);
+  if (opts?.minScore) q.set("minScore", String(opts.minScore));
+  const s = q.toString();
+  return get<DirectorDelivery>(`/api/director/boards/${encodeURIComponent(id)}/delivery${s ? `?${s}` : ""}`);
+};
+
+// Intelligent Director: staged repair — re-plans ONLY the flagged scenes via
+// the reasoning engine, preserving ids and approved neighbours.
+export const directorRepair = (id: string, scene_numbers?: number[]) =>
+  fetch(`/api/director/boards/${encodeURIComponent(id)}/repair`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(scene_numbers?.length ? { scene_numbers } : {}),
+  }).then(directorOk<{ board_id: string; repaired: number[]; score: number; board: DirectorBoard }>("repair failed"));
 
 export const directorUpdateBoard = (id: string, patch: Record<string, unknown>) =>
   fetch(`/api/director/boards/${encodeURIComponent(id)}`, {
@@ -1453,3 +1674,61 @@ export const refaceDelete = (id: string) =>
   fetch(`/api/reface/${encodeURIComponent(id)}`, {
     method: "DELETE",
   }).then(refaceOk<{ ok: boolean; id: string }>("delete failed"));
+
+// ---------------------------------------------------------------- Database browser
+// SQLite explorer tab (below Reface): every user table in
+// data/scenarios.sqlite + data/devotional.sqlite, with full row CRUD.
+export interface DbTableInfo {
+  name: string;
+  rows: number;
+}
+export interface DbFileInfo {
+  key: string;
+  file: string;
+  tables: DbTableInfo[];
+}
+export interface DbColumnInfo {
+  name: string;
+  type: string;
+  notnull: boolean;
+  default: string | null;
+  pk: boolean;
+}
+export type DbValue = string | number | null;
+export interface DbRowsResponse {
+  db: string;
+  table: string;
+  columns: DbColumnInfo[];
+  pk: string[];
+  total: number;
+  limit: number;
+  offset: number;
+  rows: Record<string, DbValue>[];
+}
+export const listDbFiles = () =>
+  get<{ store: string; files: DbFileInfo[] }>("/api/database");
+export const listDbRows = (db: string, table: string, opts: { search?: string; sort?: string; dir?: "ASC" | "DESC"; limit?: number; offset?: number } = {}) => {
+  const q = new URLSearchParams({ db, table });
+  if (opts.search?.trim()) q.set("search", opts.search.trim());
+  if (opts.sort) q.set("sort", opts.sort);
+  if (opts.dir) q.set("dir", opts.dir);
+  if (opts.limit != null) q.set("limit", String(opts.limit));
+  if (opts.offset != null) q.set("offset", String(opts.offset));
+  return get<DbRowsResponse>(`/api/database/rows?${q.toString()}`);
+};
+const dbWrite = <T,>(db: string, table: string, method: "POST" | "PUT" | "DELETE", body: unknown) =>
+  fetch(`/api/database/rows?db=${encodeURIComponent(db)}&table=${encodeURIComponent(table)}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || `database ${method} failed (HTTP ${r.status})`);
+    return d as T;
+  });
+export const insertDbRow = (db: string, table: string, values: Record<string, DbValue>) =>
+  dbWrite<{ ok: boolean; row: Record<string, DbValue> | null }>(db, table, "POST", { values });
+export const updateDbRow = (db: string, table: string, key: Record<string, DbValue>, values: Record<string, DbValue>) =>
+  dbWrite<{ ok: boolean; updated: number; row: Record<string, DbValue> | null }>(db, table, "PUT", { key, values });
+export const deleteDbRow = (db: string, table: string, key: Record<string, DbValue>) =>
+  dbWrite<{ ok: boolean; deleted: number }>(db, table, "DELETE", { key });

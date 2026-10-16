@@ -1,5 +1,109 @@
 # AGENTS.md — operating notes for video generation + frontend
 
+## Devotional Studio (canonical asset library)
+Devotional nav (`frontend/src/components/DevotionalPage.tsx`, client in
+`frontend/src/devotionalApi.ts`, pure helpers + `DEVOTIONAL_SCHEMA` in
+`lib/devotional.mjs`). Metadata/versions/approvals/scene-links live in
+Postgres when it is up (`devotional_assets` + `devotional_asset_versions` +
+`devotional_asset_files` + `devotional_jobs` + `devotional_scene_links` +
+`devotional_project_usage`, created idempotently in `pgInit()`), else in the
+SQLite fallback `data/devotional.sqlite` (same tables as JSON-TEXT columns,
+`project` name instead of `project_id` in usage — every `/api/devotional/*`
+route branches on `devStore()`; `/api/devotional/health` `db.up` is true when
+either store is available); binaries live
+under `devotional/<Kind>/<Name>/<ID>/` (gitignored, `DEVOTIONAL_DIR` override,
+served auth-gated via `/devotional/...`). Stable IDs (`CHAR_/LOC_/PROP_/
+STYLE_`) are primary — folder names are derived, never authoritative.
+Lifecycle `draft → review → approved → archived` (+ transient `generating`),
+enforced server-side (`canTransition`); `approved` rows auto-lock and need
+explicit `unlock:true` for canonical edits; approve requires ≥1 reference
+file. Variants/sub-locations = self-FK `parent_id` (same-kind only).
+Reference generation reuses the Flux t2i workflow via
+`scripts/devotional_reference.mjs` (one still, resumable, `[asset]` log line)
+spawned by the `devPumpJobs()` background pump — serial with main runs (waits
+for a free ComfyUI queue, never blocks API requests); `server.mjs` must never
+statically import `lib/comfy.mjs` (it `process.exit(1)` without `COMFY_BASE`).
+One-click media: every library card has a Generate button (detail dialog has
+Still + clip too) → `POST /api/devotional/assets/:id/generate` with
+`{ both: true }` queues a still only when no reference image exists plus an
+LTX showcase clip (`devotional_jobs.kind = 'video'`,
+`scripts/devotional_video.mjs`, gentle push-in, 2–8s default 3, stored as a
+`video` file row) behind it; clip jobs never touch asset status (the still
+owns draft→generating→review); the detail dialog renders clips in `<video>`.
+No success popup — the card/dialog renders inline loading bars with % right
+where Generate was pressed (`DevotionalMediaProgress.tsx`, sessions live at
+the `DevotionalPage` root so tab switches keep them): Still (cyan) + Clip
+(blue) + Overall (accent) bars in the app's `.gen-compact-table` language,
+Overall counting REAL completions only, in-flight unit estimated 0–99% from
+the shared pace store (`loadPace`/`recordPaceDuration`, same formula as
+`RunPanel`; indeterminate sweep + ticking elapsed with no pace yet), polled
+via `GET /api/devotional/jobs?ids=` (precise lookup, never the LIMIT window);
+success auto-reloads + clears, failure shows inline with Dismiss (Reference
+Studio keeps full history + Cancel/Retry).
+Saved prompt: every asset carries a first-class `prompt` column (PG +
+SQLite, auto-migrated, in snapshots/exports) editable via the detail
+dialog's Generation prompt panel (Edit Prompt → Save, or Save & Regenerate
+which renders a NEW still + a clip from that still — FIFO pump, old
+versions kept); blank = auto (`describeAssetForPrompt` from description +
+traits). The generate route resolves per-request `prompt` → saved `prompt`
+→ auto, so all still/clip paths (card Generate, regens, bulk) follow edits.
+Image & video section (`DevotionalMediaSection.tsx`, on every library card +
+in the detail dialog): the Keyframes → clips tile copied over — bulk checkbox,
+still + clip frames with vN badges, v1/v2/… version chips (oldest-first by
+file id, latest shown; chips switch the SHOWN file only, no backend main),
+and per-kind regen buttons (image → `POST .../generate` still, video →
+`{ only: "video" }` clip-only, both keep old files as new versions and track
+through the same inline progress). Library toolbar has the bulk bar
+(All/None + Videos/Images/Both + Regenerate (n), same `beats-bulk` classes):
+one queued set per checked asset, pump runs them serially, clip regens skip
+assets with no still yet. List responses carry `image_versions` /
+`video_versions` (existing files only, newest-first) so cards need no detail
+fetch. Cancel never lies: the pump's failure write is guarded to PROCESSING
+so 'cancelled by user' survives the proc tail.
+Director bridge: `POST /api/devotional/resolve` (approved-only, missing ids
+reported never substituted) + `POST /api/devotional/prompt`
+(`buildDevotionalScenePrompt`: identity vs scene-action stay separate) +
+`POST /api/devotional/scene-links` (pins asset versions per board scene;
+regeneration keeps assignments). Without Postgres the endpoints answer 503
+like the rest of the catalog; `/api/devotional/health` (db/comfy/storage)
+works regardless. Tests: `tests/devotional.test.mjs` (lib) +
+`tests/devotional_server.test.mjs` (route/schema wiring).
+
+## Intelligent Director upgrade (lyric coverage + quality control)
+Pure helpers in `lib/director.mjs` (all unit-tested in
+`tests/director_intelligent.test.mjs`, acceptance A–H): `DIRECTOR_STAGES`
+(8-stage pipeline), `extractMeaningfulPhrases` (word-by-word phrase split),
+`buildLyricCoverageMap` + `coverageSummary` (Lyric Coverage Map §3),
+`boardLyricLines` (bible decomposition, else song fallback, else []),
+`normalizeCastEntry`/`castIdsOf`/`characterDirectionsOf` (rich per-character
+action/gaze/role direction; string-id casts keep working),
+`SHOT_TYPES`/`CAMERA_MOVEMENTS`/`normalizeCamera` (shot vocabulary §6),
+`validateShotDirection` (vague-action + contradictory-camera flags),
+`detectContinuityIssues` (location jumps, emotion flips, dropped refs),
+`scoreDirectorPlan` (configurable 0–100: lyric 30 / action 20 / continuity 15
+/ timing 15 / prompts 20), `genreDirectingNotes` (kids/devotional registers),
+`buildDirectionRepairPrompt` (staged LLM repair of flagged shots only),
+`llmModelName()` (`LLM_MODEL` env, default `"local"`).
+`normalizeScene`/`normalizeShot` additionally preserve `characters_detailed[]`
++ `dramatic_purpose` (absent on legacy scenes) and accept object casts via
+`castIdsOf`; existing exports behave byte-identically (all 58 pre-existing
+director tests pass unchanged).
+Server (`frontend/server.mjs`): all chat-completions `model:` fields use the
+shared `LLM_MODEL` const (Muse Spark 1.3 = `LLM_BASE` spark endpoint +
+`LLM_MODEL=muse-spark-1.3`; default `"local"` = existing LM Studio behavior).
+New read-only routes `GET /api/director/boards/:id/coverage` (coverage map) +
+`GET .../validate` (score + breakdown + issues + approve-gate errors +
+continuity + genre note); `POST .../repair` re-plans ONLY flagged scenes via
+`llmChatJson` + `normalizeScene` and persists the board; `PUT` accepts an
+opaque `storyPlan` object (staged artefacts; scenes stay the source of truth).
+No schema migration (board JSONB carries the new fields).
+UI (`DirectorPage.tsx` + `frontend/src/api.ts`): `🎬 Intelligent Director`
+card after the analysis box (quality pill, coverage pill, Check/Repair
+buttons, genre note, logline, collapsible Validation + Lyric coverage with
+click-to-shot navigation via `jumpToShot`), plus dramatic-purpose +
+per-character direction lines in `renderShotDetails`. Tests: run
+`node --test tests/director.test.mjs tests/director_intelligent.test.mjs`.
+
 ## AI Story Director (Story-to-Video)
 Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
 `lib/director.mjs`). Boards are DB-backed (`director_boards` table, mirrored on
@@ -31,6 +135,14 @@ scene per row with its shots laid out horizontally, width ∝ duration.
 `APPROVE` flattens each shot to one generation beat (`<scene>_<a|b|…>`, shot
 duration/prompts/dialogue, `scene_number`/`shot_id`/`start_time`/`end_time`
 metadata + song-absolute offsets); shot-less scenes map 1:1 byte-identically.
+Keyframes → clips tiles number by flat beat (`Beat n/N`, N = total shots) with
+the Director linkage as `Sc S · Sh s/t` suffix (`beatHead` in
+`OutputGallery.tsx`); the in-flight beat always renders (unioned into
+`sceneNums`/`liveTotal`) so its red `.generating` pulse can never lose its
+tile. The Director Generation section follows foreign server runs for its
+project (`foreignRunForProject` + `attachRun` in `DirectorGeneration.tsx`,
+same reattach rule as the workspace) so tiles pulse even when the run was
+started in the workspace or before a refresh.
 Bible-id grounding: every scene-batch brief carries VALID id lists + a
 location/object rotation + anti-repeat mandate (ids only — free-text places,
 objects in the location slot, and invented cast are forbidden); beats carry
@@ -208,6 +320,15 @@ Gotchas:
   **raw binary** (`readRaw`, 500MB cap — not base64 JSON); reference faces stay base64
   data-URLs like every other image upload. One worker at a time (`refaceProcs`);
   progress is polled from `progress.json` (3s), never SSE.
+- **Database tab** (`DatabasePage.tsx`, below Reface): generic SQLite browser + row
+  CRUD over `data/scenarios.sqlite` + `data/devotional.sqlite` (`GET /api/database`
+  overview, `GET/POST/PUT/DELETE /api/database/rows?db=&table=`). Identifiers are
+  validated against the live schema and all values bound (no interpolated SQL);
+  `IS` key lookups coerce numeric strings (`dbCoerceKey`) since `IS` skips type
+  affinity. `scenarios` writes validate `config` JSON + mirror `prompts/<name>.json`;
+  deleting a `devotional_assets` row cascades to its files/versions/jobs/links/usage
+  (SQLite has no FK enforcement). Search is a case-insensitive LIKE across all
+  columns; default order is `rowid DESC`.
 - Runs stream script logs via SSE and parse `[asset] {...}` lines into live asset events —
   keep emitting `[asset]` JSON from any script you want surfaced in the UI.
 - **Postgres catalog**: every finished generation is recorded in the `video_generator`

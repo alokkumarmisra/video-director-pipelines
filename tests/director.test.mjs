@@ -37,6 +37,10 @@ import {
   extractPartialScenes,
   canonicalizeSceneRefs,
   dedupeScenes,
+  isKidsGenre,
+  LIMBLESS_SPECIES_RE,
+  anatomyLockFor,
+  withAnatomyLock,
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
@@ -910,5 +914,140 @@ describe("bible-id grounding (locations/objects actually used)", () => {
     const p = buildBiblePrompt({ ...input, story: "A monkey plays." });
     assert.ok(p.includes('"location": "<location_id where this beat happens>"'), "beat place in schema");
     assert.ok(p.includes("spread beats across ALL locations/objects"), "spread rule present");
+  });
+});
+
+describe("kids songs (saanpu-style rhymes)", () => {
+  it("parseLyricLines drops markdown-bold headers and strips emojis", () => {
+    const lines = parseLyricLines("**[Intro – प्यारी सी धुन]**\n\nआया आया, कौन है आया?\n**[Verse 1]**\nनन्हा साँप हमारा,\n## Chorus\nलाला गाओ!\nसाँपू राजा, बाय-बाय! 🎵\n🎵\n");
+    assert.deepEqual(lines.map((l) => l.lyric_text), [
+      "आया आया, कौन है आया?",
+      "नन्हा साँप हमारा,",
+      "लाला गाओ!",
+      "साँपू राजा, बाय-बाय!",
+    ]);
+    assert.deepEqual(lines.map((l) => l.lyric_line_id), [1, 2, 3, 4]);
+  });
+  it("validateLyricPlan allows a repeated chorus (refrain), still flags stalls", () => {
+    const base = { title: "S", image_prompt: "x still", video_prompt: "camera drifts as x moves" };
+    const lyricLines = [
+      { lyric_line_id: 1, lyric_text: "verse one" },
+      { lyric_line_id: 2, lyric_text: "verse two" },
+      { lyric_line_id: 3, lyric_text: "chorus ho" },
+      { lyric_line_id: 4, lyric_text: "chorus hey" },
+      { lyric_line_id: 5, lyric_text: "verse three" },
+    ];
+    // verse(1-2) chorus(3-4) verse(5) then the chorus repeats: the planner
+    // links the repeat to the FIRST chorus ids (identical words) — a refrain,
+    // not a stall.
+    const refrain = [
+      normalizeScene({ ...base, line_from: 1, line_to: 2 }, 1, 3),
+      normalizeScene({ ...base, line_from: 3, line_to: 4 }, 2, 3),
+      normalizeScene({ ...base, line_from: 5, line_to: 5 }, 3, 3),
+      normalizeScene({ ...base, line_from: 3, line_to: 4 }, 4, 3),
+    ];
+    assert.ok(!validateLyricPlan(refrain, lyricLines, null).some((m) => m.includes("re-covers lines")), "repeated chorus is not a stall");
+    // Same shape but the backward jump lands on DIFFERENT words: genuine stall.
+    const jump = [
+      normalizeScene({ ...base, line_from: 1, line_to: 2 }, 1, 3),
+      normalizeScene({ ...base, line_from: 5, line_to: 5 }, 2, 3),
+      normalizeScene({ ...base, line_from: 3, line_to: 3 }, 3, 3),
+    ];
+    const otherWords = [
+      { lyric_line_id: 1, lyric_text: "alpha" },
+      { lyric_line_id: 2, lyric_text: "beta" },
+      { lyric_line_id: 3, lyric_text: "gamma" },
+      { lyric_line_id: 5, lyric_text: "delta" },
+    ];
+    assert.ok(validateLyricPlan(jump, otherWords, null).some((m) => m.includes("re-covers lines")), "backward jump still flags");
+    // Exact repeat of the immediately previous range still flags (true stall).
+    const stall = [
+      normalizeScene({ ...base, line_from: 1, line_to: 2 }, 1, 3),
+      normalizeScene({ ...base, line_from: 1, line_to: 2 }, 2, 3),
+    ];
+    assert.ok(validateLyricPlan(stall, lyricLines.slice(0, 2), null).some((m) => m.includes("re-covers lines")), "adjacent repeat still flags");
+  });
+  it("bible prompt registers every singer for kids genres only", () => {
+    const kids = buildBiblePrompt({
+      title: "S", story: "lyrics", language: "Hindi", genre: "Kids",
+      visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
+    });
+    assert.ok(kids.includes("KIDS CAST RULE"), "kids bible asks for the full animal cast");
+    const custom = buildBiblePrompt({
+      title: "S", story: "lyrics", language: "Hindi", genre: "Custom", genreCustom: "nursery rhymes",
+      visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
+    });
+    assert.ok(custom.includes("KIDS CAST RULE"), "custom nursery genre counts as kids");
+    const epic = buildBiblePrompt({
+      title: "S", story: "story", language: "Hindi", genre: "Fantasy",
+      visualStyle: "Anime", targetSeconds: 60, sceneSeconds: 5,
+    });
+    assert.ok(!epic.includes("KIDS CAST RULE"), "other genres stay byte-identical in spirit");
+    assert.ok(isKidsGenre("Kids") && isKidsGenre("Educational") && isKidsGenre("Custom", "preschool learning"));
+    assert.ok(!isKidsGenre("Fantasy") && !isKidsGenre("Horror") && !isKidsGenre(""));
+  });
+});
+
+describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
+  const snake = {
+    character_id: "sapoo", name: "Sapoo", species: "snake",
+    appearance: { body: "limbless serpentine body", ears: "none" },
+    visual_identity_prompt: "green snake",
+  };
+  it("anatomyLockFor states explicit exclusions for limbless/earless cast, null otherwise", () => {
+    assert.ok(LIMBLESS_SPECIES_RE.test("snake"));
+    const lock = anatomyLockFor(snake);
+    assert.ok(lock.includes("no legs"));
+    assert.ok(lock.includes("no arms"));
+    assert.ok(lock.includes("no ears"));
+    assert.ok(lock.includes("no wings"));
+    assert.equal(anatomyLockFor({ character_id: "m", name: "Minku", visual_identity_prompt: "grey mouse" }), null);
+  });
+  it("withAnatomyLock is idempotent and passes other boards through untouched", () => {
+    const lock = anatomyLockFor(snake);
+    assert.equal(withAnatomyLock(`slithers, ${lock}`, [snake]), `slithers, ${lock}`);
+    assert.equal(withAnatomyLock("mouse waking", [{ visual_identity_prompt: "grey mouse" }]), "mouse waking");
+  });
+  it("boardToScenario enforces the lock on snake scenes + reference, keeps legacy boards clean", () => {
+    const cfg = boardToScenario({
+      input: { title: "S", visualStyle: "Anime", sceneSeconds: 5 },
+      blueprint: { characters: [snake], locations: [] },
+      scenes: [{ title: "S", characters: ["sapoo"], image_prompt: "sapoo slithers", video_prompt: "slithers" }],
+    });
+    assert.ok(cfg.sequence[0].image.includes("no legs"), "scene image carries the exclusion");
+    assert.ok(cfg.sequence[0].image.includes("no ears"), "scene image excludes ears");
+    assert.ok(cfg.referencePrompt.includes("no legs"), "reference carries the exclusion");
+    const legacy = boardToScenario({
+      input: { title: "Minku", visualStyle: "Anime", sceneSeconds: 5 },
+      blueprint: {
+        logline: "A mouse adventure.",
+        characters: [{ name: "Minku", role: "main_character", visual_identity_prompt: "grey mouse" }],
+        locations: [{ description: "forest" }],
+      },
+      scenes: [{ title: "Wake Up", image_prompt: "mouse waking", video_prompt: "mouse stretches" }],
+    });
+    assert.ok(!legacy.sequence[0].image.includes("limbless"), "legacy boards gain no snake wording");
+    assert.ok(!legacy.referencePrompt.includes("limbless"));
+  });
+  it("bible + scene prompts order anatomy-safe staging without limb-suggesting words", () => {
+    const bible = buildBiblePrompt({
+      title: "S", story: "a snake", language: "Hindi", genre: "Kids",
+      visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
+    });
+    assert.ok(bible.includes("ANATOMY INTEGRITY RULE"), "bible records the species body plan");
+    const bp = normalizeBlueprint({
+      characters: [{ name: "Sapoo", character_id: "sapoo", species: "snake", visual_identity_prompt: "green snake" }],
+      locations: [], objects: [], beats: [{ n: 1, title: "B", summary: "s" }],
+    });
+    const p = buildScenesPrompt({
+      input: {
+        title: "S", story: "x", language: "Hindi", genre: "Kids",
+        visualStyle: "Anime", targetSeconds: 10, sceneSeconds: 5,
+      },
+      blueprint: bp, beats: bp.beats, prevScene: null,
+      startNumber: 1, count: 1, styleLock: "LOCK", totalScenes: 1,
+    });
+    assert.ok(p.includes("ANATOMY-SAFE STAGING"), "scene brief stages only possible actions");
+    assert.ok(!p.includes("(limbs,"), "video schema no longer suggests limbs to the model");
   });
 });

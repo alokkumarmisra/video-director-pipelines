@@ -66,7 +66,10 @@ describe("sequence wiring", () => {
     const src = read("lib/sequence.mjs");
     assert.match(src, /resolveRefForRun\(outDir, prefix\)/);
     assert.match(src, /uploadToInput\(anchorPath/);
-    assert.match(src, /buildKeyframe\(keyframePromptFor\(seq\[i\]\.image, cfg\), i, refInput\)/);
+    // kfPrompt is grounded via keyframePromptFor then passed to buildKeyframe
+    // (split across two lines for readability, not inline).
+    assert.match(src, /keyframePromptFor\(seq\[i\]\.image, cfg\)/);
+    assert.match(src, /buildKeyframe\(kfPrompt, i, refInput\)/);
   });
 
   it("switching the main ref regenerates stale keyframes + clips", () => {
@@ -135,9 +138,10 @@ describe("sequence wiring", () => {
     const src = read("lib/sequence.mjs");
     // Each generator records the just-written file and prefers it over the
     // previously selected main; skips (no new file) keep the old selection.
-    // genRef resolves the basename after the null check, beats inline it.
+    // genKeyframe + genClip follow newFile ?? resolveMain; genRef is
+    // explicit-only (a fresh ref NEVER auto-selects, only a user pick does).
     const hits = src.match(/newFile \?\? (?:path\.basename\()?resolveMain\(/g) || [];
-    assert.equal(hits.length, 3, "genRef + genKeyframe + genClip must select the fresh file");
+    assert.equal(hits.length, 2, "genKeyframe + genClip must select the fresh file (ref stays explicit-only)");
     assert.match(src, /newFile = path\.basename\(dest\)/);
     // A deselected ref skip records nothing (no silent re-enable).
     assert.match(src, /deselected, skipping/);

@@ -303,26 +303,9 @@ export default function CraftPanel({
     }
   };
 
-  // Escape closes the popup (same pattern as Create Project).
-  useEffect(() => {
-    if (!promptOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPromptOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [promptOpen]);
-
-  // Escape closes the master popup (never while a scene merge is in flight —
-  // use Stop for that, so a stray keypress can't lose progress).
-  useEffect(() => {
-    if (!masterOpen || popupBusy) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMasterOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [masterOpen, popupBusy]);
+  // The preview + master popups close only via their Cancel / close
+  // buttons — no backdrop-click or Escape dismiss, so a stray keypress
+  // can't lose progress (use Stop for an in-flight scene merge).
 
   const setDuration = (v: string) => {
     setDurationStr(v);
@@ -477,7 +460,7 @@ export default function CraftPanel({
         )}
       </p>
       {promptOpen && (
-        <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setPromptOpen(false); }}>
+        <div className="overlay">
           <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="craft-prompt-title" style={{ maxWidth: 720 }}>
             <div className="dialog-head">
               <h2 id="craft-prompt-title">Craft Prompt Preview</h2>
@@ -542,7 +525,7 @@ export default function CraftPanel({
         </div>
       )}
       {masterOpen && (
-        <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !popupBusy) closeMasterPopup(); }}>
+        <div className="overlay">
           <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="master-popup-title" style={{ maxWidth: 640 }}>
             <div className="dialog-head">
               <h2 id="master-popup-title">Apply Master Prompt to All Scenes</h2>

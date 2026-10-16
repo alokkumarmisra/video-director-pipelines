@@ -28,10 +28,14 @@ describe("scene number badges", () => {
     assert.match(sm, /font-size:\s*12px/);
   });
 
-  it("shot cards show Scene n/total in the header with no overlay badges", () => {
+  it("shot cards show flat Beat n/N with scene/shot linkage in the header", () => {
     const src = read("frontend/src/components/OutputGallery.tsx");
-    assert.match(src, /Scene \{n\}\/\{total\}/);
-    assert.match(src, /Scene \{n\}\{liveTotal != null \? `\/\$\{liveTotal\}` : ""\}/);
+    // Header text comes from beatHead(): flat `Beat n/N` (N = total beats =
+    // total shots) plus `Sc S Sh s/t` linkage, so a 60-scene board with
+    // 3-4 shots/scene reads Beat 7/122, not Scene 5/60.
+    assert.match(src, /function beatHead\(beats/);
+    assert.match(src, /return `Beat \$\{flat\}`/);
+    assert.match(src, /Beat \$\{flat\} · Sc \$\{s\.scene\} Sh/);
     assert.doesNotMatch(src, /<SceneBadge scene=\{n\} total=\{total\}/);
     assert.doesNotMatch(src, /<SceneBadge scene=\{n\} total=\{liveTotal\}/);
     assert.doesNotMatch(src, /label=\{`V\$\{n\}\/\$\{total\}`\}/);

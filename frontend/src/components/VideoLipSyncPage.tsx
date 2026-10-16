@@ -303,19 +303,13 @@ export default function VideoLipSyncPage({ onOpenProject, onProjectsChanged }: {
     }
   };
 
-  // Lock background scroll + Esc to close while the editor popup is open.
+  // Lock background scroll while the editor popup is open. It closes only
+  // via its Cancel / close buttons — no backdrop-click or Escape dismiss.
   useEffect(() => {
     if (editingBeat == null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setEditingBeat(null);
-    };
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [editingBeat]);
 
   const handleRun = async () => {
@@ -624,7 +618,7 @@ export default function VideoLipSyncPage({ onOpenProject, onProjectsChanged }: {
           and deletes the stale voice files, so the beat returns to PENDING
           until it is re-voiced + re-synced. */}
       {editingBeat != null && seq[editingBeat - 1] && (
-        <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={`Edit Scene ${editingBeat} dialogue`} onClick={() => { if (!savingDlg) setEditingBeat(null); }}>
+        <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label={`Edit Scene ${editingBeat} dialogue`}>
           <div className="dlg-box char-popup" onClick={(e) => e.stopPropagation()}>
             <h3 className="dlg-title">
               🎙 Scene {editingBeat} · Dialogue

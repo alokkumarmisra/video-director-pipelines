@@ -114,13 +114,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     setQueue((q) => q.filter((d) => d.id !== current.id));
   }, [current]);
 
-  // Esc dismisses (cancel for confirms), Enter activates the primary button.
-  // The dialog carries no text inputs, so global Enter is safe.
+  // Enter activates the primary button (the dialog carries no text inputs,
+  // so global Enter is safe). Escape and backdrop clicks intentionally do
+  // nothing — the dialog closes only via its OK / Cancel buttons.
   useEffect(() => {
     if (!current) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.preventDefault(); settle(false); }
-      else if (e.key === "Enter") { e.preventDefault(); settle(true); }
+      if (e.key === "Enter") { e.preventDefault(); settle(true); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -144,7 +144,6 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           role="alertdialog"
           aria-modal="true"
           aria-label={current.title}
-          onClick={() => settle(current.kind === "alert")}
         >
           <div className="dlg-box" data-tone={current.tone} onClick={(e) => e.stopPropagation()}>
             <div className="dlg-icon" data-tone={current.tone} aria-hidden="true">

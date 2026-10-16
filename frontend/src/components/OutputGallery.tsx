@@ -105,33 +105,32 @@ function sceneTotals(beats: Beat[] | null | undefined): { total: number; counts:
   return { total: Math.max(...sns), counts };
 }
 
-// Keyframes → clips tile header — compact so the totals survive the narrow
-// 5-column tile (`.shot-head` ellipsizes anything past ~24 chars, which is
-// what cut off `/122` in the old `Scene S · Shot s · n/N` format):
-//   Director linkage -> `Scene S/T · Shot s/t` (beat position in the tooltip)
-//   legacy/manual    -> `Scene n/total` (unchanged).
+// Keyframes → clips tile header — flat beat numbering so multi-shot scenes
+// read correctly: 60 director scenes with 3-4 shots each flatten to 100+
+// generation beats (one image + video per shot). The header is the flat
+// position `Beat n/N` (N = total beats = total shots); the Director linkage
+// rides as the suffix `Sc S · Sh s/t` so the scene grouping stays visible.
+// Legacy/manual beats (no linkage) show `Beat n/N` — identical to the old
+// `Scene n/total` when 1 scene = 1 beat.
 function beatHead(beats: Beat[] | null | undefined, n: number, total: number | null): string {
+  const flat = total != null ? `${n}/${total}` : `${n}`;
   const s = beatShotOf(beats, n);
-  if (!s) {
-    const pos = total != null ? `${n}/${total}` : `${n}`;
-    return `Scene ${pos}`;
-  }
+  if (!s) return `Beat ${flat}`;
   const t = sceneTotals(beats);
-  const sceneTotal = t?.total ?? (total != null && total > 0 ? total : s.scene);
   const shotsInScene = t?.counts.get(s.scene) ?? null;
   const shotPart = shotsInScene != null ? `${s.shot}/${shotsInScene}` : `${s.shot}`;
-  return `Scene ${s.scene}/${sceneTotal} · Shot ${shotPart}`;
+  return `Beat ${flat} · Sc ${s.scene} Sh ${shotPart}`;
 }
 
 function beatTitle(beats: Beat[] | null | undefined, n: number, total: number | null): string {
+  const flat = total != null ? `beat ${n} of ${total}` : `beat ${n}`;
   const s = beatShotOf(beats, n);
-  const pos = total != null ? `beat ${n} of ${total}` : `beat ${n}`;
-  if (!s) return `Scene ${n} (${pos}) — keyframe image + video clip`;
+  if (!s) return `Beat ${n} (${flat}) — keyframe image + video clip`;
   const t = sceneTotals(beats);
-  const sceneTotal = t?.total ?? (total != null && total > 0 ? total : s.scene);
+  const sceneTotal = t?.total ?? s.scene;
   const shotsInScene = t?.counts.get(s.scene) ?? null;
   const shotLong = shotsInScene != null ? `shot ${s.shot} of ${shotsInScene}` : `shot ${s.shot}`;
-  return `Scene ${s.scene} of ${sceneTotal}, ${shotLong} (${pos}) — keyframe image + video clip`;
+  return `Beat ${n} of ${total ?? "?"} (${flat}) — Scene ${s.scene} of ${sceneTotal}, ${shotLong} — keyframe image + video clip`;
 }
 
 // Dialogue text format for the Lip-sync viewer popup — one line per dialogue
@@ -396,10 +395,21 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     const clips = live.filter((a) => a.stage === "clip").sort(byIndex);
     const kfByIndex = new Map(keyframes.map((k) => [k.index ?? -1, k.file]));
     const clipByIndex = new Map(clips.map((c) => [c.index ?? -1, c.file]));
+    // The live total is the flat beat total (one beat per shot, so a
+    // 60-scene board with 3-4 shots/scene totals 100+ beats). It must be the
+    // max of every known source: a stale/short totalScenes (e.g. the planned
+    // scene count) must never clip the rendered slots — otherwise the
+    // in-flight tile does not exist and its generating animation never shows.
+    const landedMax = Math.max(0, ...keyframes.map((k) => k.index ?? 0), ...clips.map((c) => c.index ?? 0));
+    const activeBeat = progress?.status === "running" && progress.activeScene != null && progress.activeScene > 0
+      ? progress.activeScene
+      : 0;
     const liveTotal =
-      totalScenes != null && totalScenes > 0
-        ? totalScenes
-        : Math.max(0, ...keyframes.map((k) => k.index ?? 0), ...clips.map((c) => c.index ?? 0)) || null;
+      Math.max(
+        totalScenes != null && totalScenes > 0 ? totalScenes : 0,
+        landedMax,
+        activeBeat,
+      ) || null;
     // All scene slots 1..liveTotal render immediately (even with zero assets
     // landed yet). Without a known total, fall back to landed keyframes.
     const liveNums: number[] =
@@ -454,7 +464,7 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
           Saving writes a new scenario version (stale voice files are deleted
           server-side, so the beat returns to PENDING until re-voiced). */}
       {lipOpen && (
-        <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Lip-sync dialogues" onClick={() => { if (lipSaving == null) setLipOpen(false); }}>
+        <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Lip-sync dialogues">
           <div className="dlg-box char-popup lip-view-box" onClick={(e) => e.stopPropagation()}>
             <h3 className="dlg-title">🎙 Lip-sync dialogues{(projectName || "").trim() ? ` · ${projectName}` : ""}</h3>
             <p className="dlg-message">
@@ -863,15 +873,34 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     </div>
   );
 
-  // Every scene in story order: on-disk beats plus config-known scenes
-  // (totalScenes) with nothing generated yet. The Rendered Clip card lists
-  // each scene's previous image/video first, final cut last.
+  // Every beat in story order (flat numbering: one beat per shot, so a
+  // 60-scene board with 3-4 shots/scene renders 100+ tiles): on-disk beats
+  // plus config-known beats (totalScenes) with nothing generated yet, plus
+  // the in-flight beat while a run is active. The in-flight beat MUST render
+  // even when totalScenes is stale/short (e.g. still the planned scene count
+  // while beats already flattened) — otherwise the `.generating` tile, its
+  // GenOverlay + % bar + scanline, the `shot-N` jump anchor, and the Current
+  // image & video section have no tile to animate. The Rendered Clip card
+  // lists each beat's previous image/video first, final cut last.
+  const inFlightBeat: number | null = (() => {
+    if (progress?.status === "running" && progress.activeScene != null && progress.activeScene > 0) {
+      return progress.activeScene;
+    }
+    const m = (genTarget ?? "").match(/^(?:kf|clip):(\d+)$/);
+    return m ? Number(m[1]) : null;
+  })();
+  // Render a contiguous 1..spanMax strip (no holes): spanMax is the max of
+  // the on-disk beats, the config-known beat total, and the in-flight beat.
+  const spanMax = Math.max(
+    0,
+    totalScenes != null && totalScenes > 0 ? totalScenes : 0,
+    ...beatNums,
+    inFlightBeat != null && inFlightBeat > 0 ? inFlightBeat : 0,
+  );
   const sceneNums: number[] = [
     ...new Set([
       ...beatNums,
-      ...(totalScenes != null && totalScenes > 0
-        ? Array.from({ length: totalScenes }, (_, i) => i + 1)
-        : []),
+      ...Array.from({ length: spanMax }, (_, i) => i + 1),
     ]),
   ].sort((a, b) => a - b);
 
@@ -994,19 +1023,13 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
     }
   };
 
-  // Lock background scroll + Esc to close while the Lip-sync viewer is open.
+  // Lock background scroll while the Lip-sync viewer is open. It closes
+  // only via its close button — no backdrop-click or Escape dismiss.
   useEffect(() => {
     if (!lipOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLipOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [lipOpen]);
 
   const Tag = bare || section === "reference" ? "div" : "section";
@@ -1267,8 +1290,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
             <>
               <div className="section-label">Current image & video</div>
               <div className="grid thumb-half">
-                <div className="img-frame" title={curKf ? `Current image — scene ${curKf.n} keyframe` : "Current image"}>
-                  {curKf && <SceneBadge scene={curKf.n} total={sceneNums.length || null} title={`Scene ${curKf.n} — current keyframe image`} />}
+                <div className="img-frame" title={curKf ? `Current image — ${beatTitle(beats, curKf.n, sceneNums.length || null)} keyframe` : "Current image"}>
+                  {curKf && <SceneBadge scene={curKf.n} total={sceneNums.length || null} title={`${beatTitle(beats, curKf.n, sceneNums.length || null)} — current keyframe image`} />}
                   {curKf ? (
                     <>
                       <ExpandButton title={`Fullscreen preview of ${pretty(curKf.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, curKf.file), kind: "image", alt: pretty(curKf.file) })} />
@@ -1282,8 +1305,8 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
                     </div>
                   )}
                 </div>
-                <div className="video-frame" title={curClip ? `Current video — video ${curClip.n} clip` : "Current video"}>
-                  {curClip && <SceneBadge small label={sceneNums.length ? `V${curClip.n}/${sceneNums.length}` : `V${curClip.n}`} title={`Video ${curClip.n} — current clip`} />}
+                <div className="video-frame" title={curClip ? `Current video — ${beatTitle(beats, curClip.n, sceneNums.length || null)} clip` : "Current video"}>
+                  {curClip && <SceneBadge small label={sceneNums.length ? `V${curClip.n}/${sceneNums.length}` : `V${curClip.n}`} title={`${beatTitle(beats, curClip.n, sceneNums.length || null)} — current clip`} />}
                   {curClip ? (
                     <>
                       <ExpandButton title={`Fullscreen preview of ${pretty(curClip.file)}`} onOpen={() => setPreview({ src: outputUrl(viewScenario, curClip.file), kind: "video", alt: pretty(curClip.file) })} />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  folderOf, getScenario, listScenarios, outScenario, saveScenario, slugFolder,
+  folderOf, getScenario, listRuns, listScenarios, outScenario, saveScenario, slugFolder,
   type Engine, type ImageMode, type RegenSpec, type RunRequest, type VideoFormat, type VideoType,
 } from "../api";
 import type { AssetKind } from "../types";
@@ -28,6 +28,40 @@ interface Props {
 
 const sameRequest = (a: RunRequest, b: RunRequest) =>
   JSON.stringify(a) === JSON.stringify(b);
+
+// Reattach target for a server run that targets this panel's project: the
+// latest running record whose storage folder (authoritative) or display
+// scenario matches. Lets this panel follow runs started elsewhere (the
+// workspace, a refresh mid-run) so its Keyframes → clips tiles pulse exactly
+// like a locally started run — same rule as App's workspace attach.
+export interface ForeignRun {
+  id: string;
+  scenario: string;
+  folder?: string;
+  status: string;
+  stitch?: boolean;
+  regen?: { kind: "ref" | "keyframe" | "clip"; index?: number } | null;
+  count?: number;
+  mode?: string;
+  beats?: string | null;
+  startedAt?: number;
+  format?: string;
+}
+export function foreignRunForProject(
+  runs: (ForeignRun | null | undefined)[] | null | undefined,
+  folder: string,
+  projectName: string,
+): ForeignRun | null {
+  const list = Array.isArray(runs) ? runs : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const r = list[i];
+    if (!r || r.status !== "running") continue;
+    if ((folder && r.folder === folder) || (projectName && r.scenario === projectName)) {
+      return r;
+    }
+  }
+  return null;
+}
 
 // Generation section for the Director page — a copy of the workspace's
 // Render Clip (RunPanel) + Generate Reference + Keyframes → clips + the
@@ -59,10 +93,66 @@ export default function DirectorGeneration({ projectName, boardScenes = [], onOp
   } | null>(null);
   const [runQueue, setRunQueue] = useState<RunRequest[]>([]);
   const [genProgress, setGenProgress] = useState<GenerationProgress>(emptyProgress);
+  // Server run started elsewhere for THIS project (workspace, pre-refresh):
+  // handed to RunPanel as its reattach target so the SSE tail + progress +
+  // generating tiles follow it. Never set while a local run owns the panel.
+  const [attachRun, setAttachRun] = useState<{
+    id: string; scenario: string; folder?: string; stitch?: boolean;
+    regen?: RegenSpec | null; count?: number; mode?: "dialogue" | "song";
+    beats?: string | null; startedAt?: number; format?: VideoFormat;
+  } | null>(null);
 
   const cutFormat: VideoFormat = videoType === "INSTAGRAM" ? "vertical" : "landscape";
   const cutDir = folder ? outScenario(folder, engine, cutFormat) : "";
-  const runFolderBase = runActive && runScenario ? slugFolder(runScenario) : null;
+  // Storage folder of the active run: the panel's own immutable folder when
+  // the run targets this project (rename-proof), else the display-name slug.
+  const runFolderBase = runActive && runScenario
+    ? (runScenario === projectName && folder ? folder : slugFolder(runScenario))
+    : null;
+
+  // Follow foreign server runs for this project (mirrors App's workspace
+  // reattach): poll while locally idle; attach the latest running record for
+  // our folder/scenario so RunPanel reopens its live tail and the gallery
+  // pulses. Clears when the run leaves the running state.
+  useEffect(() => {
+    if (!projectName || !folder) {
+      setAttachRun(null);
+      return;
+    }
+    if (runActive) return; // a live local run wins — never steal it
+    let cancelled = false;
+    const poll = () => {
+      listRuns()
+        .then((rs) => {
+          if (cancelled) return;
+          const match = foreignRunForProject(rs, folder, projectName);
+          setAttachRun((prev) => {
+            if (!match) return prev && prev.id ? null : prev;
+            if (prev?.id === match.id) return prev;
+            const regen = match.regen ?? null;
+            return {
+              id: match.id,
+              scenario: match.scenario,
+              folder: match.folder,
+              stitch: !!match.stitch,
+              regen: regen ? { kind: regen.kind, index: regen.index } : null,
+              count: match.count ?? 1,
+              mode: match.mode === "dialogue" || match.mode === "song" ? match.mode : undefined,
+              beats: typeof match.beats === "string" ? match.beats : null,
+              startedAt: match.startedAt,
+              format: match.format === "vertical" ? "vertical" : "landscape",
+            };
+          });
+        })
+        .catch(() => {});
+    };
+    poll();
+    const t = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [projectName, folder, runActive]);
 
   const changeVideoType = (v: VideoType) => {
     setVideoType(v);
@@ -258,8 +348,8 @@ export default function DirectorGeneration({ projectName, boardScenes = [], onOp
         pendingRun={pendingRun}
         onProgress={setGenProgress}
         runQueue={runQueue}
+        attachRun={attachRun}
       />
-
       <div style={{ marginTop: 12 }}>
         <GenerateReference
           referencePrompt={refPrompt}
