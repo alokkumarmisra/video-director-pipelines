@@ -78,6 +78,9 @@ import {
   detectContinuityIssues,
   buildDirectionRepairPrompt,
   genreDirectingNotes,
+  isKidsGenre,
+  kidsContentWarnings,
+  MIN_KIDS_SHOT_SECONDS,
   normalizeStoryPlan,
   buildStoryPlan,
   stageStatus,
@@ -5844,7 +5847,11 @@ const server = http.createServer(async (req, res) => {
         ? Math.max(15, Math.min(3600, song.durationSeconds))
         : Math.max(15, Math.min(3600, Math.floor(Number(b.targetSeconds)) || 60));
       const targetSeconds = wantedTarget;
-      const sceneSeconds = Math.max(1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
+      // Preschool pacing: kids-genre boards never plan sub-4s scenes —
+      // fast cutting overstimulates toddlers (COPPA-calm). The UI already
+      // defaults kids boards to 5s scenes; this floor holds for API callers.
+      const kidsGenre = isKidsGenre(genre, genre === "Custom" ? String(b.genreCustom || "").trim() : "");
+      const sceneSeconds = Math.max(kidsGenre ? 4 : 1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
       const sceneCount = sceneCountFor(targetSeconds, sceneSeconds);
       if (!sceneCount) throw new Error("could not derive a scene count from the durations");
       return {
@@ -5869,6 +5876,13 @@ const server = http.createServer(async (req, res) => {
         chainContinuity: b.chainContinuity !== false,
         ...(song ? { song } : {}),
       };
+    }
+    // Per-board shot-floor options for normalizeScene: kids-genre boards
+    // redistribute sub-1.5s shots (calm-cut pacing); every other board
+    // passes undefined and normalizes exactly as before.
+    function kidsShotOpts(board) {
+      const input = board && board.input ? board.input : {};
+      return isKidsGenre(input.genre, input.genreCustom) ? { minShotSeconds: MIN_KIDS_SHOT_SECONDS } : undefined;
     }
     // Song upload for the Director's music-video mode: base64 audio -> file
     // in director/ + ffprobe duration (drives the storyboard timeline).
@@ -6138,7 +6152,7 @@ const server = http.createServer(async (req, res) => {
             }
           }
           if (Array.isArray(patch.scenes)) {
-            board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds));
+            board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds, kidsShotOpts(board)));
             // Scene edits saved onto an independent-shots board stay
             // independent even if the edited text reintroduces handoffs.
             if (board.input.chainContinuity !== true) {
@@ -6338,7 +6352,7 @@ const server = http.createServer(async (req, res) => {
         issues: scored.issues,
         coverage: scored.coverage,
         errors: gate.errors,
-        warnings: [...gate.warnings, ...lyric],
+        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board)],
         continuity: detectContinuityIssues(board.scenes),
         genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
       });
@@ -6479,7 +6493,7 @@ const server = http.createServer(async (req, res) => {
       });
       const fixed = (Array.isArray(raw.scenes) ? raw.scenes : []).map((s, i) => {
         const num = Number(s && s.scene_number) || targets[i] || 0;
-        const normed = normalizeScene(s, num || 1, board.input && board.input.sceneSeconds);
+        const normed = normalizeScene(s, num || 1, board.input && board.input.sceneSeconds, kidsShotOpts(board));
         // Same post-processing as a planned batch: silent-film boards stay
         // silent, independent-shots boards stay independent, lyric_text is
         // re-joined, and bible-id grounding drops hallucinated cast — so a
@@ -6672,7 +6686,7 @@ const server = http.createServer(async (req, res) => {
       const landed = [];
       const groundNotes = [];
       for (let i = 0; i < got.length && done + landed.length < board.sceneCount; i++) {
-        const normed = normalizeScene(got[i], done + landed.length + 1, board.input.sceneSeconds);
+        const normed = normalizeScene(got[i], done + landed.length + 1, board.input.sceneSeconds, kidsShotOpts(board));
         // Silent-film board: the model sometimes still emits lines despite the
         // DISABLED instruction — strip them server-side so Generate stays
         // silent (no voice, no lip-sync, no clip growth).
@@ -7030,7 +7044,7 @@ const server = http.createServer(async (req, res) => {
         rawTag: `_raw_${id}_regen_${scene.scene_number}.log`,
       });
       const fresh = raw.scene && typeof raw.scene === "object" ? raw.scene : raw;
-      board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds);
+      board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds, kidsShotOpts(board));
       if (board.input.includeDialogue === false) board.scenes[index].dialogue = [];
       if (board.input.chainContinuity !== true) scrubSceneContinuity(board.scenes[index]);
       board.error = null;

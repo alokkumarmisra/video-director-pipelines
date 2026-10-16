@@ -258,6 +258,17 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [targetNote, setTargetNote] = useState<string | null>(null);
   const [sceneOpt, setSceneOpt] = useState(3);
   const [sceneCustom, setSceneCustom] = useState("4");
+  // Kids pacing default: selecting a kids-ish genre auto-switches the scene
+  // duration to 5s (COPPA-calm — fast cutting overstimulates toddlers),
+  // unless the user already picked a duration themselves (tracked here so we
+  // never yank an explicit choice). The server enforces a 4s floor regardless.
+  const sceneTouched = useRef(false);
+  const isKidsGenreUi = (g: string, custom: string): boolean =>
+    g === "Kids" || g === "Educational" ||
+    (g === "Custom" && /kid|preschool|pre-school|nursery|rhyme|toddler|children|learn|educat|bedtime/i.test(custom));
+  const maybeDefaultKidsPacing = (nextGenre: string, nextCustom: string): void => {
+    if (!sceneTouched.current && sceneOpt === 3 && isKidsGenreUi(nextGenre, nextCustom)) setSceneOpt(5);
+  };
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [instructions, setInstructions] = useState("");
   // ✨ Get by AI for the instructions box: the local LLM reads the story +
@@ -1948,11 +1959,11 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               </div>
               <div>
                 <label htmlFor="dir-genre">Genre</label>
-                <select id="dir-genre" value={genre} onChange={(e) => setGenre(e.target.value)}>
+                <select id="dir-genre" value={genre} onChange={(e) => { const v = e.target.value; setGenre(v); maybeDefaultKidsPacing(v, genreCustom); }}>
                   {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
                 {genre === "Custom" && (
-                  <input value={genreCustom} maxLength={40} placeholder="Custom genre…" onChange={(e) => setGenreCustom(e.target.value)} style={{ marginTop: 6 }} />
+                  <input value={genreCustom} maxLength={40} placeholder="Custom genre…" onChange={(e) => { const v = e.target.value; setGenreCustom(v); maybeDefaultKidsPacing(genre, v); }} style={{ marginTop: 6 }} />
                 )}
               </div>
               <div>
@@ -2050,11 +2061,11 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
               </div>
               <div>
                 <label htmlFor="dir-scene" title="Typical scene length (pacing hint only) — the AI decides each scene's own duration, shot count and shot timings from the story, line by line">Scene duration · AI-paced</label>
-                <select id="dir-scene" value={sceneOpt} onChange={(e) => setSceneOpt(Number(e.target.value))}>
+                <select id="dir-scene" value={sceneOpt} onChange={(e) => { sceneTouched.current = true; setSceneOpt(Number(e.target.value)); }}>
                   {SCENE_DURS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
                 </select>
                 {sceneOpt === -1 && (
-                  <input type="number" min={1} max={30} value={sceneCustom} onChange={(e) => setSceneCustom(e.target.value)} style={{ marginTop: 6 }} />
+                  <input type="number" min={1} max={30} value={sceneCustom} onChange={(e) => { sceneTouched.current = true; setSceneCustom(e.target.value); }} style={{ marginTop: 6 }} />
                 )}
               </div>
             </div>

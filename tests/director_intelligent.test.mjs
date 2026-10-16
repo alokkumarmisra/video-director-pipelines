@@ -20,6 +20,15 @@ import {
   validateLyricPlan,
   boardToScenario,
   genreDirectingNotes,
+  isKidsGenre,
+  kidsDirectingRules,
+  kidsContentWarnings,
+  buildBiblePrompt,
+  buildScenesPrompt,
+  splitSceneTimeline,
+  normalizeShots,
+  MIN_SHOT_SECONDS,
+  MIN_KIDS_SHOT_SECONDS,
   DIRECTOR_STAGES,
   llmModelName,
 } from "../lib/director.mjs";
@@ -204,5 +213,91 @@ describe("coverage + scoring engine", () => {
     );
     assert.deepEqual(boardLyricLines({ blueprint: {}, input: { story: "a long story" } }), []);
     assert.deepEqual(boardLyricLines(null), []);
+  });
+});
+
+// Kids/preschool readiness: preset-distilled staging rules reach the Director
+// prompts, unsafe content raises advisory warnings, and calm pacing floors hold.
+describe("kids readiness: staging rules, safety scan, calm pacing", () => {
+  const kidsInput = (genre = "Kids", genreCustom = "") => ({
+    title: "Bunny Day", language: "English", genre, genreCustom,
+    visualStyle: "3D Preschool Animation", styleCustom: "",
+    targetSeconds: 12, sceneSeconds: 5, story: "A bunny hops through the garden.",
+    includeDialogue: true, chainContinuity: true,
+  });
+  const emptyBible = { characters: [], locations: [], objects: [] };
+
+  it("kidsDirectingRules: [] off-genre, base + sub-rules on kids genres", () => {
+    assert.deepEqual(kidsDirectingRules("Adventure"), []);
+    assert.deepEqual(kidsDirectingRules("Kids", ""), kidsDirectingRules("Kids")); // default custom
+    const base = kidsDirectingRules("Kids");
+    assert.ok(base.length >= 1 && base[0].includes("KIDS-SAFE STAGING"));
+    assert.ok(kidsDirectingRules("Custom", "nursery rhymes").some((r) => r.includes("NURSERY-RHYME")));
+    assert.ok(kidsDirectingRules("Custom", "abc learning").some((r) => r.includes("ALPHABET TEACHING")));
+    assert.ok(kidsDirectingRules("Educational", "counting fun").some((r) => r.includes("COUNTING")));
+    assert.ok(kidsDirectingRules("Kids", "animal friends").some((r) => r.includes("ANIMAL LEARNING")));
+    assert.ok(isKidsGenre("Educational") && isKidsGenre("Kids"));
+  });
+
+  it("bible + scene prompts carry kids rules only on kids boards", () => {
+    const kids = buildBiblePrompt(kidsInput());
+    assert.ok(kids.includes("KIDS CAST RULE") && kids.includes("KIDS-SAFE STAGING"));
+    const rhyme = buildBiblePrompt(kidsInput("Custom", "nursery rhymes"));
+    assert.ok(rhyme.includes("NURSERY-RHYME STRUCTURE"));
+    const epic = buildBiblePrompt({ ...kidsInput(), genre: "Adventure" });
+    assert.ok(!epic.includes("KIDS CAST RULE") && !epic.includes("KIDS-SAFE STAGING"));
+    const scenes = buildScenesPrompt({
+      input: kidsInput(), blueprint: emptyBible, beats: [], prevScene: null,
+      startNumber: 1, count: 2, styleLock: "lock",
+    });
+    assert.ok(scenes.includes("KIDS PACING") && scenes.includes(String(MIN_KIDS_SHOT_SECONDS)));
+    const scenesEpic = buildScenesPrompt({
+      input: { ...kidsInput(), genre: "Adventure" }, blueprint: emptyBible, beats: [],
+      prevScene: null, startNumber: 1, count: 2, styleLock: "lock",
+    });
+    assert.ok(!scenesEpic.includes("KIDS-SAFE STAGING") && !scenesEpic.includes("KIDS PACING"));
+  });
+
+  it("kidsContentWarnings: silent off-genre, advisory on kids boards, capped", () => {
+    const violent = { input: { genre: "Horror" }, scenes: [{ scene_number: 1, action: "A demon kills with blood" }] };
+    assert.deepEqual(kidsContentWarnings(violent), []);
+    const gentle = { input: { genre: "Kids" }, scenes: [{ scene_number: 1, action: "The bunny hops and waves hello", dialogue: [{ speaker: "bunny", line: "Hello friends!" }] }] };
+    assert.deepEqual(kidsContentWarnings(gentle), []);
+    // Style-lock words in image prompts must NOT trip the scan.
+    const styley = { input: { genre: "Kids" }, scenes: [{ scene_number: 1, action: "Bunny hops", image_prompt: "dramatic lighting, cinematic" }] };
+    assert.deepEqual(kidsContentWarnings(styley), []);
+    const bad = {
+      input: { genre: "Kids" },
+      scenes: [{ scene_number: 2, action: "A monster stabs with a knife, blood everywhere", shots: [{ shot_id: "2-A", action: "calm", dialogue: [{ speaker: "x", line: "we die here" }] }] }],
+    };
+    const warns = kidsContentWarnings(bad);
+    assert.equal(warns.length, 2);
+    assert.ok(warns[0].includes("Scene 2") && warns[1].includes("2-A"));
+    const flood = { input: { genre: "Kids" }, scenes: Array.from({ length: 12 }, (_, i) => ({ scene_number: i + 1, action: "blood and murder" })) };
+    assert.equal(kidsContentWarnings(flood).length, 10);
+  });
+
+  it("calm pacing: kids floor redistributes tiny shots, defaults untouched", () => {
+    assert.equal(MIN_KIDS_SHOT_SECONDS, 1.5);
+    const tl = splitSceneTimeline(["Bunny hops", "waves hello", "naps"], 6, { minShotSeconds: MIN_KIDS_SHOT_SECONDS });
+    assert.ok(tl.every((t) => t.duration_seconds >= MIN_KIDS_SHOT_SECONDS));
+    assert.equal(Math.round(tl.reduce((a, t) => a + t.duration_seconds, 0) * 10) / 10, 6);
+    // Infeasible floor degrades gracefully (total/shot wins, never NaN/stall).
+    const tight = splitSceneTimeline(["a", "b", "c"], 3, { minShotSeconds: MIN_KIDS_SHOT_SECONDS });
+    assert.ok(tight.every((t) => t.duration_seconds >= 1));
+    // Default path is byte-identical: sub-second AI timings still trusted.
+    const kept = normalizeShots(
+      [{ shot_id: "1-A", duration_seconds: 0.6 }, { shot_id: "1-B", duration_seconds: 0.6 }, { shot_id: "1-C", duration_seconds: 1.8 }],
+      1, 3,
+    );
+    assert.deepEqual(kept.map((s) => s.duration_seconds), [0.6, 0.6, 1.8]);
+    const calmed = normalizeShots(
+      [{ shot_id: "1-A", duration_seconds: 0.6 }, { shot_id: "1-B", duration_seconds: 0.6 }, { shot_id: "1-C", duration_seconds: 1.8 }],
+      1, 3, { minShotSeconds: MIN_KIDS_SHOT_SECONDS },
+    );
+    assert.ok(calmed.every((s) => s.duration_seconds >= MIN_SHOT_SECONDS));
+    assert.equal(Math.round(calmed.reduce((a, s) => a + s.duration_seconds, 0) * 10) / 10, 3);
+    const sc = normalizeScene({ title: "S", duration_seconds: 6, shots: [{ duration_seconds: 0.5 }, { duration_seconds: 5.5 }] }, 1, 6, { minShotSeconds: MIN_KIDS_SHOT_SECONDS });
+    assert.ok(sc.shots.every((s) => s.duration_seconds >= MIN_KIDS_SHOT_SECONDS));
   });
 });

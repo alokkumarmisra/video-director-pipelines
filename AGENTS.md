@@ -103,6 +103,19 @@ buttons, genre note, logline, collapsible Validation + Lyric coverage with
 click-to-shot navigation via `jumpToShot`), plus dramatic-purpose +
 per-character direction lines in `renderShotDetails`. Tests: run
 `node --test tests/director.test.mjs tests/director_intelligent.test.mjs`.
+Kids/preschool readiness: `kidsDirectingRules` (distilled from
+`presets/kids/*.md`, which only feed the Craft path — sub-rules for
+rhyme/alphabet/counting/animals) is injected into the bible, scene-batch and
+single-scene regen prompts on kids-genre boards only (other boards
+byte-identical); `kidsContentWarnings` scans scene action/titles/dialogue —
+never image prompts (style locks would false-positive) — for
+violence/horror/adult themes and rides in validate `warnings` (advisory,
+never blocks Approve, capped at 10); calm pacing is enforced three-deep —
+UI auto-defaults kids boards to 5s scenes (until the user touches the
+selector), `directorValidateInput` floors kids `sceneSeconds` at 4s, and all
+four `normalizeScene` call sites pass `{ minShotSeconds:
+MIN_KIDS_SHOT_SECONDS }` (1.5s) via `kidsShotOpts(board)` so sub-1.5s AI
+shots are redistributed by `splitSceneTimeline` instead of trusted.
 
 ## AI Story Director (Story-to-Video)
 Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
