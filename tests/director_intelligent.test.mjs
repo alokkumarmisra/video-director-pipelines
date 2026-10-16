@@ -277,8 +277,7 @@ describe("kids readiness: staging rules, safety scan, calm pacing", () => {
     assert.equal(kidsContentWarnings(flood).length, 10);
   });
 
-  it("calm pacing: kids floor redistributes tiny shots, defaults untouched", () => {
-    assert.equal(MIN_KIDS_SHOT_SECONDS, 1.5);
+  it("calm pacing: kids floor redistributes tiny shots, defaults untouched", () => {    assert.equal(MIN_KIDS_SHOT_SECONDS, 1.5);
     const tl = splitSceneTimeline(["Bunny hops", "waves hello", "naps"], 6, { minShotSeconds: MIN_KIDS_SHOT_SECONDS });
     assert.ok(tl.every((t) => t.duration_seconds >= MIN_KIDS_SHOT_SECONDS));
     assert.equal(Math.round(tl.reduce((a, t) => a + t.duration_seconds, 0) * 10) / 10, 6);
@@ -299,5 +298,26 @@ describe("kids readiness: staging rules, safety scan, calm pacing", () => {
     assert.equal(Math.round(calmed.reduce((a, s) => a + s.duration_seconds, 0) * 10) / 10, 3);
     const sc = normalizeScene({ title: "S", duration_seconds: 6, shots: [{ duration_seconds: 0.5 }, { duration_seconds: 5.5 }] }, 1, 6, { minShotSeconds: MIN_KIDS_SHOT_SECONDS });
     assert.ok(sc.shots.every((s) => s.duration_seconds >= MIN_KIDS_SHOT_SECONDS));
+  });
+
+  it("hindi input: genre detection, sub-rules, safety scan in Devanagari", () => {
+    assert.ok(isKidsGenre("Custom", "बच्चों के गाने"));
+    assert.ok(isKidsGenre("Custom", "balgeet"));
+    assert.ok(!isKidsGenre("Adventure", ""));
+    assert.ok(kidsDirectingRules("Custom", "लोरी").some((r) => r.includes("NURSERY-RHYME")));
+    assert.ok(kidsDirectingRules("Custom", "अक्षर ज्ञान").some((r) => r.includes("ALPHABET TEACHING")));
+    assert.ok(kidsDirectingRules("Custom", "गिनती").some((r) => r.includes("COUNTING")));
+    assert.ok(kidsDirectingRules("Custom", "जानवर").some((r) => r.includes("ANIMAL LEARNING")));
+    const w = (scenes, genre = "Kids", gc = "") => kidsContentWarnings({ input: { genre, genreCustom: gc }, scenes });
+    assert.equal(w([{ scene_number: 1, action: "बगीचे में खून बहा" }]).length, 1);
+    assert.equal(w([{ scene_number: 1, dialogue: [{ speaker: "x", line: "चुड़ैल आई" }] }]).length, 1);
+    assert.equal(w([{ scene_number: 1, action: "khoon everywhere" }]).length, 1);
+    // Innocent compounds holding मार/मर stems must NOT flag.
+    assert.deepEqual(w([{ scene_number: 1, action: "हमारा बगीचा सुंदर है" }]), []);
+    assert.deepEqual(w([{ scene_number: 1, action: "राजकुमार मार्ग पर चला" }]), []);
+    assert.deepEqual(w([{ scene_number: 1, action: "बच्चा बीमार है" }]), []);
+    assert.deepEqual(w([{ scene_number: 1, action: "चूहा कमरे में नाचा" }]), []);
+    assert.deepEqual(w([{ scene_number: 1, action: "बिल्ली डर गई और भागी" }]), []);
+    assert.deepEqual(w([{ scene_number: 1, action: "खून और हत्या" }], "Adventure"), []);
   });
 });

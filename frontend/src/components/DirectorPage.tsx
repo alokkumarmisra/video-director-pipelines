@@ -265,7 +265,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const sceneTouched = useRef(false);
   const isKidsGenreUi = (g: string, custom: string): boolean =>
     g === "Kids" || g === "Educational" ||
-    (g === "Custom" && /kid|preschool|pre-school|nursery|rhyme|toddler|children|learn|educat|bedtime/i.test(custom));
+    (g === "Custom" && /kid|preschool|pre-school|nursery|rhyme|toddler|children|learn|educat|bedtime|moral|panchatantra|bacho|bacch|lori|balgeet|ginti|akshar|बच्च|बाल|शिशु|नन्ह|लोरी|नर्सरी|अक्षर|वर्णमाला|गिनती|संख्या|जानवर|पशु|तुकबंदी|पंचतंत्र|नैतिक/i.test(custom));
   const maybeDefaultKidsPacing = (nextGenre: string, nextCustom: string): void => {
     if (!sceneTouched.current && sceneOpt === 3 && isKidsGenreUi(nextGenre, nextCustom)) setSceneOpt(5);
   };

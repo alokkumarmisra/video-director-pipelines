@@ -116,6 +116,13 @@ selector), `directorValidateInput` floors kids `sceneSeconds` at 4s, and all
 four `normalizeScene` call sites pass `{ minShotSeconds:
 MIN_KIDS_SHOT_SECONDS }` (1.5s) via `kidsShotOpts(board)` so sub-1.5s AI
 shots are redistributed by `splitSceneTimeline` instead of trusted.
+Hindi/Hinglish input is first-class: `isKidsGenre` matches Devanagari
+(बच्चों/लोरी/अक्षर/गिनती/जानवर/पंचतंत्र…) and romanized (balgeet/lori/ginti)
+genre text, the rhyme/alphabet/counting/animals sub-rules trigger on Hindi
+custom genres, and `kidsContentWarnings` scans Devanagari with explicit
+guards so innocent compounds (हमारा, राजकुमार, बीमार, कमरा, मार्ग) never
+flag while खून/मारा/चुड़ैल do — plus severe-only Hinglish tripwires
+(khoon/maut/bandook).
 
 ## AI Story Director (Story-to-Video)
 Director menu (`frontend/src/components/DirectorPage.tsx`, pure helpers in
