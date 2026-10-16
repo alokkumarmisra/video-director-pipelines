@@ -1079,4 +1079,17 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     assert.deepEqual(validateBibleAnatomy({ characters: [{ name: "Sapoo", species: "snake", visual_identity_prompt: "limbless serpentine snake" }] }), []);
     assert.deepEqual(validateBibleAnatomy({}), []);
   });
+  it("validateBibleAnatomy enforces skin covering: scales/feathers/skin/fur", () => {
+    const one = (name, species, identity) =>
+      validateBibleAnatomy({ characters: [{ name, species, visual_identity_prompt: identity }] });
+    assert.equal(one("S", "snake", "green snake with fur").length, 1, "snake with fur flags");
+    assert.equal(one("L", "lizard", "furry lizard").length, 1, "lizard with fur flags");
+    assert.equal(one("E", "elephant", "grey elephant with fur").length, 1, "elephant with fur flags");
+    assert.equal(one("B", "buffalo", "black buffalo, fur").length, 1, "buffalo with fur flags");
+    assert.equal(one("P", "parrot", "red fur parrot").length, 1, "bird with fur flags");
+    assert.equal(one("Sh", "lion", "lion, bare skin, no fur").length, 1, "fur-less lion flags");
+    assert.deepEqual(one("S", "snake", "limbless serpentine snake, green scales"), []);
+    assert.deepEqual(one("Sh", "lion", "golden fur lion, four legs"), []);
+    assert.deepEqual(one("E", "elephant", "grey bare skin, four legs"), []);
+  });
 });

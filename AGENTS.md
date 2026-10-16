@@ -93,6 +93,10 @@ every character): the bible rule is conditional (limbless template ONLY for
 snake/serpent/worm/eel, explicitly FORBIDDEN words for legged species),
 `anatomyLockFor` returns null for legged species even when poisoned, and
 `validateBibleAnatomy` flags latched bibles in validate warnings.
+SKIN COVERING is part of the same rule (snake/lizard/fish/turtle = scales,
+birds = feathers, elephant/buffalo/human = bare skin, lion/dog/cat = fur) and
+is checked by the same validator.
+
 Server (`frontend/server.mjs`): all chat-completions `model:` fields use the
 shared `LLM_MODEL` const (Muse Spark 1.3 = `LLM_BASE` spark endpoint +
 `LLM_MODEL=muse-spark-1.3`; default `"local"` = existing LM Studio behavior).
