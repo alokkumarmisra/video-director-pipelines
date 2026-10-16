@@ -6533,6 +6533,8 @@ const server = http.createServer(async (req, res) => {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
       if (!board.blueprint) return json(res, 400, { error: "analyze the story first" });
+      const anatomyErrors = validateBibleAnatomy(board.blueprint);
+      if (anatomyErrors.length) return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
       const countQ = Number(u.searchParams.get("count"));
       const spec = nextSceneBatchSpec(board, Number.isFinite(countQ) ? countQ : undefined, id);
       if (spec.ready) {
@@ -6572,6 +6574,10 @@ const server = http.createServer(async (req, res) => {
       try {
         const board = readDirectorBoard(id);
         if (!board.blueprint) throw new Error("analyze the story first");
+        const anatomyErrors = validateBibleAnatomy(board.blueprint);
+        if (anatomyErrors.length) {
+          return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
+        }
         const body = await readJson(req).catch(() => ({}));
         const spec = nextSceneBatchSpec(board, body.count, id);
         if (spec.ready) return json(res, 200, spec.write ? writeDirectorBoard(spec.board) : spec.board);
@@ -7168,6 +7174,18 @@ const server = http.createServer(async (req, res) => {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
       if (!Array.isArray(board.scenes) || !board.scenes.length) throw new Error("nothing to approve — generate scenes first");
+      // Anatomical bible failures are generation-blocking (unlike ordinary
+      // quality/safety warnings): scene prompts paste character identity
+      // verbatim, so a poisoned dog/elephant bible guarantees the wrong
+      // rendered body. Require Analyze/review repair before keyframes/clips.
+      const anatomyErrors = validateBibleAnatomy(board.blueprint);
+      if (anatomyErrors.length) {
+        return json(res, 400, {
+          error: `character bible anatomy failed: ${anatomyErrors[0]}`,
+          errors: anatomyErrors,
+          warnings: [],
+        });
+      }
       // Story QA gate (§21 + Chief Director approveGate): same checklist as
       // the Story page client, so a board with unknown speakers, missing
       // emotion/expression or broken scene order cannot reach
