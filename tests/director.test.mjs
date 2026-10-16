@@ -41,6 +41,7 @@ import {
   LIMBLESS_SPECIES_RE,
   anatomyLockFor,
   withAnatomyLock,
+  validateBibleAnatomy,
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
@@ -1049,5 +1050,33 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     });
     assert.ok(p.includes("ANATOMY-SAFE STAGING"), "scene brief stages only possible actions");
     assert.ok(!p.includes("(limbs,"), "video schema no longer suggests limbs to the model");
+  });
+  it("bible rule is conditional: snake template forbidden for legged species", () => {
+    const bible = buildBiblePrompt({
+      title: "D", story: "a dog", language: "Hindi", genre: "Kids",
+      visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
+    });
+    assert.ok(bible.includes("ANATOMY INTEGRITY RULE"));
+    assert.ok(bible.includes("For EVERY OTHER species"), "legged species get their own branch");
+    assert.ok(bible.includes("NEVER write"), "limbless wording explicitly forbidden for legged cast");
+  });
+  it("anatomyLockFor refuses poisoned legged species, keeps real snakes locked", () => {
+    const poisonedDog = {
+      character_id: "doggi", name: "Doggi",
+      species: "domestic dog, one continuous elongated limbless serpentine body, no legs, no arms",
+      appearance: { ears: "none" },
+      visual_identity_prompt: "limbless serpentine snake body, fur brown",
+    };
+    assert.equal(anatomyLockFor(poisonedDog), null, "poisoned dog gets no snake lock");
+    assert.equal(anatomyLockFor({ character_id: "d", name: "Doggi", species: "dog", visual_identity_prompt: "brown four-legged dog" }), null);
+  });
+  it("validateBibleAnatomy flags latched bibles, silent on clean ones", () => {
+    const poisoned = { characters: [{ name: "Doggi", species: "domestic dog, limbless serpentine body, no legs", visual_identity_prompt: "snake body" }] };
+    const warns = validateBibleAnatomy(poisoned);
+    assert.equal(warns.length, 1);
+    assert.ok(warns[0].includes("Doggi") && warns[0].includes("limbless"));
+    assert.deepEqual(validateBibleAnatomy({ characters: [{ name: "Doggi", species: "dog", visual_identity_prompt: "brown four-legged dog" }] }), []);
+    assert.deepEqual(validateBibleAnatomy({ characters: [{ name: "Sapoo", species: "snake", visual_identity_prompt: "limbless serpentine snake" }] }), []);
+    assert.deepEqual(validateBibleAnatomy({}), []);
   });
 });

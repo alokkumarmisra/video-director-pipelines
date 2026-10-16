@@ -88,6 +88,11 @@ action/gaze/role direction; string-id casts keep working),
 + `dramatic_purpose` (absent on legacy scenes) and accept object casts via
 `castIdsOf`; existing exports behave byte-identically (all 58 pre-existing
 director tests pass unchanged).
+Anatomy-latch guard (a real dog board once got the full snake template on
+every character): the bible rule is conditional (limbless template ONLY for
+snake/serpent/worm/eel, explicitly FORBIDDEN words for legged species),
+`anatomyLockFor` returns null for legged species even when poisoned, and
+`validateBibleAnatomy` flags latched bibles in validate warnings.
 Server (`frontend/server.mjs`): all chat-completions `model:` fields use the
 shared `LLM_MODEL` const (Muse Spark 1.3 = `LLM_BASE` spark endpoint +
 `LLM_MODEL=muse-spark-1.3`; default `"local"` = existing LM Studio behavior).

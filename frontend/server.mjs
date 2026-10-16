@@ -81,6 +81,7 @@ import {
   isKidsGenre,
   kidsContentWarnings,
   learningReviewChecklist,
+  validateBibleAnatomy,
   MIN_KIDS_SHOT_SECONDS,
   normalizeStoryPlan,
   buildStoryPlan,
@@ -6353,7 +6354,7 @@ const server = http.createServer(async (req, res) => {
         issues: scored.issues,
         coverage: scored.coverage,
         errors: gate.errors,
-        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board)],
+        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board), ...validateBibleAnatomy(board.blueprint)],
         continuity: detectContinuityIssues(board.scenes),
         genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
       });
