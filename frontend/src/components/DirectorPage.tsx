@@ -695,6 +695,30 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     openSceneDetails(si);
   };
 
+  // Validation text is authored by helpers/server and may mention any scene
+  // number. Turn those references into navigation links without hard-coding
+  // a particular scene or changing the rest of the diagnostic text.
+  const linkSceneReferences = (message: string) => {
+    const parts = message.split(/(Scene\s+\d+)/gi);
+    return parts.map((part, i) => {
+      const match = part.match(/^Scene\s+(\d+)$/i);
+      return match
+        ? <button key={`${i}-${part}`} type="button" className="ghost" style={{ padding: 0, border: 0, color: "var(--accent)", textDecoration: "underline", minHeight: 0 }} onClick={() => jumpToShot(Number(match[1]), null)} title={`Open ${part}`}>{part}</button>
+        : part;
+    });
+  };
+  const groupSceneMessages = (messages: string[]) => {
+    const groups = new Map<string, string[]>();
+    messages.forEach((message) => {
+      const sceneMatch = message.match(/\bScene\s+(\d+)\b/i);
+      const key = sceneMatch ? sceneMatch[1] : `other-${groups.size}`;
+      const rows = groups.get(key) ?? [];
+      rows.push(message);
+      groups.set(key, rows);
+    });
+    return [...groups.entries()];
+  };
+
   const doAnalyze = async () => {
     if (busy) return;
     const lyrics = story.trim();
@@ -2497,16 +2521,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                         {validation.errors.length > 0 && (
                           <div style={{ marginTop: 6 }}>
                             <div className="shotlist-detail-label">Blocking (approve gate)</div>
-                            {validation.errors.slice(0, 8).map((m, i) => (
-                              <p key={i} className="hint warn-text" style={{ margin: "2px 0 0" }}>⛔ {m}</p>
+                            {groupSceneMessages(validation.errors).slice(0, 8).map(([scene, messages], i) => (
+                              <p key={`${scene}-${i}`} className="hint err-text" style={{ display: "block", margin: "2px 0 0" }}>⛔ {messages.map((m, mi) => <span key={mi}>{mi > 0 ? " · " : ""}{linkSceneReferences(m)}</span>)}</p>
                             ))}
                           </div>
                         )}
                         {validation.issues.length > 0 ? (
                           <div style={{ marginTop: 6 }}>
                             <div className="shotlist-detail-label">Actionable issues</div>
-                            {validation.issues.slice(0, 12).map((m, i) => (
-                              <p key={i} className="hint" style={{ margin: "2px 0 0" }}>• {m}</p>
+                            {groupSceneMessages(validation.issues).slice(0, 12).map(([scene, messages], i) => (
+                              <p key={`${scene}-${i}`} className="hint err-text" style={{ display: "block", margin: "2px 0 0" }}>• {messages.map((m, mi) => <span key={mi}>{mi > 0 ? " · " : ""}{linkSceneReferences(m)}</span>)}</p>
                             ))}
                             {validation.issues.length > 12 && (
                               <p className="hint" style={{ margin: "2px 0 0" }}>…and {validation.issues.length - 12} more.</p>

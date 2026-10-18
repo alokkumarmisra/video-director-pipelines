@@ -724,9 +724,10 @@ export default function OutputGallery({ scenario, refreshKey, assets, bare, gene
   // generatingScenario arrives as the base scenario name; Wan runs render
   // into the suffixed dir, so both forms match. The format must match too —
   // a vertical Reel run never lights up the landscape cards.
-  const generating = !!generatingScenario && !!viewScenario &&
-    (generatingScenario === viewScenario || `${generatingScenario}_wan` === viewScenario ||
-      `${generatingScenario}_vertical` === viewScenario || `${generatingScenario}_wan_vertical` === viewScenario) &&
+  const activeGeneratingScenario = generatingScenario ?? null;
+  const generating = !!activeGeneratingScenario && !!viewScenario &&
+    (activeGeneratingScenario === viewScenario || `${activeGeneratingScenario}_wan` === viewScenario ||
+      `${activeGeneratingScenario}_vertical` === viewScenario || `${activeGeneratingScenario}_wan_vertical` === viewScenario) &&
     (generatingFormat ?? "landscape") === (isVerticalOut(viewScenario) ? "vertical" : "landscape");
   const genTarget = (() => {
     if (!generating) return null;

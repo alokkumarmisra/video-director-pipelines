@@ -744,6 +744,9 @@ try {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   devDb = new DatabaseSync(DEVOTIONAL_DB);
   devDb.exec(DEVOTIONAL_SQLITE_SCHEMA);
+  // A PROCESSING job cannot survive a server restart (the child process is
+  // gone); close it as a visible failure instead of leaving the UI polling.
+  try { devDb.prepare("UPDATE devotional_jobs SET status='FAILED', error_message='server restarted while job was processing', updated_at=? WHERE status='PROCESSING'").run(new Date().toISOString()); } catch { /* first boot/schema race */ }
   // Existing installs predate the saved-prompt column — add it once.
   try { devDb.exec(`ALTER TABLE devotional_assets ADD COLUMN prompt TEXT NOT NULL DEFAULT ''`); }
   catch { /* column already exists */ }
@@ -2335,6 +2338,9 @@ async function pgInit() {
     // Devotional Studio library tables (idempotent — safe on every boot).
     try { await pgPool.query(DEVOTIONAL_SCHEMA); }
     catch (e) { console.warn("[pg] devotional schema failed:", e.message); }
+    try {
+      await pgPool.query("UPDATE devotional_jobs SET status='FAILED', error_message='server restarted while job was processing', updated_at=now() WHERE status='PROCESSING'");
+    } catch (e) { console.warn("[pg] devotional job recovery failed:", e.message); }
     // Saved generation-prompt override (existing installs predate the column).
     try { await pgPool.query(`ALTER TABLE devotional_assets ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT ''`); }
     catch (e) { console.warn("[pg] devotional prompt migration failed:", e.message); }
@@ -3433,6 +3439,9 @@ async function devPumpJobs() {
             }
           }
         } else {
+          // Failed/killed generators may leave a partial file. The filename
+          // is unique per job, and it is not a registered user asset yet.
+          try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile); } catch { /* best-effort orphan cleanup */ }
           const err = (log.match(/\[asset\][\s\S]*$/) ? log.slice(-2000) : log.slice(-2000)) || `exit ${code}`;
           const msg = isVideo && !String(err).includes("reference generation failed")
             ? `showcase clip failed: ${String(err).trim().slice(-500) || "unknown error"} — check COMFY_BASE and retry`
@@ -9186,10 +9195,12 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { error: `illegal transition ${from} -> ${to}` });
       }
       if (to === "approved") {
-        const n = store === "pg"
-          ? (await pgPool.query("SELECT count(*)::int AS n FROM devotional_asset_files WHERE asset_id = $1", [id])).rows[0].n
-          : devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files WHERE asset_id = ?").get(id)?.n ?? 0;
-        if (!Number(n)) return json(res, 400, { error: "approve needs at least one reference file — generate or upload first" });
+        const files = store === "pg"
+          ? (await pgPool.query("SELECT file_path FROM devotional_asset_files WHERE asset_id = $1", [id])).rows
+          : devDb.prepare("SELECT file_path FROM devotional_asset_files WHERE asset_id = ?").all(id);
+        const hasReferenceImage = files.some((f) => /\.(png|jpe?g|webp)$/i.test(String(f.file_path || ""))
+          && fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)));
+        if (!hasReferenceImage) return json(res, 400, { error: "approve needs an existing reference image — generate or upload one first" });
       }
       let out;
       if (store === "pg") {
@@ -9403,9 +9414,11 @@ const server = http.createServer(async (req, res) => {
         image = "queued";
         await markGenerating();
       } else {
-        const hasImage = store === "pg"
-          ? (await pgPool.query("SELECT 1 FROM devotional_asset_files WHERE asset_id = $1 LIMIT 1", [id])).rowCount > 0
-          : !!devDb.prepare("SELECT 1 FROM devotional_asset_files WHERE asset_id = ? LIMIT 1").get(id);
+        const imageRows = store === "pg"
+          ? (await pgPool.query("SELECT file_path FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id DESC", [id])).rows
+          : devDb.prepare("SELECT file_path FROM devotional_asset_files WHERE asset_id = ? ORDER BY id DESC").all(id);
+        const hasImage = imageRows.some((f) => /\.(png|jpe?g|webp)$/i.test(String(f.file_path || ""))
+          && fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)));
         if (!hasImage) {
           jobs.push(await enqueue("reference", "flux-t2i", "flux-2-klein-9b-fp8", { fileKind }));
           image = "queued";

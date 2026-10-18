@@ -1299,7 +1299,10 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
   const cutFormatParam = cutFormat === "vertical" ? { format: "vertical" as VideoFormat } : {};
   // Storage folder of the active run (dirs the galleries compare against).
   // runScenario stays the display name for display-vs-display checks.
-  const runFolderBase = runActive && runScenario ? folderForName(runScenario) : null;
+  const activeRun = runActive || !!attachRun || !!serverRun;
+  const activeRunScenario = runActive ? runScenario : attachRun?.scenario ?? serverRun?.scenario ?? null;
+  const runFolderBase = activeRunScenario ? (runActive ? null : attachRun?.folder ?? serverRun?.folder) ?? folderForName(activeRunScenario) : null;
+  const activeRunFormat = runActive ? runFormat : attachRun?.format ?? (serverRun?.format === "vertical" ? "vertical" : "landscape");
   // Unsaved card edits belong to the project on screen — drop them on
   // switch so the next project's saved values show (nothing is lost: the
   // editor only enables Save while its own content is on screen).
@@ -2167,8 +2170,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
                 refreshKey={refreshKey}
                 section="reference"
                 generatingScenario={runFolderBase}
-                generatingFormat={runActive ? runFormat : null}
-                regenTarget={runActive ? regenTarget : null}
+                generatingFormat={activeRunFormat}
+                regenTarget={runActive ? regenTarget : attachRun?.regen ?? serverRun?.regen ?? null}
                 runQueue={runQueue}
                 onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
                 onUploaded={refresh}
@@ -2185,8 +2188,8 @@ function Studio({ user, onLogout, theme, onToggleTheme, draftBg, draftBtn, onDra
             refreshKey={refreshKey}
             section="beats"
             generatingScenario={runFolderBase}
-            generatingFormat={runActive ? runFormat : null}
-            regenTarget={runActive ? regenTarget : null}
+            generatingFormat={activeRunFormat}
+            regenTarget={runActive ? regenTarget : attachRun?.regen ?? serverRun?.regen ?? null}
             runQueue={runQueue}
             onRegen={(kind, index) => handleRegen(kind, index, cutFormat === "vertical" ? "vertical" : undefined)}
             onBulkRegen={(kind, indices) => handleBulkRegen(kind, indices, cutFormat === "vertical" ? "vertical" : undefined)}
