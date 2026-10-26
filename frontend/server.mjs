@@ -30,6 +30,24 @@ import {
 } from "../lib/presets.mjs";
 import { applyMasterToBeats } from "../lib/master_prompt.mjs";
 import { audioDuration, dialogueWavFile } from "../lib/tts.mjs";
+import { analyzePcm } from "../lib/audio_analysis.mjs";
+import { resolveImageWorkflow, DEFAULT_IMAGE_WORKFLOW, isImageWorkflowId } from "../lib/image_workflows.mjs";
+import { buildAudioTimeline, audioTimelineDuration, validateAudioTimeline, syncAudioTimelineToScenes } from "../lib/audio_timeline.mjs";
+import {
+  SEMANTIC_SYSTEM,
+  analyzeLine,
+  buildSemanticAnalysisPrompt,
+  mergeModelSemantics,
+  buildSemanticContext,
+  attachSemantics,
+  validateSceneSemantics,
+  repairSceneSemantics,
+  buildEnglishVisualInstruction,
+  buildNarrationVisuals,
+  alignSemanticsToTiming,
+  buildLyricActionPlan,
+  detectLanguage,
+} from "../lib/semantics.mjs";
 import {
   beatDialogueStatus,
   lineWavFile,
@@ -42,6 +60,8 @@ import {
   } from "../lib/dialogue_pipeline.mjs";
 import {
   SCENE_BATCH,
+  SCENE_BATCH_MIN,
+  SCENE_BATCH_MAX,
   sceneCountFor,
   styleLockFor,
   DIRECTOR_SYSTEM,
@@ -65,6 +85,7 @@ import {
   stripContinuityText,
   parseLyricLines,
   estimateLyricTiming,
+  timeLinesFromTranscript,
   linesForTimeWindow,
   planProgress,
   verifyPlanComplete,
@@ -78,12 +99,8 @@ import {
   detectContinuityIssues,
   buildDirectionRepairPrompt,
   genreDirectingNotes,
-  isKidsGenre,
-  kidsContentWarnings,
   learningReviewChecklist,
   validateBibleAnatomy,
-  validateKidsScenePhysics,
-  MIN_KIDS_SHOT_SECONDS,
   normalizeStoryPlan,
   buildStoryPlan,
   stageStatus,
@@ -113,13 +130,98 @@ import {
 } from "../lib/director.mjs";
 import { storyboardToScenario } from "../lib/project_import.mjs";
 import {
-  newRefaceId,
-  REFACE_ID_RE,
-  refaceSummary,
-  refaceDetail,
-  readRefaceMeta,
-  writeRefaceMeta,
-} from "../lib/reface.mjs";
+  KIDS_SCHEMA,
+  KIDS_SQLITE_SCHEMA,
+  KIDS_OPTION_KEYS,
+  KIDS_DEFAULT_OPTIONS,
+  KIDS_PROJECT_STATUSES,
+  normalizeKidsProject,
+  validateKidsProject,
+  normalizeKidsDirectorPlan,
+  isPlanSubstantive,
+  planEditGuard,
+  buildKidsPlanFromBoard,
+  buildKidsDirectorPlanPrompt,
+  KIDS_DIRECTOR_SYSTEM,
+  kidsDashboardMetrics,
+  kidsSlug,
+  hasScript,
+  directorStyleFor,
+  directorLanguageFor,
+  directorAspectFor,
+  directorGenreFor,
+} from "../lib/kids.mjs";
+import {
+  kidsOptions,
+  kidsSetOptions,
+  kidsListProjects,
+  kidsGetProject,
+  kidsProjectNameExists,
+  kidsInsertProject,
+  kidsUpdateProject,
+  kidsDeleteProject,
+  kidsGetPlan,
+  kidsListPlans,
+  kidsSavePlan,
+  kidsApprovePlan,
+  kidsListScenes,
+  kidsReplaceScenes,
+  kidsListCharacters,
+  kidsReplaceCharacters,
+  kidsListAssets,
+  kidsUpsertAsset,
+  kidsListJobs,
+  kidsUpsertJob,
+  kidsDashboard,
+  kidsGetStory,
+  kidsListStories,
+  kidsSaveStory,
+  kidsApproveStory,
+  kidsListLibrary,
+  kidsGetLibraryAsset,
+  kidsInsertLibraryAsset,
+  kidsUpdateLibraryAsset,
+  kidsDeleteLibraryAsset,
+  kidsListLibraryFiles,
+  kidsInsertLibraryFile,
+  kidsListAllLibraryFiles,
+  kidsJobRow,
+  kidsListLyricSections,
+  kidsReplaceLyricSections,
+  kidsListAudioSegments,
+  kidsReplaceAudioSegments,
+  kidsListTimeline,
+  kidsReplaceTimeline,
+  kidsInsertQcRun,
+  kidsListQcRuns,
+  kidsInsertExport,
+  kidsListExports,
+  kidsInsertFeedback,
+  kidsListFeedback,
+} from "../lib/kids_store.mjs";
+import {
+  KIDS_PIPELINE_STAGES,
+  kidsStageStatus,
+  kidsRunnableStages,
+  normalizeKidsStory,
+  validateKidsStory,
+  isKidsStorySubstantive,
+  buildKidsStoryPrompt,
+  segmentLyrics,
+  normalizeLyricSections,
+  buildKidsSongPrompt,
+  buildKidsAudioTimeline,
+  buildKidsTimeline,
+  validateKidsTimeline,
+  normalizeKidsLibraryAsset,
+  buildKidsScenePrompt,
+  runKidsQualityChecks,
+  normalizeKidsFeedback,
+  kidsTrainingExamples,
+  KIDS_LIBRARY_KINDS,
+  KIDS_LIBRARY_CATEGORIES,
+  buildKidsVoiceMap,
+} from "../lib/kids_pipeline.mjs";
 import {
   DOC_STATUSES,  validateDocBrief,
   normalizeDocCharacter,
@@ -158,29 +260,13 @@ import {
   withDevotionalRealism,
   isDevotionalBrief,
 } from "../lib/documentary.mjs";
-import {
-  DEVOTIONAL_KINDS,
-  DEVOTIONAL_STATUSES,
-  DEVOTIONAL_FILE_KINDS,
-  DEVOTIONAL_SCHEMA,
-  makeAssetId,
-  safeFolder,
-  isSafeSegment,
-  normalizeKind,
-  normalizeStatus,
-  canTransition,
-  normalizeAliases,
-  normalizeAsset,
-  validateAssetPayload,
-  describeAssetForPrompt,
-  buildDevotionalScenePrompt,
-  resolveSceneAssets,
-  SEED_SUGGESTIONS,
-  buildAssetReferenceMap,
-  findDuplicateAssets,
-  buildVisualStyleGuide,
-  validateAssetContinuity,
-} from "../lib/devotional.mjs";
+// Reject path traversal / absolute / separator-carrying segments (used by the
+// auth-gated binary servers — e.g. serveKids). Mirrors lib/devotional.mjs's
+// helper of the same name.
+function isSafeSegment(s) {
+  return typeof s === "string" && s.length > 0 && s.length <= 120 &&
+    !s.includes("..") && !s.includes("/") && !s.includes("\\") && !s.startsWith(".");
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -650,120 +736,88 @@ const pgPool = new Pool({
   connectionTimeoutMillis: 3000,
 });
 let pgUp = false;
-// ---------------------------------------------------------------- devotional sqlite fallback
-// Devotional Studio works without Postgres: when pgUp is false every
-// devotional route below uses this local SQLite store instead
-// (data/devotional.sqlite, same binaries under devotional/). SQLite is the
-// canonical store in USE_SQLITE=true mode (pgProbe never enables pgUp
-// there); when Postgres is up it stays canonical and SQLite idles.
-const DEVOTIONAL_DB = path.join(DATA_DIR, "devotional.sqlite");
-let devDb = null;
-const DEVOTIONAL_SQLITE_SCHEMA = `
-CREATE TABLE IF NOT EXISTS devotional_assets (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL CHECK (kind IN ('character','location','prop','style')),
-  parent_id TEXT,
-  name TEXT NOT NULL,
-  aliases TEXT NOT NULL DEFAULT '[]',
-  category TEXT NOT NULL DEFAULT '',
-  description TEXT NOT NULL DEFAULT '',
-  identity TEXT NOT NULL DEFAULT '{}',
-  style_id TEXT,
-  negative_prompt TEXT NOT NULL DEFAULT '',
-  prompt TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','generating','review','approved','archived')),
-  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
-  locked INTEGER NOT NULL DEFAULT 0,
-  continuity TEXT NOT NULL DEFAULT '',
-  metadata TEXT NOT NULL DEFAULT '{}',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-CREATE INDEX IF NOT EXISTS idx_devotional_kind_status_lite ON devotional_assets(kind, status);
-CREATE INDEX IF NOT EXISTS idx_devotional_parent_lite ON devotional_assets(parent_id);
-CREATE TABLE IF NOT EXISTS devotional_asset_versions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  asset_id TEXT NOT NULL,
-  version INTEGER NOT NULL,
-  snapshot TEXT NOT NULL,
-  note TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  UNIQUE (asset_id, version)
-);
-CREATE TABLE IF NOT EXISTS devotional_asset_files (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  asset_id TEXT NOT NULL,
-  file_path TEXT NOT NULL,
-  file_kind TEXT NOT NULL DEFAULT 'master',
-  source TEXT NOT NULL DEFAULT 'upload' CHECK (source IN ('generated','upload')),
-  prompt TEXT,
-  workflow TEXT,
-  model TEXT,
-  seed INTEGER,
-  metadata TEXT NOT NULL DEFAULT '{}',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-CREATE INDEX IF NOT EXISTS idx_devotional_files_asset_lite ON devotional_asset_files(asset_id);
-CREATE TABLE IF NOT EXISTS devotional_jobs (
-  id TEXT PRIMARY KEY,
-  asset_id TEXT,
-  kind TEXT NOT NULL DEFAULT 'reference',
-  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSING','COMPLETED','FAILED')),
-  prompt TEXT,
-  workflow TEXT,
-  model TEXT,
-  error_message TEXT,
-  metadata TEXT NOT NULL DEFAULT '{}',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-CREATE TABLE IF NOT EXISTS devotional_scene_links (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  board_id TEXT NOT NULL,
-  scene_number INTEGER NOT NULL,
-  asset_id TEXT NOT NULL,
-  asset_version INTEGER NOT NULL DEFAULT 1,
-  role TEXT NOT NULL CHECK (role IN ('character','location','prop','style')),
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  UNIQUE (board_id, scene_number, asset_id, role)
-);
-CREATE INDEX IF NOT EXISTS idx_devotional_links_board_lite ON devotional_scene_links(board_id);
-CREATE INDEX IF NOT EXISTS idx_devotional_links_asset_lite ON devotional_scene_links(asset_id);
-CREATE TABLE IF NOT EXISTS devotional_project_usage (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project TEXT NOT NULL,
-  asset_id TEXT NOT NULL,
-  asset_version INTEGER NOT NULL DEFAULT 1,
-  scenes TEXT NOT NULL DEFAULT '[]',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-  UNIQUE (project, asset_id)
-);
-`;
-try {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  devDb = new DatabaseSync(DEVOTIONAL_DB);
-  devDb.exec(DEVOTIONAL_SQLITE_SCHEMA);
-  // A PROCESSING job cannot survive a server restart (the child process is
-  // gone); close it as a visible failure instead of leaving the UI polling.
-  try { devDb.prepare("UPDATE devotional_jobs SET status='FAILED', error_message='server restarted while job was processing', updated_at=? WHERE status='PROCESSING'").run(new Date().toISOString()); } catch { /* first boot/schema race */ }
-  // Existing installs predate the saved-prompt column — add it once.
-  try { devDb.exec(`ALTER TABLE devotional_assets ADD COLUMN prompt TEXT NOT NULL DEFAULT ''`); }
-  catch { /* column already exists */ }
-} catch (e) {
-  console.warn("[devotional] sqlite fallback unavailable:", e.message);
-  devDb = null;
-}
-// SQLite stores JSON columns as TEXT — parse them back to the API shape.
-// node-pg returns arrays/objects natively; both shapes are accepted here.
-const devJson = (v, fb) => {
+// ---------------------------------------------------------------- kids studio store
+// The Sanskriti Kids Studio is a PROJECT LAYER on top of the existing
+// Director pipeline — it never renders on its own. Its own tables live in a
+// DEDICATED Postgres database (`Sanskriti_kids` by default, override with
+// PG_KIDS_DATABASE) so the studio's project/plan/scene/asset/job rows never
+// mix with the main catalog (video_generator). When that database is not
+// reachable the studio falls back to a local SQLite file
+// (data/kids.sqlite) with the same tables, so the module always works.
+const KIDS_DB_NAME = process.env.PG_KIDS_DATABASE || "Sanskriti_kids";
+const kidsPool = new Pool({
+  host: process.env.PG_HOST || "localhost",
+  port: Number(process.env.PG_PORT || 5432),
+  database: KIDS_DB_NAME,
+  user: process.env.PG_USER || "postgres",
+  password: process.env.PG_PASSWORD || "",
+  connectionTimeoutMillis: 3000,
+});
+let kidsPgUp = false;
+const KIDS_SQLITE_FILE = path.join(DATA_DIR, "kids.sqlite");
+let kidsDb = null;
+// Which store answers a kids query: "pg" | "sqlite" | null (none available).
+const kidsStore = () => (kidsPgUp ? "pg" : (kidsDb ? "sqlite" : null));
+// JSON columns arrive as objects from node-pg and as TEXT from SQLite.
+const kidsJson = (v, fb) => {
   if (v == null) return fb;
   if (typeof v !== "string") return v;
   try { return JSON.parse(v); } catch { return fb; }
 };
-const devNow = () => new Date().toISOString();
-// True when a devotional database (Postgres or SQLite) can serve requests.
-const devStore = () => (pgUp ? "pg" : (devDb ? "sqlite" : null));
+const kidsNow = () => new Date().toISOString();
+// ---------------------------------------------------------------- kids sqlite fallback
+// The Kids Studio works without Postgres: when the dedicated `Sanskriti_kids`
+// database is unreachable every kids route uses this local SQLite store
+// instead (data/kids.sqlite, same tables). Same discipline as the Devotional
+// Studio: the studio is always usable, Postgres is the canonical store when
+// it is up.
+try {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  kidsDb = new DatabaseSync(KIDS_SQLITE_FILE);
+  kidsDb.exec(KIDS_SQLITE_SCHEMA);
+  // A PROCESSING job cannot survive a server restart (the child process is
+  // gone); close it as a visible failure instead of leaving the UI polling.
+  try {
+    kidsDb.prepare(
+      "UPDATE kids_jobs SET status='FAILED', error_message='server restarted while job was processing', updated_at=? WHERE status='PROCESSING'",
+    ).run(kidsNow());
+  } catch { /* first boot/schema race */ }
+  // An EXISTING fallback database keeps its old columns (CREATE TABLE IF NOT
+  // EXISTS never changes a table). Every column the studio added later is
+  // ALTERed in here — the same discipline the Postgres branch uses.
+  const kidsSqliteColumns = {
+    kids_projects: {
+      audio_path: "TEXT NOT NULL DEFAULT ''",
+      reference_images: "TEXT NOT NULL DEFAULT '[]'",
+      metadata: "TEXT NOT NULL DEFAULT '{}'",
+      board_id: "TEXT",
+      scenario_name: "TEXT",
+    },
+    kids_jobs: {
+      metadata: "TEXT NOT NULL DEFAULT '{}'",
+      error_message: "TEXT",
+    },
+    kids_assets: {
+      prompt: "TEXT NOT NULL DEFAULT ''",
+      status: "TEXT NOT NULL DEFAULT 'PENDING'",
+      scene_number: "INTEGER",
+    },
+  };
+  for (const [table, cols] of Object.entries(kidsSqliteColumns)) {
+    let have = new Set();
+    try {
+      have = new Set(kidsDb.prepare(`PRAGMA table_info(${table})`).all().map((r) => r.name));
+    } catch { continue; /* the table does not exist in this file */ }
+    for (const [name, ddl] of Object.entries(cols)) {
+      if (have.has(name)) continue;
+      try { kidsDb.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`); }
+      catch (e) { console.warn(`[kids] sqlite migration ${table}.${name} failed:`, e.message); }
+    }
+  }
+} catch (e) {
+  console.warn("[kids] sqlite fallback unavailable:", e.message);
+  kidsDb = null;
+}
 const PG_SCHEMA = `
 CREATE TABLE IF NOT EXISTS scenarios (
   name TEXT PRIMARY KEY,
@@ -2335,15 +2389,6 @@ async function pgInit() {
   if (!(await pgProbe())) return;
   try {
     await pgPool.query(PG_SCHEMA);
-    // Devotional Studio library tables (idempotent — safe on every boot).
-    try { await pgPool.query(DEVOTIONAL_SCHEMA); }
-    catch (e) { console.warn("[pg] devotional schema failed:", e.message); }
-    try {
-      await pgPool.query("UPDATE devotional_jobs SET status='FAILED', error_message='server restarted while job was processing', updated_at=now() WHERE status='PROCESSING'");
-    } catch (e) { console.warn("[pg] devotional job recovery failed:", e.message); }
-    // Saved generation-prompt override (existing installs predate the column).
-    try { await pgPool.query(`ALTER TABLE devotional_assets ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT ''`); }
-    catch (e) { console.warn("[pg] devotional prompt migration failed:", e.message); }
     // Legacy `assets` catalog is retired (project_assets + project_references
     // + disk are canonical) — drop it on existing installs.
     await pgPool.query(`DROP TABLE IF EXISTS public.assets`);
@@ -2598,6 +2643,49 @@ async function pgInit() {
 }
 pgInit();
 
+// Kids Studio: connect to its dedicated Postgres database and create the
+// studio tables. Independent of the main catalog's USE_SQLITE switch — the
+// studio owns `Sanskriti_kids` outright, and falls back to the local SQLite
+// file when that database is unreachable (so the module always works).
+async function kidsInit() {
+  try {
+    await kidsPool.query("SELECT 1");
+    kidsPgUp = true;
+  } catch (e) {
+    kidsPgUp = false;
+    console.warn(`[kids] database "${KIDS_DB_NAME}" unreachable: ${String(e.message || e)} — using the local SQLite store`);
+    return;
+  }
+  try {
+    await kidsPool.query(KIDS_SCHEMA);
+    // Existing installs predate the optional audio + reference-image columns.
+    try { await kidsPool.query(`ALTER TABLE kids_projects ADD COLUMN IF NOT EXISTS audio_path TEXT NOT NULL DEFAULT ''`); }
+    catch (e) { console.warn("[kids] audio_path migration failed:", e.message); }
+    try { await kidsPool.query(`ALTER TABLE kids_projects ADD COLUMN IF NOT EXISTS reference_images JSONB NOT NULL DEFAULT '[]'`); }
+    catch (e) { console.warn("[kids] reference_images migration failed:", e.message); }
+    // Seed the configurable option lists once (age groups, categories,
+    // languages, platforms, resolutions, visual styles). The user can edit
+    // them afterwards through the API — the UI never hardcodes them.
+    for (const key of KIDS_OPTION_KEYS) {
+      const defaults = KIDS_DEFAULT_OPTIONS[key] || [];
+      const existing = await kidsPool.query(
+        "SELECT count(*)::int AS n FROM kids_options WHERE option_key = $1", [key]);
+      if (existing.rows[0]?.n) continue;
+      let order = 0;
+      for (const value of defaults) {
+        await kidsPool.query(
+          "INSERT INTO kids_options (option_key, option_value, sort_order) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+          [key, value, order++]);
+      }
+    }
+    console.log(`[kids] store: postgres (${KIDS_DB_NAME})`);
+  } catch (e) {
+    kidsPgUp = false;
+    console.warn("[kids] schema init failed:", e.message);
+  }
+}
+kidsInit();
+
 const DIST = path.join(__dirname, "dist");
 const PORT = Number(process.env.PORT || 8790);
 const LLM_BASE = (process.env.LLM_BASE || "").replace(/\/+$/, "");
@@ -2691,15 +2779,22 @@ async function llmPostChat(url, payload, { timeoutMs = REQUEST_TIMEOUT_MS, tag =
 // batch finishes (success, salvage or error).
 const directorLive = new Map(); // boardId -> { active, phase, batchFrom, batchTo, startedAt, text }
 const liveBegin = (id, info) => {
-  directorLive.set(id, { active: true, startedAt: Date.now(), text: "", ...info });
+  directorLive.set(id, { active: true, startedAt: Date.now(), text: "", reasoning: "", ...info });
 };
 const liveAppend = (id, chunk) => {
   const st = directorLive.get(id);
   if (st && st.active) st.text += chunk;
 };
+// Thinking models stream their reasoning as a separate delta field — kept in
+// its own buffer slot so the live view can show activity during the (often
+// long) thinking phase without polluting the parsed response text.
+const liveAppendReasoning = (id, chunk) => {
+  const st = directorLive.get(id);
+  if (st && st.active) st.reasoning = (st.reasoning || "") + chunk;
+};
 const liveReset = (id, note) => {
   const st = directorLive.get(id);
-  if (st) st.text = note ? `${note}\n` : "";
+  if (st) { st.text = note ? `${note}\n` : ""; st.reasoning = ""; }
 };
 const liveEnd = (id) => { directorLive.delete(id); };
 // Streaming twin of llmChatJson for director scene batches: same payload +
@@ -2707,6 +2802,43 @@ const liveEnd = (id) => { directorLive.delete(id); };
 // exactly like the non-streamed path), same stripJson + rawTag outcome.
 // Only the director scenes route uses this — every other caller keeps the
 // untouched llmPostChat/llmChatJson above.
+// Shared LLM call reusing the craft-endpoint convention (LLM_MODEL,
+// thinking disabled). Parse failures save the raw response for debugging
+// and throw a useful error — nothing is silently discarded.
+// MODULE LEVEL on purpose: the Sanskriti Kids studio helpers need the SAME
+// helper (never a second LLM client).
+async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null }) {
+  const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+  if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
+  // Tag retries per batch file so the server log shows which plan step
+  // dropped and reconnected (e.g. [llm:story_scenes_1]).
+  const tag = rawTag ? String(rawTag).replace(/^_raw_/, "").replace(/\.log$/, "").slice(0, 60) : "director";
+  try {
+    const d = await llmPostChat(`${base}/v1/chat/completions`, {
+      model: LLM_MODEL,
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      temperature,
+      max_tokens: maxTokens,
+      chat_template_kwargs: { enable_thinking: false },
+    }, { timeoutMs, tag });
+    const text = String(d.choices?.[0]?.message?.content ?? "");
+    try {
+      return stripJson(text);
+    } catch (e) {
+      if (rawTag) {
+        try {
+          fs.mkdirSync(DIRECTOR, { recursive: true });
+          fs.writeFileSync(path.join(DIRECTOR, rawTag), text);
+        } catch { /* raw save is best-effort */ }
+      }
+      throw new Error(`${e.message}${rawTag ? ` (raw response saved to director/${rawTag})` : ""}`);
+    }
+  } catch (e) {
+    if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
+    throw e;
+  }
+}
+
 async function llmChatJsonLive({ system, user, maxTokens = 16000, temperature = 0.5, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null, liveId = null, tag = "director" }) {
   const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
   if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
@@ -2756,6 +2888,13 @@ async function llmChatJsonLive({ system, user, maxTokens = 16000, temperature = 
                 text += delta;
                 if (liveId) liveAppend(liveId, String(delta));
               }
+              // Thinking models (qwen3.5…) stream reasoning as
+              // delta.reasoning_content FIRST — often for minutes before the
+              // real content starts. Surface it in the live buffer so the
+              // live view shows activity during thinking; `text` (what gets
+              // parsed) keeps ONLY the content.
+              const think = String(payload?.choices?.[0]?.delta?.reasoning_content || "");
+              if (think && liveId) liveAppendReasoning(liveId, think);
             }
           }
         } else {
@@ -2778,16 +2917,19 @@ async function llmChatJsonLive({ system, user, maxTokens = 16000, temperature = 
       }
     } catch (e) {
       if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
-      // Parse/save errors are meaningful (the scenes route runs its salvage
-      // path on them) — never retried. Transport drops retry the whole
+      const msg = String((e && e.message) || "");
+      // Treat empty response the same as truncation — the model likely hit its
+      // context window limit. The scenes route will halve the batch size and retry.
+      const isOutputLimit = /LLM returned an empty response|truncated|unbalanced|parse failed|no JSON/i.test(msg);
+      // Parse/save errors (output-limit) are meaningful — the scenes route
+      // runs its salvage path on them. Transport drops retry the whole
       // request, exactly like the non-streamed path.
-      if (/^LLM JSON|LLM returned|raw response saved/.test(String((e && e.message) || ""))) throw e;
-      if (!llmRetryableFetchError(e)) throw e;
+      if (!isOutputLimit && !llmRetryableFetchError(e)) throw e;
       lastErr = e;
       if (n >= attempts) break; // exhausted — fall through to the annotated throw below
     } finally { clearTimeout(t); }
     const wait = Math.min(30000, LLM_RETRY_BASE_MS * 2 ** (n - 1)) + Math.floor(Math.random() * 1000);
-    console.warn(`[llm:${tag}] attempt ${n}/${attempts} failed (${String((lastErr && lastErr.message) || lastErr).slice(0, 160)}) — retrying in ${wait}ms`);
+    console.warn(`[llm:${tag}] attempt ${n}/${attempts} failed (${msg.slice(0, 160)}) — retrying in ${wait}ms`);
     await sleep(wait);
   }
   const err = lastErr instanceof Error ? lastErr : new Error(String(lastErr));
@@ -2847,6 +2989,935 @@ async function videoDurationSec(full) {
     const n = Number(String(out).trim());
     return Number.isFinite(n) && n > 0 ? n : null;
   } catch { return null; }
+}
+async function analyzeDirectorAudio(full) {
+  // Decode to low-rate mono float PCM so the analysis remains bounded even
+  // for longer songs. The upload itself is never modified.
+  const cacheFile = `${full}.features-v1.json`;
+  try {
+    const cached = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
+    if (cached && cached.version === 1) return cached.analysis;
+  } catch { /* first analysis or stale/corrupt cache */ }
+  const sampleRate = 11025;
+  const child = spawn("ffmpeg", ["-v", "error", "-i", full, "-vn", "-ac", "1", "-ar", String(sampleRate), "-f", "f32le", "pipe:1"], { windowsHide: true });
+  const chunks = [];
+  let bytes = 0, stderr = "";
+  const timeout = setTimeout(() => { try { child.kill(); } catch {} }, 240000);
+  child.stdout.on("data", chunk => { bytes += chunk.length; if (bytes > 240 * 1024 * 1024) child.kill(); else chunks.push(chunk); });
+  child.stderr.on("data", chunk => { stderr = (stderr + chunk.toString()).slice(-4000); });
+  await new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve() : reject(new Error(`FFmpeg audio decode failed (${code}): ${stderr.slice(-500)}`)));
+  }).finally(() => clearTimeout(timeout));
+  const pcmBuffer = Buffer.concat(chunks);
+  const aligned = pcmBuffer.length - (pcmBuffer.length % 4);
+  const pcm = new Float32Array(aligned / 4);
+  for (let i = 0; i < pcm.length; i++) pcm[i] = pcmBuffer.readFloatLE(i * 4);
+  const analysis = analyzePcm(pcm, sampleRate);
+  try { fs.writeFileSync(cacheFile, JSON.stringify({ version: 1, analysis }), "utf8"); } catch { /* cache is best-effort */ }
+  return analysis;
+}
+// One song / narration analysis for BOTH the Director and the Sanskriti Kids
+// Song & Audio studios (the studio must never build a second analyzer).
+// Measures duration, silence and beats, transcribes with local Whisper when
+// it is configured, then asks the local LLM for the section structure. The
+// heuristic fallback keeps the studio usable when the model is offline.
+async function analyzeSongAudio(body = {}) {
+  const title = String(body.title || "Untitled Song").slice(0, 120);
+  let lyrics = String(body.lyrics || "").trim();
+  const genre = String(body.genre || "Kids");
+  const language = String(body.language || "English");
+  const audioMode = body.audioMode === "story" ? "story" : "song";
+  const durationSeconds = Number(body.durationSeconds) || 0;
+  let hasLyrics = lyrics.length >= 20;
+  let transcript = { status: "not_configured", text: "", segments: [], note: "Configure WHISPER_CPP_BIN and WHISPER_MODEL to enable local Whisper transcription." };
+  let measured = { meanVolumeDb: null, peakVolumeDb: null, silenceRanges: [], source: "ffmpeg", signal: null };
+  const audioName = String(body.file || "");
+  if (isSafe(audioName) && /\.(mp3|wav|m4a)$/i.test(audioName)) {
+    const audioPath = path.join(DIRECTOR, audioName);
+    if (fs.existsSync(audioPath)) {
+      try {
+        measured.signal = await analyzeDirectorAudio(audioPath);
+        const output = await runCmd("ffmpeg", ["-hide_banner", "-i", audioPath, "-af", "volumedetect,silencedetect=n=-35dB:d=0.35", "-f", "null", "-"], 180000);
+        const text = String(output);
+        const mean = text.match(/mean_volume:\s*(-?[\d.]+)\s*dB/i);
+        const peak = text.match(/max_volume:\s*(-?[\d.]+)\s*dB/i);
+        const starts = [...text.matchAll(/silence_start:\s*([\d.]+)/g)].map(m => Number(m[1]));
+        const ends = [...text.matchAll(/silence_end:\s*([\d.]+)/g)].map(m => Number(m[1]));
+        measured.meanVolumeDb = mean ? Number(mean[1]) : null;
+        measured.peakVolumeDb = peak ? Number(peak[1]) : null;
+        measured.silenceRanges = starts.map((start, i) => ({ start: Math.round(start * 10) / 10, end: Math.round((ends[i] ?? durationSeconds) * 10) / 10 }));
+      } catch (e) { measured.source = "unavailable"; measured.warning = e.message; }
+    }
+  }
+  const whisperBin = String(process.env.WHISPER_CPP_BIN || "").trim();
+  const whisperModel = String(process.env.WHISPER_MODEL || "").trim();
+  const transcriptAudio = path.join(DIRECTOR, audioName);
+  if (isSafe(audioName) && /\.(mp3|wav|m4a)$/i.test(audioName) && fs.existsSync(transcriptAudio)) {
+    const tempBase = path.join(DIRECTOR, `_whisper_${crypto.randomUUID()}`);
+    try {
+      let result;
+      let engine;
+      if (whisperBin && whisperModel) {
+        const wav = `${tempBase}.wav`;
+        await runCmd("ffmpeg", ["-y", "-v", "error", "-i", transcriptAudio, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", wav], 180000);
+        const whisperLang = ({ Hindi: "hi", English: "en", Hinglish: "auto" })[language] || "auto";
+        await new Promise((resolve, reject) => {
+          const proc = spawn(whisperBin, ["-m", whisperModel, "-f", wav, "-l", whisperLang, "-oj", "-of", tempBase, "-np"], { windowsHide: true });
+          let err = "";
+          const timer = setTimeout(() => { try { proc.kill(); } catch {} reject(new Error("Whisper transcription timed out")); }, 900000);
+          proc.stderr.on("data", c => { err = (err + c.toString()).slice(-3000); });
+          proc.on("error", e => { clearTimeout(timer); reject(e); });
+          proc.on("close", code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`Whisper exited ${code}: ${err}`)); });
+        });
+        const jsonPath = `${tempBase}.json`;
+        if (!fs.existsSync(jsonPath)) throw new Error("whisper.cpp completed without JSON output");
+        result = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+        engine = "whisper.cpp";
+      }
+      if (result) {
+        const segments = Array.isArray(result.transcription) ? result.transcription : Array.isArray(result.segments) ? result.segments : [];
+        transcript = {
+          status: "complete",
+          text: String(result.text || segments.map(s => s.text || "").join(" ")).trim(),
+          segments: segments.map(s => ({ start: Number(s.offsets?.from ?? s.start ?? 0) / (s.offsets?.from != null ? 1000 : 1), end: Number(s.offsets?.to ?? s.end ?? 0) / (s.offsets?.to != null ? 1000 : 1), text: String(s.text || "").trim() })).filter(s => s.text),
+          note: `${engine} transcript — review and edit before story planning.`,
+        };
+      }
+    } catch (e) { transcript = { status: "unavailable", text: "", segments: [], note: e.message }; }
+    finally { for (const suffix of [".wav", ".json", ".txt", ".srt", ".vtt"]) try { fs.unlinkSync(`${tempBase}${suffix}`); } catch {} }
+  }
+  if (!hasLyrics && transcript.status === "complete" && transcript.text.length >= 20) {
+    lyrics = transcript.text;
+    hasLyrics = true;
+  }
+
+  const heuristic = () => {
+    // Rough structure guess: split duration into 3-4 equal segments.
+    const n = durationSeconds > 0 ? Math.min(4, Math.max(2, Math.round(durationSeconds / 20))) : 2;
+    const segDur = Math.round(durationSeconds / n) || 30;
+    const segments = [];
+    let cursor = 0;
+    for (let i = 0; i < n; i++) {
+      const end = i === n - 1 ? durationSeconds : cursor + segDur;
+      segments.push({
+        start: cursor,
+        end: Math.min(end, durationSeconds),
+        label: i === 0 ? "Intro" : i === n - 1 ? "Outro" : `Part ${i + 1}`,
+        mood: "cheerful",
+        action: "scene develops",
+      });
+      cursor = end;
+    }
+    return {
+      mood: "cheerful, gentle, child-friendly",
+      structure: "verse-chorus with repeating motifs",
+      narrationStyle: "warm, expressive, clear pronunciation",
+      visualStyle: "bright, colorful, simple shapes",
+      educationalFocus: "learning through repetition",
+      segments,
+      source: "heuristic",
+      measured,
+      transcript,
+    };
+  };
+
+  if (!durationSeconds || durationSeconds <= 0) {
+    return { error: "song duration required — upload the audio first", status: 400 };
+  }
+
+  try {
+    const raw = await llmChatJson({
+      system: audioMode === "story"
+        ? `Analyze uploaded spoken narration/dialogue for a children's story video. Reply JSON only. Use transcript and measured facts provided: infer narration delivery, emotional tone, pauses and broad story-audio sections; do not invent words or measurements and do not impose music/beat-cut rules. Return mood, structure, narrationStyle, visualStyle, educationalFocus and 2-6 segments (start/end seconds, label, mood, action) covering 0-${durationSeconds}s.`
+        : `You analyze children's songs for AI video generation. Reply with JSON only. Given title, lyrics, duration, genre/language and measured audio features, infer mood, likely narrative/song style and visual recommendations. Do not claim audio measurements. When measured beat times exist, use them as anchors and return 2-6 broad musical sections with approximate boundaries; do not claim verse/chorus as certain without lyric evidence. Return mood, structure, narrationStyle, visualStyle, educationalFocus and segments (start/end seconds, label, mood, action). Segment times must cover 0-${durationSeconds}s.`,
+      user: JSON.stringify({
+        title,
+        lyrics: hasLyrics ? lyrics.slice(0, 4000) : "(no lyrics — instrumental)",
+        genre,
+        language,
+        durationSeconds,
+        hasLyrics,
+        audioMode,
+        measuredAudio: measured,
+      }),
+      maxTokens: 800,
+      temperature: 0.3,
+      timeoutMs: REQUEST_TIMEOUT_MS,
+    });
+
+    const segs = Array.isArray(raw.segments) ? raw.segments : [];
+    const cleanSegments = segs.map((s, i) => ({
+      start: Number.isFinite(Number(s.start)) ? Math.max(0, Math.round(Number(s.start) * 10) / 10) : Math.round((i / Math.max(1, segs.length)) * durationSeconds * 10) / 10,
+      end: Number.isFinite(Number(s.end)) ? Math.min(durationSeconds, Math.round(Number(s.end) * 10) / 10) : Math.round(((i + 1) / Math.max(1, segs.length)) * durationSeconds * 10) / 10,
+      label: String(s.label || `Part ${i + 1}`).slice(0, 40),
+      mood: String(s.mood || "cheerful").slice(0, 60),
+      action: String(s.action || "scene develops").slice(0, 80),
+    }));
+    // Ensure segments cover 0 to durationSeconds with no gaps.
+    if (cleanSegments.length) {
+      cleanSegments[0].start = 0;
+      cleanSegments[cleanSegments.length - 1].end = durationSeconds;
+      for (let i = 1; i < cleanSegments.length; i++) {
+        if (cleanSegments[i].start < cleanSegments[i - 1].end) cleanSegments[i].start = cleanSegments[i - 1].end;
+      }
+    }
+
+    return {
+      title,
+      durationSeconds,
+      mood: String(raw.mood || "cheerful, gentle, child-friendly").slice(0, 120),
+      structure: String(raw.structure || "verse-chorus").slice(0, 160),
+      narrationStyle: String(raw.narrationStyle || "warm, expressive, clear").slice(0, 160),
+      visualStyle: String(raw.visualStyle || "bright, colorful, simple").slice(0, 160),
+      educationalFocus: String(raw.educationalFocus || "learning through repetition").slice(0, 160),
+      segments: cleanSegments,
+      source: "llm",
+      hasLyrics,
+      measured,
+      transcript,
+      lyrics: hasLyrics ? lyrics : "",
+    };
+  } catch (e) {
+    console.warn("[director/analyze-song] LLM failed, heuristic fallback:", e.message);
+    return { ...heuristic(), lyrics: hasLyrics ? lyrics : "" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The MEANING-AWARE semantic analysis (lib/semantics.mjs).
+//
+// Every source line of a board is analysed BEFORE the scenes are planned:
+// the language is detected, the important verbs are turned into visible
+// actions, the camera is chosen from the narrative meaning and the line's
+// meaning is recorded. The deterministic pass always runs (offline, instant);
+// the configured local model enriches it (subject/target disambiguation,
+// cultural context, arbitrary verbs) and a malformed answer never loses the
+// deterministic reading.
+// ---------------------------------------------------------------------------
+
+/** The numbered source lines a board plans from (lyric lines or story lines). */
+function directorSourceLines(board) {
+  const b = board && typeof board === "object" ? board : {};
+  const lyric = boardLyricLines(b);
+  if (Array.isArray(lyric) && lyric.length) {
+    return lyric.map((l, i) => ({
+      id: Number(l.lyric_line_id || l.line_id) || i + 1,
+      text: String(l.lyric_text ?? l.text ?? l.line ?? ""),
+    })).filter((l) => l.text);
+  }
+  const story = String((b.input && b.input.story) || "");
+  return story.split(/\n+/).map((t) => t.trim()).filter(Boolean)
+    .map((text, i) => ({ id: i + 1, text }));
+}
+
+// Array guard used by the semantics wrappers below (same helper as
+// lib/semantics.mjs — defined here because those wrappers are server-local).
+const arr = (v) => (Array.isArray(v) ? v : []);
+
+/** The deterministic analysis of a set of lines (no model, no network). */
+function analyzeLinesDeterministic(lines, { language = "auto", bible = null, genre = "" } = {}) {
+  return arr(lines).map((l, i) => analyzeLine(l.text, {
+    index: i,
+    language,
+    bible,
+    genre,
+    duration: Number(l.duration_seconds) || 5,
+  }));
+}
+
+/**
+ * The model-assisted pass. The ORIGINAL text always comes from the source
+ * lines — the model can only enrich the reading, never replace the line.
+ */
+async function enrichSemanticsWithModel(lines, { language = "auto", bible = null, genre = "", styleLock = "", timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  const src = arr(lines);
+  if (!src.length) return { rows: [], source: "none" };
+  try {
+    const raw = await llmChatJsonLive({
+      system: SEMANTIC_SYSTEM,
+      user: buildSemanticAnalysisPrompt(src, { language, genre, bible, styleLock }),
+      maxTokens: 6000,
+      temperature: 0.2,
+      timeoutMs,
+      rawTag: `_raw_semantics_${Date.now().toString(36)}.log`,
+      liveId: null,
+      tag: "semantics",
+    });
+    const merged = mergeModelSemantics(raw, src, { language, genre });
+    if (!Array.isArray(merged) || merged.length !== src.length) {
+      return { rows: [], source: "malformed", warning: "the model returned an unexpected number of lines — the deterministic analysis is used" };
+    }
+    return { rows: merged, source: "llm" };
+  } catch (e) {
+    return { rows: [], source: "offline", warning: `the model could not enrich the meaning (${String(e.message || e).slice(0, 160)}) — the deterministic analysis is used` };
+  }
+}
+
+/**
+ * Attach the meaning to the scenes: the scene that covers a line carries that
+ * line's source text, interpretation, action plan, camera rationale and
+ * beats. A scene that misses the meaning is REPAIRED deterministically and
+ * flagged — never silently accepted.
+ */
+function attachSemanticsToScenes(board, semantics) {
+  const rows = arr(semantics && semantics.lines);
+  if (!rows.length) return { attached: 0, repaired: 0, issues: [] };
+  const byId = new Map();
+  rows.forEach((r) => byId.set(Number(r.line_id), r));
+  let attached = 0;
+  let repaired = 0;
+  const issues = [];
+  for (const scene of arr(board.scenes)) {
+    // The scene names the line it covers (line_from/line_to); the first
+    // covered line is its source line.
+    const from = Number(scene.line_from) || 0;
+    const to = Number(scene.line_to) || from;
+    let sem = from ? byId.get(from) : null;
+    if (!sem) {
+      // Fall back to the first line whose number is covered by the scene.
+      for (const [id, r] of byId.entries()) {
+        if (!from || (id >= from && id <= to)) { sem = r; break; }
+      }
+    }
+    if (!sem) continue;
+    attachSemantics(scene, sem);
+    attached += 1;
+    const check = validateSceneSemantics(scene, sem);
+    if (!check.ok) {
+      issues.push(`Scene ${scene.scene_number}: ${check.errors.slice(0, 2).join("; ")}`);
+      // The deterministic repair fills the camera, the action plan and the
+      // beats from the meaning — it never invents a new action.
+      repairSceneSemantics(scene, sem);
+      repaired += 1;
+    }
+  }
+  return { attached, repaired, issues };
+}
+
+/** The semantic issues of a board (the validate route + the repair prompt). */
+function boardSemanticIssues(board) {
+  const rows = arr(board && board.semantics && board.semantics.lines);
+  if (!rows.length) return [];
+  const byId = new Map(rows.map((r) => [Number(r.line_id), r]));
+  const issues = [];
+  for (const scene of arr(board && board.scenes)) {
+    const from = Number(scene.line_from) || 0;
+    const sem = from ? byId.get(from) : null;
+    if (!sem) continue;
+    const check = validateSceneSemantics(scene, sem);
+    for (const e of check.errors.slice(0, 3)) issues.push(`Scene ${scene.scene_number}: ${e}`);
+    for (const w of (check.warnings || []).slice(0, 2)) issues.push(`Scene ${scene.scene_number}: ${w}`);
+  }
+  return issues;
+}
+
+/** The scene prompt needs the meaning of the lines it plans from. */
+function semanticsForBatch(board, batchLines) {
+  const rows = arr(board && board.semantics && board.semantics.lines);
+  if (!rows.length) return [];
+  const wanted = new Set(arr(batchLines).map((l) => Number(l.lyric_line_id || l.line_id)).filter(Boolean));
+  if (!wanted.size) return rows.slice(0, 12);
+  const picked = rows.filter((r) => wanted.has(Number(r.line_id)));
+  return picked.length ? picked : rows.slice(0, 12);
+}
+
+// ---------------------------------------------------------------------------
+// Sanskriti Kids — the studio workflow helpers.
+//
+// They orchestrate the EXISTING engines (the local LLM, the shared song
+// analyzer, the FFmpeg pipeline) and persist through the kids store. The
+// studio never renders on its own: images, clips, voices and the final cut
+// stay in the workspace / Director engines.
+// ---------------------------------------------------------------------------
+
+const kidsFail = (message, status = 400) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
+// The story job gives up after 8 minutes: a local model on a big document can
+// take minutes, but a job must never hang forever.
+const KIDS_STORY_TIMEOUT_MS = Number(process.env.KIDS_STORY_TIMEOUT_MS || 8 * 60 * 1000);
+
+// ---------------------------------------------------------------- kids library
+// The Sanskriti Kids asset library stores its generated reference stills under
+// kids/<scope>/<Kind>/<key>/ (gitignored working storage, like devotional/).
+const KIDS_DIR = process.env.KIDS_DIR
+  ? path.resolve(process.env.KIDS_DIR)
+  : path.join(ROOT, "kids");
+const KIDS_LIB_KIND_DIR = { character: "Characters", location: "Locations", prop: "Props" };
+// One generator at a time — the ComfyUI queue is serial.
+let kidsPumping = false;
+const kidsProcs = new Map();
+
+/** The folder that holds one library asset's files. */
+function kidsAssetDir(asset) {
+  const scope = String(asset?.scope || "shared").replace(/[^A-Za-z0-9_-]/g, "_") || "shared";
+  const kindDir = KIDS_LIB_KIND_DIR[String(asset?.kind)] || "Assets";
+  const key = String(asset?.asset_key || "asset").replace(/[^A-Za-z0-9_-]/g, "_") || "asset";
+  return path.join(KIDS_DIR, scope, kindDir, key);
+}
+
+/**
+ * The library reference pump: renders ONE still per job with the Flux
+ * Reference Image workflow. THE PROMPT IS PASSED VERBATIM — only the prompt
+ * node of the workflow changes; nothing is appended to the prompt and no
+ * negative text is invented.
+ */
+async function kidsPumpJobs() {
+  const store = kidsStore();
+  if (kidsPumping || !store) return;
+  kidsPumping = true;
+  const db = store === "pg" ? kidsPool : kidsDb;
+  try {
+    if ([...kidsProcs.values()].some((p) => p.exitCode === null)) return;
+    let job = null;
+    if (store === "pg") {
+      const q = await kidsPool.query(
+        "SELECT * FROM kids_jobs WHERE status = 'PENDING' AND kind = 'library_reference' ORDER BY created_at LIMIT 1"
+      ).catch(() => null);
+      job = q?.rows?.[0] ?? null;
+    } else if (kidsDb) {
+      job = kidsDb.prepare(
+        "SELECT * FROM kids_jobs WHERE status = 'PENDING' AND kind = 'library_reference' ORDER BY created_at LIMIT 1",
+      ).get();
+    }
+    if (!job) return;
+    job = kidsJobRow(job);
+    const meta = job.metadata && typeof job.metadata === "object" ? job.metadata : {};
+    const assetId = Number(meta.asset_id) || 0;
+    const asset = assetId ? await kidsGetLibraryAsset(store, db, assetId) : null;
+    if (!asset) {
+      await kidsUpsertJob(store, db, {
+        id: job.id, project_id: job.project_id, kind: job.kind, status: "FAILED",
+        error_message: "the library asset was deleted", metadata: meta,
+      });
+      return;
+    }
+    // THE SAVED PROMPT — verbatim, exactly as the user stored it.
+    const prompt = String(asset.prompt || "").trim();
+    if (!prompt) {
+      await kidsUpsertJob(store, db, {
+        id: job.id, project_id: job.project_id, kind: job.kind, status: "FAILED",
+        error_message: "this asset has no saved prompt — write one first", metadata: meta,
+      });
+      return;
+    }
+    const dir = kidsAssetDir(asset);
+    fs.mkdirSync(dir, { recursive: true });
+    let file = "reference.png", n = 2;
+    while (fs.existsSync(path.join(dir, file))) file = `reference_v${n++}.png`;
+    const outFile = path.join(dir, file);
+    const rel = path.relative(KIDS_DIR, outFile).split(path.sep).join("/");
+    // The image workflow for this job (the header dropdown's choice rides on
+    // the job row). The library default is the Flux Reference Image workflow.
+    const imageWf = resolveImageWorkflow(String(meta.workflow || ""), DEFAULT_IMAGE_WORKFLOW);
+    await kidsUpsertJob(store, db, {
+      id: job.id, project_id: job.project_id, kind: job.kind, status: "PROCESSING",
+      error_message: null, metadata: { ...meta, file, rel },
+    });
+    // ONLY the prompt is passed — no negative, no extra text.
+    const procArgs = ["scripts/kids_reference.mjs", "--workflow", imageWf.id,
+      "--prompt", prompt, "--out", outFile,
+      "--width", String(imageWf.width), "--height", String(imageWf.height),
+      "--steps", String(imageWf.steps)];
+    const proc = spawn(process.execPath, procArgs, { cwd: ROOT, env: process.env, windowsHide: true });
+    kidsProcs.set(job.id, proc);
+    let log = "";
+    proc.stdout?.on("data", (d) => (log += d.toString()));
+    proc.stderr?.on("data", (d) => (log += d.toString()));
+    proc.on("close", async (code) => {
+      kidsProcs.delete(job.id);
+      try {
+        if (code === 0 && fs.existsSync(outFile)) {
+          await kidsInsertLibraryFile(store, db, {
+            asset_id: asset.id, file_path: rel, kind: "image", prompt,
+            workflow: imageWf.workflow, model: imageWf.model, status: "COMPLETED",
+          });
+          // The generated still becomes the asset's reference image and the
+          // asset moves to "review" — the user still has to approve it.
+          await kidsUpdateLibraryAsset(store, db, asset.id, {
+            reference_image: rel,
+            status: asset.status === "approved" ? "approved" : "review",
+          });
+          await kidsUpsertJob(store, db, {
+            id: job.id, project_id: job.project_id, kind: job.kind, status: "COMPLETED",
+            error_message: null, metadata: { ...meta, file: rel, workflow: imageWf.id },
+          });
+        } else {
+          try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile); } catch { /* orphan cleanup */ }
+          const msg = `reference generation failed: ${String(log).trim().slice(-500) || `exit ${code}`} — check COMFY_BASE and retry`;
+          await kidsUpsertJob(store, db, {
+            id: job.id, project_id: job.project_id, kind: job.kind, status: "FAILED",
+            error_message: msg, metadata: meta,
+          });
+        }
+      } catch (e) { console.warn("[kids] reference job finish failed:", e.message); }
+      void kidsPumpJobs(); // chain the next PENDING job
+    });
+  } catch (e) {
+    console.warn("[kids] pump failed:", e.message);
+  } finally {
+    kidsPumping = false;
+  }
+}
+
+/**
+ * The Story Studio feeds the asset library: every character, location and
+ * prop the story names becomes a library row (draft, never auto-approved)
+ * so the look can be approved once and reused in every scene.
+ */
+async function syncLibraryFromStory(store, db, project, story) {
+  const s = normalizeKidsStory(story);
+  const scope = project.id;
+  const make = (kind, key, name, category, prompt, extra = {}) => ({
+    scope, project_id: scope, kind,
+    asset_key: key, name, category,
+    description: extra.description || "",
+    tags: extra.tags || [],
+    prompt: prompt || extra.description || "",
+    reference_image: extra.reference_image || "",
+    appearance: extra.appearance || "",
+    clothing: extra.clothing || "",
+    colors: extra.colors || "",
+    personality: extra.personality || "",
+    voice: extra.voice || "",
+    movement: extra.movement || "",
+    age_appearance: extra.age_appearance || "",
+    version: 1, status: "draft", locked: false, metadata: {},
+  });
+  for (const c of s.characters) {
+    const key = String(c.character_id || c.name).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+    if (!key) continue;
+    const prompt = [c.appearance, c.clothing, c.colors].filter(Boolean).join(", ");
+    await kidsInsertLibraryAsset(store, db, make("character", key, c.name || key, c.category || c.role || "Character",
+      prompt, {
+        appearance: c.appearance, clothing: c.clothing, colors: c.colors,
+        personality: c.personality, voice: c.voice, movement: c.movement,
+        description: c.appearance,
+      }));
+  }
+  const locations = new Set();
+  const props = new Set();
+  for (const scene of s.scenes) {
+    if (scene.location) locations.add(scene.location);
+    for (const p of scene.props) props.add(p);
+  }
+  for (const loc of locations) {
+    const key = String(loc).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+    if (!key) continue;
+    await kidsInsertLibraryAsset(store, db, make("location", key, loc, "Location", loc, { description: loc }));
+  }
+  for (const prop of props) {
+    const key = String(prop).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+    if (!key) continue;
+    await kidsInsertLibraryAsset(store, db, make("prop", key, prop, "Prop", prop, { description: prop }));
+  }
+}
+
+/** The Story Studio: the AI writes the story document, the store versions it. */async function generateKidsStory(store, db, project, body = {}) {
+  const options = await kidsOptions(store, db);
+  const draft = normalizeKidsProject({ ...project, ...body }, { options });
+  if (!hasScript(draft.script) && !hasScript(draft.lyrics)) {
+    throw kidsFail("the project needs a script or lyrics before the story can be written");
+  }
+  let story;
+  try {
+    // STREAMED: a local model needs minutes for a story document and a
+    // one-shot request would hit the HTTP client's headers timeout. The
+    // shared streamed helper returns the same parsed JSON.
+    const raw = await llmChatJsonLive({
+      system: KIDS_DIRECTOR_SYSTEM,
+      user: buildKidsStoryPrompt(draft),
+      maxTokens: 4000,
+      temperature: 0.7,
+      timeoutMs: KIDS_STORY_TIMEOUT_MS,
+      rawTag: `_raw_${project.id}_kids_story.log`,
+      liveId: null,
+      tag: "kids_story",
+    });
+    story = normalizeKidsStory(raw);
+  } catch (e) {
+    throw kidsFail(`the story could not be written: ${String(e.message || e).slice(0, 300)}`, 502);
+  }
+  if (!isKidsStorySubstantive(story)) {
+    throw kidsFail("the model returned an empty story — try again", 502);
+  }
+  const saved = await kidsSaveStory(store, db, project.id, story, { status: "draft", note: "AI generated" });
+  // The story feeds the character / location / prop library.
+  try { await syncLibraryFromStory(store, db, project, story); }
+  catch (e) { console.warn("[kids] library sync failed:", e.message); }
+  return saved;
+}
+
+/** The Song & Lyrics Studio: segment the lyrics (deterministic + AI). */
+async function analyzeKidsLyrics(store, db, project, body = {}) {
+  const lyrics = String(body.lyrics || project.lyrics || project.script || "").trim();
+  if (!lyrics) throw kidsFail("paste the lyrics first");
+  const duration = Number(body.duration_seconds) || Number(project.duration_seconds) || 0;
+  // The deterministic segmentation always works (offline, no model needed).
+  const fallback = segmentLyrics(lyrics);
+  let sections = fallback.map((s) => ({ label: s.label, lines: s.lines, text: s.text }));
+  let source = "deterministic";
+  let analysis = null;
+  // The deterministic segmentation is the default (fast + offline). The AI
+  // labelling is opt-in because a local model needs minutes.
+  if (body.use_llm === true) {
+    try {
+      const raw = await llmChatJsonLive({
+        system: "You segment children's song lyrics into verse / chorus / intro / outro / instrumental sections and propose simple, repeatable choreography for children. Reply JSON only.",
+        user: buildKidsSongPrompt(project, { lyrics, measured: body.measured || null }),
+        maxTokens: 2500,
+        temperature: 0.4,
+        timeoutMs: REQUEST_TIMEOUT_MS,
+        rawTag: `_raw_${project.id}_kids_song.log`,
+        liveId: null,
+        tag: "kids_song",
+      });
+      const ai = Array.isArray(raw.sections) ? raw.sections : [];
+      if (ai.length) {
+        sections = ai.map((s) => ({
+          label: s.label,
+          lines: Array.isArray(s.lines) ? s.lines : [],
+          text: String(s.text || (Array.isArray(s.lines) ? s.lines.join("\n") : "")),
+          emotion: s.emotion,
+          character_ids: s.characters || s.character_ids || [],
+          choreography: s.choreography || s.action || "",
+          lip_sync: s.lip_sync === true,
+        }));
+        source = "llm";
+      }
+      analysis = {
+        mood: String(raw.mood || "").slice(0, 200),
+        structure: String(raw.structure || "").slice(0, 200),
+        educational_focus: String(raw.educationalFocus || "").slice(0, 200),
+        visual_style: String(raw.visualStyle || "").slice(0, 200),
+        warnings: Array.isArray(raw.warnings) ? raw.warnings.map(String).slice(0, 10) : [],
+      };
+    } catch (e) {
+      analysis = {
+        warnings: [
+          `the model could not label the song (${String(e.message || e).slice(0, 160)}) — the deterministic segmentation is used instead`,
+        ],
+      };
+    }
+  }
+  const canonical = normalizeLyricSections(sections, { totalDuration: duration });
+  const rows = canonical.map((s, i) => ({
+    seq: i,
+    label: s.label,
+    lines: s.lines,
+    text: s.text,
+    start_seconds: s.start_seconds,
+    end_seconds: s.end_seconds,
+    emotion: s.emotion,
+    character_ids: s.character_ids,
+    choreography: s.choreography,
+    lip_sync: s.lip_sync,
+    estimated: s.estimated,
+  }));
+  const saved = await kidsReplaceLyricSections(store, db, project.id, rows);
+  await kidsUpsertJob(store, db, {
+    id: `kids_lyrics_${project.id}_${Date.now().toString(36)}`,
+    project_id: project.id, kind: "lyrics", status: "COMPLETED",
+    error_message: null, metadata: { sections: saved.length, source },
+  });
+  return { sections: saved, source, analysis, lyrics };
+}
+
+/** The Audio Analysis studio: measure the source audio into a timeline. */
+async function analyzeKidsAudio(store, db, project, body = {}) {
+  const file = String(body.file || project.audio_path || "").trim();
+  if (!file) throw kidsFail("no audio file is attached to this project — upload one first");
+  const meta = project.metadata && typeof project.metadata === "object" ? project.metadata : {};
+  const metaAudio = meta.audio && typeof meta.audio === "object" ? meta.audio : {};
+  const duration = Number(body.duration_seconds) || Number(metaAudio.duration_seconds) || 0;
+  const audioMode = body.audioMode === "story" ? "story" : "song";
+  const result = await analyzeSongAudio({
+    title: project.title,
+    lyrics: body.lyrics || project.lyrics || project.script || "",
+    genre: "Kids",
+    language: project.language,
+    audioMode,
+    durationSeconds: duration,
+    file,
+  });
+  if (result && result.error) throw kidsFail(result.error, result.status || 400);
+  const total = Number(result.durationSeconds) || duration;
+  const transcript = (result.transcript && result.transcript.segments) || [];
+  const windows = transcript
+    .map((w) => ({
+      start: Number(w.start) || 0,
+      end: Number(w.end) || 0,
+      text: String(w.text || "").trim(),
+    }))
+    .filter((w) => w.text && w.end > w.start)
+    .sort((a, b) => a.start - b.start);
+  const sections = (result.segments || [])
+    .map((s) => ({
+      start: Number(s.start) || 0,
+      end: Number(s.end) || 0,
+      label: String(s.label || "").slice(0, 60),
+      mood: String(s.mood || "").slice(0, 60),
+      action: String(s.action || "").slice(0, 200),
+    }))
+    .filter((s) => s.end > s.start);
+  const raw = [];
+  const fill = (from, to) => {
+    if (to - from < 0.05) return;
+    const inSection = sections.find((s) => s.start <= from + 0.01 && s.end >= to - 0.01);
+    raw.push({
+      start_seconds: from,
+      end_seconds: to,
+      type: "music",
+      text: "",
+      emotion: inSection ? inSection.mood : "",
+      music_note: inSection ? inSection.label : "Instrumental passage",
+      action: inSection ? inSection.action : "",
+      estimated: !inSection,
+    });
+  };
+  let cursor = 0;
+  for (const w of windows) {
+    fill(cursor, w.start);
+    raw.push({
+      start_seconds: w.start,
+      end_seconds: w.end,
+      type: audioMode === "story" ? "narration" : "singing",
+      text: w.text,
+      emotion: "",
+      music_note: "",
+      estimated: false,
+    });
+    cursor = Math.max(cursor, w.end);
+  }
+  fill(cursor, total);
+  const rows = buildKidsAudioTimeline(raw, { duration: total });
+  const saved = await kidsReplaceAudioSegments(store, db, project.id, rows.map((r, i) => ({
+    seq: i,
+    start_seconds: r.start_seconds,
+    end_seconds: r.end_seconds,
+    duration_seconds: r.duration_seconds,
+    type: r.type,
+    speaker: r.speaker,
+    text: r.text,
+    emotion: r.emotion,
+    character: r.character,
+    action: r.action,
+    scene: r.scene,
+    background: r.background,
+    camera: r.camera,
+    music_note: r.music_note,
+    sound_effect: r.sound_effect,
+    confidence: r.confidence,
+    estimated: r.estimated,
+  })));
+  // The measured facts are kept with the project so the QC stage can use them.
+  const meta2 = project.metadata && typeof project.metadata === "object" ? project.metadata : {};
+  const measured = (result.measured && typeof result.measured === "object") ? result.measured : {};
+  await kidsUpdateProject(store, db, project.id, {
+    metadata: {
+      ...meta2,
+      audio: {
+        duration_seconds: total,
+        measured,
+        mood: result.mood || "",
+        structure: result.structure || "",
+        source: result.source || "",
+        transcript_status: (result.transcript && result.transcript.status) || "not_configured",
+        analyzed_at: new Date().toISOString(),
+      },
+    },
+  });
+  await kidsUpsertJob(store, db, {
+    id: `kids_audio_${project.id}_${Date.now().toString(36)}`,
+    project_id: project.id, kind: "audio_analysis", status: "COMPLETED",
+    error_message: null, metadata: { segments: saved.length, source: result.source },
+  });
+  return {
+    segments: saved,
+    analysis: {
+      mood: result.mood || "",
+      structure: result.structure || "",
+      narration_style: result.narrationStyle || "",
+      educational_focus: result.educationalFocus || "",
+      source: result.source || "",
+      duration_seconds: total,
+      measured,
+      transcript: result.transcript || null,
+    },
+  };
+}
+
+/** The Storyboard: build the editable scene timeline from the real rows. */
+async function buildKidsTimelineForProject(store, db, project) {
+  const [scenes, segments, library, storyRow] = await Promise.all([
+    kidsListScenes(store, db, project.id),
+    kidsListAudioSegments(store, db, project.id),
+    kidsListLibrary(store, db, {}),
+    kidsGetStory(store, db, project.id),
+  ]);
+  const mine = (kind) => library.filter((a) => a.kind === kind && (a.scope === "shared" || a.scope === project.id));
+  const characters = mine("character");
+  const locations = mine("location");
+  const props = mine("prop");
+  // The storyboard that actually gets RENDERED is the Director board — when
+  // one is linked the timeline follows it (never the story's plan, so the two
+  // can never drift). Without a board the studio's story is the plan.
+  let boardScenes = [];
+  if (project.board_id) {
+    try {
+      const board = readDirectorBoard(project.board_id);
+      boardScenes = (board.scenes || []).map((s) => {
+        const o = s && typeof s === "object" ? s : {};
+        const cam = o.camera && typeof o.camera === "object" ? o.camera : {};
+        const shots = Array.isArray(o.shots) ? o.shots : [];
+        return {
+          scene_number: Number(o.scene_number) || 0,
+          title: String(o.title || ""),
+          duration_seconds: Number(o.duration_seconds) || 0,
+          text: String(o.lyric_segment || o.lyric_text || o.narration || ""),
+          characters: (Array.isArray(o.characters) ? o.characters : []).map((x) => String(x)),
+          location: String(o.location || ""),
+          props: (Array.isArray(o.objects) ? o.objects : []).map((x) => String(x)),
+          action: String(o.action || o.story_beat || ""),
+          emotion: String(o.expression || o.emotion || ""),
+          camera_shot: String(cam.shot_type || ""),
+          camera_movement: String(cam.movement || ""),
+          lighting: String(o.lighting || ""),
+          image_prompt: String(o.image_prompt || ""),
+          video_prompt: String(o.video_prompt || ""),
+          negative_prompt: String(o.negative_prompt || ""),
+          dialogue: (Array.isArray(o.dialogue) ? o.dialogue : []).map((d) => `${String(d.speaker || "")}: ${String(d.line || "")}`),
+          shots: shots.length,
+        };
+      });
+    } catch { boardScenes = []; }
+  }
+  const storyScenes = (storyRow && storyRow.story && Array.isArray(storyRow.story.scenes)) ? storyRow.story.scenes : [];
+  const source = boardScenes.length
+    ? boardScenes
+    : storyScenes.length
+      ? storyScenes.map((s) => ({
+        scene_number: s.scene_number,
+        title: s.title,
+        duration_seconds: s.duration_seconds,
+        text: s.narration,
+        characters: s.characters,
+        location: s.location,
+        props: s.props,
+        action: s.action,
+        emotion: s.emotion,
+        camera_shot: s.camera_shot,
+        camera_movement: s.camera_movement,
+        lighting: s.lighting,
+        image_prompt: s.image_prompt,
+        video_prompt: s.video_prompt,
+        negative_prompt: s.negative_prompt,
+      }))
+      : scenes.map((s) => ({
+        scene_number: s.scene_number,
+        title: s.title,
+        duration_seconds: s.duration_seconds,
+        text: s.synopsis,
+        camera_shot: s.camera,
+        image_prompt: s.prompt,
+      }));
+  const timeline = buildKidsTimeline({ scenes: source, segments, characters, locations, props });
+  // Every scene prompt is composed from the CANONICAL library assets so a
+  // character's look never drifts between scenes.
+  const withPrompts = timeline.map((row) => {
+    const composed = buildKidsScenePrompt({
+      scene: row,
+      characters,
+      locations,
+      props,
+      style: project.visual_style || "",
+    });
+    return {
+      ...row,
+      image_prompt: row.image_prompt || composed.prompt,
+      negative_prompt: row.negative_prompt || composed.negative,
+      characters_used: composed.characters_used,
+    };
+  });
+  await kidsReplaceTimeline(store, db, project.id, withPrompts.map((row, i) => ({
+    scene_number: Number(row.scene_number) || i + 1,
+    payload: row,
+  })));
+  return withPrompts;
+}
+
+/** The Quality Control stage: the children's-content checks + export record. */
+async function runKidsQc(store, db, project) {
+  const [storyRow, timelineRows, segments, assets, library] = await Promise.all([
+    kidsGetStory(store, db, project.id),
+    kidsListTimeline(store, db, project.id),
+    kidsListAudioSegments(store, db, project.id),
+    kidsListAssets(store, db, project.id),
+    kidsListLibrary(store, db, {}),
+  ]);
+  const mine = (kind) => library.filter((a) => a.kind === kind && (a.scope === "shared" || a.scope === project.id));
+  const characters = mine("character");
+  const locations = mine("location");
+  const props = mine("prop");
+  let timeline = timelineRows.map((r) => r.payload);
+  if (!timeline.length) timeline = await buildKidsTimelineForProject(store, db, project);
+  // The media facts: the measured audio and the real final cut on disk.
+  const meta = project.metadata && typeof project.metadata === "object" ? project.metadata : {};
+  const audio = meta.audio && typeof meta.audio === "object" ? meta.audio : {};
+  const measured = audio.measured && typeof audio.measured === "object" ? audio.measured : {};
+  const media = {
+    audio_duration_seconds: Number(audio.duration_seconds) || 0,
+    peak_volume_db: Number.isFinite(Number(measured.peakVolumeDb)) ? Number(measured.peakVolumeDb) : null,
+    subtitles_supported: false,
+    probed: false,
+    black_frames: [],
+  };
+  let final = null;
+  if (project.scenario_name) {
+    const dirs = allDirsFor(folderSlug(project.scenario_name));
+    for (const dir of dirs) {
+      const full = path.join(OUTPUTS, dir);
+      if (!fs.existsSync(full)) continue;
+      let vm = null;
+      try { vm = versionMap(full, prefixFor(dir), []); } catch { vm = null; }
+      if (!vm || !vm.finalMain) continue;
+      final = { dir, file: vm.finalMain, path: path.join(full, vm.finalMain) };
+      break;
+    }
+  }
+  if (final) {
+    media.probed = true;
+    try {
+      const out = await runCmd("ffmpeg", ["-hide_banner", "-i", final.path, "-vf", "blackdetect=d=0.5:pix_th=0.10", "-f", "null", "-"], 120000);
+      const hits = [...String(out).matchAll(/black_start:([\d.]+)/g)].map((m) => Math.round(Number(m[1]) * 10) / 10);
+      media.black_frames = hits;
+    } catch { /* ffmpeg could not probe — the media facts stay honest */ }
+  }
+  const result = runKidsQualityChecks({
+    project,
+    story: (storyRow && storyRow.story) || {},
+    timeline,
+    assets,
+    segments,
+    library: { characters, locations, props },
+    media,
+  });
+  const run = await kidsInsertQcRun(store, db, project.id, result.summary, result.checks);
+  await kidsUpsertJob(store, db, {
+    id: `kids_qc_${project.id}_${Date.now().toString(36)}`,
+    project_id: project.id, kind: "quality_control", status: "COMPLETED",
+    error_message: null, metadata: result.summary,
+  });
+  return {
+    ...result,
+    run_id: run.id,
+    media,
+    note: "these are automated checks — a teacher still reviews the content before it is published",
+  };
 }
 // Middle frame of a video as a JPEG (grid thumbnail + vision-caption source
 // + reference visual when a video seeds a project).
@@ -2944,270 +4015,15 @@ function serveResource(res, file) {
   fs.createReadStream(p).pipe(res);
 }
 
-// ---------------------------------------------------------------- devotional studio
-// Reusable devotional filmmaking library (characters, locations, props,
-// styles). Binaries live under devotional/<KindPlural>/<AssetId>/ (gitignored
-// working storage, same discipline as resources/); all metadata, versions,
-// approvals and scene links live in Postgres when it is up (DEVOTIONAL_SCHEMA in
-// lib/devotional.mjs) and in data/devotional.sqlite otherwise — every route
-// below branches on devStore(). Stable asset IDs (CHAR_/LOC_/PROP_/STYLE_) are the
-// primary identifiers — folder names are derived, never authoritative.
-const DEVOTIONAL_DIR = process.env.DEVOTIONAL_DIR
-  ? path.resolve(process.env.DEVOTIONAL_DIR)
-  : path.join(ROOT, "devotional");
-const DEVOTIONAL_KIND_DIR = { character: "Characters", location: "Locations", prop: "Props", style: "Styles_And_Presets" };
-const DEVOTIONAL_UPLOAD_EXT = {
-  "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
-};
-// Next free NN suffix for a stable asset id (<PREFIX>_<PART>_<NN>).
-async function devNextAssetId(kind, name) {
-  for (let n = 1; n < 1000; n++) {
-    const id = makeAssetId(kind, name, n);
-    try {
-      if (pgUp) {
-        const r = await pgPool.query("SELECT 1 FROM devotional_assets WHERE id = $1", [id]);
-        if (!r.rowCount) return id;
-      } else if (devDb) {
-        const r = devDb.prepare("SELECT 1 FROM devotional_assets WHERE id = ?").get(id);
-        if (!r) return id;
-      } else {
-        return id;
-      }
-    } catch { return id; }
-  }
-  return makeAssetId(kind, name, Date.now() % 100000);
-}
-function devAssetDir(asset) {
-  const kindDir = DEVOTIONAL_KIND_DIR[asset.kind] || "Other";
-  return path.join(DEVOTIONAL_DIR, kindDir, safeFolder(asset.name), String(asset.id));
-}
-// Row -> API shape (aliases[] arrive from PG as a JS array via node-pg,
-// from SQLite as a JSON string — both are accepted).
-// List responses also carry lightweight previews (latest existing still +
-// latest existing clip per asset) so library cards can render generated
-// media without N+1 detail fetches — see devAttachPreviews(). image_versions
-// / video_versions carry every existing still/clip (newest-first, { id, url,
-// file_kind }) so cards can render Keyframes→clips-style v1/v2 version chips.
-function devAttachPreviews(assets, fileRows) {
-  const byId = new Map();
-  for (const a of assets) byId.set(a.id, { image: null, video: null, count: 0, images: [], videos: [] });
-  // fileRows are expected newest-first (ORDER BY id DESC) so the first
-  // existing image/video seen per asset is the latest.
-  for (const f of fileRows || []) {
-    const slot = byId.get(f.asset_id);
-    if (!slot) continue;
-    slot.count += 1;
-    let full = null;
-    try { full = path.join(DEVOTIONAL_DIR, f.file_path); } catch { full = null; }
-    if (!full || !fs.existsSync(full)) continue;
-    const fp = String(f.file_path || "");
-    const isVideo = String(f.file_kind || "").toLowerCase() === "video" || /\.(mp4|webm|mov)$/i.test(fp);
-    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(fp);
-    const url = `/devotional/${fp}`;
-    if (isVideo) {
-      const entry = { id: f.id, url, file_kind: f.file_kind || "video" };
-      slot.videos.push(entry);
-      if (!slot.video) slot.video = { url, file_kind: f.file_kind || "video", id: f.id };
-    } else if (isImage) {
-      const entry = { id: f.id, url, file_kind: f.file_kind || "master" };
-      slot.images.push(entry);
-      if (!slot.image) slot.image = { url, file_kind: f.file_kind || "master", id: f.id };
-    }
-  }
-  return assets.map((a) => {
-    const slot = byId.get(a.id) || { image: null, video: null, count: 0, images: [], videos: [] };
-    return {
-      ...a,
-      preview_image: slot.image ? slot.image.url : null,
-      preview_image_kind: slot.image ? slot.image.file_kind : null,
-      preview_video: slot.video ? slot.video.url : null,
-      file_count: slot.count,
-      image_versions: slot.images,
-      video_versions: slot.videos,
-    };
-  });
-}
-function devRow(r) {
-  const aliases = Array.isArray(r.aliases) ? r.aliases : devJson(r.aliases, []);
-  const identity = (r.identity && typeof r.identity === "object") ? r.identity : devJson(r.identity, {});
-  const metadata = (r.metadata && typeof r.metadata === "object") ? r.metadata : devJson(r.metadata, {});
-  return {
-    id: r.id, kind: r.kind, parent_id: r.parent_id, name: r.name,
-    aliases: Array.isArray(aliases) ? aliases : [],
-    category: r.category, description: r.description,
-    identity: identity && typeof identity === "object" && !Array.isArray(identity) ? identity : {},
-    style_id: r.style_id, negative_prompt: r.negative_prompt,
-    prompt: r.prompt ?? "",
-    status: r.status, version: Number(r.version), locked: r.locked === true || r.locked === 1 || r.locked === "1" || r.locked === "t" || r.locked === "true" || r.locked === "TRUE",
-    continuity: r.continuity, metadata: metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {},
-    created_at: r.created_at, updated_at: r.updated_at,
-  };
-}
-// SQLite row helpers: files carry a JSON metadata string, jobs carry a JSON
-// metadata string (PG returns objects natively).
-function devFileRow(f) {
-  return {
-    ...f,
-    metadata: (f.metadata && typeof f.metadata === "object") ? f.metadata : devJson(f.metadata, {}),
-    url: `/devotional/${f.file_path}`,
-    exists: fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)),
-  };
-}
-function devJobRow(j) {
-  return { ...j, metadata: (j.metadata && typeof j.metadata === "object") ? j.metadata : devJson(j.metadata, {}) };
-}
-// Snapshot the current row into devotional_asset_versions (durable audit trail).
-async function devSnapshot(id, version, note = "") {
-  const cleanNote = String(note || "").slice(0, 300);
-  if (pgUp) {
-    const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id]);
-    if (!r.rows[0]) return;
-    await pgPool.query(
-      `INSERT INTO devotional_asset_versions (asset_id, version, snapshot, note)
-       VALUES ($1, $2, $3::jsonb, $4) ON CONFLICT (asset_id, version) DO NOTHING`,
-      [id, version, JSON.stringify(devRow(r.rows[0])), cleanNote]);
-    return;
-  }
-  if (!devDb) return;
-  const r = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-  if (!r) return;
-  devDb.prepare(
-    "INSERT OR IGNORE INTO devotional_asset_versions (asset_id, version, snapshot, note) VALUES (?, ?, ?, ?)"
-  ).run(id, version, JSON.stringify(devRow(r)), cleanNote);
-}
-function serveDevotional(res, rel) {
+// The Sanskriti Kids asset library files (the generated reference stills).
+function serveKids(res, rel) {
   const parts = String(rel || "").split("/");
   if (parts.some((s) => !isSafeSegment(s))) { res.writeHead(400); return res.end(); }
-  const p = path.join(DEVOTIONAL_DIR, ...parts);
-  if (!p.startsWith(DEVOTIONAL_DIR) || !fs.existsSync(p) || !fs.statSync(p).isFile()) {
+  const p = path.join(KIDS_DIR, ...parts);
+  if (!p.startsWith(KIDS_DIR) || !fs.existsSync(p) || !fs.statSync(p).isFile()) {
     res.writeHead(404); return res.end();
   }
   res.writeHead(200, { "Content-Type": MIME[path.extname(p).toLowerCase()] || "application/octet-stream", "Cache-Control": "no-store" });
-  fs.createReadStream(p).pipe(res);
-}
-
-// ---------------------------------------------------------------- reface
-// Face-swap studio: upload a minutes-long video, auto-detect + cluster every
-// face identity, upload one reference face image, swap the chosen identity.
-// Jobs live in reface/<id>/ (gitignored working storage, like resources/);
-// scripts/reface.py (local insightface, CPU) does analyze + swap in
-// background workers tracked in refaceProcs (one at a time — the box's CPU
-// is the bottleneck, same serial discipline as the ComfyUI queue).
-const REFACE = path.join(ROOT, "reface");
-const REFACE_MAX_VIDEO = 500 * 1024 * 1024; // 500MB raw upload cap
-const REFACE_VIDEO_EXT = {
-  "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov",
-  "video/x-matroska": ".mkv",
-};
-const refaceProcs = new Map(); // id -> ChildProcess (analyze or swap)
-const refaceBusy = () => {
-  for (const pr of refaceProcs.values()) {
-    if (!pr.killed && pr.exitCode == null) return true;
-  }
-  return false;
-};
-async function probeVideo(full) {
-  try {
-    const out = await runCmd("ffprobe",
-      ["-v", "error", "-show_entries",
-       "format=duration:stream=width,height,avg_frame_rate,codec_type",
-       "-of", "json", full], 30000);
-    const j = JSON.parse(String(out));
-    let duration = null;
-    const d = Number(j?.format?.duration);
-    if (Number.isFinite(d) && d > 0) duration = d;
-    let fps = 24, width = 0, height = 0, hasAudio = false;
-    for (const s of j?.streams || []) {
-      if (s.codec_type === "video" && !width) {
-        width = Number(s.width) || 0;
-        height = Number(s.height) || 0;
-        const fr = String(s.avg_frame_rate || "24/1");
-        const m = fr.match(/^([\d.]+)\/([\d.]+)$/);
-        if (m && Number(m[2])) fps = Number(m[1]) / Number(m[2]);
-        else if (Number(fr)) fps = Number(fr);
-      }
-      if (s.codec_type === "audio") hasAudio = true;
-    }
-    return { duration, fps, width, height, hasAudio };
-  } catch { return { duration: null, fps: null, width: 0, height: 0, hasAudio: false }; }
-}
-function spawnRefaceWorker(id, args) {
-  const dir = path.join(REFACE, id);
-  const py = process.env.REFACE_PYTHON || "python";
-  const logStream = fs.createWriteStream(path.join(dir, "job.log"), { flags: "a" });
-  const proc = spawn(py, [path.join(ROOT, "scripts", "reface.py"), ...args, dir], {
-    cwd: ROOT, windowsHide: true,
-  });
-  refaceProcs.set(id, proc);
-  proc.stdout.on("data", (c) => { try { logStream.write(c); } catch { /* closing */ } });
-  proc.stderr.on("data", (c) => { try { logStream.write(c); } catch { /* closing */ } });
-  proc.on("error", (e) => { try { logStream.write(`spawn failed: ${e.message}\n`); } catch { /* ignore */ } });
-  proc.on("close", (code) => {
-    refaceProcs.delete(id);
-    try { logStream.end(); } catch { /* ignore */ }
-    const kind = args[0]; // analyze | swap
-    try {
-      const meta = readRefaceMeta(dir);
-      if (!meta) return;
-      if (code === 0) {
-        if (kind === "analyze") {
-          meta.status = "analyzed";
-        } else {
-          meta.status = "done";
-          try {
-            if (fs.existsSync(path.join(dir, "result.mp4"))) meta.result = "result.mp4";
-            else { meta.status = "swap_error"; meta.error = "worker finished without writing result.mp4"; }
-          } catch { meta.status = "swap_error"; meta.error = "worker finished without writing result.mp4"; }
-        }
-        if (meta.status === "analyzed" || meta.status === "done") meta.error = null;
-      } else {
-        meta.status = kind === "analyze" ? "analyze_error" : "swap_error";
-        try {
-          const tail = fs.readFileSync(path.join(dir, "job.log"), "utf8").slice(-800);
-          const m = tail.match(/\[reface\] FAILED: ([^\n]*)/);
-          meta.error = (m ? m[1] : `worker exited with code ${code}`).slice(0, 300);
-        } catch { meta.error = `worker exited with code ${code}`; }
-      }
-      writeRefaceMeta(dir, meta);
-    } catch (e) { console.warn("[reface] close handler failed:", e.message); }
-  });
-  return proc;
-}
-// Static file serving for a job dir, with single-range support so result
-// videos seek in the browser (serveOutput has no ranges — added here only).
-function serveReface(req, res, id, rel) {
-  if (!REFACE_ID_RE.test(String(id || ""))) { res.writeHead(404); return res.end(); }
-  const segs = String(rel || "").split("/").filter((s) => s && s !== ".");
-  if (!segs.length || segs.some((s) => s === ".." || s.includes("\\"))) { res.writeHead(404); return res.end(); }
-  const dir = path.join(REFACE, id);
-  const p = path.normalize(path.join(dir, ...segs));
-  if (!p.startsWith(dir + path.sep)) { res.writeHead(403); return res.end(); }
-  if (!fs.existsSync(p) || !fs.statSync(p).isFile()) { res.writeHead(404); return res.end(); }
-  const st = fs.statSync(p);
-  const type = MIME[path.extname(p).toLowerCase()] || "application/octet-stream";
-  const range = req.headers.range;
-  if (range) {
-    const m = String(range).match(/^bytes=(\d*)-(\d*)$/);
-    if (m) {
-      let start = m[1] === "" ? 0 : Number(m[1]);
-      let end = m[2] === "" ? st.size - 1 : Number(m[2]);
-      if (!Number.isFinite(start) || start < 0) start = 0;
-      if (!Number.isFinite(end) || end >= st.size) end = st.size - 1;
-      if (start <= end) {
-        res.writeHead(206, {
-          "Content-Type": type, "Accept-Ranges": "bytes", "Cache-Control": "no-store",
-          "Content-Range": `bytes ${start}-${end}/${st.size}`,
-          "Content-Length": end - start + 1,
-        });
-        fs.createReadStream(p, { start, end }).pipe(res);
-        return;
-      }
-    }
-  }
-  res.writeHead(200, {
-    "Content-Type": type, "Accept-Ranges": "bytes", "Cache-Control": "no-store",
-    "Content-Length": st.size,
-  });
   fs.createReadStream(p).pipe(res);
 }
 
@@ -3267,26 +4083,6 @@ const readJson = (req) => new Promise((res, rej) => {
   req.on("data", (c) => (b += c));
   req.on("end", () => { try { res(JSON.parse(b)); } catch { rej(new Error("bad json")); } });
 });
-// Raw binary body reader (video uploads — base64 JSON would bloat a
-// minutes-long clip by 4/3 and hold two copies in memory). Rejects 413 past
-// maxBytes; the socket is destroyed so the client stops sending.
-const readRaw = (req, maxBytes) => new Promise((res, rej) => {
-  const chunks = [];
-  let n = 0, settled = false;
-  req.on("data", (c) => {
-    if (settled) return;
-    n += c.length;
-    if (n > maxBytes) {
-      settled = true;
-      try { req.destroy(); } catch { /* already closing */ }
-      rej(Object.assign(new Error("file too large"), { code: 413 }));
-      return;
-    }
-    chunks.push(c);
-  });
-  req.on("end", () => { if (!settled) { settled = true; res(Buffer.concat(chunks)); } });
-  req.on("error", (e) => { if (!settled) { settled = true; rej(e); } });
-});
 
 // ---------------------------------------------------------------- runs
 // One run = one spawned `node scripts/character_sequence{,_wan}.mjs <folder>`
@@ -3303,177 +4099,6 @@ const readRaw = (req, maxBytes) => new Promise((res, rej) => {
 // opts.count    -> repeat a `ref` regen this many times (each pass writes a new
 //                  _vN version to pick from); anything else always runs once.
 const runs = new Map(); // id -> { scenario, folder, status, log, startedAt, proc, subs:Set<res> }
-// Devotional reference jobs: one background Flux still at a time, serial with
-// the main runs above (the ComfyUI queue is serial). PENDING jobs wait for a
-// free queue instead of failing — the pump runs on enqueue + on main-run exit.
-const devotionalProcs = new Map(); // jobId -> ChildProcess
-let devPumping = false;
-async function devPumpJobs() {
-  const store = devStore();
-  if (devPumping || !store) return;
-  devPumping = true;
-  // Store-aware accessors so the pump works identically on PG and SQLite.
-  const liteGet = (sql, ...args) => {
-    try { return devDb.prepare(sql).get(...args) ?? null; } catch { return null; }
-  };
-  const liteRun = (sql, ...args) => {
-    try { devDb.prepare(sql).run(...args); } catch (e) { console.warn("[devotional] sqlite write failed:", e.message); }
-  };
-  try {
-    if ([...runs.values()].some((r) => r.status === "running")) return;
-    if ([...devotionalProcs.values()].some((p) => p.exitCode === null)) return;
-    let job = null;
-    if (store === "pg") {
-      const q = await pgPool.query(
-        "SELECT * FROM devotional_jobs WHERE status = 'PENDING' ORDER BY created_at LIMIT 1").catch(() => null);
-      job = q?.rows?.[0] ?? null;
-      if (job) job = devJobRow(job);
-    } else {
-      job = liteGet("SELECT * FROM devotional_jobs WHERE status = 'PENDING' ORDER BY created_at LIMIT 1");
-      if (job) job = devJobRow(job);
-    }
-    if (!job) return;
-    let assetRow = null;
-    if (store === "pg") {
-      const ar = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [job.asset_id]).catch(() => null);
-      assetRow = ar?.rows?.[0] ?? null;
-    } else {
-      assetRow = liteGet("SELECT * FROM devotional_assets WHERE id = ?", job.asset_id);
-    }
-    const asset = assetRow ? devRow(assetRow) : null;
-    if (!asset) {
-      if (store === "pg") {
-        await pgPool.query("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'asset deleted', updated_at = now() WHERE id = $1", [job.id]);
-      } else {
-        liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'asset deleted', updated_at = ? WHERE id = ?", devNow(), job.id);
-      }
-      return;
-    }
-    const meta = job.metadata && typeof job.metadata === "object" ? job.metadata : {};
-    const isVideo = job.kind === "video";
-    const fileKind = isVideo ? "video" : (DEVOTIONAL_FILE_KINDS.includes(String(meta.fileKind || "").toLowerCase())
-      ? String(meta.fileKind).toLowerCase() : "master");
-    const duration = isVideo ? Math.max(2, Math.min(8, Number(meta.duration) || 3)) : 0;
-    const dir = devAssetDir(asset);
-    fs.mkdirSync(dir, { recursive: true });
-    // Video jobs animate the latest existing still; reference jobs render one.
-    let srcImage = null;
-    if (isVideo) {
-      const rows = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id DESC", [job.asset_id]).catch(() => null))?.rows ?? []
-        : (() => { try { return devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id DESC").all(job.asset_id); } catch { return []; } })();
-      srcImage = rows.map((f) => path.join(DEVOTIONAL_DIR, f.file_path))
-        .find((full) => /\.(png|jpe?g|webp)$/i.test(full) && fs.existsSync(full)) ?? null;
-      if (!srcImage) {
-        const msg = "no reference image yet — the still must finish first";
-        if (store === "pg") {
-          await pgPool.query("UPDATE devotional_jobs SET status = 'FAILED', error_message = $2, updated_at = now() WHERE id = $1", [job.id, msg]);
-        } else {
-          liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = ?, updated_at = ? WHERE id = ?", msg, devNow(), job.id);
-        }
-        return;
-      }
-    }
-    const base = isVideo ? `${String(asset.id).toLowerCase()}_video` : `${String(asset.id).toLowerCase()}_${fileKind}`;
-    const outExt = isVideo ? ".mp4" : ".png";
-    let file = `${base}${outExt}`, n = 2;
-    while (fs.existsSync(path.join(dir, file))) file = `${base}_v${n++}${outExt}`;
-    const outFile = path.join(dir, file);
-    if (store === "pg") {
-      await pgPool.query("UPDATE devotional_jobs SET status = 'PROCESSING', metadata = $2::jsonb, updated_at = now() WHERE id = $1",
-        [job.id, JSON.stringify({ ...meta, file })]);
-    } else {
-      liteRun("UPDATE devotional_jobs SET status = 'PROCESSING', metadata = ?, updated_at = ? WHERE id = ?",
-        JSON.stringify({ ...meta, file }), devNow(), job.id);
-    }
-    const procArgs = isVideo
-      ? ["scripts/devotional_video.mjs", "--image", srcImage,
-         "--out", outFile, "--prompt", String(job.prompt || ""), "--duration", String(duration)]
-      : ["scripts/devotional_reference.mjs", "--prompt", String(job.prompt || ""),
-         "--out", outFile, "--width", "1024", "--height", "1024", "--steps", "4"];
-    const proc = spawn(process.execPath, procArgs,
-      { cwd: ROOT, env: process.env, windowsHide: true });
-    devotionalProcs.set(job.id, proc);
-    let log = "";
-    proc.stdout?.on("data", (d) => (log += d.toString()));
-    proc.stderr?.on("data", (d) => (log += d.toString()));
-    proc.on("close", async (code) => {
-      devotionalProcs.delete(job.id);
-      try {
-        const activePg = pgUp;
-        if (code === 0 && fs.existsSync(outFile)) {
-          const rel = path.relative(DEVOTIONAL_DIR, outFile).split(path.sep).join("/");
-          if (activePg) {
-            if (isVideo) {
-              await pgPool.query(
-                `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata)
-                 VALUES ($1,$2,$3,'generated',$4,'ltx-i2v','ltx-2.5-22b-distilled',$5::jsonb)`,
-                [job.asset_id, rel, "video", String(job.prompt || ""),
-                 JSON.stringify({ job: job.id, duration })]);
-            } else {
-              await pgPool.query(
-                `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata)
-                 VALUES ($1,$2,$3,'generated',$4,'flux-t2i','flux-2-klein-9b-fp8',$5::jsonb)`,
-                [job.asset_id, rel, fileKind, String(job.prompt || ""),
-                 JSON.stringify({ job: job.id })]);
-            }
-            await pgPool.query("UPDATE devotional_jobs SET status = 'COMPLETED', updated_at = now() WHERE id = $1", [job.id]);
-            if (!isVideo) {
-              await pgPool.query(
-                "UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1 AND status = 'generating'",
-                [job.asset_id]);
-            }
-          } else if (devDb) {
-            if (isVideo) {
-              liteRun(
-                "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata) VALUES (?, ?, ?, 'generated', ?, 'ltx-i2v', 'ltx-2.5-22b-distilled', ?)",
-                job.asset_id, rel, "video", String(job.prompt || ""), JSON.stringify({ job: job.id, duration }));
-            } else {
-              liteRun(
-                "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, prompt, workflow, model, metadata) VALUES (?, ?, ?, 'generated', ?, 'flux-t2i', 'flux-2-klein-9b-fp8', ?)",
-                job.asset_id, rel, fileKind, String(job.prompt || ""), JSON.stringify({ job: job.id }));
-            }
-            liteRun("UPDATE devotional_jobs SET status = 'COMPLETED', updated_at = ? WHERE id = ?", devNow(), job.id);
-            if (!isVideo) {
-              liteRun("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ? AND status = 'generating'", devNow(), job.asset_id);
-            }
-          }
-        } else {
-          // Failed/killed generators may leave a partial file. The filename
-          // is unique per job, and it is not a registered user asset yet.
-          try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile); } catch { /* best-effort orphan cleanup */ }
-          const err = (log.match(/\[asset\][\s\S]*$/) ? log.slice(-2000) : log.slice(-2000)) || `exit ${code}`;
-          const msg = isVideo && !String(err).includes("reference generation failed")
-            ? `showcase clip failed: ${String(err).trim().slice(-500) || "unknown error"} — check COMFY_BASE and retry`
-            : `reference generation failed: ${String(err).trim().slice(-500) || "unknown error"} — check COMFY_BASE and retry, or upload manually`;
-          // Guarded to PROCESSING so a user cancel (already FAILED with
-          // 'cancelled by user') is never overwritten by the proc tail.
-          if (activePg) {
-            await pgPool.query(
-              "UPDATE devotional_jobs SET status = 'FAILED', error_message = $2, updated_at = now() WHERE id = $1 AND status = 'PROCESSING'",
-              [job.id, msg]);
-            // A failed job never corrupts the asset: back to review/draft.
-            if (!isVideo) {
-              await pgPool.query(
-                "UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1 AND status = 'generating'",
-                [job.asset_id]);
-            }
-          } else if (devDb) {
-            liteRun("UPDATE devotional_jobs SET status = 'FAILED', error_message = ?, updated_at = ? WHERE id = ? AND status = 'PROCESSING'", msg, devNow(), job.id);
-            if (!isVideo) {
-              liteRun("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ? AND status = 'generating'", devNow(), job.asset_id);
-            }
-          }
-        }
-      } catch (e) { console.warn("[devotional] job finish failed:", e.message); }
-      void devPumpJobs(); // chain the next PENDING job
-    });
-  } catch (e) {
-    console.warn("[devotional] pump failed:", e.message);
-  } finally {
-    devPumping = false;
-  }
-}
 // Boards with a scene-planning LLM call in flight. A second POST while one
 // is running is rejected (409) so two overlapping batches can never append
 // duplicate scenes — the client retries/continues from scenes.length.
@@ -3573,8 +4198,6 @@ function startRun(scenario, opts = {}) {
     const dirName = outDirName(run.folder, run.engine, run.format);
     pgRefreshProjectFiles(run.scenario, dirName)
       .catch((e) => console.warn("[pg] sync failed:", e.message));
-    // A freed ComfyUI queue lets waiting devotional reference jobs through.
-    void devPumpJobs();
   };
   const launch = () => {
     run.pass += 1;
@@ -4526,7 +5149,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Everything below (API + generated outputs) requires a session.
-    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/") || p.startsWith("/reface/") || p.startsWith("/devotional/")) && !authedUser(req))
+    if ((p.startsWith("/api/") || p.startsWith("/outputs/") || p.startsWith("/resources/") || p.startsWith("/kids/")) && !authedUser(req))
       return json(res, 401, { error: "unauthorized" });
 
     if (p === "/api/scenarios" && req.method === "GET") {
@@ -5481,171 +6104,6 @@ const server = http.createServer(async (req, res) => {
         version, project_id, warnings,
       });
     }
-    // ------------------------------------------------------- reface studio
-    if (p === "/api/reface" && req.method === "GET") {
-      // Newest first (created_at desc); unreadable dirs are skipped.
-      let rows = [];
-      try {
-        rows = fs.readdirSync(REFACE)
-          .map((id) => {
-            try { return refaceSummary(path.join(REFACE, id)); }
-            catch { return null; }
-          })
-          .filter(Boolean)
-          .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
-      } catch { rows = []; }
-      return json(res, 200, rows);
-    }
-    if (p === "/api/reface/upload" && req.method === "POST") {
-      // Raw binary video body (Content-Type: video/*, original name in
-      // X-Filename). Creates the job dir + meta + thumbnail; the client then
-      // POSTs /analyze to detect faces.
-      const ctype = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
-      const ext = REFACE_VIDEO_EXT[ctype];
-      if (!ext) return json(res, 400, { error: `unsupported video type ${ctype || "(none)"} — upload mp4/webm/mov/mkv` });
-      let buf;
-      try { buf = await readRaw(req, REFACE_MAX_VIDEO); }
-      catch (e) {
-        if (e?.code === 413) return json(res, 413, { error: "video over 500MB — trim it and re-upload" });
-        return json(res, 400, { error: "upload read failed" });
-      }
-      if (!buf.length) return json(res, 400, { error: "empty file" });
-      const rawName = String(req.headers["x-filename"] || "video").slice(0, 120);
-      const id = newRefaceId();
-      const dir = path.join(REFACE, id);
-      fs.mkdirSync(dir, { recursive: true });
-      const file = `source${ext}`;
-      fs.writeFileSync(path.join(dir, file), buf);
-      const probe = await probeVideo(path.join(dir, file));
-      if (probe.duration == null) {
-        fs.rmSync(dir, { recursive: true, force: true });
-        return json(res, 400, { error: "not a readable video file — re-export as mp4 and retry" });
-      }
-      try {
-        await extractMiddleFrame(path.join(dir, file), path.join(dir, "source_thumb.jpg"));
-      } catch { /* thumbnail is best-effort */ }
-      const meta = {
-        id, created_at: new Date().toISOString(),
-        filename: rawName.replace(/[\\/:*?"<>|]/g, "_") || "video",
-        source: file, bytes: buf.length,
-        duration: probe.duration, fps: probe.fps,
-        width: probe.width, height: probe.height, hasAudio: probe.hasAudio,
-        status: "uploaded", error: null,
-        reference: null, targetFace: null, result: null,
-      };
-      writeRefaceMeta(dir, meta);
-      return json(res, 200, refaceDetail(dir));
-    }
-    if (p.startsWith("/api/reface/") && p.split("/").length === 4 && req.method === "GET") {
-      // GET /api/reface/:id — detail (faces + live progress inline).
-      const id = pathName(p.split("/")[3]);
-      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
-      const dir = path.join(REFACE, id);
-      if (!fs.existsSync(path.join(dir, "meta.json"))) return json(res, 404, { error: "no such reface job" });
-      return json(res, 200, refaceDetail(dir));
-    }
-    if (p.startsWith("/api/reface/") && p.endsWith("/reference") && req.method === "POST") {
-      // The NEW face to put onto the video: small base64 image payload
-      // (same data-URL convention as /api/upload/ref).
-      const id = pathName(p.split("/")[3]);
-      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
-      const dir = path.join(REFACE, id);
-      const meta = readRefaceMeta(dir);
-      if (!meta) return json(res, 404, { error: "no such reface job" });
-      let body;
-      try { body = await readJson(req); }
-      catch { return json(res, 400, { error: "bad json" }); }
-      if (typeof body.data !== "string") return json(res, 400, { error: "data (base64) required" });
-      const m = body.data.match(/^data:image\/(\w+);base64,(.+)$/s);
-      if (!m) return json(res, 400, { error: "expected a data:image base64 payload" });
-      const buf = Buffer.from(m[2], "base64");
-      if (!buf.length) return json(res, 400, { error: "empty image" });
-      if (buf.length > 15 * 1024 * 1024) return json(res, 413, { error: "image over 15MB — downscale and retry" });
-      const ext = { png: ".png", jpeg: ".jpg", jpg: ".jpg", webp: ".webp" }[m[1].toLowerCase()] || ".png";
-      for (const f of fs.readdirSync(dir)) {
-        if (f.startsWith("reference.") && fs.statSync(path.join(dir, f)).isFile()) {
-          try { fs.unlinkSync(path.join(dir, f)); } catch { /* keep going */ }
-        }
-      }
-      const file = `reference${ext}`;
-      fs.writeFileSync(path.join(dir, file), buf);
-      meta.reference = file;
-      // A new reference invalidates a finished swap (it was rendered with the
-      // old face) — status falls back to analyzed so Swap runs again.
-      if (meta.status === "done" || meta.status === "swap_error") meta.status = "analyzed";
-      meta.error = null;
-      writeRefaceMeta(dir, meta);
-      return json(res, 200, refaceDetail(dir));
-    }
-    if (p.startsWith("/api/reface/") && p.endsWith("/analyze") && req.method === "POST") {
-      const id = pathName(p.split("/")[3]);
-      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
-      const dir = path.join(REFACE, id);
-      const meta = readRefaceMeta(dir);
-      if (!meta) return json(res, 404, { error: "no such reface job" });
-      if (refaceProcs.has(id)) return json(res, 409, { error: "this job already has a worker running" });
-      if (refaceBusy()) return json(res, 409, { error: "another reface job is running — wait for it to finish" });
-      if (!meta.source || !fs.existsSync(path.join(dir, meta.source)))
-        return json(res, 400, { error: "source video missing — re-upload it" });
-      meta.status = "analyzing";
-      meta.error = null;
-      writeRefaceMeta(dir, meta);
-      try { fs.unlinkSync(path.join(dir, "progress.json")); } catch { /* first run */ }
-      try {
-        spawnRefaceWorker(id, ["analyze"]);
-      } catch (e) {
-        meta.status = "analyze_error";
-        meta.error = String(e.message || e).slice(0, 200);
-        writeRefaceMeta(dir, meta);
-        return json(res, 500, { error: meta.error });
-      }
-      return json(res, 200, { started: true, id });
-    }
-    if (p.startsWith("/api/reface/") && p.endsWith("/swap") && req.method === "POST") {
-      const id = pathName(p.split("/")[3]);
-      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
-      const dir = path.join(REFACE, id);
-      const meta = readRefaceMeta(dir);
-      if (!meta) return json(res, 404, { error: "no such reface job" });
-      let body;
-      try { body = await readJson(req); }
-      catch { return json(res, 400, { error: "bad json" }); }
-      const faceId = String(body.faceId || "");
-      if (!/^face\d+$/.test(faceId)) return json(res, 400, { error: "pick a face from the panel first" });
-      if (refaceProcs.has(id)) return json(res, 409, { error: "this job already has a worker running" });
-      if (refaceBusy()) return json(res, 409, { error: "another reface job is running — wait for it to finish" });
-      let faces = [];
-      try { faces = JSON.parse(fs.readFileSync(path.join(dir, "faces.json"), "utf8")); } catch { faces = []; }
-      if (!faces.some((f) => f.id === faceId))
-        return json(res, 400, { error: "unknown face — analyze the video first" });
-      if (!meta.reference || !fs.existsSync(path.join(dir, meta.reference)))
-        return json(res, 400, { error: "upload a reference face image first" });
-      meta.status = "swapping";
-      meta.targetFace = faceId;
-      meta.result = null;
-      meta.error = null;
-      writeRefaceMeta(dir, meta);
-      try {
-        spawnRefaceWorker(id, ["swap", "--face", faceId]);
-      } catch (e) {
-        meta.status = "swap_error";
-        meta.error = String(e.message || e).slice(0, 200);
-        writeRefaceMeta(dir, meta);
-        return json(res, 500, { error: meta.error });
-      }
-      return json(res, 200, { started: true, id, faceId });
-    }
-    if (p.startsWith("/api/reface/") && p.split("/").length === 4 && req.method === "DELETE") {
-      const id = pathName(p.split("/")[3]);
-      if (!REFACE_ID_RE.test(id)) return json(res, 400, { error: "bad id" });
-      const proc = refaceProcs.get(id);
-      if (proc && !proc.killed && proc.exitCode == null) {
-        try { proc.kill(); } catch { /* already dead */ }
-        refaceProcs.delete(id);
-      }
-      fs.rmSync(path.join(REFACE, id), { recursive: true, force: true });
-      return json(res, 200, { ok: true, id });
-    }
     if (p === "/api/upload/keyframe" && req.method === "POST") {
       // Upload an image as beat N's keyframe. Stored as the next keyframe
       // version in outputs/<folder>/ and selected as main, so a later
@@ -5707,39 +6165,8 @@ const server = http.createServer(async (req, res) => {
     // save/generation pipeline (client calls saveScenario, then opens the
     // workspace). No separate image/video implementation exists here.
     // Shared LLM call reusing the craft-endpoint convention (LLM_MODEL,
-    // thinking disabled). Parse failures save the raw response for debugging
-    // and throw a useful error — nothing is silently discarded.
-    async function llmChatJson({ system, user, maxTokens = 8000, temperature = 0.7, timeoutMs = REQUEST_TIMEOUT_MS, rawTag = null }) {
-      const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
-      if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
-      // Tag retries per batch file so the server log shows which plan step
-      // dropped and reconnected (e.g. [llm:story_scenes_1]).
-      const tag = rawTag ? String(rawTag).replace(/^_raw_/, "").replace(/\.log$/, "").slice(0, 60) : "director";
-      try {
-        const d = await llmPostChat(`${base}/v1/chat/completions`, {
-          model: LLM_MODEL,
-          messages: [{ role: "system", content: system }, { role: "user", content: user }],
-          temperature,
-          max_tokens: maxTokens,
-          chat_template_kwargs: { enable_thinking: false },
-        }, { timeoutMs, tag });
-        const text = String(d.choices?.[0]?.message?.content ?? "");
-        try {
-          return stripJson(text);
-        } catch (e) {
-          if (rawTag) {
-            try {
-              fs.mkdirSync(DIRECTOR, { recursive: true });
-              fs.writeFileSync(path.join(DIRECTOR, rawTag), text);
-            } catch { /* raw save is best-effort */ }
-          }
-          throw new Error(`${e.message}${rawTag ? ` (raw response saved to director/${rawTag})` : ""}`);
-        }
-      } catch (e) {
-        if (e?.name === "AbortError") throw new Error("LLM timed out — the model may still be loading; the story is kept, try again.");
-        throw e;
-      }
-    }
+    // thinking disabled) — llmChatJson is defined at MODULE level above so
+    // the Sanskriti Kids studio helpers use the SAME client.
     const directorBoardFile = (id) => path.join(DIRECTOR, `${id}.json`);
     const readDirectorBoard = (id) => {
       if (!isSafe(id)) throw new Error("bad board id");
@@ -5837,7 +6264,7 @@ const server = http.createServer(async (req, res) => {
         const sf = String(b.song.file || "");
         if (!isSafe(sf) || !/\.(mp3|wav|m4a)$/i.test(sf) || !fs.existsSync(path.join(DIRECTOR, sf)))
           throw new Error("song file missing — re-upload the mp3");
-        const dur = Math.round(Number(b.song.durationSeconds) || 0);
+        const dur = Math.round((Number(b.song.durationSeconds) || 0) * 1000) / 1000;
         song = {
           file: sf,
           fileName: String(b.song.fileName || "song.mp3").slice(0, 120),
@@ -5845,35 +6272,54 @@ const server = http.createServer(async (req, res) => {
           hasLyrics: b.song.hasLyrics !== false,
         };
       }
+      let sourceAudio = null;
+      if (b.sourceAudio && typeof b.sourceAudio === "object") {
+        const af = String(b.sourceAudio.file || "");
+        if (!isSafe(af) || !/\.(mp3|wav|m4a)$/i.test(af) || !fs.existsSync(path.join(DIRECTOR, af)))
+          throw new Error("narration audio file missing — re-upload the audio");
+        sourceAudio = {
+          file: af,
+          fileName: String(b.sourceAudio.fileName || "narration.wav").slice(0, 120),
+          durationSeconds: Math.max(0.001, Math.round((Number(b.sourceAudio.durationSeconds) || 0) * 1000) / 1000),
+          ...(b.sourceAudio.transcript && typeof b.sourceAudio.transcript === "object" ? { transcript: String(b.sourceAudio.transcript.text || "").slice(0, 20000) } : {}),
+        };
+      }
       if (song && !song.hasLyrics && story.length < 3)
         story = `[Instrumental song "${title}" — no lyrics provided; direct a matching visual story]`;
+      if (story.length < 20 && sourceAudio?.transcript?.length >= 20) story = sourceAudio.transcript;
       if (story.length < 20) throw new Error(song
         ? "paste the song lyrics (20+ characters), or leave them empty for an instrumental visual story"
         : "story is too short — paste the full story");
       const language = DIRECTOR_LANGS.includes(b.language) ? b.language : "English";
-      const genre = DIRECTOR_GENRES.includes(b.genre) ? b.genre : "Kids";
-      const visualStyle = DIRECTOR_STYLES.includes(b.visualStyle) ? b.visualStyle : "3D Preschool Animation";
+      const genre = DIRECTOR_GENRES.includes(b.genre) ? b.genre : "Adventure";
+      const visualStyle = DIRECTOR_STYLES.includes(b.visualStyle) ? b.visualStyle : "3D Cinematic";
       const aspectRatio = DIRECTOR_ASPECTS.includes(b.aspectRatio) ? b.aspectRatio : "16:9";
       // Song mode: the timeline IS the song length (rounded, clamped).
-      const wantedTarget = song?.durationSeconds
-        ? Math.max(15, Math.min(3600, song.durationSeconds))
+      const audioDuration = song?.durationSeconds || sourceAudio?.durationSeconds;
+      const wantedTarget = audioDuration
+        ? Math.max(0.001, Math.min(3600, audioDuration))
         : Math.max(15, Math.min(3600, Math.floor(Number(b.targetSeconds)) || 60));
       const targetSeconds = wantedTarget;
-      // Preschool pacing: kids-genre boards never plan sub-4s scenes —
-      // fast cutting overstimulates toddlers (COPPA-calm). The UI already
-      // defaults kids boards to 5s scenes; this floor holds for API callers.
-      const kidsGenre = isKidsGenre(genre, genre === "Custom" ? String(b.genreCustom || "").trim() : "");
-      const sceneSeconds = Math.max(kidsGenre ? 4 : 1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
+      const sceneSeconds = Math.max(1, Math.min(30, Math.floor(Number(b.sceneSeconds)) || 3));
       const sceneCount = sceneCountFor(targetSeconds, sceneSeconds);
       if (!sceneCount) throw new Error("could not derive a scene count from the durations");
       return {
         title,
         story,
         language,
+        // The language of the SOURCE TEXT for the meaning analysis
+        // (auto | hi | en | hinglish) — the spoken language stays separate.
+        semanticsLanguage: ["auto", "hi", "en", "hinglish"].includes(String(b.semanticsLanguage || "").trim().toLowerCase())
+          ? String(b.semanticsLanguage || "auto").trim().toLowerCase()
+          : "auto",
         genre,
         genreCustom: genre === "Custom" ? String(b.genreCustom || "").trim() : "",
         visualStyle,
         styleCustom: visualStyle === "Custom" ? String(b.styleCustom || "").trim() : "",
+        // Master Prompt: the UI auto-fills it from the visual-style preset and
+        // the user may edit it — a non-empty value becomes THE style lock
+        // (styleLockFor prefers it over the preset/custom text).
+        masterPrompt: String(b.masterPrompt || "").trim().slice(0, 2000),
         targetSeconds,
         sceneSeconds,
         aspectRatio,
@@ -5886,17 +6332,32 @@ const server = http.createServer(async (req, res) => {
         // (cfg.chainContinuity -> runSequence chain wording). Generation
         // pixels always stay per-scene (own keyframe per clip).
         chainContinuity: b.chainContinuity !== false,
+        ...(sourceAudio ? { sourceAudio } : {}),
+        ...(b.songAnalysis && typeof b.songAnalysis === "object" ? { songAnalysis: {
+          mood: String(b.songAnalysis.mood || "").slice(0, 200),
+          structure: String(b.songAnalysis.structure || "").slice(0, 300),
+          narrationStyle: String(b.songAnalysis.narrationStyle || "").slice(0, 200),
+          segments: Array.isArray(b.songAnalysis.segments) ? b.songAnalysis.segments.slice(0, 12).map(s => ({ start: Number(s.start) || 0, end: Number(s.end) || 0, label: String(s.label || "").slice(0, 40), mood: String(s.mood || "").slice(0, 60) })) : [],
+          transcript: b.songAnalysis.transcript && typeof b.songAnalysis.transcript === "object" ? {
+            status: String(b.songAnalysis.transcript.status || ""),
+            segments: Array.isArray(b.songAnalysis.transcript.segments) ? b.songAnalysis.transcript.segments.slice(0, 500).map(s => ({
+              start: Math.max(0, Number(s.start) || 0),
+              end: Math.min(targetSeconds, Math.max(0, Number(s.end) || 0)),
+              text: String(s.text || "").trim().slice(0, 600),
+            })).filter(s => s.text && s.end > s.start) : [],
+          } : null,
+          measured: b.songAnalysis.measured && typeof b.songAnalysis.measured === "object" ? {
+            meanVolumeDb: b.songAnalysis.measured.meanVolumeDb != null && Number.isFinite(Number(b.songAnalysis.measured.meanVolumeDb)) ? Number(b.songAnalysis.measured.meanVolumeDb) : null,
+            signal: b.songAnalysis.measured.signal && typeof b.songAnalysis.measured.signal === "object" ? {
+              bpm: b.songAnalysis.measured.signal.bpm != null && Number.isFinite(Number(b.songAnalysis.measured.signal.bpm)) ? Number(b.songAnalysis.measured.signal.bpm) : null,
+              bpmConfidence: Number(b.songAnalysis.measured.signal.bpmConfidence) || 0,
+              beatTimes: Array.isArray(b.songAnalysis.measured.signal.beatTimes) ? b.songAnalysis.measured.signal.beatTimes.slice(0, 600) : [],
+              keyEstimate: b.songAnalysis.measured.signal.keyEstimate || null,
+            } : null,
+          } : null,
+        } } : {}),
         ...(song ? { song } : {}),
       };
-    }
-    // Per-board shot-floor options for normalizeScene: kids-genre boards
-    // redistribute sub-1.5s shots (calm-cut pacing); every other board
-    // passes undefined and normalizes exactly as before.
-    function kidsShotOpts(board) {
-      const input = board && board.input ? board.input : {};
-      return isKidsGenre(input.genre, input.genreCustom)
-        ? { minShotSeconds: MIN_KIDS_SHOT_SECONDS, minSceneSeconds: 4 }
-        : undefined;
     }
     // Song upload for the Director's music-video mode: base64 audio -> file
     // in director/ + ffprobe duration (drives the storyboard timeline).
@@ -5924,7 +6385,7 @@ const server = http.createServer(async (req, res) => {
       }
       const originalName = String(body.fileName || "song").slice(0, 120) || "song";
       return json(res, 200, {
-        file, fileName: originalName, durationSeconds: Math.round(durationSeconds),
+        file, fileName: originalName, durationSeconds: Math.round(durationSeconds * 1000) / 1000,
         sizeBytes: buf.length,
       });
     }
@@ -6001,37 +6462,212 @@ const server = http.createServer(async (req, res) => {
       list.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
       return json(res, 200, list);
     }
-    if (p === "/api/director/analyze" && req.method === "POST") {
-      const input = directorValidateInput(await readJson(req));
-      const raw = await llmChatJson({
-        system: DIRECTOR_SYSTEM,
-        user: buildBiblePrompt(input),
-        maxTokens: 8000,
-        temperature: 0.7,
-        timeoutMs: REQUEST_TIMEOUT_MS,
-        rawTag: `_raw_${slug(input.title)}_bible.log`,
+    // Prompt preview for the "Show Prompt" popup: returns EXACTLY the user
+    // prompt the analyze (bible) call will send — no model call, no cost.
+    // The user can edit it there and send the edited text via promptOverride.
+    if (p === "/api/director/prompt-preview" && req.method === "POST") {
+      const bodyRaw = await readJson(req);
+      const input = directorValidateInput(bodyRaw);
+      return json(res, 200, { prompt: buildBiblePrompt(input) });
+    }
+    // Optimize Prompt (Show Prompt popup): the LLM tightens the generated or
+    // user-edited bible prompt — clearer, less redundant, every constraint
+    // kept — and returns it alongside token counts so the user can compare
+    // with the main prompt before applying. Stateless — nothing is saved.
+    // Token counts use the same chars/4 approximation as the board prompt
+    // preview; real optimize-call usage is reported too when the backend
+    // provides it.
+    if (p === "/api/director/optimize-prompt" && req.method === "POST") {
+      const body = await readJson(req);
+      const prompt = String(body.prompt || "").trim();
+      if (prompt.length < 40) return json(res, 400, { error: "nothing to optimize — the prompt is empty or too short" });
+      if (prompt.length > 60000) return json(res, 400, { error: "prompt too long to optimize (60000 character cap)" });
+      const title = String(body.title || "").trim().slice(0, 120);
+      const est = (t) => Math.round(String(t).length / 4);
+      const base = (process.env.LLM_BASE || "").replace(/\/+$/, "");
+      if (!base) throw new Error("LLM_BASE not set — the director needs the local LLM (LM Studio / llama-server).");
+      const d = await llmPostChat(`${base}/v1/chat/completions`, {
+        model: LLM_MODEL,
+        messages: [
+          { role: "system", content: "You are a prompt-optimization assistant for an AI video director. Optimize the given directing prompt: make it clearer, better structured and free of redundancy so a local LLM follows it more reliably. STRICT RULES: keep EVERY constraint, id list, JSON-shape instruction, style lock, duration and placeholder exactly as given; never invent new story details, characters or requirements; never answer the prompt yourself; keep the same language(s). The optimized_prompt value MUST stay PLAIN TEXT in the SAME format as the original prompt — never convert it to JSON, YAML, a table or a summary, never shorten it below half its length, and never wrap the whole prompt in a new data structure. Reply with JSON only: { \"optimized_prompt\": \"<the complete optimized prompt>\" }." },
+          { role: "user", content: JSON.stringify({ ...(title ? { title } : {}), prompt }) },
+        ],
+        temperature: 0.3,
+        max_tokens: 8000,
+        chat_template_kwargs: { enable_thinking: false },
+      }, { tag: "optimize-prompt" });
+      const text = String(d.choices?.[0]?.message?.content ?? "");
+      // Preferred: structured JSON. Fallback: usable plain-text (fences and a
+      // leading label stripped) so a non-JSON reply is never discarded.
+      let optimized = "";
+      try {
+        const raw = stripJson(text);
+        optimized = String(raw.optimized_prompt || raw.optimizedPrompt || raw.prompt || "").trim();
+      } catch {
+        let s = text.trim();
+        const fence = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (fence) s = fence[1].trim();
+        optimized = s.replace(/^optimized[_ ]?prompt\s*:\s*/i, "").trim();
+      }
+      if (!optimized) throw new Error("the optimizer returned an empty prompt — try again");
+      // Guard: a weak model sometimes "optimizes" by converting the prompt
+      // into a JSON data structure (the original is plain text). That output
+      // would break the storyboard if applied — refuse it honestly instead.
+      const originalIsJson = prompt.startsWith("{");
+      const optimizedIsJson = optimized.startsWith("{") && /"\s*:\s*["{[]/.test(optimized.slice(0, 400));
+      if (!originalIsJson && optimizedIsJson)
+        throw new Error("the optimizer converted the prompt into a data structure instead of plain text — try again (or optimize manually)");
+      return json(res, 200, {
+        optimized: optimized.slice(0, 60000),
+        tokens: { original: est(prompt), optimized: est(optimized) },
+        usage: d.usage && typeof d.usage === "object"
+          ? { prompt_tokens: Number(d.usage.prompt_tokens) || null, completion_tokens: Number(d.usage.completion_tokens) || null }
+          : null,
       });
+    }
+    if (p === "/api/director/analyze" && req.method === "POST") {
+      const bodyRaw = await readJson(req);
+      const input = directorValidateInput(bodyRaw);
+      // promptOverride: the user-edited bible prompt from the Show Prompt
+      // popup — sent VERBATIM to the model in place of the generated prompt
+      // (the system prompt, normalization and every downstream stage are
+      // unchanged). Empty/missing = the default generated prompt.
+      const promptOverride = String(bodyRaw?.promptOverride || "").trim();
+      // liveId: client-generated request id — when present the bible call
+      // streams (same payload, stream:true) into a Node-side buffer served
+      // read-only by GET /api/director/analyze-live/:id so the form can show
+      // the backend response live while it generates.
+      const liveId = String(bodyRaw?.liveId || "").trim().slice(0, 64).replace(/[^a-zA-Z0-9._-]/g, "") || null;
+      if (liveId) liveBegin(liveId, { phase: "bible" });
+      let raw;
+      try {
+        const bibleArgs = {
+          system: DIRECTOR_SYSTEM,
+          user: promptOverride || buildBiblePrompt(input),
+          maxTokens: 16000,
+          temperature: 0.7,
+          timeoutMs: REQUEST_TIMEOUT_MS,
+          rawTag: `_raw_${slug(input.title)}_bible.log`,
+        };
+        raw = liveId
+          ? await llmChatJsonLive({ ...bibleArgs, liveId, tag: "bible" })
+          : await llmChatJson(bibleArgs);
+      } finally {
+        if (liveId) liveEnd(liveId);
+      }
       const blueprint = normalizeBlueprint(raw);
       if (!blueprint.characters.length && !blueprint.beats.length)
         throw new Error("director returned an empty blueprint — try again");
       const id = slug(input.title) || `story_${Date.now().toString(36)}`;
+      // The MEANING pass runs right after the bible: every source line is
+      // analysed (language, meaning, visible action, camera) BEFORE any scene
+      // is planned. The deterministic pass is instant; the model enrichment
+      // runs per scene batch (see the /scenes route) so the story is never
+      // blocked by a slow local model.
+      const sourceLines = directorSourceLines({ input, blueprint });
+      const semanticRows = analyzeLinesDeterministic(sourceLines, {
+        language: String(input.semanticsLanguage || "auto"),
+        bible: blueprint,
+        genre: input.genre,
+      });
       const board = writeDirectorBoard({
         id,
         input,
         status: "analyzed",
         blueprint,
+        semantics: {
+          language: String(input.semanticsLanguage || "auto"),
+          source: "deterministic",
+          lines: semanticRows,
+          created_at: new Date().toISOString(),
+        },
         // Chief Director Story Plan: derived from the fresh bible so every
         // downstream stage traces to this authoritative narrative source.
         storyPlan: buildStoryPlan({ input, blueprint }),
         scenes: [],
         sceneCount: sceneCountFor(input.targetSeconds, input.sceneSeconds),
-        styleLock: styleLockFor(input.visualStyle, input.styleCustom),
+        styleLock: styleLockFor(input.visualStyle, input.styleCustom, input.masterPrompt),
         scenarioName: null,
         error: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
       return json(res, 200, board);
+    }
+    {
+      const mAudioTimeline = p.match(/^\/api\/director\/boards\/([^/]+)\/timeline$/);
+      if (mAudioTimeline && ["GET", "PUT"].includes(req.method)) {
+        const id = decodeURIComponent(mAudioTimeline[1]);
+        const board = readDirectorBoard(id);
+        const signature = () => crypto.createHash("sha256").update(JSON.stringify({
+          scenes: board.scenes || [], story: board.input?.story || "", song: board.input?.song || null,
+          sourceAudio: board.input?.sourceAudio || null, transcript: board.input?.songAnalysis?.transcript?.segments || [],
+        })).digest("hex");
+        if (req.method === "GET") {
+          if (!board.audioTimeline || board.audioTimeline.schema_version !== 2 || board.audioTimeline.source_signature !== signature()) {
+            board.audioTimeline = buildAudioTimeline(board);
+            board.audioTimeline.source_signature = signature();
+            writeDirectorBoard(board);
+          }
+          return json(res, 200, board.audioTimeline);
+        }
+        const incoming = await readJson(req);
+        const expectedDuration = audioTimelineDuration(board);
+        if (Number(incoming.duration_seconds) !== Number(board.audioTimeline?.duration_seconds || expectedDuration))
+          return json(res, 400, { error: "timeline duration is locked to the source audio" });
+        const shots = Array.isArray(incoming.shots) ? incoming.shots : [];
+        const ids = new Set();
+        const normalized = shots.map((shot, index) => {
+          const shotId = String(shot.shot_id || `shot-${index + 1}`).slice(0, 80);
+          if (ids.has(shotId)) throw new Error(`duplicate shot_id: ${shotId}`);
+          ids.add(shotId);
+          const start = Math.max(0, Number(shot.start_seconds) || 0);
+          const end = Number(shot.end_seconds);
+          return {
+            ...shot, shot_id: shotId,
+            start_seconds: Math.round(start * 1000) / 1000,
+            end_seconds: Math.round(end * 1000) / 1000,
+            duration_seconds: Math.round((end - start) * 1000) / 1000,
+            audio_type: ["instrumental", "vocal", "dialogue", "mixed"].includes(shot.audio_type) ? shot.audio_type : "mixed",
+            voice_ids: Array.isArray(shot.voice_ids) ? shot.voice_ids.map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 8) : [],
+            character_ids: Array.isArray(shot.character_ids) ? shot.character_ids.map(x => String(x).trim().slice(0, 120)).filter(Boolean).slice(0, 16) : [],
+            character_reference_ids: Array.isArray(shot.character_reference_ids) ? shot.character_reference_ids.map(x => String(x).trim().slice(0, 120)).filter(Boolean).slice(0, 16) : [],
+            lyrics_or_dialogue: String(shot.lyrics_or_dialogue || "").slice(0, 4000),
+            aligned_vocal_cues: String(shot.lyrics_or_dialogue || "").trim() ? [{
+              start_seconds: Math.round(start * 1000) / 1000,
+              end_seconds: Math.round(end * 1000) / 1000,
+              text: String(shot.lyrics_or_dialogue || "").trim().slice(0, 4000),
+              voice_ids: Array.isArray(shot.voice_ids) ? shot.voice_ids.map(x => String(x).trim()).filter(Boolean).slice(0, 8) : [],
+            }] : [],
+            action: String(shot.action || "").slice(0, 1500),
+            image_generation_prompt: String(shot.image_generation_prompt || "").slice(0, 5000),
+            video_motion_prompt: String(shot.video_motion_prompt || "").slice(0, 5000),
+            lip_sync_required: shot.lip_sync_required === true,
+          };
+        });
+        const timeline = {
+          ...incoming,
+          director_mode: board.input?.song ? "music_video" : "story_video",
+          duration_seconds: expectedDuration,
+          coverage: { start_seconds: 0, end_seconds: expectedDuration, complete: true },
+          shots: normalized, source_signature: signature(), status: "review",
+        };
+        const errors = validateAudioTimeline(timeline, expectedDuration);
+        if (errors.length) return json(res, 400, { error: errors.join("; "), validation: errors });
+        const syncResult = syncAudioTimelineToScenes(board.scenes, timeline, {
+          shotFloor: 0.5,
+          sceneFloor: 1,
+        });
+        const storyboardSync = syncResult.synced;
+        board.audioTimeline = timeline;
+        timeline.storyboard_sync = storyboardSync ? "synced" : "timeline_only";
+        const syncWarning = syncResult.reason;
+        if (!storyboardSync && !(timeline.warnings || []).includes(syncWarning)) timeline.warnings = [...(timeline.warnings || []), syncWarning];
+        if (storyboardSync) timeline.warnings = (timeline.warnings || []).filter(w => w !== syncWarning);
+        timeline.source_signature = signature();
+        writeDirectorBoard(board);
+        return json(res, 200, timeline);
+      }
     }
     {
       // Board-scoped routes: GET/PUT/DELETE /api/director/boards/:id (board id
@@ -6090,7 +6726,13 @@ const server = http.createServer(async (req, res) => {
             }
             if (typeof patch.input.styleCustom === "string") {
               board.input.styleCustom = patch.input.styleCustom.trim().slice(0, 120);
-              try { board.styleLock = styleLockFor(board.input.visualStyle, board.input.styleCustom); } catch { /* keep old lock */ }
+              try { board.styleLock = styleLockFor(board.input.visualStyle, board.input.styleCustom, board.input.masterPrompt); } catch { /* keep old lock */ }
+            }
+            if (typeof patch.input.masterPrompt === "string") {
+              board.input.masterPrompt = patch.input.masterPrompt.trim().slice(0, 2000);
+              // The Master Prompt is THE style lock when set — refresh so
+              // future batches ground on the edited text.
+              try { board.styleLock = styleLockFor(board.input.visualStyle, board.input.styleCustom, board.input.masterPrompt); } catch { /* keep old lock */ }
             }
             // Song boards lock their timeline to the uploaded song length —
             // ignore target edits there (scene pacing stays editable).
@@ -6166,7 +6808,7 @@ const server = http.createServer(async (req, res) => {
             }
           }
           if (Array.isArray(patch.scenes)) {
-            board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds, kidsShotOpts(board)));
+            board.scenes = patch.scenes.map((s, i) => normalizeScene(s, i + 1, board.input.sceneSeconds));
             // Scene edits saved onto an independent-shots board stay
             // independent even if the edited text reintroduces handoffs.
             if (board.input.chainContinuity !== true) {
@@ -6215,6 +6857,23 @@ const server = http.createServer(async (req, res) => {
         tail: st.text.slice(-900),
       });
     }
+    // Analyze live stream (read-only): the bible LLM response streaming RIGHT
+    // NOW for a pre-board Generate request (no board exists yet, so the
+    // buffer is keyed by the client-generated liveId sent in the analyze
+    // body). Same rules as the board live view — polls a Node-side buffer
+    // only; the model is never touched. { active:false } when idle/unknown.
+    if (p.match(/^\/api\/director\/analyze-live\/[^/]+$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const st = directorLive.get(id);
+      if (!st || !st.active) return json(res, 200, { active: false, text: "" });
+      // Combined view: the model's streaming reasoning (thinking phase) then
+      // the real response — so the live textarea shows activity from the
+      // first token, not minutes of silence while a thinking model thinks.
+      const combined = st.reasoning
+        ? `${st.reasoning}\n\n――― response ―――\n\n${st.text}`
+        : st.text;
+      return json(res, 200, { active: true, text: combined.slice(-20000) });
+    }
     // Shared batch planner: computes EXACTLY what the next Continue would
     // send to the LLM (same count, budget, line window, prior dialogue) —
     // used by POST .../scenes for the real call and by GET
@@ -6257,12 +6916,15 @@ const server = http.createServer(async (req, res) => {
       }
       // planBatchHint: after a total stall the board remembers a small batch
       // size, so the next Continue goes straight to small batches instead of
-      // failing a full 10-scene batch again. Cleared on the next clean batch.
+      // failing a full batch again. Cleared on the next clean batch.
       const hinted = Math.floor(Number(board.planBatchHint));
-      const hintCap = hinted >= 1 ? Math.min(hinted, SCENE_BATCH) : SCENE_BATCH;
+      const hintCap = hinted >= 1 ? Math.min(hinted, SCENE_BATCH_MAX) : SCENE_BATCH;
       const wanted = Math.floor(Number(countOverride));
-      const n = Number.isFinite(wanted) && wanted >= 1
-        ? Math.min(wanted, SCENE_BATCH, remaining)
+      // User-chosen batch size (AI Story Director UI dropdown): 1..SCENE_BATCH_MAX,
+      // still capped by what is left of the plan. Falls back to the board's
+      // stall hint, then to the default SCENE_BATCH when nothing was chosen.
+      const n = Number.isFinite(wanted) && wanted >= SCENE_BATCH_MIN
+        ? Math.min(wanted, SCENE_BATCH_MAX, remaining)
         : Math.min(hintCap, remaining);
       // This batch's time slice: cover ~n average-scenes worth of story,
       // never budgeting far past the remaining timeline.
@@ -6294,6 +6956,9 @@ const server = http.createServer(async (req, res) => {
       let lineRange = [];
       try {
         const song = board.input && board.input.song;
+        const transcriptSegments = Array.isArray(board.input?.songAnalysis?.transcript?.segments)
+          ? board.input.songAnalysis.transcript.segments : [];
+        const withWhisperTimes = (lines) => timeLinesFromTranscript(lines, transcriptSegments, planTarget);
         if (song && song.hasLyrics !== false) {
           const parsed = parseLyricLines(board.input.story);
           if (parsed.length) {
@@ -6302,14 +6967,17 @@ const server = http.createServer(async (req, res) => {
             const bibleLines = Array.isArray(board.blueprint.lyric_lines) && board.blueprint.lyric_lines.length
               ? board.blueprint.lyric_lines
               : parsed;
-            lyricTiming = estimateLyricTiming(
+            const timedBible = withWhisperTimes(bibleLines);
+            const timedParsed = timedBible.length ? timedBible : withWhisperTimes(parsed);
+            lyricTiming = timedParsed.length ? timedParsed : estimateLyricTiming(
               bibleLines,
               song.durationSeconds || board.input.targetSeconds);
           }
         } else if (planTarget > 0) {
           const storyLines = parseLyricLines(board.input.story || "");
           if (storyLines.length) {
-            lyricTiming = estimateLyricTiming(storyLines, planTarget);
+            const timedStory = withWhisperTimes(storyLines);
+            lyricTiming = timedStory.length ? timedStory : estimateLyricTiming(storyLines, planTarget);
           }
         }
         if (lyricTiming.length && planTarget > 0) {
@@ -6348,6 +7016,68 @@ const server = http.createServer(async (req, res) => {
     // configurable 0–100 score with explicit rule-based breakdown (lyric
     // coverage, action clarity, continuity, timing, prompt completeness) plus
     // the structural story-board gate. Read-only; issues are actionable.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/semantics$/) && req.method === "GET") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      return json(res, 200, {
+        board_id: id,
+        semantics: board.semantics || { language: "auto", lines: [], source: "none" },
+        issues: boardSemanticIssues(board),
+      });
+    }
+    // Run (or re-run) the meaning analysis. body: { useModel?: boolean }
+    // The model pass is opt-in per call (it is slow on a local model) — the
+    // deterministic pass always runs and is stored either way.
+    if (p.match(/^\/api\/director\/boards\/[^/]+\/semantics$/) && req.method === "POST") {
+      const id = decodeURIComponent(p.split("/")[4] || "");
+      const board = readDirectorBoard(id);
+      const body = await readJson(req).catch(() => ({}));
+      const language = String(body.language || (board.input && board.input.semanticsLanguage) || "auto");
+      const lines = directorSourceLines(board);
+      if (!lines.length) {
+        return json(res, 400, { error: "this board has no source lines to analyse" });
+      }
+      let rows = analyzeLinesDeterministic(lines, {
+        language, bible: board.blueprint, genre: board.input && board.input.genre,
+      });
+      let source = "deterministic";
+      let warning = "";
+      if (body.useModel !== false) {
+        const enriched = await enrichSemanticsWithModel(lines, {
+          language, bible: board.blueprint, genre: board.input && board.input.genre,
+          styleLock: board.styleLock || "",
+        });
+        if (enriched.rows.length) { rows = enriched.rows; source = enriched.source; }
+        warning = enriched.warning || "";
+      }
+      // The song boards: the measured audio timing rides along when a
+      // transcript exists (never a fabricated timestamp).
+      const transcriptSegments = (board.input && board.input.songAnalysis && board.input.songAnalysis.transcript
+        && board.input.songAnalysis.transcript.segments) || [];
+      if (transcriptSegments.length) {
+        rows = alignSemanticsToTiming(rows, {
+          transcriptSegments,
+          duration: Number(board.input && board.input.song && board.input.song.durationSeconds) || 0,
+        });
+      }
+      board.semantics = {
+        language,
+        source,
+        warning,
+        lines: rows,
+        created_at: new Date().toISOString(),
+      };
+      const attached = attachSemanticsToScenes(board, board.semantics);
+      board.semantic_issues = attached.issues;
+      const saved = writeDirectorBoard(board);
+      return json(res, 200, {
+        board_id: id,
+        semantics: saved.semantics,
+        attached: attached.attached,
+        repaired: attached.repaired,
+        issues: attached.issues,
+      });
+    }
     if (p.match(/^\/api\/director\/boards\/[^/]+\/validate$/) && req.method === "GET") {
       const id = decodeURIComponent(p.split("/")[4] || "");
       const board = readDirectorBoard(id);
@@ -6366,7 +7096,22 @@ const server = http.createServer(async (req, res) => {
         issues: scored.issues,
         coverage: scored.coverage,
         errors: gate.errors,
-        warnings: [...gate.warnings, ...lyric, ...kidsContentWarnings(board), ...learningReviewChecklist(board), ...validateBibleAnatomy(board.blueprint), ...validateKidsScenePhysics(board)],
+        warnings: [...gate.warnings, ...lyric, ...learningReviewChecklist(board), ...validateBibleAnatomy(board.blueprint)],
+        // The meaning layer: does every scene really show its source line?
+        semantics: (board.semantics && board.semantics.lines ? board.semantics.lines : []).slice(0, 200).map((r) => ({
+          line_id: r.line_id,
+          source_text: r.source_text,
+          language: r.language,
+          interpretation: r.interpretation,
+          line_kind: r.line_kind,
+          action_plan: (r.action_plan || []).map((a) => ({
+            action: a.action, body_part: a.body_part, grounded: a.grounded !== false,
+          })),
+          camera: r.camera || null,
+          beats: r.beats || [],
+          warnings: r.warnings || [],
+        })),
+        semanticIssues: boardSemanticIssues(board),
         continuity: detectContinuityIssues(board.scenes),
         genreNote: genreDirectingNotes(board.input && board.input.genre, board.input && board.input.genreCustom),
       });
@@ -6499,7 +7244,14 @@ const server = http.createServer(async (req, res) => {
       const picked = board.scenes.filter((s) => targets.includes(Number(s.scene_number)));
       if (!picked.length) return json(res, 400, { error: "no matching scenes for scene_numbers" });
       const user = buildDirectionRepairPrompt({
-        input: board.input, blueprint: board.blueprint, scenes: picked, issues: scored.issues,
+        input: board.input, blueprint: board.blueprint, scenes: picked,
+        // The meaning of the flagged lines: a repair restores the LINE's
+        // meaning, not just the flag.
+        issues: [...scored.issues, ...boardSemanticIssues(board)],
+        semantics: semanticsForBatch(board, picked.flatMap((s) => [
+          { lyric_line_id: s.line_from },
+          { lyric_line_id: s.line_to },
+        ]).filter((l) => l.lyric_line_id)),
       });
       const raw = await llmChatJson({
         system: DIRECTOR_SYSTEM, user, maxTokens: 6000, temperature: 0.5,
@@ -6507,7 +7259,7 @@ const server = http.createServer(async (req, res) => {
       });
       const fixed = (Array.isArray(raw.scenes) ? raw.scenes : []).map((s, i) => {
         const num = Number(s && s.scene_number) || targets[i] || 0;
-        const normed = normalizeScene(s, num || 1, board.input && board.input.sceneSeconds, kidsShotOpts(board));
+        const normed = normalizeScene(s, num || 1, board.input && board.input.sceneSeconds);
         // Same post-processing as a planned batch: silent-film boards stay
         // silent, independent-shots boards stay independent, lyric_text is
         // re-joined, and bible-id grounding drops hallucinated cast — so a
@@ -6537,6 +7289,8 @@ const server = http.createServer(async (req, res) => {
       });
       const byNum = new Map(fixed.map((s) => [Number(s.scene_number), s]));
       board.scenes = board.scenes.map((s) => byNum.get(Number(s.scene_number)) || s);
+      // The repaired scenes carry the meaning again.
+      attachSemanticsToScenes(board, board.semantics);
       board.warn = null;
       const next = scoreDirectorPlan({ ...board, blueprint: { ...(board.blueprint || {}), lyric_lines: boardLyricLines(board) } });
       return json(res, 200, { board_id: id, repaired: targets, score: next.score, board: writeDirectorBoard(board) });
@@ -6547,8 +7301,6 @@ const server = http.createServer(async (req, res) => {
       if (!board.blueprint) return json(res, 400, { error: "analyze the story first" });
       const anatomyErrors = validateBibleAnatomy(board.blueprint);
       if (anatomyErrors.length) return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
-      const contentErrors = kidsContentWarnings(board);
-      if (contentErrors.length) return json(res, 400, { error: contentErrors[0], errors: contentErrors });
       const countQ = Number(u.searchParams.get("count"));
       const spec = nextSceneBatchSpec(board, Number.isFinite(countQ) ? countQ : undefined, id);
       if (spec.ready) {
@@ -6592,13 +7344,52 @@ const server = http.createServer(async (req, res) => {
         if (anatomyErrors.length) {
           return json(res, 400, { error: anatomyErrors[0], errors: anatomyErrors });
         }
-        const contentErrors = kidsContentWarnings(board);
-        if (contentErrors.length) return json(res, 400, { error: contentErrors[0], errors: contentErrors });
         const body = await readJson(req).catch(() => ({}));
         const spec = nextSceneBatchSpec(board, body.count, id);
         if (spec.ready) return json(res, 200, spec.write ? writeDirectorBoard(spec.board) : spec.board);
         const { done, planTarget, prog, avgScene, remaining, n, budget, beats, prevScene, priorDialogue, lyricTiming, lineRange } = spec;
         const scenesRawTag = `_raw_${id}_scenes_${done + 1}.log`;
+        // The MEANING pass for THIS batch: the configured model enriches the
+        // deterministic reading of the lines this batch covers (the meaning
+        // the scenes are planned FROM). A failure keeps the deterministic
+        // analysis — the batch is never blocked by a slow model.
+        const batchLines = arr(lineRange).length ? arr(lineRange) : arr(lyricTiming);
+        const semanticLanguage = String((board.input && board.input.semanticsLanguage) || "auto");
+        const deterministicRows = analyzeLinesDeterministic(
+          batchLines.map((l) => ({
+            id: Number(l.lyric_line_id || l.line_id) || 0,
+            text: String(l.lyric_text ?? l.text ?? l.line ?? ""),
+          })).filter((l) => l.text),
+          { language: semanticLanguage, bible: board.blueprint, genre: board.input && board.input.genre },
+        );
+        let semanticRows = deterministicRows;
+        if (deterministicRows.length && body.useModel !== false) {
+          const enriched = await enrichSemanticsWithModel(
+            deterministicRows.map((r) => ({ id: r.line_id, text: r.source_text })),
+            {
+              language: semanticLanguage, bible: board.blueprint,
+              genre: board.input && board.input.genre, styleLock: board.styleLock || "",
+            },
+          );
+          if (enriched.rows.length) semanticRows = enriched.rows;
+        }
+        // The board keeps the enriched meaning (the UI shows it, the next
+        // batch reuses it).
+        if (arr(board.semantics && board.semantics.lines).length) {
+          const known = new Map(board.semantics.lines.map((r) => [Number(r.line_id), r]));
+          for (const row of semanticRows) known.set(Number(row.line_id), row);
+          board.semantics = {
+            ...board.semantics,
+            lines: [...known.values()].sort((a, b) => Number(a.line_id) - Number(b.line_id)),
+          };
+        } else {
+          board.semantics = {
+            language: semanticLanguage,
+            source: semanticRows.length ? "deterministic" : "none",
+            lines: semanticRows,
+            created_at: new Date().toISOString(),
+          };
+        }
         // Huge batches can get cut off mid-array (model hits max_tokens /
         // context). Salvage path: bind every COMPLETED scene from the raw
         // text and continue the plan from there, instead of 500ing with
@@ -6634,6 +7425,9 @@ const server = http.createServer(async (req, res) => {
               plannedSeconds: prog.plannedSeconds, targetSeconds: planTarget || null,
               totalLines: lyricTiming.length || null,
               compact: attemptCompact,
+              // The meaning of the lines this batch covers (the scenes are
+              // planned FROM the meaning, not from the raw line).
+              semantics: semanticRows,
             }),
             maxTokens: 16000,
             temperature: 0.5,
@@ -6663,14 +7457,14 @@ const server = http.createServer(async (req, res) => {
             salvageNote = `Partial batch: kept ${salvaged.length} of ${attemptN} scenes (the AI output was cut off) — press Continue to plan the rest.`;
             break;
           }
-          if (attempt === 1 && attemptN > 1 && /truncated|unbalanced/i.test(msg)) {
+          if (attempt === 1 && attemptN > 1 && /truncated|unbalanced|empty response/i.test(msg)) {
             attemptN = Math.max(1, Math.floor(attemptN / 2));
             attemptTag = scenesRawTag.replace(/\.log$/, `_retry${attemptN}.log`);
-            console.warn(`[director:${id}] batch of ${n} truncated with 0 usable scenes — retrying with ${attemptN} (raw kept at director/${scenesRawTag})`);
-            liveReset(id, `(batch of ${n} was cut off with nothing usable — retrying with ${attemptN} scenes)`);
+            console.warn(`[director:${id}] batch of ${n} truncated/empty with 0 usable scenes — retrying with ${attemptN} (raw kept at director/${scenesRawTag})`);
+            liveReset(id, `(batch of ${n} was cut off/empty with nothing usable — retrying with ${attemptN} scenes)`);
             continue;
           }
-          if (attempt === 2 && attemptN > 1 && /truncated|unbalanced/i.test(msg)) {
+          if (attempt === 2 && attemptN > 1 && /truncated|unbalanced|empty response/i.test(msg)) {
             // Last resort: exactly one scene with terse prompts — fits even a
             // tiny output window. Same schema, so it normalizes/grounds equally.
             attemptN = 1;
@@ -6686,7 +7480,7 @@ const server = http.createServer(async (req, res) => {
           // failures — transport/timeout errors (which write no raw file) keep
           // their own message so the UI doesn't mislead.
           board.planBatchHint = 1;
-          if (/truncated|unbalanced|parse failed|no JSON/i.test(msg)) {
+          if (/truncated|unbalanced|parse failed|no JSON|empty response/i.test(msg)) {
             board.error = `Scene planning stalled at scene ${done + 1}: the model output was unusable (${msg.slice(0, 120)}; raw: director/${attemptTag}). The output limit is on the LLM side — raise Context Length / Max Tokens in LM Studio (or load a larger model), then press Continue.`;
           } else {
             board.error = `Scene planning stalled at scene ${done + 1}: ${msg.slice(0, 250)} — partial scenes are kept, fix the cause and press Continue.`;
@@ -6710,7 +7504,7 @@ const server = http.createServer(async (req, res) => {
       const landed = [];
       const groundNotes = [];
       for (let i = 0; i < got.length && done + landed.length < board.sceneCount; i++) {
-        const normed = normalizeScene(got[i], done + landed.length + 1, board.input.sceneSeconds, kidsShotOpts(board));
+        const normed = normalizeScene(got[i], done + landed.length + 1, board.input.sceneSeconds);
         // Silent-film board: the model sometimes still emits lines despite the
         // DISABLED instruction — strip them server-side so Generate stays
         // silent (no voice, no lip-sync, no clip growth).
@@ -6817,6 +7611,15 @@ const server = http.createServer(async (req, res) => {
         const warnBits = [];
         if (dropped > 0) warnBits.push(`${dropped} repeat scene${dropped === 1 ? "" : "s"} skipped (same title + action as an earlier scene)`);
         if (groundNotes.length) warnBits.push(...groundNotes);
+        // The MEANING lands on the scenes: every scene carries its source
+        // line, the interpretation, the visible action plan, the camera
+        // rationale and the beats. A scene that does not show its line is
+        // repaired deterministically and reported (never silently accepted).
+        const semanticAttach = attachSemanticsToScenes(board, board.semantics);
+        for (const issue of semanticAttach.issues.slice(0, 4)) {
+          console.warn(`[director:${id}] meaning: ${issue}`);
+          if (warnBits.length < 5) warnBits.push(issue);
+        }
         if (warnBits.length > 4) warnBits.splice(4, warnBits.length - 4, `…and ${warnBits.length - 4} more grounding notes (see server log)`);
         if (warnBits.length) {
           for (const w of warnBits) console.warn(`[director:${id}] grounding: ${w}`);
@@ -7068,7 +7871,7 @@ const server = http.createServer(async (req, res) => {
         rawTag: `_raw_${id}_regen_${scene.scene_number}.log`,
       });
       const fresh = raw.scene && typeof raw.scene === "object" ? raw.scene : raw;
-      board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds, kidsShotOpts(board));
+      board.scenes[index] = normalizeScene(fresh, scene.scene_number, scene.duration_seconds);
       if (board.input.includeDialogue === false) board.scenes[index].dialogue = [];
       if (board.input.chainContinuity !== true) scrubSceneContinuity(board.scenes[index]);
       board.error = null;
@@ -7202,14 +8005,6 @@ const server = http.createServer(async (req, res) => {
           warnings: [],
         });
       }
-      const kidsErrors = [...kidsContentWarnings(board), ...validateKidsScenePhysics(board)];
-      if (kidsErrors.length) {
-        return json(res, 400, {
-          error: `kids-content review failed: ${kidsErrors[0]}`,
-          errors: kidsErrors.slice(0, 20),
-          warnings: [],
-        });
-      }
       // Story QA gate (§21 + Chief Director approveGate): same checklist as
       // the Story page client, so a board with unknown speakers, missing
       // emotion/expression or broken scene order cannot reach
@@ -7256,6 +8051,834 @@ const server = http.createServer(async (req, res) => {
       // /api/scenario/:name) — identical semantics to the Scenario Editor
       // Save — then opens the workspace for standard generation.
       return json(res, 200, { name: target, config, partial, migrated: board.scenes.length, sceneCount: board.sceneCount });
+    }
+    // ------------------------------------------------- Sanskriti Kids Studio
+    // A PROJECT LAYER on top of the EXISTING pipeline (never a parallel
+    // renderer): the studio owns the kids-specific data (project brief,
+    // Director Plan, mirrored scenes/characters, assets, jobs) in its own
+    // `Sanskriti_kids` database, while story analysis, scene planning,
+    // approval, image/video generation, dialogue and the final cut all run
+    // through the shared Director + workspace engines unchanged.
+    const kidsDbFor = (store) => (store === "pg" ? kidsPool : kidsDb);
+    if (p === "/api/kids/health" && req.method === "GET") {
+      const store = kidsStore();
+      let comfy = { up: false };
+      try { comfy = await comfyStatus(); } catch (e) { comfy = { up: false, error: String(e.message || e) }; }
+      return json(res, 200, {
+        db: { up: !!store, store: store || null, database: KIDS_DB_NAME },
+        comfy: { up: !!comfy.up, error: comfy.error || null },
+      });
+    }
+    if (p === "/api/kids/dashboard" && req.method === "GET") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const payload = await kidsDashboard(store, kidsDbFor(store));
+      // Images / videos / completed cuts are counted from the REAL generated
+      // files on disk (the same source the Home dashboard uses) for every
+      // kids project that was approved into a scenario — never a guess.
+      const projects = await kidsListProjects(store, kidsDbFor(store));
+      const assets = [];
+      for (const project of projects) {
+        if (!project.scenario_name) continue;
+        const dirs = allDirsFor(folderSlug(project.scenario_name));
+        const cov = diskCoverageFor(dirs, null);
+        for (const n of cov.kf) assets.push({ kind: "image", status: "COMPLETED", project_id: project.id });
+        for (const n of cov.clips) assets.push({ kind: "video", status: "COMPLETED", project_id: project.id });
+        if (cov.final) assets.push({ kind: "final", status: "COMPLETED", project_id: project.id });
+        if (cov.ref) assets.push({ kind: "reference", status: "COMPLETED", project_id: project.id });
+      }
+      payload.metrics = kidsDashboardMetrics({
+        projects,
+        scenes: payload.scenes || [],
+        characters: payload.characters || [],
+        assets,
+        jobs: payload.jobs || [],
+      });
+      return json(res, 200, payload);
+    }
+    if (p === "/api/kids/options" && req.method === "GET") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      return json(res, 200, await kidsOptions(store, kidsDbFor(store)));
+    }
+    if (p === "/api/kids/options" && req.method === "PUT") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req);
+      const key = String(body.key || "");
+      if (!KIDS_OPTION_KEYS.includes(key)) return json(res, 400, { error: `unknown option list "${key}"` });
+      const values = Array.isArray(body.values) ? body.values : [];
+      if (!values.length) return json(res, 400, { error: "the option list cannot be empty" });
+      await kidsSetOptions(store, kidsDbFor(store), key, values);
+      return json(res, 200, await kidsOptions(store, kidsDbFor(store)));
+    }
+    if (p === "/api/kids/projects" && req.method === "GET") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      return json(res, 200, await kidsListProjects(store, kidsDbFor(store)));
+    }
+    if (p === "/api/kids/projects" && req.method === "POST") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req);
+      const options = await kidsOptions(store, kidsDbFor(store));
+      const project = normalizeKidsProject(body, { options });
+      const check = validateKidsProject(project);
+      if (check.errors.length) return json(res, 400, { error: check.errors[0], errors: check.errors });
+      const id = kidsSlug(project.title, `kids_${Date.now().toString(36)}`);
+      const name = `${id}${await kidsProjectNameExists(store, kidsDbFor(store), id) ? `_${Date.now().toString(36)}` : ""}`;
+      // The measured duration of the uploaded audio rides along in the
+      // metadata — the audio stage needs it (ffprobe may be unavailable).
+      const audioDuration = Number(body.audio_duration_seconds);
+      const metadata = body.audio_duration_seconds
+        ? { audio: { duration_seconds: audioDuration, uploaded_at: new Date().toISOString() } }
+        : {};
+      const row = await kidsInsertProject(store, kidsDbFor(store), {
+        id: name, name, ...project, board_id: null, scenario_name: null, metadata,
+      });
+      return json(res, 200, { project: row, warnings: check.warnings });
+    }
+    // The studio jobs (story, lyrics, audio analysis, reference stills) — the
+    // panels poll this to show the real progress of a running stage.
+    if (p === "/api/kids/jobs" && req.method === "GET") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const q = Object.fromEntries(new URL(req.url, "http://x").searchParams.entries());
+      const rows = await kidsListJobs(store, kidsDbFor(store), q.project_id ? String(q.project_id) : null);
+      const kind = q.kind ? String(q.kind) : "";
+      return json(res, 200, { jobs: kind ? rows.filter((j) => j.kind === kind) : rows });
+    }
+    // --- The production pipeline catalog ---------------------------------
+    // The 16 stages with their REAL dependencies plus the honest availability
+    // of every service the stage depends on (an offline Whisper or a missing
+    // lip-sync engine is reported as unavailable, never assumed).
+    if (p === "/api/kids/pipeline" && req.method === "GET") {      const [llm, comfy] = await Promise.all([
+        llmStatus().catch(() => ({ up: false })),
+        comfyStatus().catch(() => ({ up: false })),
+      ]);
+      const whisperReady = Boolean(String(process.env.WHISPER_CPP_BIN || "").trim()
+        && String(process.env.WHISPER_MODEL || "").trim());
+      const lipsyncReady = Boolean(String(process.env.EASY_WAV2LIP_DIR || "").trim()
+        || String(process.env.EASY_WAV2LIP_PYTHON || "").trim());
+      return json(res, 200, {
+        stages: KIDS_PIPELINE_STAGES,
+        services: {
+          llm: { up: !!(llm && llm.up), model: LLM_MODEL, error: (llm && llm.error) || null },
+          comfyui: { up: !!(comfy && comfy.up), error: (comfy && comfy.error) || null },
+          whisper: { up: whisperReady, note: whisperReady ? "local whisper.cpp" : "set WHISPER_CPP_BIN and WHISPER_MODEL for transcription" },
+          tts: { up: true, note: "edge-tts voices" },
+          lipsync: { up: lipsyncReady, note: lipsyncReady ? "Easy-Wav2Lip" : "set EASY_WAV2LIP_DIR / EASY_WAV2LIP_PYTHON" },
+          ffmpeg: { up: true },
+        },
+      });
+    }
+    // --- The reusable asset library (characters, locations, props) --------
+    if (p === "/api/kids/library" && req.method === "GET") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const q = Object.fromEntries(new URL(req.url, "http://x").searchParams.entries());
+      const rows = await kidsListLibrary(store, kidsDbFor(store), {
+        scope: q.scope ? String(q.scope) : null,
+        kind: q.kind ? String(q.kind) : null,
+      });
+      // The generated reference stills travel with the rows (one query).
+      const allFiles = await kidsListAllLibraryFiles(store, kidsDbFor(store));
+      const byAsset = new Map();
+      for (const f of allFiles) {
+        if (!byAsset.has(f.asset_id)) byAsset.set(f.asset_id, []);
+        byAsset.get(f.asset_id).push(f);
+      }
+      return json(res, 200, {
+        assets: rows.map((a) => ({ ...a, files: byAsset.get(a.id) || [] })),
+        kinds: KIDS_LIBRARY_KINDS,
+        categories: KIDS_LIBRARY_CATEGORIES,
+      });
+    }
+    if (p === "/api/kids/library" && req.method === "POST") {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const body = await readJson(req);
+      const kind = KIDS_LIBRARY_KINDS.includes(String(body.kind)) ? String(body.kind) : "character";
+      const asset = normalizeKidsLibraryAsset(body, { kind });
+      if (!asset.name) return json(res, 400, { error: "the asset needs a name" });
+      const projectId = body.project_id ? String(body.project_id) : null;
+      if (projectId) {
+        const db = kidsDbFor(store);
+        const project = await kidsGetProject(store, db, projectId);
+        if (!project) return json(res, 404, { error: "no such project" });
+      }
+      const row = await kidsInsertLibraryAsset(store, kidsDbFor(store), {
+        ...asset,
+        scope: projectId || "shared",
+        project_id: projectId,
+      });
+      return json(res, 200, { asset: row });
+    }
+    if (p.startsWith("/api/kids/library/")) {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const db = kidsDbFor(store);
+      const segs = p.split("/");
+      const id = Number(pathName(segs[4] || ""));
+      if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: "bad library asset id" });
+      const existing = await kidsGetLibraryAsset(store, db, id);
+      if (!existing) return json(res, 404, { error: "no such library asset" });
+      // --- Generate the reference still (the Flux Reference Image workflow) --
+      if (segs[5] === "generate" && req.method === "POST") {
+        const body = await readJson(req).catch(() => ({}));
+        const prompt = String(existing.prompt || "").trim();
+        if (!prompt) {
+          return json(res, 400, { error: "this asset has no saved prompt — write one first" });
+        }
+        const workflow = isImageWorkflowId(body.workflow) ? String(body.workflow) : DEFAULT_IMAGE_WORKFLOW;
+        const jobId = `kids_ref_${id}_${Date.now().toString(36)}`;
+        await kidsUpsertJob(store, db, {
+          id: jobId, project_id: existing.scope === "shared" ? null : existing.scope,
+          kind: "library_reference", status: "PENDING", error_message: null,
+          // The prompt travels VERBATIM — the workflow is used as authored.
+          metadata: { asset_id: id, workflow, prompt },
+        });
+        void kidsPumpJobs();
+        return json(res, 202, {
+          job: { id: jobId, kind: "library_reference", status: "PENDING" },
+          message: "the reference still is queued — the prompt is passed exactly as saved",
+        });
+      }
+      if (segs[5] === "files" && req.method === "GET") {
+        return json(res, 200, { files: await kidsListLibraryFiles(store, db, id) });
+      }
+      if (req.method === "PUT") {
+        const body = await readJson(req);
+        if (existing.locked === true && body.locked !== true) {
+          return json(res, 409, { error: "this asset is locked — unlock it before editing" });
+        }
+        const patch = normalizeKidsLibraryAsset({ ...existing, ...body }, { kind: existing.kind });
+        const updated = await kidsUpdateLibraryAsset(store, db, id, {
+          name: patch.name,
+          category: patch.category,
+          description: patch.description,
+          tags: patch.tags,
+          prompt: patch.prompt,
+          reference_image: patch.reference_image,
+          appearance: patch.appearance,
+          clothing: patch.clothing,
+          colors: patch.colors,
+          personality: patch.personality,
+          voice: patch.voice,
+          movement: patch.movement,
+          age_appearance: patch.age_appearance,
+          version: patch.version,
+          status: patch.status,
+          locked: body.locked === undefined ? existing.locked : body.locked === true,
+        });
+        return json(res, 200, { asset: updated });
+      }
+      if (req.method === "DELETE") {
+        await kidsDeleteLibraryAsset(store, db, id);
+        return json(res, 200, { ok: true });
+      }
+    }    if (p.startsWith("/api/kids/projects/")) {
+      const store = kidsStore();
+      if (!store) return json(res, 503, { error: "database unavailable" });
+      const db = kidsDbFor(store);
+      // "/api/kids/projects/<id>[/<rest>]" — segment 4 is the id, 5+ the rest.
+      const segs = p.split("/");
+      const id = pathName(segs[4] || "");
+      const rest = segs.slice(5).join("/");
+      if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) return json(res, 400, { error: "bad project id" });
+      const project = await kidsGetProject(store, db, id);
+      if (!project) return json(res, 404, { error: "no such project" });
+      // --- Director Plan ---------------------------------------------------
+      if (rest === "plan" && req.method === "GET") {
+        const plan = await kidsGetPlan(store, db, id);
+        return json(res, 200, { plan, history: await kidsListPlans(store, db, id) });
+      }
+      if (rest === "plan" && req.method === "PUT") {
+        // An APPROVED plan must never be silently overwritten — an explicit
+        // unlock is required (the same discipline the Devotional library uses).
+        const current = await kidsGetPlan(store, db, id);
+        const body = await readJson(req);
+        const guard = planEditGuard(current?.status || "draft", { unlock: body.unlock === true });
+        if (!guard.allowed) return json(res, 409, { error: guard.error });
+        const plan = normalizeKidsDirectorPlan(body.plan || {});
+        const saved = await kidsSavePlan(store, db, id, plan, { status: "draft", note: String(body.note || "") });
+        return json(res, 200, { plan: saved });
+      }
+      if (rest === "plan" && req.method === "POST") {
+        // Generate a fresh Director Plan with the AI. The prompt is built by
+        // the shared pure helper; the plan is stored as a NEW version.
+        const body = await readJson(req).catch(() => ({}));
+        const script = body.script || project.script || project.lyrics;
+        if (!hasScript(script)) {
+          return json(res, 400, { error: "the project needs a script or lyrics before the Director can plan" });
+        }
+        const draft = normalizeKidsProject({ ...project, script, lyrics: project.lyrics }, {
+          options: await kidsOptions(store, db),
+        });
+        let plan;
+        try {
+          const raw = await llmChatJson({
+            system: KIDS_DIRECTOR_SYSTEM,
+            user: buildKidsDirectorPlanPrompt(draft),
+            maxTokens: 16000,
+            temperature: 0.7,
+            timeoutMs: REQUEST_TIMEOUT_MS,
+            rawTag: `_raw_${id}_kids_plan.log`,
+          });
+          plan = normalizeKidsDirectorPlan(raw);
+        } catch (e) {
+          await kidsUpsertJob(store, db, {
+            id: `kids_plan_${id}_${Date.now().toString(36)}`,
+            project_id: id, kind: "director_plan", status: "FAILED",
+            error_message: String(e.message || e).slice(0, 500), metadata: {},
+          });
+          return json(res, 502, { error: `the Director could not plan this project: ${String(e.message || e).slice(0, 300)}` });
+        }
+        if (!isPlanSubstantive(plan)) {
+          return json(res, 502, { error: "the Director returned an empty plan — try again" });
+        }
+        const saved = await kidsSavePlan(store, db, id, plan, { status: "draft", note: "AI generated" });
+        await kidsUpsertJob(store, db, {
+          id: `kids_plan_${id}_${Date.now().toString(36)}`,
+          project_id: id, kind: "director_plan", status: "COMPLETED", metadata: { version: saved.version },
+        });
+        return json(res, 200, { plan: saved });
+      }
+      if (rest === "plan/approve" && req.method === "POST") {
+        const current = await kidsGetPlan(store, db, id);
+        if (!current) return json(res, 404, { error: "this project has no Director Plan yet" });
+        const approved = await kidsApprovePlan(store, db, id, current.version);
+        await kidsUpdateProject(store, db, id, { status: "approved" });
+        return json(res, 200, { plan: approved });
+      }
+      // --- Link / mirror the shared Director board ------------------------
+      // The studio does NOT plan scenes itself: the existing Director engine
+      // owns the bible and the scene plan. The studio links the board and
+      // MIRRORS its scenes + characters so the dashboard, the gallery and the
+      // project page all read one source of truth.
+      if ((rest === "board" && req.method === "PUT") || (rest === "sync" && req.method === "POST")) {
+        const body = rest === "board" ? await readJson(req) : {};
+        const boardId = String(body.board_id || project.board_id || "");
+        if (!boardId) return json(res, 400, { error: "no Director board to link" });
+        let board;
+        try { board = readDirectorBoard(boardId); }
+        catch (e) { return json(res, 404, { error: `storyboard not found: ${String(e.message || e)}` }); }
+        const scenes = (board.scenes || []).map((s) => ({
+          scene_number: Number(s.scene_number) || 0,
+          title: String(s.title || ""),
+          synopsis: String(s.story_beat || s.action || ""),
+          duration_seconds: Number(s.duration_seconds) || 0,
+          camera: [s.camera?.shot_type, s.camera?.movement].filter(Boolean).join(" · "),
+          transition: String(s.transition_to_next_scene || ""),
+          prompt: String(s.image_prompt || ""),
+          status: String(s.status || "planned"),
+        }));
+        const characters = (board.blueprint?.characters || []).map((c) => ({
+          character_id: String(c.character_id || ""),
+          name: String(c.name || ""),
+          role: String(c.role || ""),
+          species: String(c.species || ""),
+          description: Object.entries(c.appearance || {}).map(([k, v]) => `${k}: ${v}`).join(", "),
+          visual_identity_prompt: String(c.visual_identity_prompt || ""),
+        }));
+        await kidsReplaceScenes(store, db, id, scenes);
+        await kidsReplaceCharacters(store, db, id, characters);
+        // The kids cast keeps ONE voice across every scene: the library rows
+        // (an explicit voice id wins) decide the per-speaker TTS voices, and
+        // the map is written onto the board so the workspace speaks with them.
+        try {
+          const libChars = (await kidsListLibrary(store, db, { scope: "shared" }))
+            .concat(await kidsListLibrary(store, db, { scope: id }))
+            .filter((a) => a.kind === "character");
+          const voiceMap = buildKidsVoiceMap(libChars, {
+            language: project.language,
+            existing: (board.input && board.input.tts && board.input.tts.voices) || {},
+          });
+          if (Object.keys(voiceMap).length) {
+            board.input = board.input || {};
+            board.input.tts = {
+              ...(board.input.tts && typeof board.input.tts === "object" ? board.input.tts : {}),
+              language: project.language || (board.input.tts && board.input.tts.language) || "Hindi",
+              voices: { ...(board.input.tts && board.input.tts.voices) || {}, ...voiceMap },
+            };
+            writeDirectorBoard(board);
+          }
+        } catch (e) { console.warn("[kids] voice map failed:", e.message); }
+        // The Director Plan is derived from the board — it can never drift
+        // from the storyboard it describes.
+        const derived = buildKidsPlanFromBoard(board, project);
+        const existing = await kidsGetPlan(store, db, id);
+        const plan = existing && existing.status === "approved"
+          ? existing
+          : await kidsSavePlan(store, db, id, derived, {
+            status: "draft", note: "derived from the Director storyboard",
+          });
+        const updated = await kidsUpdateProject(store, db, id, {
+          board_id: boardId,
+          status: board.status === "approved" ? "approved" : "planning",
+        });
+        return json(res, 200, { project: updated, plan, scenes, characters });
+      }
+      // --- Scenes / characters / assets / jobs (read) ----------------------
+      if (rest === "scenes" && req.method === "GET") {
+        return json(res, 200, await kidsListScenes(store, db, id));
+      }
+      if (rest === "characters" && req.method === "GET") {
+        return json(res, 200, await kidsListCharacters(store, db, id));
+      }
+      if (rest === "assets" && req.method === "GET") {
+        return json(res, 200, await kidsListAssets(store, db, id));
+      }
+      if (rest === "jobs" && req.method === "GET") {
+        return json(res, 200, await kidsListJobs(store, db, id));
+      }
+      // ============================================================
+      // The production pipeline of ONE project (real state only)
+      // ============================================================
+      const kidsTry = async (fn) => {
+        try { return { ok: true, data: await fn() }; }
+        catch (e) { return { ok: false, status: Number(e?.status) || 500, error: String(e?.message || e) }; }
+      };
+      const kidsState = async () => {
+        const [plan, story, lyricSections, audioSegments, scenes, assets, feedback, qcRuns, library, timelineRows] = await Promise.all([
+          kidsGetPlan(store, db, id),
+          kidsGetStory(store, db, id),
+          kidsListLyricSections(store, db, id),
+          kidsListAudioSegments(store, db, id),
+          kidsListScenes(store, db, id),
+          kidsListAssets(store, db, id),
+          kidsListFeedback(store, db, id),
+          kidsListQcRuns(store, db, id),
+          kidsListLibrary(store, db, {}),
+          kidsListTimeline(store, db, id),
+        ]);
+        const mine = (kind) => library.filter((a) => a.kind === kind && (a.scope === "shared" || a.scope === id));
+        const characters = mine("character");
+        const locations = mine("location");
+        const props = mine("prop");
+        // The generated media: the REAL files on disk are the source of truth.
+        const disk = { images: 0, videos: 0, reference: false, final: null };
+        if (project.scenario_name) {
+          const dirs = allDirsFor(folderSlug(project.scenario_name));
+          for (const dir of dirs) {
+            const full = path.join(OUTPUTS, dir);
+            if (!fs.existsSync(full)) continue;
+            let vm = null;
+            try { vm = versionMap(full, prefixFor(dir), []); } catch { vm = null; }
+            if (!vm) continue;
+            if (vm.refMain) disk.reference = true;
+            for (const b of Object.values(vm.beats || {})) {
+              if (b.keyframeMain) disk.images += 1;
+              if (b.clipMain) disk.videos += 1;
+            }
+            if (vm.finalMain) disk.final = { dir, file: vm.finalMain, path: path.join(full, vm.finalMain) };
+            break;
+          }
+        }
+        const stored = timelineRows.map((r) => r.payload).filter(Boolean);
+        const timeline = stored.length
+          ? stored
+          : buildKidsTimeline({
+            scenes: scenes.map((s) => ({
+              scene_number: s.scene_number,
+              title: s.title,
+              duration_seconds: s.duration_seconds,
+              text: s.synopsis,
+              camera_shot: s.camera,
+              image_prompt: s.prompt,
+            })),
+            segments: audioSegments,
+            characters,
+            locations,
+            props,
+          });
+        return {
+          plan, story, lyricSections, audioSegments, scenes, assets, feedback,
+          qcRuns, characters, locations, props, timeline, library, disk,
+        };
+      };
+      const kidsStageList = async () => {
+        const s = await kidsState();
+        const stages = kidsStageStatus({
+          plan: s.plan,
+          story: s.story,
+          lyricSections: s.lyricSections,
+          audioSegments: s.audioSegments,
+          characters: s.characters,
+          locations: s.locations,
+          props: s.props,
+          scenes: s.scenes,
+          timeline: s.timeline,
+          images: s.disk.images,
+          videos: s.disk.videos,
+          voices: s.assets.filter((a) => a.kind === "audio"),
+          final: s.disk.final,
+          assets: s.assets,
+          qc: s.qcRuns[0] || null,
+          feedback: s.feedback,
+        });
+        return { stages, runnable: kidsRunnableStages(stages) };
+      };
+      if (rest === "pipeline" && req.method === "GET") {
+        return json(res, 200, await kidsStageList());
+      }
+      if (rest === "pipeline" && req.method === "POST") {
+        // Run the SELECTED stages. Only the stages the studio can execute
+        // itself are executed here; the generation stages are delegated to the
+        // EXISTING engines (the Director board + the workspace run) and are
+        // reported as "needs the workspace" instead of being faked.
+        const body = await readJson(req).catch(() => ({}));
+        const requested = Array.isArray(body.stages) ? body.stages.map(String) : [];
+        if (!requested.length) return json(res, 400, { error: "select at least one stage to run" });
+        const { stages, runnable } = await kidsStageList();
+        const results = [];
+        for (const stageId of requested) {
+          const stage = stages.find((s) => s.id === stageId);
+          if (!stage) { results.push({ stage: stageId, status: "unknown", message: "unknown stage" }); continue; }
+          if (!runnable.includes(stageId) && stage.status !== "done") {
+            results.push({
+              stage: stageId, status: "blocked",
+              message: `blocked by ${stage.blocked_by.join(", ") || "an earlier stage"}`,
+            });
+            continue;
+          }
+          const run = async (fn) => {
+            const r = await kidsTry(fn);
+            return r.ok ? { status: "completed", message: "" } : { status: "failed", message: r.error };
+          };
+          if (stageId === "story") {
+            // The story runs as a background job (a local model needs minutes).
+            const jobId = `kids_story_${id}_${Date.now().toString(36)}`;
+            await kidsUpsertJob(store, db, {
+              id: jobId, project_id: id, kind: "story", status: "PROCESSING",
+              error_message: null, metadata: { started_at: new Date().toISOString() },
+            });
+            (async () => {
+              try {
+                const saved = await generateKidsStory(store, db, project, {});
+                await kidsUpsertJob(store, db, {
+                  id: jobId, project_id: id, kind: "story", status: "COMPLETED",
+                  error_message: null, metadata: { version: saved.version },
+                });
+              } catch (e) {
+                await kidsUpsertJob(store, db, {
+                  id: jobId, project_id: id, kind: "story", status: "FAILED",
+                  error_message: String(e.message || e).slice(0, 500), metadata: {},
+                });
+              }
+            })();
+            results.push({ stage: stageId, status: "started", message: "the story is being written — follow the job" });
+            continue;
+          }
+          if (stageId === "song") {
+            const r = await kidsTry(() => analyzeKidsLyrics(store, db, project, {}));
+            results.push({
+              stage: stageId, status: r.ok ? "completed" : "failed",
+              message: r.ok ? `${r.data.sections.length} lyric section(s) saved` : r.error,
+            });
+            continue;
+          }
+          if (stageId === "audio") {
+            const r = await kidsTry(() => analyzeKidsAudio(store, db, project, {}));
+            results.push({
+              stage: stageId, status: r.ok ? "completed" : "failed",
+              message: r.ok ? `${r.data.segments.length} audio segment(s) measured` : r.error,
+            });
+            continue;
+          }
+          if (stageId === "storyboard") {
+            const r = await kidsTry(() => buildKidsTimelineForProject(store, db, project));
+            results.push({
+              stage: stageId, status: r.ok ? "completed" : "failed",
+              message: r.ok ? `${r.data.length} scene(s) on the timeline` : r.error,
+            });
+            continue;
+          }
+          if (stageId === "qc") {
+            const r = await kidsTry(() => runKidsQc(store, db, project));
+            results.push({
+              stage: stageId, status: r.ok ? "completed" : "failed",
+              message: r.ok ? `${r.data.summary.errors} error(s), ${r.data.summary.warnings} warning(s)` : r.error,
+            });
+            continue;
+          }
+          results.push({
+            stage: stageId, status: "delegated",
+            message: `${stage.label} runs in the ${stage.engine === "comfyui" ? "workspace / Director" : stage.engine} engine — open it to generate`,
+          });
+        }
+        await kidsUpsertJob(store, db, {
+          id: `kids_pipeline_${id}_${Date.now().toString(36)}`,
+          project_id: id, kind: "pipeline", status: "COMPLETED",
+          error_message: null, metadata: { stages: requested, results },
+        });
+        return json(res, 200, { results, ...(await kidsStageList()) });
+      }
+      // ============================================================
+      // Story Studio
+      // ============================================================
+      if (rest === "story" && req.method === "GET") {
+        const story = await kidsGetStory(store, db, id);
+        const jobs = await kidsListJobs(store, db, id);
+        return json(res, 200, {
+          story,
+          history: await kidsListStories(store, db, id),
+          job: jobs.find((j) => j.kind === "story") || null,
+        });
+      }
+      if (rest === "story" && req.method === "POST") {
+        if (!project) return json(res, 404, { error: "no such project" });
+        const body = await readJson(req).catch(() => ({}));
+        // The AI story can take minutes on a local model — it runs as a JOB
+        // (the studio's own job table) so the request never blocks the UI.
+        // The client polls GET /api/kids/projects/:id/story.
+        const jobId = `kids_story_${id}_${Date.now().toString(36)}`;
+        const check = hasScript(body.script || project.script || body.lyrics || project.lyrics);
+        if (!check) {
+          return json(res, 400, { error: "the project needs a script or lyrics before the story can be written" });
+        }
+        await kidsUpsertJob(store, db, {
+          id: jobId, project_id: id, kind: "story", status: "PROCESSING",
+          error_message: null, metadata: { started_at: new Date().toISOString() },
+        });
+        // Fire and forget - the job row carries the outcome.
+        (async () => {
+          try {
+            const saved = await generateKidsStory(store, db, project, body);
+            await kidsUpsertJob(store, db, {
+              id: jobId, project_id: id, kind: "story", status: "COMPLETED",
+              error_message: null, metadata: { version: saved.version },
+            });
+          } catch (e) {
+            await kidsUpsertJob(store, db, {
+              id: jobId, project_id: id, kind: "story", status: "FAILED",
+              error_message: String(e.message || e).slice(0, 500), metadata: {},
+            });
+          }
+        })();
+        return json(res, 202, {
+          job: { id: jobId, kind: "story", status: "PROCESSING" },
+          message: "the Director is writing the story — this tab polls the job",
+        });
+      }
+      if (rest === "story" && req.method === "PUT") {
+        const body = await readJson(req);
+        const current = await kidsGetStory(store, db, id);
+        if (current && current.status === "approved" && body.unlock !== true) {
+          return json(res, 409, { error: "this story is approved — unlock it before editing" });
+        }
+        const story = normalizeKidsStory(body.story || {});
+        if (!isKidsStorySubstantive(story)) {
+          return json(res, 400, { error: "the story is empty" });
+        }
+        const check = validateKidsStory(story);
+        const saved = await kidsSaveStory(store, db, id, story, {
+          status: "draft", note: String(body.note || "edited"),
+        });
+        return json(res, 200, { story: saved, warnings: check.warnings, errors: check.errors });
+      }
+      if (rest === "story/approve" && req.method === "POST") {
+        const current = await kidsGetStory(store, db, id);
+        if (!current) return json(res, 404, { error: "this project has no story yet" });
+        const story = normalizeKidsStory(current.story);
+        const check = validateKidsStory(story);
+        if (check.errors.length) return json(res, 400, { error: check.errors[0], errors: check.errors });
+        const approved = await kidsApproveStory(store, db, id, current.version);
+        return json(res, 200, { story: approved, warnings: check.warnings });
+      }
+      // ============================================================
+      // Song & Lyrics Studio
+      // ============================================================
+      if (rest === "lyrics" && req.method === "GET") {
+        return json(res, 200, { sections: await kidsListLyricSections(store, db, id) });
+      }
+      if (rest === "lyrics" && req.method === "POST") {
+        const body = await readJson(req).catch(() => ({}));
+        const r = await kidsTry(() => analyzeKidsLyrics(store, db, project, body));
+        if (!r.ok) return json(res, r.status, { error: r.error });
+        return json(res, 200, r.data);
+      }
+      // ============================================================
+      // Audio Analysis and Narration
+      // ============================================================
+      if (rest === "audio-analysis" && req.method === "GET") {
+        return json(res, 200, { segments: await kidsListAudioSegments(store, db, id) });
+      }
+      if (rest === "audio-analysis" && req.method === "POST") {
+        const body = await readJson(req).catch(() => ({}));
+        const r = await kidsTry(() => analyzeKidsAudio(store, db, project, body));
+        if (!r.ok) return json(res, r.status, { error: r.error });
+        return json(res, 200, r.data);
+      }
+      // ============================================================
+      // Storyboard and Scene Timeline
+      // ============================================================
+      if (rest === "timeline" && req.method === "GET") {
+        const rows = await kidsListTimeline(store, db, id);
+        if (rows.length) return json(res, 200, { timeline: rows.map((r) => r.payload) });
+        const built = await buildKidsTimelineForProject(store, db, project);
+        return json(res, 200, { timeline: built, saved: false });
+      }
+      if (rest === "timeline" && req.method === "PUT") {
+        const body = await readJson(req);
+        const rows = Array.isArray(body.timeline) ? body.timeline : [];
+        if (!rows.length) return json(res, 400, { error: "the timeline is empty" });
+        const check = validateKidsTimeline(rows, { duration: Number(body.duration_seconds) || 0 });
+        const saved = await kidsReplaceTimeline(store, db, id, rows.map((r, i) => ({
+          scene_number: Number(r.scene_number) || i + 1,
+          payload: r,
+        })));
+        return json(res, 200, { timeline: saved.map((r) => r.payload), warnings: check.warnings, errors: check.errors });
+      }
+      if (rest === "timeline/build" && req.method === "POST") {
+        const r = await kidsTry(() => buildKidsTimelineForProject(store, db, project));
+        if (!r.ok) return json(res, r.status, { error: r.error });
+        return json(res, 200, { timeline: r.data });
+      }
+      // ============================================================
+      // Quality control and export
+      // ============================================================
+      if (rest === "qc" && req.method === "GET") {
+        const runs = await kidsListQcRuns(store, db, id);
+        return json(res, 200, { runs, latest: runs[0] || null });
+      }
+      if (rest === "qc" && req.method === "POST") {
+        const r = await kidsTry(() => runKidsQc(store, db, project));
+        if (!r.ok) return json(res, r.status, { error: r.error });
+        return json(res, 200, r.data);
+      }
+      if (rest === "exports" && req.method === "GET") {
+        return json(res, 200, { exports: await kidsListExports(store, db, id) });
+      }
+      if (rest === "export" && req.method === "POST") {
+        const body = await readJson(req).catch(() => ({}));
+        const profile = String(body.profile || "youtube");
+        const s = await kidsState();
+        if (!s.disk.final) {
+          return json(res, 400, {
+            error: "there is no final cut yet — generate the clips and assemble the video first",
+          });
+        }
+        const duration = await videoDurationSec(s.disk.final.path);
+        const resolution = String(body.resolution || project.resolution || "");
+        const row = await kidsInsertExport(store, db, {
+          project_id: id,
+          profile,
+          status: "recorded",
+          file_path: s.disk.final.path,
+          duration_seconds: duration || 0,
+          resolution,
+          notes: String(body.notes || "").slice(0, 500),
+        });
+        return json(res, 200, {
+          export: {
+            id: Number(row.id),
+            profile,
+            status: "recorded",
+            file_path: s.disk.final.path,
+            duration_seconds: duration || 0,
+            resolution,
+          },
+          message: "the export record was written — the file itself was produced by the FFmpeg assembly step",
+        });
+      }
+      // ============================================================
+      // AI Learning and Feedback
+      // ============================================================
+      if (rest === "feedback" && req.method === "GET") {
+        const rows = await kidsListFeedback(store, db, id);
+        return json(res, 200, {
+          feedback: rows,
+          training_examples: kidsTrainingExamples(rows),
+        });
+      }
+      if (rest === "feedback" && req.method === "POST") {
+        const body = await readJson(req);
+        const record = normalizeKidsFeedback(body);
+        if (record.errors.length) return json(res, 400, { error: record.errors[0], errors: record.errors });
+        const id2 = record.id || `kids_fb_${id}_${Date.now().toString(36)}`;
+        const row = await kidsInsertFeedback(store, db, {
+          id: id2,
+          project_id: id,
+          target_kind: record.target_kind,
+          target_id: record.target_id,
+          rating: record.rating,
+          verdict: record.verdict,
+          note: record.note,
+          corrected_text: record.corrected_text,
+          use_for_training: record.use_for_training,
+          payload: record.payload,
+        });
+        return json(res, 200, {
+          feedback: {
+            id: row.id,
+            target_kind: row.target_kind,
+            target_id: row.target_id,
+            rating: row.rating == null ? null : Number(row.rating),
+            verdict: row.verdict,
+            note: row.note,
+            use_for_training: row.use_for_training === true || Number(row.use_for_training) === 1,
+            created_at: row.created_at ?? null,
+          },
+        });
+      }
+      // --- The project itself ----------------------------------------------
+      if (!rest && req.method === "GET") {
+        const [plan, planHistory, scenes, characters, assets, jobs] = await Promise.all([
+          kidsGetPlan(store, db, id),
+          kidsListPlans(store, db, id),
+          kidsListScenes(store, db, id),
+          kidsListCharacters(store, db, id),
+          kidsListAssets(store, db, id),
+          kidsListJobs(store, db, id),
+        ]);
+        const [story, storyHistory, lyricSections, audioSegments, timelineRows, library, feedback, qcRuns, exports] = await Promise.all([
+          kidsGetStory(store, db, id),
+          kidsListStories(store, db, id),
+          kidsListLyricSections(store, db, id),
+          kidsListAudioSegments(store, db, id),
+          kidsListTimeline(store, db, id),
+          kidsListLibrary(store, db, {}),
+          kidsListFeedback(store, db, id),
+          kidsListQcRuns(store, db, id),
+          kidsListExports(store, db, id),
+        ]);
+        const mine = (kind) => library.filter((a) => a.kind === kind && (a.scope === "shared" || a.scope === id));
+        return json(res, 200, {
+          project, plan, planHistory, scenes, characters, assets, jobs,
+          story, storyHistory, lyricSections, audioSegments,
+          timeline: timelineRows.map((r) => r.payload),
+          library: {
+            characters: mine("character"),
+            locations: mine("location"),
+            props: mine("prop"),
+          },
+          feedback, qcRuns, exports,
+        });
+      }
+      if (!rest && req.method === "PUT") {
+        const body = await readJson(req);
+        const options = await kidsOptions(store, db);
+        const merged = normalizeKidsProject({ ...project, ...body }, { options });
+        // The brief fields the Director already consumed are NOT silently
+        // rewritten — a change to script/lyrics after a plan exists needs an
+        // explicit reset so the approved plan can never drift from the brief.
+        if (body.reset_plan === true) {
+          await kidsSavePlan(store, db, id, { version: 1 }, { status: "draft", note: "brief changed — plan reset" });
+        }
+        const updated = await kidsUpdateProject(store, db, id, {
+          ...merged,
+          board_id: body.board_id !== undefined ? body.board_id : project.board_id,
+          scenario_name: body.scenario_name !== undefined ? body.scenario_name : project.scenario_name,
+        });
+        const check = validateKidsProject(merged);
+        return json(res, 200, { project: updated, warnings: check.warnings, errors: check.errors });
+      }
+      if (!rest && req.method === "DELETE") {
+        const removed = await kidsDeleteProject(store, db, id);
+        if (!removed) return json(res, 404, { error: "no such project" });
+        return json(res, 200, { ok: true });
+      }
     }
     // ------------------------------------------------- Documentary Mode
     // Orchestration layer on top of the EXISTING pipeline (never a parallel
@@ -7550,7 +9173,7 @@ const server = http.createServer(async (req, res) => {
         const raw = await llmChatJson({
           system: DOCUMENTARY_DIRECTOR_SYSTEM,
           user: buildDocBiblePrompt(board.brief, actx),
-          maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
+          maxTokens: 16000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
           rawTag: `_raw_doc_${id}_bible.log`,
         });
         blueprint = raw && typeof raw === "object" ? raw : null;
@@ -7593,7 +9216,7 @@ const server = http.createServer(async (req, res) => {
             const raw = await llmChatJson({
               system: DOCUMENTARY_DIRECTOR_SYSTEM,
               user: buildDocShotsPrompt({ brief: board.brief, board, chapter: c, startGlobal: global, analysisCtx: actx }),
-              maxTokens: 8000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
+              maxTokens: 16000, temperature: 0.7, timeoutMs: REQUEST_TIMEOUT_MS,
               rawTag: `_raw_doc_${id}_ch${c.chapter_number}.log`,
             });
             const seqs = raw && Array.isArray(raw.sequences) ? raw.sequences : null;
@@ -8173,6 +9796,18 @@ const server = http.createServer(async (req, res) => {
         return json(res, 502, { error: String(e.message || "AI request failed") });
       }
     }
+    // Song analysis for the Kids Video Director: the local LLM reads the
+    // uploaded song's metadata (title, duration, lyrics) + genre/language and
+    // returns mood, structure (timed segments), narration style and visual
+    // recommendations. Stateless — nothing is persisted. Falls back to a
+    // heuristic when the LLM is offline so the button never hard-fails.
+    if (p === "/api/director/analyze-song" && req.method === "POST") {
+      // The SAME analyzer the Sanskriti Kids Song & Audio studios use.
+      const body = await readJson(req);
+      const result = await analyzeSongAudio(body);
+      if (result && result.error) return json(res, result.status || 400, { error: result.error });
+      return json(res, 200, result);
+    }
     // Predefined video-type presets (system-owned presets/*.md defaults).
     // List carries metadata only; content is fetched per id when needed
     // (craft prompt injection, View/edit-rules panel). Per-project edits are
@@ -8555,996 +10190,17 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true, version, scene: n, dialogue, segmented: needsSegmentation(dialogue), invalidated });
     }
-    // ------------------------------------------------- devotional studio
-    // Reusable devotional asset library (characters / locations / props /
-    // styles). Metadata + versions + approvals + scene links live in Postgres
-    // when it is up, else in the SQLite fallback (see devStore);
-    // binaries live under DEVOTIONAL_DIR. All list
-    // responses are paginated; every statistic below comes from live data.
-    if (p === "/api/devotional/stats" && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      let byKindRows, fileN, jobRows, recentRows, usageN;
-      if (store === "pg") {
-        const byKind = await pgPool.query(
-          `SELECT kind, status, count(*)::int AS n FROM devotional_assets GROUP BY kind, status`);
-        const files = await pgPool.query("SELECT count(*)::int AS n FROM devotional_asset_files")
-          .catch(() => ({ rows: [{ n: 0 }] }));
-        const jobs = await pgPool.query(
-          `SELECT status, count(*)::int AS n FROM devotional_jobs GROUP BY status`)
-          .catch(() => ({ rows: [] }));
-        const recent = await pgPool.query(
-          `SELECT id, kind, name, status, version, updated_at FROM devotional_assets
-           ORDER BY updated_at DESC LIMIT 8`).catch(() => ({ rows: [] }));
-        const usage = await pgPool.query(
-          `SELECT COUNT(DISTINCT project_id)::int AS n FROM devotional_project_usage`)
-          .catch(() => ({ rows: [{ n: 0 }] }));
-        byKindRows = byKind.rows; fileN = files.rows[0]?.n ?? 0;
-        jobRows = jobs.rows; recentRows = recent.rows; usageN = usage.rows[0]?.n ?? 0;
-      } else {
-        try {
-          byKindRows = devDb.prepare(
-            "SELECT kind, status, count(*) AS n FROM devotional_assets GROUP BY kind, status").all();
-          fileN = devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files").get()?.n ?? 0;
-          jobRows = devDb.prepare("SELECT status, count(*) AS n FROM devotional_jobs GROUP BY status").all();
-          recentRows = devDb.prepare(
-            "SELECT id, kind, name, status, version, updated_at FROM devotional_assets ORDER BY updated_at DESC LIMIT 8").all();
-          usageN = devDb.prepare("SELECT COUNT(DISTINCT project) AS n FROM devotional_project_usage").get()?.n ?? 0;
-        } catch {
-          byKindRows = []; fileN = 0; jobRows = []; recentRows = []; usageN = 0;
-        }
-      }
-      const counts = { character: 0, location: 0, prop: 0, style: 0 };
-      let approved = 0, drafts = 0;
-      for (const r of byKindRows) {
-        if (counts[r.kind] != null) counts[r.kind] += Number(r.n) || 0;
-        if (r.status === "approved") approved += Number(r.n) || 0;
-        if (r.status === "draft" || r.status === "review" || r.status === "generating") drafts += Number(r.n) || 0;
-      }
-      const jobCounts = {};
-      for (const r of jobRows) jobCounts[r.status] = Number(r.n) || 0;
-      return json(res, 200, {
-        counts, approved, drafts,
-        files: Number(fileN) || 0,
-        jobs: jobCounts,
-        failedJobs: (jobCounts.FAILED || 0) + (jobCounts.PENDING || 0),
-        projectsUsing: Number(usageN) || 0,
-        recent: recentRows,
-      });
-    }
-    if (p === "/api/devotional/assets" && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const kind = u.searchParams.get("kind");
-      const status = u.searchParams.get("status");
-      const category = u.searchParams.get("category");
-      const search = String(u.searchParams.get("search") || "").trim().slice(0, 120);
-      const sort = String(u.searchParams.get("sort") || "updated").toLowerCase();
-      const page = Math.max(1, Number(u.searchParams.get("page")) || 1);
-      const pageSize = Math.max(1, Math.min(100, Number(u.searchParams.get("pageSize")) || 24));
-      const order = sort === "name" ? "name ASC" : sort === "created" ? "created_at DESC" : "updated_at DESC";
-      if (store === "pg") {
-        const conds = [];
-        const params = [];
-        if (normalizeKind(kind)) { params.push(kind.toLowerCase()); conds.push(`kind = $${params.length}`); }
-        if (normalizeStatus(status)) { params.push(status.toLowerCase()); conds.push(`status = $${params.length}`); }
-        if (category) { params.push(category); conds.push(`category = $${params.length}`); }
-        if (search) {
-          params.push(`%${search}%`);
-          conds.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length} OR category ILIKE $${params.length} OR EXISTS (SELECT 1 FROM unnest(aliases) a WHERE a ILIKE $${params.length}) OR id ILIKE $${params.length})`);
-        }
-        const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-        const total = (await pgPool.query(`SELECT count(*)::int AS n FROM devotional_assets ${where}`, params)).rows[0].n;
-        params.push(pageSize, (page - 1) * pageSize);
-        const rows = (await pgPool.query(
-          `SELECT * FROM devotional_assets ${where} ORDER BY ${order} LIMIT $${params.length - 1} OFFSET $${params.length}`,
-          params)).rows.map(devRow);
-        // Attach latest still + clip per asset so each tab can render
-        // generated media below the cards (no N+1 detail fetches).
-        let fileRows = [];
-        if (rows.length) {
-          try {
-            fileRows = (await pgPool.query(
-              "SELECT * FROM devotional_asset_files WHERE asset_id = ANY($1) ORDER BY id DESC",
-              [rows.map((r) => r.id)])).rows;
-          } catch { fileRows = []; }
-        }
-        return json(res, 200, { total, page, pageSize, assets: devAttachPreviews(rows, fileRows) });
-      }
-      // SQLite: LIKE is case-insensitive for ASCII (NOCASE); aliases live in
-      // a JSON string column so a substring match covers them.
-      const conds = [];
-      const params = [];
-      if (normalizeKind(kind)) { params.push(kind.toLowerCase()); conds.push("kind = ?"); }
-      if (normalizeStatus(status)) { params.push(status.toLowerCase()); conds.push("status = ?"); }
-      if (category) { params.push(category); conds.push("category = ? COLLATE NOCASE"); }
-      if (search) {
-        params.push(`%${search}%`);
-        conds.push("(name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\' OR aliases LIKE ? ESCAPE '\\' OR id LIKE ? ESCAPE '\\')");
-        const like = params.pop();
-        params.push(like, like, like, like, like);
-      }
-      const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-      const total = devDb.prepare(`SELECT count(*) AS n FROM devotional_assets ${where}`).get(...params)?.n ?? 0;
-      const rows = devDb.prepare(
-        `SELECT * FROM devotional_assets ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, pageSize, (page - 1) * pageSize).map(devRow);
-      let fileRows = [];
-      if (rows.length) {
-        try {
-          const marks = rows.map(() => "?").join(",");
-          fileRows = devDb.prepare(
-            `SELECT * FROM devotional_asset_files WHERE asset_id IN (${marks}) ORDER BY id DESC`).all(...rows.map((r) => r.id));
-        } catch { fileRows = []; }
-      }
-      return json(res, 200, { total: Number(total) || 0, page, pageSize, assets: devAttachPreviews(rows, fileRows) });
-    }
-    if (p === "/api/devotional/assets" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => null);
-      if (!body || typeof body !== "object") return json(res, 400, { error: "body must be an asset object" });
-      const { ok, errors, asset } = validateAssetPayload(body);
-      if (!ok) return json(res, 400, { error: errors.join("; ") });
-      if (!asset.kind || !asset.name) return json(res, 400, { error: "kind and name are required" });
-      const id = asset.id || await devNextAssetId(asset.kind, asset.name);
-      if (!/^[A-Z0-9_]{3,64}$/.test(id)) return json(res, 400, { error: "bad asset id" });
-      if (asset.parent_id) {
-        const prow = store === "pg"
-          ? (await pgPool.query("SELECT kind FROM devotional_assets WHERE id = $1", [asset.parent_id])).rows[0]
-          : devDb.prepare("SELECT kind FROM devotional_assets WHERE id = ?").get(asset.parent_id);
-        if (!prow) return json(res, 400, { error: "no such parent asset" });
-        if (prow.kind !== asset.kind) return json(res, 400, { error: "variant parent must be the same kind" });
-      }
-      try {
-        let row;
-        if (store === "pg") {
-          const r = await pgPool.query(
-            `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
-               identity, style_id, negative_prompt, status, version, locked, continuity, metadata, prompt)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,'draft',1,$11,$12,$13::jsonb,$14)
-             RETURNING *`,
-            [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
-             asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
-             asset.negative_prompt || "", !!asset.locked, asset.continuity || "",
-             JSON.stringify(asset.metadata || {}), asset.prompt || ""]);
-          row = r.rows[0];
-        } else {
-          const now = devNow();
-          devDb.prepare(
-            `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
-               identity, style_id, negative_prompt, status, version, locked, continuity, metadata, prompt, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?, ?, ?)`
-          ).run(id, asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
-            asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
-            asset.style_id || null, asset.negative_prompt || "", asset.locked ? 1 : 0,
-            asset.continuity || "", JSON.stringify(asset.metadata || {}), asset.prompt || "", now, now);
-          row = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-        }
-        await devSnapshot(id, 1, "created");
-        return json(res, 200, devRow(row));
-      } catch (e) {
-        if (String(e.message || "").includes("duplicate") || String(e.message || "").includes("UNIQUE") || e.code === "23505" || e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
-          return json(res, 409, { error: `asset ${id} already exists — rename or use a new id (never overwritten)` });
-        }
-        throw e;
-      }
-    }
-    // Seed the starter library (suggested deities / places / props / styles).
-    // Conflict-safe: existing ids are skipped and reported, never overwritten.
-    if (p === "/api/devotional/seed" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const created = [], skipped = [];
-      for (const kind of DEVOTIONAL_KINDS) {
-        for (const s of SEED_SUGGESTIONS[kind] || []) {
-          const id = await devNextAssetId(kind, s.name);
-          try {
-            if (store === "pg") {
-              await pgPool.query(
-                `INSERT INTO devotional_assets (id, kind, name, category, description, status, version)
-                 VALUES ($1,$2,$3,$4,$5,'draft',1)`,
-                [id, kind, s.name, s.category || "", s.description || ""]);
-            } else {
-              const now = devNow();
-              devDb.prepare(
-                "INSERT INTO devotional_assets (id, kind, name, category, description, status, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'draft', 1, ?, ?)"
-              ).run(id, kind, s.name, s.category || "", s.description || "", now, now);
-            }
-            await devSnapshot(id, 1, "seeded");
-            created.push(id);
-          } catch (e) {
-            if (e.code === "23505" || String(e.message || "").includes("UNIQUE")) skipped.push(id);
-            else throw e;
-          }
-        }
-      }
-      return json(res, 200, { ok: true, created, skipped });
-    }
-    if (p === "/api/devotional/jobs" && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const status = String(u.searchParams.get("status") || "").toUpperCase();
-      const limit = Math.max(1, Math.min(100, Number(u.searchParams.get("limit")) || 30));
-      const valid = status && ["PENDING", "PROCESSING", "COMPLETED", "FAILED"].includes(status);
-      // ?ids=a,b,c — precise lookup for live progress trackers (one-click
-      // media polls its own queued jobs; never subject to the LIMIT window).
-      const ids = String(u.searchParams.get("ids") || "").split(",")
-        .map((s) => s.trim()).filter((s) => /^[\w-]{1,80}$/.test(s)).slice(0, 20);
-      if (ids.length) {
-        if (store === "pg") {
-          const r = await pgPool.query("SELECT * FROM devotional_jobs WHERE id = ANY($1)", [ids]);
-          return json(res, 200, r.rows.map(devJobRow));
-        }
-        const marks = ids.map(() => "?").join(",");
-        return json(res, 200, devDb.prepare(
-          `SELECT * FROM devotional_jobs WHERE id IN (${marks})`).all(...ids).map(devJobRow));
-      }
-      if (store === "pg") {
-        const r = valid
-          ? await pgPool.query("SELECT * FROM devotional_jobs WHERE status = $1 ORDER BY created_at DESC LIMIT $2", [status, limit])
-          : await pgPool.query("SELECT * FROM devotional_jobs ORDER BY created_at DESC LIMIT $1", [limit]);
-        return json(res, 200, r.rows);
-      }
-      const rows = valid
-        ? devDb.prepare("SELECT * FROM devotional_jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?").all(status, limit)
-        : devDb.prepare("SELECT * FROM devotional_jobs ORDER BY created_at DESC LIMIT ?").all(limit);
-      return json(res, 200, rows.map(devJobRow));
-    }
-    // Director integration: resolve a scene to approved canonical assets.
-    // Body: { scene: { devotional_characters[], devotional_location,
-    // devotional_props[], devotional_style } }. Unresolved ids are reported
-    // for the review step — never silently substituted.
-    if (p === "/api/devotional/resolve" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => ({}));
-      const scene = body && typeof body === "object" ? body.scene || body : {};
-      const ids = new Set([
-        ...(Array.isArray(scene.devotional_characters) ? scene.devotional_characters : []),
-        ...(Array.isArray(scene.devotional_props) ? scene.devotional_props : []),
-        scene.devotional_location, scene.devotional_style,
-      ].filter(Boolean).map((x) => String(x).toUpperCase()));
-      const lib = {};
-      if (ids.size) {
-        if (store === "pg") {
-          const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = ANY($1)", [[...ids]]);
-          for (const row of r.rows) lib[row.id] = devRow(row);
-        } else {
-          const list = [...ids];
-          const marks = list.map(() => "?").join(",");
-          for (const row of devDb.prepare(`SELECT * FROM devotional_assets WHERE id IN (${marks})`).all(...list)) {
-            lib[row.id] = devRow(row);
-          }
-        }
-      }
-      return json(res, 200, resolveSceneAssets(scene, lib));
-    }
-    // Director integration: assemble the final image prompt from canonical
-    // assets + scene action (identity and action stay separate).
-    if (p === "/api/devotional/prompt" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => ({}));
-      const scene = body && typeof body === "object" ? body.scene || {} : {};
-      const fetchAssets = async (list) => {
-        const out = [];
-        for (const id of (Array.isArray(list) ? list : []).filter(Boolean)) {
-          const key = String(id).toUpperCase();
-          const row = store === "pg"
-            ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [key])).rows[0]
-            : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(key);
-          if (row) out.push(devRow(row));
-        }
-        return out;
-      };
-      const one = async (id) => (await fetchAssets(id ? [id] : []))[0] || null;
-      const characters = await fetchAssets(scene.devotional_characters);
-      const props = await fetchAssets(scene.devotional_props);
-      const location = await one(scene.devotional_location);
-      const style = await one(scene.devotional_style);
-      return json(res, 200, {
-        ...buildDevotionalScenePrompt({ characters, location, props, style, scene }),
-        assets: {
-          characters: characters.map((a) => ({ id: a.id, version: a.version })),
-          location: location ? { id: location.id, version: location.version } : null,
-          props: props.map((a) => ({ id: a.id, version: a.version })),
-          style: style ? { id: style.id, version: style.version } : null,
-        },
-      });
-    }
-    // Record which approved asset versions a Director scene uses (durable
-    // reference — later canonical edits never rewrite history).
-    if (p === "/api/devotional/scene-links" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => null);
-      const board_id = String(body?.board_id || "").trim();
-      const scene_number = Number(body?.scene_number);
-      const links = Array.isArray(body?.links) ? body.links : [];
-      if (!board_id || !Number.isInteger(scene_number) || scene_number < 1) {
-        return json(res, 400, { error: "board_id and scene_number are required" });
-      }
-      const saved = [];
-      for (const l of links) {
-        const role = String(l?.role || "").toLowerCase();
-        const asset_id = String(l?.asset_id || "").toUpperCase();
-        if (!["character", "location", "prop", "style"].includes(role) || !asset_id) continue;
-        if (store === "pg") {
-          const ar = await pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [asset_id]);
-          if (!ar.rows[0]) continue; // unknown assets are skipped, never invented
-          await pgPool.query(
-            `INSERT INTO devotional_scene_links (board_id, scene_number, asset_id, asset_version, role)
-             VALUES ($1,$2,$3,$4,$5)
-             ON CONFLICT (board_id, scene_number, asset_id, role) DO UPDATE SET asset_version = EXCLUDED.asset_version`,
-            [board_id, scene_number, asset_id, Number(ar.rows[0].version) || 1, role]);
-        } else {
-          const ar = devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(asset_id);
-          if (!ar) continue; // unknown assets are skipped, never invented
-          devDb.prepare(
-            `INSERT INTO devotional_scene_links (board_id, scene_number, asset_id, asset_version, role)
-             VALUES (?, ?, ?, ?, ?)
-             ON CONFLICT (board_id, scene_number, asset_id, role) DO UPDATE SET asset_version = excluded.asset_version`
-          ).run(board_id, scene_number, asset_id, Number(ar.version) || 1, role);
-        }
-        saved.push({ board_id, scene_number, asset_id, role });
-      }
-      return json(res, 200, { ok: true, saved });
-    }
-    if (p.startsWith("/api/devotional/boards/") && p.endsWith("/links") && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const boardId = pathName(p.split("/")[4] || "");
-      if (!boardId) return json(res, 400, { error: "bad board id" });
-      const rows = store === "pg"
-        ? (await pgPool.query(
-          "SELECT * FROM devotional_scene_links WHERE board_id = $1 ORDER BY scene_number, role", [boardId])).rows
-        : devDb.prepare(
-          "SELECT * FROM devotional_scene_links WHERE board_id = ? ORDER BY scene_number, role").all(boardId);
-      return json(res, 200, rows);
-    }
-    // Explicit project usage record (which approved versions a project uses).
-    // SQLite mode has no projects table, so the project NAME is stored
-    // directly (UNIQUE(project, asset_id)); Postgres keeps project_id.
-    if (p === "/api/devotional/project-usage" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => null);
-      const name = String(body?.project || "").trim();
-      const assets = Array.isArray(body?.assets) ? body.assets : [];
-      if (!name || !isSafe(name)) return json(res, 400, { error: "project is required" });
-      const assetVersion = (asset_id) => store === "pg"
-        ? pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [asset_id]).then((r) => r.rows[0])
-        : devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(asset_id);
-      if (store === "pg") {
-        const pid = await pgProjectId(name);
-        if (pid == null) return json(res, 404, { error: "no such project" });
-        let saved = 0;
-        for (const a of assets) {
-          const asset_id = String(a?.asset_id || "").toUpperCase();
-          const scenes = Array.isArray(a?.scenes) ? a.scenes.map(Number).filter((n) => Number.isInteger(n)) : [];
-          const ar = await assetVersion(asset_id);
-          if (!ar) continue;
-          await pgPool.query(
-            `INSERT INTO devotional_project_usage (project_id, asset_id, asset_version, scenes, updated_at)
-             VALUES ($1,$2,$3,$4,now())
-             ON CONFLICT (project_id, asset_id) DO UPDATE SET asset_version = EXCLUDED.asset_version,
-               scenes = EXCLUDED.scenes, updated_at = now()`,
-            [pid, asset_id, Number(ar.version) || 1, scenes]);
-          saved++;
-        }
-        return json(res, 200, { ok: true, saved });
-      }
-      let saved = 0;
-      for (const a of assets) {
-        const asset_id = String(a?.asset_id || "").toUpperCase();
-        const scenes = Array.isArray(a?.scenes) ? a.scenes.map(Number).filter((n) => Number.isInteger(n)) : [];
-        if (!asset_id) continue;
-        const ar = assetVersion(asset_id);
-        if (!ar) continue;
-        const now = devNow();
-        devDb.prepare(
-          `INSERT INTO devotional_project_usage (project, asset_id, asset_version, scenes, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT (project, asset_id) DO UPDATE SET asset_version = excluded.asset_version,
-             scenes = excluded.scenes, updated_at = excluded.updated_at`
-        ).run(name, asset_id, Number(ar.version) || 1, JSON.stringify(scenes), now, now);
-        saved++;
-      }
-      return json(res, 200, { ok: true, saved });
-    }
-    // Metadata backup (library metadata + references; binaries stay on disk).
-    if (p === "/api/devotional/export" && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      if (store === "pg") {
-        const assets = (await pgPool.query("SELECT * FROM devotional_assets ORDER BY kind, name")).rows.map(devRow);
-        const files = (await pgPool.query("SELECT * FROM devotional_asset_files ORDER BY asset_id, id")).rows;
-        const links = (await pgPool.query("SELECT * FROM devotional_scene_links ORDER BY board_id, scene_number")).rows;
-        return json(res, 200, { exported_at: new Date().toISOString(), assets, files, links });
-      }
-      const assets = devDb.prepare("SELECT * FROM devotional_assets ORDER BY kind, name").all().map(devRow);
-      const files = devDb.prepare("SELECT * FROM devotional_asset_files ORDER BY asset_id, id").all().map(devFileRow);
-      const links = devDb.prepare("SELECT * FROM devotional_scene_links ORDER BY board_id, scene_number").all();
-      return json(res, 200, { exported_at: new Date().toISOString(), assets, files, links });
-    }
-    // Restore library metadata (conflict-safe: existing ids skipped unless
-    // { overwrite: true } is set explicitly).
-    if (p === "/api/devotional/import" && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const body = await readJson(req).catch(() => null);
-      const list = Array.isArray(body?.assets) ? body.assets : null;
-      if (!list) return json(res, 400, { error: "body must be { assets: [...] }" });
-      const overwrite = body.overwrite === true;
-      const created = [], updated = [], skipped = [];
-      for (const raw of list.slice(0, 500)) {
-        const { ok, asset } = validateAssetPayload(raw || {});
-        if (!ok || !asset.kind || !asset.name) { skipped.push(String(raw?.id || raw?.name || "?")); continue; }
-        const id = asset.id || await devNextAssetId(asset.kind, asset.name);
-        const exists = store === "pg"
-          ? (await pgPool.query("SELECT 1 FROM devotional_assets WHERE id = $1", [id])).rowCount
-          : devDb.prepare("SELECT 1 FROM devotional_assets WHERE id = ?").get(id);
-        if (exists && !overwrite) { skipped.push(id); continue; }
-        if (exists) {
-          if (store === "pg") {
-            await pgPool.query(
-              `UPDATE devotional_assets SET kind=$2, parent_id=$3, name=$4, aliases=$5, category=$6,
-                 description=$7, identity=$8::jsonb, style_id=$9, negative_prompt=$10, continuity=$11,
-                 metadata=$12::jsonb, prompt=$13, updated_at=now() WHERE id=$1`,
-              [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
-               asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
-               asset.negative_prompt || "", asset.continuity || "", JSON.stringify(asset.metadata || {}),
-               asset.prompt || ""]);
-          } else {
-            devDb.prepare(
-              `UPDATE devotional_assets SET kind=?, parent_id=?, name=?, aliases=?, category=?,
-                 description=?, identity=?, style_id=?, negative_prompt=?, continuity=?,
-                 metadata=?, prompt=?, updated_at=? WHERE id=?`
-            ).run(asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
-              asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
-              asset.style_id || null, asset.negative_prompt || "", asset.continuity || "",
-              JSON.stringify(asset.metadata || {}), asset.prompt || "", devNow(), id);
-          }
-          updated.push(id);
-        } else {
-          if (store === "pg") {
-            await pgPool.query(
-              `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
-                 identity, style_id, negative_prompt, status, version, continuity, metadata, prompt)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,'draft',1,$11,$12::jsonb,$13)`,
-              [id, asset.kind, asset.parent_id, asset.name, asset.aliases, asset.category,
-               asset.description, JSON.stringify(asset.identity || {}), asset.style_id,
-               asset.negative_prompt || "", asset.continuity || "", JSON.stringify(asset.metadata || {}),
-               asset.prompt || ""]);
-          } else {
-            const now = devNow();
-            devDb.prepare(
-              `INSERT INTO devotional_assets (id, kind, parent_id, name, aliases, category, description,
-                 identity, style_id, negative_prompt, status, version, continuity, metadata, prompt, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?, ?, ?, ?)`
-            ).run(id, asset.kind, asset.parent_id, asset.name, JSON.stringify(asset.aliases || []),
-              asset.category || "", asset.description || "", JSON.stringify(asset.identity || {}),
-              asset.style_id || null, asset.negative_prompt || "", asset.continuity || "",
-              JSON.stringify(asset.metadata || {}), asset.prompt || "", now, now);
-          }
-          await devSnapshot(id, 1, "imported");
-          created.push(id);
-        }
-      }
-      return json(res, 200, { ok: true, created, updated, skipped });
-    }
-    // Integration health: database, ComfyUI reachability, storage writability.
-    // db.up is true when EITHER Postgres or the SQLite fallback can serve.
-    if (p === "/api/devotional/health" && req.method === "GET") {
-      const storage = (() => {
-        try {
-          fs.mkdirSync(DEVOTIONAL_DIR, { recursive: true });
-          const probe = path.join(DEVOTIONAL_DIR, ".write_probe");
-          fs.writeFileSync(probe, "ok");
-          fs.unlinkSync(probe);
-          return { up: true, root: DEVOTIONAL_DIR };
-        } catch (e) { return { up: false, error: e.message, root: DEVOTIONAL_DIR }; }
-      })();
-      let comfy = { up: false };
-      try { comfy = await comfyStatus(); } catch (e) { comfy = { up: false, error: String(e.message || e) }; }
-      return json(res, 200, { db: { up: !!devStore() }, comfy: { up: !!comfy.up, error: comfy.error || null }, storage });
-    }
-    if (p.startsWith("/api/devotional/assets/") && req.method === "GET" && !p.endsWith("/files") && !p.endsWith("/versions") && !p.endsWith("/usage")) {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      if (!/^[A-Z0-9_]{3,64}$/.test(id)) return json(res, 400, { error: "bad asset id" });
-      let row, fileRows, versionRows, childRows;
-      if (store === "pg") {
-        const r = await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id]);
-        if (!r.rows[0]) return json(res, 404, { error: "no such asset" });
-        row = r.rows[0];
-        fileRows = (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id", [id])).rows;
-        versionRows = (await pgPool.query(
-          "SELECT asset_id, version, note, created_at FROM devotional_asset_versions WHERE asset_id = $1 ORDER BY version", [id])).rows;
-        childRows = (await pgPool.query("SELECT id, name, status FROM devotional_assets WHERE parent_id = $1 ORDER BY name", [id])).rows;
-      } else {
-        row = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-        if (!row) return json(res, 404, { error: "no such asset" });
-        fileRows = devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id").all(id);
-        versionRows = devDb.prepare(
-          "SELECT asset_id, version, note, created_at FROM devotional_asset_versions WHERE asset_id = ? ORDER BY version").all(id);
-        childRows = devDb.prepare("SELECT id, name, status FROM devotional_assets WHERE parent_id = ? ORDER BY name").all(id);
-      }
-      const asset = devRow(row);
-      const files = fileRows.map(devFileRow);
-      const missing = files.filter((f) => !f.exists).map((f) => f.file_path);
-      return json(res, 200, { ...asset, files, versions: versionRows, children: childRows, missing });
-    }
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/files") && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const rows = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id", [id])).rows
-        : devDb.prepare("SELECT * FROM devotional_asset_files WHERE asset_id = ? ORDER BY id").all(id);
-      return json(res, 200, rows.map(devFileRow));
-    }
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/versions") && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const rows = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_asset_versions WHERE asset_id = $1 ORDER BY version", [id])).rows
-        : devDb.prepare("SELECT * FROM devotional_asset_versions WHERE asset_id = ? ORDER BY version").all(id)
-          .map((v) => ({ ...v, snapshot: devJson(v.snapshot, {}) }));
-      return json(res, 200, rows);
-    }
-    // Where an asset is used: linked Director scenes + recorded projects.
-    // SQLite usage rows carry the project NAME (no projects table there).
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/usage") && req.method === "GET") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      let scenes, projects;
-      if (store === "pg") {
-        scenes = (await pgPool.query(
-          "SELECT board_id, scene_number, asset_version, role FROM devotional_scene_links WHERE asset_id = $1 ORDER BY board_id, scene_number", [id])).rows;
-        projects = (await pgPool.query(
-          `SELECT p.name, u.asset_version, u.scenes FROM devotional_project_usage u
-           JOIN projects p ON p.project_id = u.project_id WHERE u.asset_id = $1`, [id])).rows;
-      } else {
-        scenes = devDb.prepare(
-          "SELECT board_id, scene_number, asset_version, role FROM devotional_scene_links WHERE asset_id = ? ORDER BY board_id, scene_number").all(id);
-        projects = devDb.prepare(
-          "SELECT project AS name, asset_version, scenes FROM devotional_project_usage WHERE asset_id = ?").all(id)
-          .map((u) => ({ name: u.name, asset_version: u.asset_version, scenes: devJson(u.scenes, []) }));
-      }
-      return json(res, 200, { asset_id: id, scenes, projects });
-    }
-    // Edit metadata. Approved + locked assets need { unlock: true } to change
-    // canonical fields (name/description/identity) — the lock is explicit.
-    if (p.startsWith("/api/devotional/assets/") && req.method === "PUT" && p.split("/").length === 5) {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const curRow = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
-        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      if (!curRow) return json(res, 404, { error: "no such asset" });
-      const body = await readJson(req).catch(() => null);
-      if (!body || typeof body !== "object") return json(res, 400, { error: "body must be an asset object" });
-      const { ok, errors, asset } = validateAssetPayload(body, { isUpdate: true });
-      if (!ok) return json(res, 400, { error: errors.join("; ") });
-      const prev = devRow(curRow);
-      const touchesCanonical = body.name !== undefined || body.description !== undefined || body.identity !== undefined
-        || body.prompt !== undefined || body.negative_prompt !== undefined || body.continuity !== undefined;
-      if (prev.status === "approved" && prev.locked && touchesCanonical && body.unlock !== true) {
-        return json(res, 403, { error: "canonical identity is locked — approve a new version or unlock explicitly" });
-      }
-      if (body.status !== undefined && body.status.toLowerCase() !== prev.status && !canTransition(prev.status, body.status)) {
-        return json(res, 400, { error: `illegal transition ${prev.status} -> ${body.status}` });
-      }
-      const next = {
-        ...prev,
-        name: body.name !== undefined ? String(body.name).trim().slice(0, 120) : prev.name,
-        aliases: body.aliases !== undefined ? normalizeAliases(body.aliases) : prev.aliases,
-        category: body.category !== undefined ? String(body.category).trim().slice(0, 80) : prev.category,
-        description: body.description !== undefined ? String(body.description).trim().slice(0, 4000) : prev.description,
-        identity: body.identity !== undefined && typeof body.identity === "object" ? body.identity : prev.identity,
-        style_id: body.style_id !== undefined
-          ? (String(body.style_id).trim() ? String(body.style_id).trim().toUpperCase().slice(0, 64) : null) : prev.style_id,
-        negative_prompt: body.negative_prompt !== undefined ? String(body.negative_prompt).trim().slice(0, 2000) : prev.negative_prompt,
-        prompt: body.prompt !== undefined ? String(body.prompt).trim().slice(0, 2000) : prev.prompt,
-        status: body.status !== undefined ? body.status.toLowerCase() : prev.status,
-        locked: body.locked !== undefined ? !!body.locked : prev.locked,
-        continuity: body.continuity !== undefined ? String(body.continuity).trim().slice(0, 2000) : prev.continuity,
-        metadata: body.metadata !== undefined && typeof body.metadata === "object" ? body.metadata : prev.metadata,
-      };
-      if (!next.name) return json(res, 400, { error: "name must not be empty" });
-      let out;
-      if (store === "pg") {
-        const r = await pgPool.query(
-          `UPDATE devotional_assets SET name=$2, aliases=$3, category=$4, description=$5, identity=$6::jsonb,
-             style_id=$7, negative_prompt=$8, status=$9, locked=$10, continuity=$11, metadata=$12::jsonb, prompt=$13,
-             updated_at=now() WHERE id=$1 RETURNING *`,
-          [id, next.name, next.aliases, next.category, next.description, JSON.stringify(next.identity || {}),
-           next.style_id, next.negative_prompt, next.status, next.locked, next.continuity,
-           JSON.stringify(next.metadata || {}), next.prompt || ""]);
-        out = r.rows[0];
-      } else {
-        devDb.prepare(
-          `UPDATE devotional_assets SET name=?, aliases=?, category=?, description=?, identity=?,
-             style_id=?, negative_prompt=?, status=?, locked=?, continuity=?, metadata=?, prompt=?,
-             updated_at=? WHERE id=?`
-        ).run(next.name, JSON.stringify(next.aliases || []), next.category, next.description,
-          JSON.stringify(next.identity || {}), next.style_id, next.negative_prompt, next.status,
-          next.locked ? 1 : 0, next.continuity, JSON.stringify(next.metadata || {}), next.prompt || "", devNow(), id);
-        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      }
-      return json(res, 200, devRow(out));
-    }
-    // Lifecycle transition with validation (approve / reject / regenerate-flow).
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/status") && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const body = await readJson(req).catch(() => ({}));
-      const to = normalizeStatus(body?.status);
-      if (!to) return json(res, 400, { error: "status is required" });
-      const from = store === "pg"
-        ? (await pgPool.query("SELECT status FROM devotional_assets WHERE id = $1", [id])).rows[0]?.status
-        : devDb.prepare("SELECT status FROM devotional_assets WHERE id = ?").get(id)?.status;
-      if (!from) return json(res, 404, { error: "no such asset" });
-      if (from !== to && !canTransition(from, to)) {
-        return json(res, 400, { error: `illegal transition ${from} -> ${to}` });
-      }
-      if (to === "approved") {
-        const files = store === "pg"
-          ? (await pgPool.query("SELECT file_path FROM devotional_asset_files WHERE asset_id = $1", [id])).rows
-          : devDb.prepare("SELECT file_path FROM devotional_asset_files WHERE asset_id = ?").all(id);
-        const hasReferenceImage = files.some((f) => /\.(png|jpe?g|webp)$/i.test(String(f.file_path || ""))
-          && fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)));
-        if (!hasReferenceImage) return json(res, 400, { error: "approve needs an existing reference image — generate or upload one first" });
-      }
-      let out;
-      if (store === "pg") {
-        const r = await pgPool.query(
-          "UPDATE devotional_assets SET status = $2, updated_at = now() WHERE id = $1 RETURNING *", [id, to]);
-        if (to === "approved") {
-          await pgPool.query("UPDATE devotional_assets SET locked = TRUE WHERE id = $1", [id]);
-          r.rows[0].locked = true;
-        }
-        out = r.rows[0];
-      } else {
-        devDb.prepare("UPDATE devotional_assets SET status = ?, updated_at = ? WHERE id = ?").run(to, devNow(), id);
-        if (to === "approved") {
-          devDb.prepare("UPDATE devotional_assets SET locked = 1 WHERE id = ?").run(id);
-        }
-        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      }
-      return json(res, 200, devRow(out));
-    }
-    if (p.startsWith("/api/devotional/assets/") && (p.endsWith("/lock") || p.endsWith("/unlock")) && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const lock = p.endsWith("/lock");
-      let out;
-      if (store === "pg") {
-        const r = await pgPool.query(
-          "UPDATE devotional_assets SET locked = $2, updated_at = now() WHERE id = $1 RETURNING *", [id, lock]);
-        if (!r.rows[0]) return json(res, 404, { error: "no such asset" });
-        out = r.rows[0];
-      } else {
-        devDb.prepare("UPDATE devotional_assets SET locked = ?, updated_at = ? WHERE id = ?").run(lock ? 1 : 0, devNow(), id);
-        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-        if (!out) return json(res, 404, { error: "no such asset" });
-      }
-      return json(res, 200, devRow(out));
-    }
-    // New canonical version: snapshot current, bump version number.
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/version") && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const body = await readJson(req).catch(() => ({}));
-      const curRow = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
-        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      if (!curRow) return json(res, 404, { error: "no such asset" });
-      const prev = devRow(curRow);
-      await devSnapshot(id, prev.version, String(body?.note || ""));
-      let out;
-      if (store === "pg") {
-        const r = await pgPool.query(
-          "UPDATE devotional_assets SET version = version + 1, status = 'review', updated_at = now() WHERE id = $1 RETURNING *", [id]);
-        out = r.rows[0];
-      } else {
-        devDb.prepare("UPDATE devotional_assets SET version = version + 1, status = 'review', updated_at = ? WHERE id = ?").run(devNow(), id);
-        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      }
-      await devSnapshot(id, Number(devRow(out).version), "version opened");
-      return json(res, 200, devRow(out));
-    }
-    // Restore an earlier snapshot (safe: current state is snapshotted first,
-    // scene links keep pointing at the versions they recorded).
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/restore") && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const body = await readJson(req).catch(() => ({}));
-      const version = Number(body?.version);
-      if (!Number.isInteger(version) || version < 1) return json(res, 400, { error: "version is required" });
-      const snapRaw = store === "pg"
-        ? (await pgPool.query(
-          "SELECT snapshot FROM devotional_asset_versions WHERE asset_id = $1 AND version = $2", [id, version])).rows[0]?.snapshot
-        : devDb.prepare("SELECT snapshot FROM devotional_asset_versions WHERE asset_id = ? AND version = ?").get(id, version)?.snapshot;
-      if (snapRaw == null) return json(res, 404, { error: "no such version" });
-      const curVersion = store === "pg"
-        ? (await pgPool.query("SELECT version FROM devotional_assets WHERE id = $1", [id])).rows[0]?.version
-        : devDb.prepare("SELECT version FROM devotional_assets WHERE id = ?").get(id)?.version;
-      if (curVersion == null) return json(res, 404, { error: "no such asset" });
-      const s = (typeof snapRaw === "string" ? devJson(snapRaw, {}) : snapRaw) || {};
-      await devSnapshot(id, Number(curVersion), `pre-restore of v${version}`);
-      const sAliases = Array.isArray(s.aliases) ? s.aliases : devJson(s.aliases, []);
-      let out;
-      if (store === "pg") {
-        const r = await pgPool.query(
-          `UPDATE devotional_assets SET name=$2, aliases=$3, category=$4, description=$5, identity=$6::jsonb,
-             style_id=$7, negative_prompt=$8, continuity=$9, metadata=$10::jsonb,
-             version=version+1, status='review', updated_at=now() WHERE id=$1 RETURNING *`,
-          [id, String(s.name || "restored").slice(0, 120), Array.isArray(s.aliases) ? s.aliases : [],
-           String(s.category || "").slice(0, 80), String(s.description || "").slice(0, 4000),
-           JSON.stringify(s.identity || {}), s.style_id || null, String(s.negative_prompt || "").slice(0, 2000),
-           String(s.continuity || "").slice(0, 2000), JSON.stringify(s.metadata || {})]);
-        out = r.rows[0];
-      } else {
-        devDb.prepare(
-          `UPDATE devotional_assets SET name=?, aliases=?, category=?, description=?, identity=?,
-             style_id=?, negative_prompt=?, continuity=?, metadata=?,
-             version=version+1, status='review', updated_at=? WHERE id=?`
-        ).run(String(s.name || "restored").slice(0, 120), JSON.stringify(Array.isArray(sAliases) ? sAliases : []),
-          String(s.category || "").slice(0, 80), String(s.description || "").slice(0, 4000),
-          JSON.stringify(s.identity || {}), s.style_id || null, String(s.negative_prompt || "").slice(0, 2000),
-          String(s.continuity || "").slice(0, 2000), JSON.stringify(s.metadata || {}), devNow(), id);
-        out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      }
-      await devSnapshot(id, Number(devRow(out).version), `restored from v${version}`);
-      return json(res, 200, devRow(out));
-    }
-    // Import an image (base64 data URL) as a reference file. Never overwrites:
-    // identical filenames gain a _vN suffix.
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/upload") && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const assetRow = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
-        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      if (!assetRow) return json(res, 404, { error: "no such asset" });
-      const body = await readJson(req).catch(() => null);
-      const data = String(body?.data || "");
-      const m = data.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/s);
-      if (!m) return json(res, 400, { error: "body.data must be a png/jpeg/webp data URL" });
-      const buf = Buffer.from(m[2], "base64");
-      if (!buf.length || buf.length > 25 * 1024 * 1024) return json(res, 400, { error: "image must be 1 byte..25MB" });
-      let fileKind = String(body?.fileKind || "master").toLowerCase();
-      if (!DEVOTIONAL_FILE_KINDS.includes(fileKind)) fileKind = "master";
-      const asset = devRow(assetRow);
-      const dir = devAssetDir(asset);
-      fs.mkdirSync(dir, { recursive: true });
-      const base = `${id.toLowerCase()}_${fileKind}`;
-      const ext = DEVOTIONAL_UPLOAD_EXT[m[1].toLowerCase()] || ".png";
-      let file = base + ext, n = 2;
-      while (fs.existsSync(path.join(dir, file))) file = `${base}_v${n++}${ext}`;
-      fs.writeFileSync(path.join(dir, file), buf);
-      const rel = path.relative(DEVOTIONAL_DIR, path.join(dir, file)).split(path.sep).join("/");
-      let frow;
-      if (store === "pg") {
-        const fr = await pgPool.query(
-          `INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, metadata)
-           VALUES ($1,$2,$3,'upload',$4::jsonb) RETURNING *`,
-          [id, rel, fileKind, JSON.stringify({ bytes: buf.length })]);
-        frow = fr.rows[0];
-        if (asset.status === "draft") {
-          await pgPool.query("UPDATE devotional_assets SET status = 'review', updated_at = now() WHERE id = $1", [id]);
-        }
-      } else {
-        const info = devDb.prepare(
-          "INSERT INTO devotional_asset_files (asset_id, file_path, file_kind, source, metadata) VALUES (?, ?, ?, 'upload', ?)"
-        ).run(id, rel, fileKind, JSON.stringify({ bytes: buf.length }));
-        frow = devDb.prepare("SELECT * FROM devotional_asset_files WHERE id = ?").get(Number(info.lastInsertRowid));
-        if (asset.status === "draft") {
-          devDb.prepare("UPDATE devotional_assets SET status = 'review', updated_at = ? WHERE id = ?").run(devNow(), id);
-        }
-      }
-      return json(res, 200, { ...devFileRow(frow), url: `/devotional/${rel}`, exists: true });
-    }
-    // Queue a Flux reference generation (background child process — never
-    // blocks API requests; serial with main runs via the pump below).
-    // With { both: true } this becomes the one-click media button: a still
-    // is queued only when the asset has no reference image yet, and a short
-    // LTX showcase clip (kind 'video') is always queued behind it.
-    if (p.startsWith("/api/devotional/assets/") && p.endsWith("/generate") && req.method === "POST") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const assetRow = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0]
-        : devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      if (!assetRow) return json(res, 404, { error: "no such asset" });
-      const body = await readJson(req).catch(() => ({}));
-      const asset = devRow(assetRow);
-      // Per-request prompt wins; otherwise the asset's saved prompt; blank
-      // saved prompt falls back to the canonical auto description.
-      const prompt = String(body?.prompt || asset.prompt || describeAssetForPrompt(asset)).trim().slice(0, 2000);
-      if (!prompt) return json(res, 400, { error: "prompt is required (or fill the asset description first)" });
-      let fileKind = String(body?.fileKind || "master").toLowerCase();
-      if (!DEVOTIONAL_FILE_KINDS.includes(fileKind) || fileKind === "video") fileKind = "master";
-      const both = body?.both === true;
-      // { only: "video" } = clip-only regen (no still, no status change) —
-      // the per-kind regen buttons in the Image & video section.
-      const onlyVideo = String(body?.only || "").toLowerCase() === "video";
-      const duration = Math.max(2, Math.min(8, Number(body?.duration) || 3));
-      const newJobId = () => `dev_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 6)}`;
-      const enqueue = async (kind, workflow, model, meta) => {
-        const jobId = newJobId();
-        if (store === "pg") {
-          await pgPool.query(
-            `INSERT INTO devotional_jobs (id, asset_id, kind, status, prompt, workflow, model, metadata)
-             VALUES ($1,$2,$3,'PENDING',$4,$5,$6,$7::jsonb)`,
-            [jobId, id, kind, prompt, workflow, model, JSON.stringify(meta)]);
-        } else {
-          const now = devNow();
-          devDb.prepare(
-            "INSERT INTO devotional_jobs (id, asset_id, kind, status, prompt, workflow, model, metadata, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?)"
-          ).run(jobId, id, kind, prompt, workflow, model, JSON.stringify(meta), now, now);
-        }
-        return jobId;
-      };
-      const markGenerating = async () => {
-        if (store === "pg") {
-          await pgPool.query("UPDATE devotional_assets SET status = 'generating', updated_at = now() WHERE id = $1 AND status = 'draft'", [id]);
-        } else {
-          devDb.prepare("UPDATE devotional_assets SET status = 'generating', updated_at = ? WHERE id = ? AND status = 'draft'").run(devNow(), id);
-        }
-      };
-      const jobs = [];
-      let image = "skipped";
-      if (onlyVideo) {
-        jobs.push(await enqueue("video", "ltx-i2v", "ltx-2.5-22b-distilled", { fileKind, duration }));
-      } else if (!both) {
-        jobs.push(await enqueue("reference", "flux-t2i", "flux-2-klein-9b-fp8", { fileKind }));
-        image = "queued";
-        await markGenerating();
-      } else {
-        const imageRows = store === "pg"
-          ? (await pgPool.query("SELECT file_path FROM devotional_asset_files WHERE asset_id = $1 ORDER BY id DESC", [id])).rows
-          : devDb.prepare("SELECT file_path FROM devotional_asset_files WHERE asset_id = ? ORDER BY id DESC").all(id);
-        const hasImage = imageRows.some((f) => /\.(png|jpe?g|webp)$/i.test(String(f.file_path || ""))
-          && fs.existsSync(path.join(DEVOTIONAL_DIR, f.file_path)));
-        if (!hasImage) {
-          jobs.push(await enqueue("reference", "flux-t2i", "flux-2-klein-9b-fp8", { fileKind }));
-          image = "queued";
-          await markGenerating();
-        } else {
-          image = "reused";
-        }
-        jobs.push(await enqueue("video", "ltx-i2v", "ltx-2.5-22b-distilled", { fileKind, duration }));
-      }
-      void devPumpJobs();
-      return json(res, 200, { ok: true, job: jobs[0], status: "PENDING", jobs, image });
-    }
-    if (p.startsWith("/api/devotional/jobs/") && req.method === "DELETE") {
-      const jobId = pathName(p.split("/")[4] || "");
-      if (!jobId) return json(res, 400, { error: "bad job id" });
-      const proc = devotionalProcs.get(jobId);
-      if (proc) { try { proc.kill(); } catch { /* already dead */ } }
-      if (pgUp) {
-        await pgPool.query(
-          "UPDATE devotional_jobs SET status = 'FAILED', error_message = 'cancelled by user', updated_at = now() WHERE id = $1 AND status IN ('PENDING','PROCESSING')",
-          [jobId]);
-      } else if (devDb) {
-        try {
-          devDb.prepare("UPDATE devotional_jobs SET status = 'FAILED', error_message = 'cancelled by user', updated_at = ? WHERE id = ? AND status IN ('PENDING','PROCESSING')").run(devNow(), jobId);
-        } catch { /* already gone */ }
-      }
-      return json(res, 200, { ok: true });
-    }
-    if (p.startsWith("/api/devotional/files/") && req.method === "DELETE") {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const fileId = Number(pathName(p.split("/")[4] || ""));
-      if (!Number.isInteger(fileId)) return json(res, 400, { error: "bad file id" });
-      const frow = store === "pg"
-        ? (await pgPool.query("SELECT * FROM devotional_asset_files WHERE id = $1", [fileId])).rows[0]
-        : devDb.prepare("SELECT * FROM devotional_asset_files WHERE id = ?").get(fileId);
-      if (!frow) return json(res, 404, { error: "no such file" });
-      const guardStatus = store === "pg"
-        ? (await pgPool.query(
-          "SELECT status FROM devotional_assets WHERE id = $1", [frow.asset_id])).rows[0]?.status
-        : devDb.prepare("SELECT status FROM devotional_assets WHERE id = ?").get(frow.asset_id)?.status;
-      const remaining = store === "pg"
-        ? (await pgPool.query(
-          "SELECT count(*)::int AS n FROM devotional_asset_files WHERE asset_id = $1 AND id <> $2",
-          [frow.asset_id, fileId])).rows[0].n
-        : devDb.prepare("SELECT count(*) AS n FROM devotional_asset_files WHERE asset_id = ? AND id <> ?").get(frow.asset_id, fileId)?.n ?? 0;
-      if (guardStatus === "approved" && !Number(remaining)) {
-        return json(res, 400, { error: "cannot delete the last reference of an approved asset — restore or add one first" });
-      }
-      try {
-        const full = path.join(DEVOTIONAL_DIR, frow.file_path);
-        if (full.startsWith(DEVOTIONAL_DIR) && fs.existsSync(full)) fs.unlinkSync(full);
-      } catch { /* DB row is canonical */ }
-      if (store === "pg") {
-        await pgPool.query("DELETE FROM devotional_asset_files WHERE id = $1", [fileId]);
-      } else {
-        devDb.prepare("DELETE FROM devotional_asset_files WHERE id = ?").run(fileId);
-      }
-      return json(res, 200, { ok: true, deleted: fileId });
-    }
-    // Archive (default, reversible) or hard-delete (only when nothing
-    // references the asset) an entry.
-    if (p.startsWith("/api/devotional/assets/") && req.method === "DELETE" && p.split("/").length === 5) {
-      const store = devStore();
-      if (!store) return json(res, 503, { error: "database unavailable" });
-      const id = pathName(p.split("/")[4] || "").toUpperCase();
-      const hard = u.searchParams.get("hard") === "1";
-      let curRow;
-      if (store === "pg") {
-        curRow = (await pgPool.query("SELECT * FROM devotional_assets WHERE id = $1", [id])).rows[0];
-      } else {
-        curRow = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-      }
-      if (!curRow) return json(res, 404, { error: "no such asset" });
-      if (!hard) {
-        let out;
-        if (store === "pg") {
-          const r = await pgPool.query(
-            "UPDATE devotional_assets SET status = 'archived', updated_at = now() WHERE id = $1 RETURNING *", [id]);
-          out = r.rows[0];
-        } else {
-          devDb.prepare("UPDATE devotional_assets SET status = 'archived', updated_at = ? WHERE id = ?").run(devNow(), id);
-          out = devDb.prepare("SELECT * FROM devotional_assets WHERE id = ?").get(id);
-        }
-        return json(res, 200, devRow(out));
-      }
-      const nLinks = store === "pg"
-        ? (await pgPool.query(
-          "SELECT count(*)::int AS n FROM devotional_scene_links WHERE asset_id = $1", [id])).rows[0].n
-        : devDb.prepare("SELECT count(*) AS n FROM devotional_scene_links WHERE asset_id = ?").get(id)?.n ?? 0;
-      const nUse = store === "pg"
-        ? (await pgPool.query(
-          "SELECT count(*)::int AS n FROM devotional_project_usage WHERE asset_id = $1", [id])).rows[0].n
-        : devDb.prepare("SELECT count(*) AS n FROM devotional_project_usage WHERE asset_id = ?").get(id)?.n ?? 0;
-      const nKids = store === "pg"
-        ? (await pgPool.query(
-          "SELECT count(*)::int AS n FROM devotional_assets WHERE parent_id = $1", [id])).rows[0].n
-        : devDb.prepare("SELECT count(*) AS n FROM devotional_assets WHERE parent_id = ?").get(id)?.n ?? 0;
-      if (Number(nLinks) || Number(nUse) || Number(nKids)) {
-        return json(res, 400, { error: "asset is referenced by scenes, projects or variants — archive instead" });
-      }
-      if (store === "pg") {
-        await pgPool.query("DELETE FROM devotional_assets WHERE id = $1", [id]);
-      } else {
-        // SQLite has no FK enforcement — delete dependents explicitly
-        // (mirrors the Postgres ON DELETE CASCADE behavior).
-        devDb.prepare("DELETE FROM devotional_asset_files WHERE asset_id = ?").run(id);
-        devDb.prepare("DELETE FROM devotional_asset_versions WHERE asset_id = ?").run(id);
-        devDb.prepare("DELETE FROM devotional_jobs WHERE asset_id = ?").run(id);
-        devDb.prepare("DELETE FROM devotional_scene_links WHERE asset_id = ?").run(id);
-        devDb.prepare("DELETE FROM devotional_project_usage WHERE asset_id = ?").run(id);
-        devDb.prepare("DELETE FROM devotional_assets WHERE id = ?").run(id);
-      }
-      return json(res, 200, { ok: true, deleted: id });
-    }
 // ---------------------------------------------------------------- database browser
-// Generic SQLite browser + row CRUD for the Database tab (below Reface).
-// Covers every user table in data/scenarios.sqlite + data/devotional.sqlite
-// (the canonical stores when USE_SQLITE=true). Identifiers are validated
+// Generic SQLite browser + row CRUD for the Database tab.
+// Covers every user table in data/scenarios.sqlite
+// (the canonical store when USE_SQLITE=true). Identifiers are validated
 // against /^[A-Za-z_][A-Za-z0-9_]*$/ AND against the live schema, all values
 // are bound — no string-interpolated user input ever reaches SQL.
-const DB_BROWSER_FILES = { scenarios: DB, devotional: DEVOTIONAL_DB };
+const DB_BROWSER_FILES = { scenarios: DB };
 const dbIdentOk = (s) => typeof s === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
-const dbFileOf = (key) => (key === "devotional" ? "devotional" : "scenarios");
-// A fresh short-lived handle per request (never touches the long-lived db /
-// devDb handles); closed before responding.
+const dbFileOf = (key) => "scenarios";
+// A fresh short-lived handle per request (never touches the long-lived db
+// handle); closed before responding.
 const dbBrowserOpen = (key) => {
   const file = DB_BROWSER_FILES[dbFileOf(key)];
   if (!file || !fs.existsSync(file)) return null;
@@ -9589,7 +10245,7 @@ const dbCoerceKey = (cols, key) => {
 };
 if (p === "/api/database" && req.method === "GET") {
   const files = [];
-  for (const key of ["scenarios", "devotional"]) {
+  for (const key of ["scenarios"]) {
     const h = dbBrowserOpen(key);
     if (!h) continue;
     try {
@@ -9746,13 +10402,6 @@ if (p === "/api/database/rows" && (req.method === "POST" || req.method === "PUT"
     if (table === "scenarios") {
       doomed = pk.length ? dbReadRow(h, table, pk, effKey) : null;
     }
-    if (table === "devotional_assets" && pk.length) {
-      // SQLite has no FK enforcement — cascade like the asset DELETE route.
-      const aid = effKey[pk[0]];
-      for (const t of ["devotional_asset_files", "devotional_asset_versions", "devotional_jobs", "devotional_scene_links", "devotional_project_usage"]) {
-        try { h.prepare(`DELETE FROM "${t}" WHERE asset_id IS ?`).run(aid); } catch { /* table may predate */ }
-      }
-    }
     const where = keyCols.map((c) => (c === "_rowid" ? "rowid IS ?" : `"${c}" IS ?`)).join(" AND ");
     let info;
     try {
@@ -9785,22 +10434,15 @@ if (p === "/api/database/rows" && (req.method === "POST" || req.method === "PUT"
       const [, , file] = p.split("/");
       return serveResource(res, decodeURIComponent(file));
     }
-    if (p.startsWith("/devotional/")) {
-      // /devotional/<Kind>/<Name>/<Id>/<file> — library reference binaries.
-      const rel = p.slice("/devotional/".length).split("/").map((s) => {
+    if (p.startsWith("/kids/")) {
+      // /kids/<scope>/<Kind>/<key>/<file> — the Sanskriti Kids asset
+      // library's generated reference stills (path segments are validated:
+      // path segments are validated, nothing outside the kids folder is
+      // readable).
+      const rel = p.slice("/kids/".length).split("/").map((s) => {
         try { return decodeURIComponent(s); } catch { return ""; }
       }).join("/");
-      return serveDevotional(res, rel);
-    }
-    if (p.startsWith("/reface/")) {
-      // /reface/<id>/file/<path...> — job media (source, thumbs, result).
-      // Anything else under /reface/ falls through to the SPA.
-      const parts = p.split("/");
-      if (parts.length >= 5 && parts[3] === "file") {
-        const id = decodeURIComponent(parts[2]);
-        const rel = parts.slice(4).map((s) => { try { return decodeURIComponent(s); } catch { return ""; } }).join("/");
-        return serveReface(req, res, id, rel);
-      }
+      return serveKids(res, rel);
     }
     if (p.startsWith("/api/")) return json(res, 404, { error: "unknown route" });
     serveStatic(req, res, p === "/" ? "/index.html" : p);

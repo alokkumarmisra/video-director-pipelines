@@ -28,11 +28,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   directorAnalyze, directorApprove, directorBoard,
-  directorRegenScene, directorScenes, directorUpdateBoard, saveScenario,
-  type DirectorBoard, type DirectorInput, type DirectorScene, type ImageMode,
+  directorRegenScene, directorScenes, directorUpdateBoard, saveScenario, directorLive, directorAnalyzeLive,
+  type DirectorBoard, type DirectorInput, type DirectorScene, type ImageMode, type DirectorLive, type DirectorAnalyzeLive,
 } from "../api";
 import { useDialog } from "./Dialog";
 import DirectorGeneration from "./DirectorGeneration";
+import BatchSizeSelect, { SCENE_BATCH } from "./BatchSizeSelect";
 import { IconCheck, IconClapper, IconFilm, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
 
 type StoryTab = "characters" | "scenes" | "dialogue" | "timeline";
@@ -52,6 +53,49 @@ const spkHue = (name: string): number => {
   for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 360;
   return h;
 };
+
+// Live-typing for newly planned storyboard scenes (copied from DirectorPage).
+const TYPE_CHAR_MS = 14;
+const TYPE_LINE_GAP_MS = 320;
+
+function TypedText({ text, animate, delayMs = 0, className, style, title }: {
+  text: string; animate: boolean; delayMs?: number; className?: string; style?: React.CSSProperties; title?: string;
+}) {
+  const full = str(text);
+  const [shown, setShown] = useState(animate ? 0 : full.length);
+  useEffect(() => {
+    if (!animate) { setShown(full.length); return; }
+    setShown(0);
+    let iv: number | null = null;
+    const t = window.setTimeout(() => {
+      iv = window.setInterval(() => {
+        setShown((n) => {
+          if (n >= full.length) { if (iv != null) window.clearInterval(iv); return n; }
+          return n + 1;
+        });
+      }, TYPE_CHAR_MS);
+    }, Math.max(0, delayMs));
+    return () => { window.clearTimeout(t); if (iv != null) window.clearInterval(iv); };
+  }, [animate, delayMs, full]);
+  const done = shown >= full.length;
+  return (
+    <span className={className} style={style} title={title}>
+      {full.slice(0, shown)}
+      {animate && !done && <span className="typing-caret" aria-hidden="true" />}
+    </span>
+  );
+}
+
+const sceneTypeBudget = (s: DirectorScene): number => {
+  const shots = Array.isArray(s.shots) ? s.shots : [];
+  const segs = shots.length
+    ? shots.map((sh) => str(sh.lyric_segment) || str(sh.action))
+    : [str(s.action)];
+  const chars = str(s.title).length + segs.reduce((a, t) => a + Math.min(t.length, 400), 0) + 200;
+  return chars * TYPE_CHAR_MS + (segs.length + 2) * TYPE_LINE_GAP_MS;
+};
+
+const typeDelay = (chars: number): number => Math.min(2000, chars * TYPE_CHAR_MS + TYPE_LINE_GAP_MS);
 
 // First acceptance-test story (§42): Ram / Sita / Shyam, 5 dialogues with
 // exact ownership Ram → Sita → Shyam → Ram → Shyam.
@@ -200,11 +244,20 @@ function validateStory(b: DirectorBoard): QaResult {
   return { errors, warnings };
 }
 
-export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode, onImageMode }: {
+export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode, onImageMode, seed }: {
   onOpenProject?: (name: string) => void;
   onProjectsChanged?: () => void;
   imageMode?: ImageMode;
   onImageMode?: (mode: ImageMode) => void;
+  /** Seed the form from a studio project brief. */
+  seed?: {
+    key?: string;
+    title?: string;
+    story?: string;
+    language?: string;
+    visualStyle?: string;
+    targetSeconds?: number;
+  } | null;
 } = {}) {
   const dialog = useDialog();
   // Story input (§3). Advanced knobs stay hidden — the board + style lock
@@ -212,10 +265,27 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
   const [language, setLanguage] = useState("Hindi");
-  const [genre, setGenre] = useState("Kids");
-  const [visualStyle, setVisualStyle] = useState("3D Preschool Animation");
+  // The language of the SOURCE TEXT for the meaning analysis
+  // ("auto" | "hi" | "en" | "hinglish"). Separate from `language` (spoken).
+  const [semanticsLanguage, setSemanticsLanguage] = useState("auto");
+  const [genre, setGenre] = useState("Adventure");
+  const [visualStyle, setVisualStyle] = useState("3D Cinematic");
   const [targetSeconds, setTargetSeconds] = useState("60");
-  const [sceneSeconds, setSceneSeconds] = useState("5");
+  const [sceneSeconds, setSceneSeconds] = useState("3");
+  // Seed the form from a studio brief when provided (user-visible values,
+  // freely editable — no genre pin, no forced register).
+  const seededKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!seed) return;
+    const key = seed.key || seed.title || "";
+    if (!key || seededKey.current === key) return;
+    seededKey.current = key;
+    if (seed.title) setTitle(seed.title);
+    if (seed.story) setStory(seed.story);
+    if (seed.language) setLanguage(seed.language);
+    if (seed.visualStyle) setVisualStyle(seed.visualStyle);
+    if (seed.targetSeconds && seed.targetSeconds > 0) setTargetSeconds(String(Math.round(seed.targetSeconds)));
+  }, [seed]);
   const [includeDialogue, setIncludeDialogue] = useState(true);
   const [tab, setTab] = useState<StoryTab>("characters");
   const [board, setBoard] = useState<DirectorBoard | null>(null);
@@ -223,10 +293,20 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
   const [busySince, setBusySince] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
+  // Scene-planning batch size (scenes per AI Director LLM batch) — chosen
+  // from the Batch Size dropdown before Generate Scenes / Continue planning;
+  // sent as the batch count (server default when unset = SCENE_BATCH = 10).
+  const [sceneBatch, setSceneBatch] = useState<number>(SCENE_BATCH);
   const [qa, setQa] = useState<QaResult | null>(null);
   const [regenScene, setRegenScene] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<number | null>(0);
   const [showPrompts, setShowPrompts] = useState(false);
+  // Live typing for newly planned scenes.
+  const [typingScenes, setTypingScenes] = useState<number[]>([]);
+  const seenSceneNumsRef = useRef<{ boardId: string; nums: Set<number> } | null>(null);
+  const reduceMotion = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches)[0];
   // Story Editor (§23): inline drafts, persisted via directorUpdateBoard.
   const [editingChar, setEditingChar] = useState<number | null>(null);
   const [charName, setCharName] = useState("");
@@ -235,6 +315,11 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
   const [sceneDlgDraft, setSceneDlgDraft] = useState("");
   const [sceneActionDraft, setSceneActionDraft] = useState("");
   const cancelRef = useRef(false);
+  // Live planning phase tracking (for live response polling).
+  const [planPhase, setPlanPhase] = useState<{ kind: "analyze" | "scenes"; startedAt: number; liveId?: string } | null>(null);
+  const [live, setLive] = useState<DirectorLive | null>(null);
+  const [analyzeLive, setAnalyzeLive] = useState<DirectorAnalyzeLive | null>(null);
+  const [formLiveText, setFormLiveText] = useState("");
   // 1s ticker so the busy elapsed counter stays live while planning.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -242,6 +327,74 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [busy]);
+
+  // Live typing: detect newly landed scenes and replay their text line by line.
+  useEffect(() => {
+    if (!board || reduceMotion) return;
+    const nums = board.scenes.map((s) => s.scene_number);
+    const seen = seenSceneNumsRef.current;
+    if (!seen || seen.boardId !== board.id) {
+      seenSceneNumsRef.current = { boardId: board.id, nums: new Set(nums) };
+      setTypingScenes([]);
+      return;
+    }
+    const fresh = nums.filter((n) => !seen.nums.has(n));
+    if (!fresh.length) return;
+    for (const n of fresh) seen.nums.add(n);
+    setTypingScenes((cur) => [...cur.filter((n) => !fresh.includes(n)), ...fresh]);
+  }, [board, reduceMotion]);
+
+  // Clear typing flag once the animation budget is exhausted.
+  useEffect(() => {
+    if (!typingScenes.length || !board) return;
+    let budget = 0;
+    for (const n of typingScenes) {
+      const s = board.scenes.find((x) => x.scene_number === n);
+      if (s) budget = Math.max(budget, sceneTypeBudget(s));
+    }
+    const t = window.setTimeout(() => setTypingScenes([]), Math.min(25000, budget + 1200));
+    return () => window.clearTimeout(t);
+  }, [typingScenes, board]);
+
+  // Live LLM response during Analyze phase (pre-board generation).
+  useEffect(() => {
+    if (!planPhase || planPhase.kind !== "analyze" || !planPhase.liveId) {
+      setAnalyzeLive(null);
+      return;
+    }
+    const liveId = planPhase.liveId;
+    let dead = false;
+    const tick = async () => {
+      try {
+        const s = await directorAnalyzeLive(liveId);
+        if (!dead) {
+          setAnalyzeLive(s);
+          setFormLiveText(s.active && s.text ? s.text : "");
+        }
+      } catch { /* live view is best-effort */ }
+    };
+    void tick();
+    const t = window.setInterval(tick, 1000);
+    return () => { dead = true; window.clearInterval(t); };
+  }, [planPhase]);
+
+  // Live LLM response during Scenes phase (board exists).
+  useEffect(() => {
+    if (!planPhase || planPhase.kind !== "scenes" || !board?.id) {
+      setLive(null);
+      return;
+    }
+    let dead = false;
+    const tick = async () => {
+      try {
+        const s = await directorLive(board.id);
+        if (!dead) setLive(s && s.active ? s : null);
+      } catch { /* live view is best-effort */ }
+    };
+    void tick();
+    const t = window.setInterval(tick, 1000);
+    return () => { dead = true; window.clearInterval(t); };
+  }, [planPhase, board?.id]);
 
   const fail = (e: unknown, suffix = "") => {
     const msg = `${e instanceof Error ? e.message : String(e)}${suffix}`;
@@ -260,6 +413,7 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
     if (busy) return;
     const input: DirectorInput = {
       title: title.trim(), story: story.trim(), language,
+      semanticsLanguage,
       genre, genreCustom: "", visualStyle, styleCustom: "",
       targetSeconds: Math.max(15, Math.min(3600, Math.round(Number(targetSeconds) || 60))),
       sceneSeconds: Math.min(30, Math.max(1, Math.round(Number(sceneSeconds) || 5))),
@@ -268,13 +422,16 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
     };
     if (!input.title) { setError("Give the story a title."); return; }
     if (input.story.length < 20) { setError("Paste the full story (20+ characters)."); return; }
+    const liveId = `story-analyze-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setBusy("Analyzing story — characters, locations, beats…");
     setBusySince(Date.now()); setError(""); setQa(null);
+    setPlanPhase({ kind: "analyze", startedAt: Date.now(), liveId });
+    setFormLiveText("");
     try {
-      const b = await directorAnalyze(input);
+      const b = await directorAnalyze(input, undefined, liveId);
       setBoard(b); setTab("characters"); setExpanded(0);
     } catch (e) { fail(e); }
-    finally { setBusy(null); setBusySince(null); }
+    finally { setBusy(null); setBusySince(null); setPlanPhase(null); setFormLiveText(""); }
   };
 
   // Duration-driven scene planning (§11–12): resumable batches until the
@@ -284,14 +441,16 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
     if (!board || busy) return;
     cancelRef.current = false;
     setBusy("Planning scenes…"); setBusySince(Date.now()); setError("");
+    setPlanPhase({ kind: "scenes", startedAt: Date.now() });
     try {
       let b = await directorBoard(board.id).catch(() => board);
       setBoard(b);
       while (b.scenes.length < b.sceneCount) {
         if (cancelRef.current) break;
-        setProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 12)} of ${b.sceneCount}`);
+        const batchEnd = Math.min(b.sceneCount, b.scenes.length + sceneBatch);
+        setProgress(`Scene ${b.scenes.length + 1}–${batchEnd} of ${b.sceneCount}`);
         const prevLen = b.scenes.length;
-        b = await directorScenes(b.id);
+        b = await directorScenes(b.id, sceneBatch);
         setBoard(b);
         if (b.scenes.length <= prevLen) {
           setError("Scene planning stalled (server returned no new scenes) — partial scenes are kept, retry continues.");
@@ -300,7 +459,7 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
       }
       setTab("scenes");
     } catch (e) { fail(e, " — partial scenes are kept, retry continues."); }
-    finally { setBusy(null); setBusySince(null); setProgress(""); }
+    finally { setBusy(null); setBusySince(null); setProgress(""); setPlanPhase(null); }
   };
 
   const doRegenScene = async (index: number) => {
@@ -565,6 +724,38 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
       </header>
       {error && <div className="story-err" role="alert">{error}</div>}
 
+      {/* Live LLM response during planning (analyze/scenes) */}
+      {(planPhase && (formLiveText || live)) && (
+        <section className="card" style={{ marginTop: 8 }}>
+          <div className="card-head">
+            <span className="story-sec-tag">🔴 LIVE ·</span>
+            <h2>
+              {planPhase.kind === "analyze" ? "Analyzing story…" : "Planning scenes…"}
+              <span className="muted" style={{ marginLeft: 8 }}>
+                {Math.max(0, Math.round((now - planPhase.startedAt) / 1000))}s
+              </span>
+            </h2>
+          </div>
+          <div style={{ maxHeight: "40vh", overflow: "auto" }}>
+            {analyzeLive?.active && analyzeLive.text && (
+              <details open style={{ marginBottom: 8 }}>
+                <summary><b>Raw LLM Response (Analyze)</b></summary>
+                <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 11, fontFamily: "monospace", background: "rgba(0,0,0,0.15)", padding: 10, borderRadius: 8 }}>{analyzeLive.text}</pre>
+              </details>
+            )}
+            {live && (
+              <details open>
+                <summary><b>Scene Batch Stream (Live)</b></summary>
+                <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 11, fontFamily: "monospace", background: "rgba(0,0,0,0.15)", padding: 10, borderRadius: 8 }}>
+                  {live.scenes.map((sc, i) => `Scene ${sc.scene_number}: ${sc.title}\n  Action: ${sc.action}\n  Shots: ${sc.shots.map(sh => `${sh.shot_id}: ${sh.text}`).join(" | ")}\n  Dialogue: ${sc.dialogue.map(d => `${d.speaker}: ${d.line}`).join(" | ")}`).join("\n\n")}
+                  {live.tail && `\n…${live.tail}`}
+                </pre>
+              </details>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Story input (§3): title + raw text only — no technical knobs up front. */}
       <section className="card">
         <div className="card-head"><span className="story-sec-tag">Step 1 ·</span><h2>📝 Story input</h2></div>
@@ -576,6 +767,14 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
             <label>Language
               <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </label>
+            <label>Source language (meaning)
+              <select value={semanticsLanguage} onChange={(e) => setSemanticsLanguage(e.target.value)}>
+                <option value="auto">Auto detect</option>
+                <option value="hi">Hindi</option>
+                <option value="en">English</option>
+                <option value="hinglish">Hinglish (mixed)</option>
               </select>
             </label>
             <label>Genre
@@ -599,6 +798,7 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
           <label>Story text — paste the whole story, nothing else is needed
             <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={8} placeholder={'Ram and Sita are walking through a peaceful forest. Sita looks worried…\nRam says, "Sita, do not worry…"'} />
           </label>
+          <BatchSizeSelect value={sceneBatch} onChange={setSceneBatch} disabled={!!busy} />
           <div className="row">
             <button className="primary" onClick={doAnalyze} disabled={!!busy || story.trim().length < 20 || !title.trim()}>
               {busy ? <><Spinner size={14} /> {busy}</> : <><IconSparkles /> Analyze Story</>}
@@ -716,7 +916,13 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
                     </div>
                     <div className="story-scene-main">
                       <div className="story-scene-head" onClick={() => setExpanded(open ? null : i)}>
-                        <span className="story-scene-title">{str(s.title) || `Scene ${s.scene_number}`}</span>
+                        <span className="story-scene-title">
+                          <TypedText
+                            text={str(s.title) || `Scene ${s.scene_number}`}
+                            animate={!reduceMotion && typingScenes.includes(s.scene_number)}
+                            delayMs={typeDelay(str(s.title || `Scene ${s.scene_number}`).length)}
+                          />
+                        </span>
                         <span className="story-scene-loc">📍 {str(s.location) || "—"}{str(s.time_of_day) ? ` · ${str(s.time_of_day)}` : ""}</span>
                         <span className="story-scene-tools">
                           <button className="ghost" onClick={(e) => { e.stopPropagation(); doRegenScene(i); }} disabled={regenScene != null} title="Regenerate this scene only">{regenScene === i ? <Spinner size={12} /> : <IconRefresh />}</button>
@@ -725,7 +931,15 @@ export default function StoryPage({ onOpenProject, onProjectsChanged, imageMode,
                       </div>
                       {open && (
                         <div>
-                          {str(s.story_beat) && <div className="story-scene-beat">{str(s.story_beat)}</div>}
+                          {str(s.story_beat) && (
+                            <div className="story-scene-beat">
+                              <TypedText
+                                text={str(s.story_beat)}
+                                animate={!reduceMotion && typingScenes.includes(s.scene_number)}
+                                delayMs={typeDelay(str(s.story_beat).length) + 300}
+                              />
+                            </div>
+                          )}
                           <div className="story-chips">
                             {str(s.emotion) && <span className="story-chip">🎭 <b>{str(s.emotion)}</b></span>}
                             {str(s.expression) && <span className="story-chip">🙂 {str(s.expression)}</span>}

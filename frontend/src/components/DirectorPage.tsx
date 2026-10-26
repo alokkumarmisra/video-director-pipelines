@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
-  alertServiceError, directorAddEntry, directorAnalyze, directorApprove, directorApproveStage, directorAssets, directorBoard, directorBoards, directorCinematography, directorCoverage, directorDeleteBoard,
-  directorDuplicateBoard, directorLive, directorMotionAudio, directorPlan, directorPromptPreview, directorRegenEntry, directorRegenScene, directorRepair, directorScenes, directorShotPrompts, directorSongUrl, directorUpdateBoard, directorUploadSong, directorValidate, estimateDirectorLength, fmtRelative, saveScenario, suggestDirectorInstructions,
-  type DirectorAssetMap, type DirectorBoard, type DirectorBoardMeta, type DirectorCinematography, type DirectorCoverage, type DirectorEntryKind, type DirectorInput, type DirectorLive, type DirectorMotionAudio, type DirectorPlan, type DirectorPromptPreview, type DirectorScene, type DirectorShotPrompts, type DirectorShot, type DirectorSong, type DirectorValidation, type ImageMode,
+  alertServiceError, directorAddEntry, directorAnalyze, directorAnalyzeLive, directorApprove, directorApproveStage, directorAssets, directorBiblePreview, directorBoard, directorBoards, directorCinematography, directorCoverage, directorDeleteBoard, directorOptimizePrompt,
+  directorDuplicateBoard, directorLive, directorMotionAudio, directorPlan, directorPromptPreview, directorRegenEntry, directorRegenScene, directorRepair, directorScenes, directorSemantics, directorAnalyzeSemantics, directorShotPrompts, directorSongUrl, directorUpdateBoard, directorValidate, fmtRelative, saveScenario, suggestDirectorInstructions,
+  type DirectorAssetMap, type DirectorBoard, type DirectorBoardMeta, type DirectorCinematography, type DirectorCoverage, type DirectorEntryKind, type DirectorInput, type DirectorLive, type DirectorMotionAudio, type DirectorPlan, type DirectorPromptPreview, type DirectorScene, type DirectorShotPrompts, type DirectorShot, type DirectorValidation, type DirectorSemantics, type ImageMode,
 } from "../api";
 import { useDialog } from "./Dialog";
 import { IconCheck, IconClapper, IconFilm, IconFolder, IconPanel, IconRefresh, IconSparkles, IconTrash, Spinner } from "./Icons";
 import Collapse from "./Collapse";
+import BatchSizeSelect, { SCENE_BATCH } from "./BatchSizeSelect";
 import DirectorGeneration from "./DirectorGeneration";
 import { useIdleFollow } from "./useIdleFollow";
 import {
@@ -16,6 +17,131 @@ import {
 
 const GENRES = ["Kids", "Devotional", "Adventure", "Fantasy", "Horror", "Comedy", "Educational", "Custom"];
 const STYLES = ["3D Preschool Animation", "3D Cinematic", "Realistic", "Anime", "Cartoon", "Indian Mythological", "Fantasy", "Custom"];
+// Master Prompt presets — one per visual style, auto-filled into the Master
+// Prompt box when the style changes (the user can then edit it freely; the
+// edited text is sent as THE style lock). Mirrors STYLE_LOCKS in
+// lib/director.mjs (the frontend cannot import that module).
+const STYLE_MASTER_PROMPTS: Record<string, string> = {
+  "3D Preschool Animation":
+    "Colorful 3D preschool animation, cute rounded characters, big expressive eyes, warm lighting, clean simple backgrounds, soft cinematic rendering",
+  "3D Cinematic":
+    "High-end 3D cinematic animation, detailed characters, dramatic lighting, rich textures, film-quality rendering",
+  Realistic:
+    "Ultra photorealistic highly detailed 8k uhd cinematic film still, natural skin texture, detailed expressive eyes, sharp focus, intricate details, realistic lighting and shadows, volumetric lighting, rich colors, shallow depth of field, no cartoon, no painting, no illustration, no blur",
+  Anime:
+    "Vibrant anime style, clean cel shading, expressive large eyes, dynamic composition, detailed backgrounds",
+  Cartoon:
+    "Classic 2D cartoon style, bold outlines, bright flat colors, playful squash-and-stretch feel",
+  "Indian Mythological":
+    "Ultra photorealistic Indian mythological cinematic film still, highly detailed 8k uhd, divine glowing palette, lifelike faces with natural skin texture and detailed expressive eyes, ornate traditional costumes and jewelry with intricate fabric detail, volumetric temple lighting, sharp focus, epic realistic backgrounds, no cartoon, no painting, no illustration, no blur",
+  Fantasy:
+    "Epic fantasy illustration style, magical glowing accents, lush detailed environments, cinematic atmosphere",
+  Custom: "",
+};
+
+// Analyzer director types — each with role, task, and instructions
+// Based on the Director instruction prompts for generating story and song videos
+const ANALYZER_TYPES = {
+  story_director: {
+    role: "Story Director — Sanskriti AI Studio",
+    task: "Analyze the supplied complete story, narration, or script and create a production-ready visual storyboard.",
+    instructions: [
+      "Understand the complete story before planning scenes.",
+      "Identify the plot, beginning, middle, climax, ending, characters, relationships, events, locations, and props.",
+      "Register every important character, including speaking characters and animals, with a unique ID, species, accurate anatomy, appearance, and reusable static visual_identity_prompt.",
+      "Register all important locations and props with unique IDs and reusable visual identity prompts.",
+      "Divide the story into chronological visual beats covering every important event.",
+      "Give each beat exactly one primary, clearly readable action.",
+      "Specify the characters, location, visible props, action, narration or dialogue, shot composition, camera movement, lighting, and transition for each beat.",
+      "Preserve the source's meaning, event order, and character relationships. Do not invent unnecessary characters or events.",
+      "Maintain consistent character designs, clothing, proportions, props, locations, and visual style across scenes.",
+      "Use the supplied video duration as the target runtime. Allocate scene durations according to narrative importance and supplied timing cues. Do not invent audio timestamps.",
+      "Ensure every beat references valid character, location, and prop IDs.",
+      "Return valid JSON using the application's required schema, including story analysis, registered assets, and chronological beats."
+    ]
+  },
+  song_director: {
+    role: "Song Director — Sanskriti AI Studio",
+    task: "Convert supplied song lyrics and available audio metadata into a complete visual music-video storyboard synchronized to the existing song.",
+    instructions: [
+      "Read and understand all lyrics before planning scenes.",
+      "Identify the intro, verses, chorus, repeated sections, bridge, outro, singers, speakers, characters, actions, and emotional progression when present.",
+      "Do not rewrite lyrics, compose a new song, change the supplied duration, or generate replacement audio.",
+      "Register every character represented in the lyrics, including singers, talking animals, and personified characters when present. Assign unique IDs and reusable static visual identity prompts.",
+      "Register all relevant locations and props with unique IDs and visual identity prompts.",
+      "Divide the song into chronological visual beats based on lyric meaning and supplied timing cues. Group related lines when they describe one coherent action; split them when the visual meaning changes.",
+      "For every beat, specify the corresponding lyric or lyric range, start and end times when known, characters, location, visible props, and exactly one primary visual action.",
+      "Translate lyrics into literal or appropriately symbolic visuals that a viewer can understand. Do not create unrelated scenes just to fill the song.",
+      "Use the existing song duration as the fixed runtime. If exact timestamps are unavailable, produce an estimated scene allocation and label it clearly.",
+      "Match singing and lip-sync to the correct character. Do not assign a vocal line to an unrelated character.",
+      "Repeated choruses should retain character identity while allowing purposeful visual variation.",
+      "Use instrumental passages for relevant visual actions, establishing shots, or transitions without inventing lyrics.",
+      "Specify image composition, video action, camera movement, lighting, and transitions for each beat.",
+      "Maintain character anatomy, visual identity, location continuity, and prop consistency throughout the video.",
+      "Ensure all beats together cover the complete supplied duration without unexplained gaps or overlaps.",
+      "Return valid JSON using the required schema, including registered characters, locations, props, and chronological beats."
+    ]
+  },
+  story_from_song_director: {
+    role: "Story-from-Song Director — Sanskriti AI Studio",
+    task: "Transform narrative lyrics into a coherent visual story video synchronized to the existing song.",
+    instructions: [
+      "Analyze the complete lyrics as a narrative, not merely as separate lines.",
+      "Identify the protagonist, supporting characters, goals, relationships, important events, setting, turning points, climax, and ending.",
+      "Register all characters, locations, and props with stable IDs and reusable visual identity prompts.",
+      "Preserve the narrative's chronological order and causal relationships.",
+      "Divide the narrative into visual beats that communicate the story clearly while following the supplied lyric sequence.",
+      "Each beat must contain exactly one primary visible action and reference its characters, location, and visible props.",
+      "Use the actual lyric range associated with each beat. Use supplied timestamps when available; otherwise label estimated timings.",
+      "Let musical repetition influence visual motifs and transitions, but do not force every repeated line to introduce a new event.",
+      "During instrumental passages, continue the story with relevant actions, reactions, travel, environmental shots, or transitions consistent with the narrative.",
+      "Preserve character designs, clothing, anatomy, props, and location continuity.",
+      "Specify image composition, video action, camera movement, lighting, and transitions.",
+      "Use the supplied total audio duration as the fixed runtime. Cover the complete song without changing its audio.",
+      "Return valid JSON containing narrative analysis, registered assets, and time-aligned visual beats."
+    ]
+  },
+  kids_director: {
+    role: "Kids Content Director — Sanskriti AI Studio",
+    task: "Create preschool-friendly visual scenes from supplied children's song lyrics or story.",
+    instructions: [
+      "Understand the complete source and preserve its meaning.",
+      "Register every important singer, speaker, and character with a unique species, accurate anatomy, and reusable visual identity prompt.",
+      "Register relevant locations and props with unique IDs.",
+      "Give every beat exactly one simple, clearly readable primary action.",
+      "Match song actions to the corresponding lyrics, or story actions to the narrative events.",
+      "Use bright colors, warm lighting, soft materials, expressive faces, large gestures, and gentle camera movement.",
+      "Avoid frightening faces, violence, harsh lighting, startling entrances, and dangerous actions children might imitate.",
+      "Apply correct anatomy and skin covering to every species. Cats, dogs, and rabbits have fur; birds have feathers; reptiles and fish have scales.",
+      "Keep character colors, markings, proportions, and accessories identical across scenes.",
+      "Use repetition to reinforce recognizable actions while varying the composition appropriately.",
+      "Specify the action, characters, location, visible props, image composition, video movement, and transition for every beat.",
+      "Use the supplied song duration or story runtime. Do not regenerate lyrics or audio.",
+      "Return valid JSON with registered assets and chronological beats, using the application's required schema."
+    ]
+  },
+  devotional_director: {
+    role: "Devotional Director — Sanskriti AI Studio",
+    task: "Create a respectful, visually consistent devotional video from supplied lyrics or a mythological narrative.",
+    instructions: [
+      "Analyze the lyrics or story to identify the devotional subject, intended meaning, spiritual mood, narrative events, and emotional progression.",
+      "Register every deity, saint, devotee, singer, and other relevant character with a unique ID and reusable visual identity prompt.",
+      "Preserve appropriate iconography, complexion where specified, clothing, ornaments, number of arms, sacred attributes, and associated symbols according to the source or selected tradition.",
+      "Register temples, sacred landscapes, locations, and props with unique IDs and reusable visual descriptions.",
+      "For devotional songs, follow the lyric sequence and supplied song duration. For mythological stories, follow narrative chronology.",
+      "Create visual beats that communicate the meaning of the relevant lyric or story event.",
+      "Give every beat exactly one primary action and specify characters, location, visible props, composition, camera movement, lighting, and transition.",
+      "Use devotional atmosphere, meaningful symbolism, and appropriate visual effects without obscuring the subject.",
+      "Do not fabricate sacred quotations, unsupported scriptural events, or arbitrary divine attributes.",
+      "Maintain deity identity, iconography, costume, props, and location continuity across all scenes.",
+      "Preserve the supplied lyrics and audio. Use supplied timestamps where available and label estimated timings when they are not.",
+      "Return valid JSON with devotional analysis, registered assets, and chronological beats, using the application's required schema."
+    ]
+  }
+} as const;
+
+type AnalyzerType = keyof typeof ANALYZER_TYPES;
+
 const LANGS = ["Hindi", "English", "Hinglish"];
 const TARGETS = [
   { label: "30 sec", seconds: 30 },
@@ -166,16 +292,6 @@ const formatDialogueLines = (dlg: unknown): string =>
     return head ? `${head}: ${ln}` : ln;
   }).filter(Boolean).join("\n") : "");
 
-// Local fallback for story target duration (mirrors the server heuristic):
-// ~0.45s per word + 1.2s per line + 20s pad, clamped 30–600s, rounded to 5s.
-const estimateStoryDurationLocal = (story: string): number => {
-  const words = story.split(/\s+/).filter(Boolean).length;
-  const lines = story.split("\n").map((l) => l.trim()).filter(Boolean).length;
-  if (!words) return 60;
-  const raw = 20 + words * 0.45 + lines * 1.2;
-  return Math.round(Math.min(600, Math.max(30, raw)) / 5) * 5;
-};
-
 // Pre-defined CHARACTER CONSISTENCY rules (mirrors
 // DEFAULT_CHARACTER_CONSISTENCY_RULES in lib/director.mjs). Every character
 // gets these by default; the per-character popup lets the user edit, add,
@@ -234,43 +350,23 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   // Story form.
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
-  // Music-video mode: upload an mp3, paste lyrics (optional), storyboard +
-  // video are paced to the song length, and the song is muxed over the final
-  // cut after generation. The local LLM is text-only (no audio transcription)
-  // — it "reads" the song via the pasted lyrics + title + duration.
-  const [mode, setMode] = useState<"story" | "song">("story");
-  const [song, setSong] = useState<DirectorSong | null>(null);
-  const [songUploading, setSongUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
   const [language, setLanguage] = useState("English");
-  const [genre, setGenre] = useState("Kids");
+  // The language of the SOURCE TEXT for the meaning analysis. "auto" detects
+  // it per line (Hindi / English / Hinglish).
+  const [semanticsLanguage, setSemanticsLanguage] = useState("auto");
+  const [genre, setGenre] = useState("Adventure");
   const [genreCustom, setGenreCustom] = useState("");
-  const [visualStyle, setVisualStyle] = useState("3D Preschool Animation");
+  const [visualStyle, setVisualStyle] = useState("3D Cinematic");
   const [styleCustom, setStyleCustom] = useState("");
+  // Analyzer type: selects which director prompt to use
+  const [analyzerType, setAnalyzerType] = useState<AnalyzerType>("story_director");
+  // Master Prompt: auto-filled from the visual-style preset on style change,
+  // freely editable — it is sent as THE style lock for every image prompt.
+  const [masterPrompt, setMasterPrompt] = useState(STYLE_MASTER_PROMPTS["3D Cinematic"]);
   const [targetOpt, setTargetOpt] = useState(60);
   const [targetCustom, setTargetCustom] = useState("90");
-  // Auto length (default ON, like Create Song): the story text drives the
-  // target duration via a local heuristic + the ✨ AI length button (LLM).
-  // Uncheck to pick a manual duration from the dropdown.
-  const [autoTarget, setAutoTarget] = useState(true);
-  const [autoTargetSeconds, setAutoTargetSeconds] = useState(60);
-  const [estimatingTarget, setEstimatingTarget] = useState(false);
-  const [targetNote, setTargetNote] = useState<string | null>(null);
-  // The initial genre is Kids, so initialize at the calm kids default rather
-  // than 3s (which the server later clamps to 4s, contradicting the UI).
-  const [sceneOpt, setSceneOpt] = useState(5);
-  const [sceneCustom, setSceneCustom] = useState("4");
-  // Kids pacing default: selecting a kids-ish genre auto-switches the scene
-  // duration to 5s (COPPA-calm — fast cutting overstimulates toddlers),
-  // unless the user already picked a duration themselves (tracked here so we
-  // never yank an explicit choice). The server enforces a 4s floor regardless.
-  const sceneTouched = useRef(false);
-  const isKidsGenreUi = (g: string, custom: string): boolean =>
-    g === "Kids" || g === "Educational" ||
-    (g === "Custom" && /kid|preschool|pre-school|nursery|rhyme|toddler|children|learn|educat|bedtime|moral|panchatantra|bacho|bacch|lori|balgeet|ginti|akshar|बच्च|बाल|शिशु|नन्ह|लोरी|नर्सरी|अक्षर|वर्णमाला|गिनती|संख्या|जानवर|पशु|तुकबंदी|पंचतंत्र|नैतिक/i.test(custom));
-  const maybeDefaultKidsPacing = (nextGenre: string, nextCustom: string): void => {
-    if (!sceneTouched.current && sceneOpt === 3 && isKidsGenreUi(nextGenre, nextCustom)) setSceneOpt(5);
-  };
+  const [sceneOpt, setSceneOpt] = useState(3);
+  const [sceneCustom, setSceneCustom] = useState("3");
   const [aspectRatio, setAspectRatio] = useState("16:9");
   const [instructions, setInstructions] = useState("");
   // ✨ Get by AI for the instructions box: the local LLM reads the story +
@@ -326,11 +422,19 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     return () => window.clearTimeout(t);
   }, [typingScenes, board]);
   const [stoppedNote, setStoppedNote] = useState<string | null>(null);
+  // Scene-planning batch size (scenes per AI Director LLM batch) — chosen
+  // from the Batch Size dropdown before Generate scenes / Continue scenes and
+  // sent as the batch count (server default when unset = SCENE_BATCH = 10).
+  const [sceneBatch, setSceneBatch] = useState<number>(SCENE_BATCH);
   // Intelligent Director panels (spec §13): lyric coverage map + 0–100
   // quality-control validation for the open board. Fetched on demand (no LLM,
   // no board mutation); cleared whenever another board opens.
   const [coverage, setCoverage] = useState<DirectorCoverage | null>(null);
   const [validation, setValidation] = useState<DirectorValidation | null>(null);
+  // The MEANING layer: the per-line semantic analysis of the open board.
+  const [semantics, setSemantics] = useState<DirectorSemantics | null>(null);
+  const [semBusy, setSemBusy] = useState<null | "load" | "model">(null);
+  const [semError, setSemError] = useState("");
   const [intelBusy, setIntelBusy] = useState<"check" | "repair" | null>(null);
   const [intelOpen, setIntelOpen] = useState<{ coverage: boolean; quality: boolean }>({ coverage: true, quality: true });
   // Chief Director Story Plan + stage pipeline: the authoritative narrative
@@ -385,6 +489,36 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     const t = window.setInterval(tick, 1000);
     return () => { dead = true; window.clearInterval(t); };
   }, [planPhase, liveBoardId]);
+  // Live backend response for the PRE-BOARD form: while the storyboard is
+  // being generated (no board exists yet), poll the analyze stream buffer
+  // (~1s) and show the raw response in the read-only textarea below the
+  // instructions box. Hidden again the moment generation ends.
+  const [formLiveText, setFormLiveText] = useState("");
+  const analyzeLiveIdRef = useRef<string | null>(null);
+  const formLiveRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (!planPhase || planPhase.kind !== "analyze") {
+      if (!planPhase) setFormLiveText("");
+      return;
+    }
+    const id = analyzeLiveIdRef.current;
+    if (!id) return;
+    let dead = false;
+    const tick = async () => {
+      try {
+        const s = await directorAnalyzeLive(id);
+        if (!dead && s.active && s.text) setFormLiveText(s.text);
+      } catch { /* live view is best-effort */ }
+    };
+    void tick();
+    const t = window.setInterval(tick, 1000);
+    return () => { dead = true; window.clearInterval(t); };
+  }, [planPhase]);
+  // Keep the live textarea pinned to the newest tokens.
+  useEffect(() => {
+    const el = formLiveRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [formLiveText]);
   // Editing + master-detail selection (compact cards + one full detail section).
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [editingScene, setEditingScene] = useState<number | null>(null);
@@ -417,8 +551,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   const [inputBoard, setInputBoard] = useState<DirectorBoard | null>(null);
   const [inputEditing, setInputEditing] = useState(false);
   const [inputDraft, setInputDraft] = useState({
-    title: "", story: "", language: "English", genre: "Kids", genreCustom: "",
-    visualStyle: "3D Preschool Animation", styleCustom: "", targetSeconds: 60,
+    title: "", story: "", language: "English", genre: "Adventure", genreCustom: "",
+    visualStyle: "3D Cinematic", styleCustom: "", masterPrompt: "", targetSeconds: 60,
     sceneSeconds: 3, aspectRatio: "16:9", instructions: "",
     includeDialogue: true, chainContinuity: true,
   });
@@ -439,59 +573,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       return !o;
     });
 
-  const targetSeconds = mode === "song" && song
-    ? Math.max(15, song.durationSeconds)
-    : autoTarget
-      ? autoTargetSeconds
-      : targetOpt === -1 ? Math.max(15, Number(targetCustom) || 60) : targetOpt;
+  const targetSeconds = targetOpt === -1 ? Math.max(15, Number(targetCustom) || 60) : targetOpt;
 
-  // Auto length: story edits re-estimate locally (debounced, like Create Song).
-  useEffect(() => {
-    if (!autoTarget || mode !== "story") return;
-    if (story.trim().length < 20) return;
-    const t = window.setTimeout(() => {
-      setAutoTargetSeconds(estimateStoryDurationLocal(story));
-    }, 700);
-    return () => window.clearTimeout(t);
-  }, [story, autoTarget, mode]);
-
-  // ✨ AI length: the local LLM reads the story + genre and sets the exact target.
-  const handleAiTarget = async () => {
-    if (estimatingTarget || story.trim().length < 20) return;
-    setEstimatingTarget(true);
-    setTargetNote(null);
-    try {
-      const r = await estimateDirectorLength(story, {
-        title: title.trim(),
-        genre: genre === "Custom" && genreCustom.trim() ? genreCustom.trim() : genre,
-        language,
-        sceneSeconds,
-      });
-      setAutoTargetSeconds(Math.min(3600, Math.max(15, Math.round(Number(r.duration) || 60))));
-      setTargetNote(
-        r.source === "llm"
-          ? `AI set ~${r.duration}s${r.reasoning ? ` — ${r.reasoning}` : ""}`
-          : `LLM offline — heuristic set ~${r.duration}s`,
-      );
-      // Heuristic fallback means the LLM API is down — surface the offline
-      // alert window, not just the inline note.
-      if (r.source !== "llm") {
-        await dialog.alert(
-          "AI length needs the AI service (LM Studio / llama-server), but it is unreachable — " +
-            `the duration was set with the offline heuristic (~${r.duration}s). Start LM Studio ` +
-            "with a model loaded, check LLM_BASE, then retry for the AI estimate. " +
-            "Live status: the topbar pills / GET /api/health.",
-          { title: "LLM API offline", tone: "error" },
-        );
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setTargetNote(msg);
-      alertIfLlm(msg);
-    } finally {
-      setEstimatingTarget(false);
-    }
-  };
   // ✨ Get by AI for Additional director instructions: the local LLM reads the
   // story/lyrics + master settings and drafts tailored instructions into the
   // box (existing text is sent along so the AI refines instead of discarding).
@@ -528,36 +611,47 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
   // ceiling in lib/director.mjs only guards runaway custom inputs.
   const plannedScenes = Math.min(300, Math.max(1, Math.round(targetSeconds / sceneSeconds)));
 
-  const onSongFile = async (f: File | undefined) => {
-    if (!f) return;
-    setError("");
-    setSongUploading(true);
-    try {
-      const data: string = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(String(r.result));
-        r.onerror = () => rej(new Error("could not read the audio file"));
-        r.readAsDataURL(f);
-      });
-      const up = await directorUploadSong(data, f.name);
-      setSong({ ...up, hasLyrics: story.trim().length >= 20 });
-      if (!title.trim()) {
-        const base = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
-        if (base) setTitle(base.slice(0, 120));
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSongUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
   const refreshBoards = async () => {
     try { setBoards(await directorBoards()); }
     catch { /* board list is best-effort */ }
   };
   useEffect(() => { void refreshBoards(); }, []);
+
+  // Build the Master Prompt from the selected Analyzer + Visual Style + Additional Director Instructions
+  const buildMasterPrompt = (analyzer: AnalyzerType, style: string, styleCustomVal: string, additionalInstructions: string) => {
+    const a = ANALYZER_TYPES[analyzer];
+    const stylePreset = style === "Custom" ? (styleCustomVal.trim() || "Custom style — describe the look in full.") : (STYLE_MASTER_PROMPTS[style] ?? "");
+    const lines = [
+      `ROLE: ${a.role}`,
+      `TASK: ${a.task}`,
+      "INSTRUCTIONS:",
+      ...a.instructions.map((inst, i) => `${i + 1}. ${inst}`),
+      "",
+      "VISUAL STYLE LOCK:",
+      stylePreset,
+      "",
+      "ADDITIONAL DIRECTOR INSTRUCTIONS:",
+      additionalInstructions.trim() || "(none)"
+    ];
+    return lines.join("\n");
+  };
+
+  // Update Master Prompt when Analyzer type changes
+  useEffect(() => {
+    setMasterPrompt(buildMasterPrompt(analyzerType, visualStyle, styleCustom, instructions));
+  }, [analyzerType]);
+
+  // Update Master Prompt when Visual Style changes (append/replace style lock at the end)
+  useEffect(() => {
+    const newPrompt = buildMasterPrompt(analyzerType, visualStyle, styleCustom, instructions);
+    setMasterPrompt(newPrompt);
+  }, [visualStyle, styleCustom]);
+
+  // Update Master Prompt when Additional Director Instructions change
+  useEffect(() => {
+    const newPrompt = buildMasterPrompt(analyzerType, visualStyle, styleCustom, instructions);
+    setMasterPrompt(newPrompt);
+  }, [instructions]);
 
   // AI/ComfyUI failures pop the centered alert dialog — inline text under
   // the header is too easy to miss mid-flow. A down LLM/ComfyUI API gets its
@@ -624,6 +718,34 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
     catch (e) { reportError(e); }
     finally { setIntelBusy(null); }
+  };
+
+  // The MEANING layer: read the per-line analysis of the open board
+  // (read-only, no LLM) and the deep model-assisted pass.
+  const doLoadSemantics = async () => {
+    if (!board || semBusy) return;
+    setSemBusy("load");
+    setSemError("");
+    try {
+      const sem = await directorSemantics(board.id);
+      setSemantics(sem);
+    }
+    catch (e) { setSemError(e instanceof Error ? e.message : String(e)); }
+    finally { setSemBusy(null); }
+  };
+  const doAnalyzeSemantics = async () => {
+    if (!board || semBusy) return;
+    setSemBusy("model");
+    setSemError("");
+    try {
+      const sem = await directorAnalyzeSemantics(board.id, { useModel: true });
+      setSemantics(sem);
+      // The scenes now carry the meaning — reload them.
+      const b = await directorBoard(board.id);
+      setBoard(b);
+    }
+    catch (e) { setSemError(e instanceof Error ? e.message : String(e)); }
+    finally { setSemBusy(null); }
   };
 
   // Chief Director Story Plan: load the authoritative plan + stage pipeline
@@ -719,41 +841,35 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     return [...groups.entries()];
   };
 
-  const doAnalyze = async () => {
+  const doAnalyze = async (promptOverride?: string) => {
     if (busy) return;
-    const lyrics = story.trim();
-    const hasLyrics = lyrics.length >= 20;
     const input: DirectorInput = {
       title: title.trim(),
-      story: mode === "song" && !hasLyrics
-        ? `[Instrumental song "${title.trim()}" — no lyrics provided; direct a matching visual story]`
-        : lyrics,
+      story: story.trim(),
       language, genre,
+      // The source language for the meaning analysis (auto | hi | en | hinglish).
+      semanticsLanguage,
       genreCustom: genre === "Custom" ? genreCustom.trim() : "",
       visualStyle, styleCustom: visualStyle === "Custom" ? styleCustom.trim() : "",
       targetSeconds, sceneSeconds, aspectRatio, instructions: instructions.trim(),
       includeDialogue, chainContinuity,
-      ...(mode === "song" && song
-        ? { song: { ...song, hasLyrics } }
-        : {}),
     };
     if (!input.title) {
       setError("Give the story a title.");
       return;
     }
-    if (mode === "song" && !song) {
-      setError("Upload the song first (mp3 or wav) — the timeline comes from its length.");
-      return;
-    }
-    if (mode === "story" && input.story.length < 20) {
+    if (input.story.length < 20) {
       setError("Give the story a title and paste the full story (20+ characters).");
       return;
     }
-    setBusy({ label: mode === "song" ? "Reading the song — characters, locations, beats…" : "Analyzing story — characters, locations, beats…", since: Date.now() });
+    setBusy({ label: "Analyzing story — characters, locations, beats…", since: Date.now() });
     setError("");
     setPlanPhase({ kind: "analyze", startedAt: Date.now(), title: title.trim(), total: plannedScenes });
     try {
-      const b = await directorAnalyze(input);
+      // Request id for the live response stream (textarea below the form).
+      const liveId = `dir-live-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      analyzeLiveIdRef.current = liveId;
+      const b = await directorAnalyze(input, promptOverride?.trim() ? promptOverride : undefined, liveId);
       setBoard(b);
       setSelectedScene(0);
       await refreshBoards();
@@ -765,6 +881,83 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     }
   };
 
+  // Show Prompt popup (pre-directing): fetches the EXACT user prompt the
+  // Generate Storyboard (bible) call will send — no model call — and lets the
+  // user edit it. Generating from the popup sends the edited text verbatim
+  // (promptOverride); the system prompt + every downstream stage are unchanged.
+  const [biblePromptOpen, setBiblePromptOpen] = useState(false);
+  const [biblePromptDraft, setBiblePromptDraft] = useState("");
+  const [biblePromptLoading, setBiblePromptLoading] = useState(false);
+  const [biblePromptEdited, setBiblePromptEdited] = useState(false);
+  const openBiblePrompt = async () => {
+    if (biblePromptLoading || busy) return;
+    if (!title.trim() || story.trim().length < 20) {
+      setError("Give the story a title and paste the full story (20+ characters) to preview its prompt.");
+      return;
+    }
+    setError("");
+    setBiblePromptLoading(true);
+    try {
+      const r = await directorBiblePreview({
+        title: title.trim(),
+        story: story.trim(),
+        language, genre,
+        semanticsLanguage,
+        genreCustom: genre === "Custom" ? genreCustom.trim() : "",
+        visualStyle, styleCustom: visualStyle === "Custom" ? styleCustom.trim() : "",
+        masterPrompt: masterPrompt.trim(),
+        targetSeconds, sceneSeconds, aspectRatio, instructions: instructions.trim(),
+        includeDialogue, chainContinuity,
+      });
+      setBiblePromptDraft(r.prompt);
+      setBiblePromptEdited(false);
+      setBiblePromptOptimized(null);
+      setBiblePromptTokens(null);
+      setBiblePromptOptimizeError("");
+      setBiblePromptOpen(true);
+    } catch (e) {
+      reportError(e);
+    } finally {
+      setBiblePromptLoading(false);
+    }
+  };
+
+  // ✨ Optimize Prompt (Show Prompt popup): the LLM rewrites the current
+  // draft for clarity/impact — every constraint kept. The optimized prompt is
+  // shown WITH its token count next to the main (original) prompt with its
+  // own count; nothing is applied until the user presses Use optimized.
+  const [biblePromptOptimizing, setBiblePromptOptimizing] = useState(false);
+  const [biblePromptOptimized, setBiblePromptOptimized] = useState<string | null>(null);
+  const [biblePromptMain, setBiblePromptMain] = useState("");
+  const [biblePromptTokens, setBiblePromptTokens] = useState<{ original: number; optimized: number } | null>(null);
+  const [biblePromptOptimizeError, setBiblePromptOptimizeError] = useState("");
+  const optimizeBiblePrompt = async () => {
+    if (biblePromptOptimizing) return;
+    const text = biblePromptDraft.trim();
+    if (!text) return;
+    setBiblePromptOptimizing(true);
+    setBiblePromptOptimizeError("");
+    try {
+      const r = await directorOptimizePrompt(text, title.trim() || undefined);
+      setBiblePromptOptimized(r.optimized);
+      setBiblePromptMain(text);
+      setBiblePromptTokens(r.tokens ?? null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setBiblePromptOptimizeError(msg);
+      alertIfLlm(msg);
+    } finally {
+      setBiblePromptOptimizing(false);
+    }
+  };
+  const useOptimizedBiblePrompt = () => {
+    if (biblePromptOptimized == null) return;
+    setBiblePromptDraft(biblePromptOptimized);
+    setBiblePromptEdited(true);
+    setBiblePromptOptimized(null);
+    setBiblePromptTokens(null);
+  };
+
   // Show prompt (dry run): the exact system + user messages the next
   // Continue would send to the LLM — fetched without calling the model,
   // nothing planned or saved. Read-only, so it works even mid-planning.
@@ -774,7 +967,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
     if (!board || promptLoading) return;
     setPromptLoading(true);
     try {
-      setPromptPreview(await directorPromptPreview(board.id));
+      setPromptPreview(await directorPromptPreview(board.id, sceneBatch));
     } catch (e) {
       reportError(e, "");
     } finally {
@@ -818,15 +1011,16 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
         // per shot), so the total tracks projected beats, not just scene rows.
         const beatsDone = boardBeats(b.scenes);
         const beatsTotal = boardBeatsTotal(b.scenes, b.sceneCount);
-        setSceneProgress(`Scene ${b.scenes.length + 1}–${Math.min(b.sceneCount, b.scenes.length + 10)} of ${b.sceneCount} · 🎞 ${beatsDone}/${beatsTotal} shots`);
-        setGeneratingRange({ from: b.scenes.length + 1, to: Math.min(b.sceneCount, b.scenes.length + 10) });
+        const batchEnd = Math.min(b.sceneCount, b.scenes.length + sceneBatch);
+        setSceneProgress(`Scene ${b.scenes.length + 1}–${batchEnd} of ${b.sceneCount} · 🎞 ${beatsDone}/${beatsTotal} shots`);
+        setGeneratingRange({ from: b.scenes.length + 1, to: batchEnd });
         const ctl = new AbortController();
         abortRef.current = ctl;
         const prevLen = b.scenes.length;
         const batchStart = Date.now();
         batchStartRef.current = batchStart;
         try {
-          b = await directorScenes(b.id, undefined, ctl.signal);
+          b = await directorScenes(b.id, sceneBatch, ctl.signal);
         } catch (e) {
           // Stop pressed mid-batch: the server may still save that batch —
           // reload and report exactly where the resume continues from.
@@ -1146,10 +1340,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
       title: str(b.input.title),
       story: str(b.input.story),
       language: str(b.input.language) || "English",
-      genre: str(b.input.genre) || "Kids",
+      genre: str(b.input.genre) || "Adventure",
       genreCustom: str(b.input.genreCustom),
-      visualStyle: str(b.input.visualStyle) || "3D Preschool Animation",
+      visualStyle: str(b.input.visualStyle) || "3D Cinematic",
       styleCustom: str(b.input.styleCustom),
+      // Legacy boards predate the Master Prompt — show the style's preset so
+      // the box reflects the lock the server actually derives.
+      masterPrompt: str(b.input.masterPrompt) || STYLE_MASTER_PROMPTS[str(b.input.visualStyle)] || "",
       targetSeconds: Math.max(15, Math.round(Number(b.input.targetSeconds) || 60)),
       sceneSeconds: Math.min(30, Math.max(1, Math.round(Number(b.input.sceneSeconds) || 3))),
       aspectRatio: str(b.input.aspectRatio) || "16:9",
@@ -1204,6 +1401,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
           genreCustom: inputDraft.genreCustom.trim().slice(0, 40),
           visualStyle: inputDraft.visualStyle,
           styleCustom: inputDraft.styleCustom.trim().slice(0, 120),
+          masterPrompt: inputDraft.masterPrompt.trim().slice(0, 2000),
           targetSeconds: Math.max(15, Math.min(3600, Math.round(Number(inputDraft.targetSeconds) || 60))),
           sceneSeconds: Math.min(30, Math.max(1, Math.round(Number(inputDraft.sceneSeconds) || 3))),
           aspectRatio: inputDraft.aspectRatio,
@@ -1891,109 +2089,25 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
 
         {!board && (
           <>
-            <p className="card-desc">
-              Tell a story — the AI Director breaks it into characters, locations, beats and
-              cinematic scenes with image + video prompts. Approving hands a standard project
-              to the existing generation pipeline (nothing here renders pixels itself).
-              Prefer a music video? Switch to Song mode: upload the mp3, optionally paste
-              the lyrics, and the storyboard + video are paced to the song length.
-            </p>
-            <div className="row" role="tablist" aria-label="Director input mode" style={{ marginBottom: 10 }}>
-              <button
-                className={`ghost shotlist-btn${mode === "story" ? " on" : ""}`}
-                role="tab"
-                aria-selected={mode === "story"}
-                onClick={() => setMode("story")}
-                title="Paste a story and direct it scene by scene"
-              >
-                📖 Story
-              </button>
-              <button
-                className={`ghost shotlist-btn${mode === "song" ? " on" : ""}`}
-                role="tab"
-                aria-selected={mode === "song"}
-                onClick={() => setMode("song")}
-                title="Upload a song — storyboard + video paced to its length"
-              >
-                🎵 Song → Video
-              </button>
-            </div>
-            {mode === "song" && (
-              <div className="beat-meta-box" style={{ marginBottom: 10 }}>
-                <div className="section-label">Song (mp3 / wav)</div>
-                {!song ? (
-                  <>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,.mp3,.wav,.m4a"
-                      disabled={songUploading}
-                      onChange={(e) => void onSongFile(e.target.files?.[0])}
-                      title="Upload the song — its length becomes the video timeline"
-                    />
-                    <p className="hint" style={{ margin: "4px 0 0" }}>
-                      {songUploading
-                        ? "Reading the song file…"
-                        : "Upload the mp3 — its exact length becomes the video timeline. The Director reads the pasted lyrics + title (audio itself isn't transcribed — the local LLM is text-only)."}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ margin: "2px 0 6px" }}>
-                      <b>{song.fileName}</b> · ~{song.durationSeconds}s · timeline locked 🎵
-                    </p>
-                    <audio controls src={directorSongUrl(song.file)} style={{ width: "100%" }} />
-                    <div className="row" style={{ marginTop: 6 }}>
-                      <button
-                        className="ghost shotlist-btn"
-                        onClick={() => setSong(null)}
-                        disabled={songUploading || busy != null}
-                        title="Remove the song and upload a different one"
-                      >
-                        Remove song
-                      </button>
-                    </div>
-                  </>
-                )}
+            <div className="row" style={{ marginTop: 8, gap: 10, alignItems: "flex-end" }}>
+              <div style={{ flex: "2.2 1 150px" }}>
+                <label htmlFor="dir-title">Story title</label>
+                <input
+                  id="dir-title"
+                  value={title}
+                  maxLength={120}
+                  placeholder="The Mouse and the Magic Cheese"
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </div>
-            )}
-            <label htmlFor="dir-title">Story title</label>
-            <input
-              id="dir-title"
-              value={title}
-              maxLength={120}
-              placeholder="The Mouse and the Magic Cheese"
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <label htmlFor="dir-story" style={{ marginTop: 8 }}>
-              {mode === "song" ? "Lyrics (optional — paste for best results; empty = instrumental visual story)" : "Story"}
-            </label>
-            <textarea
-              id="dir-story"
-              rows={8}
-              value={story}
-              maxLength={10000}
-              placeholder={mode === "song" ? "[Verse 1]\nPaste the song lyrics here… (or leave empty for an instrumental)" : "Once upon a time… (paste the full story)"}
-              onChange={(e) => setStory(e.target.value)}
-            />
-            <div className="grid grid-3" style={{ marginTop: 8 }}>
-              <div>
-                <label htmlFor="dir-lang">Language</label>
-                <select id="dir-lang" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                  {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+              <div style={{ flex: "1.5 1 130px" }}>
+                <label htmlFor="dir-analyzer" title="Select the director type — its task and instructions will appear in the Master Prompt">Analyzer</label>
+                <select id="dir-analyzer" value={analyzerType} onChange={(e) => setAnalyzerType(e.target.value as AnalyzerType)}>
+                  {Object.entries(ANALYZER_TYPES).map(([key, val]) => <option key={key} value={key}>{val.role}</option>)}
                 </select>
               </div>
-              <div>
-                <label htmlFor="dir-genre">Genre</label>
-                <select id="dir-genre" value={genre} onChange={(e) => { const v = e.target.value; setGenre(v); maybeDefaultKidsPacing(v, genreCustom); }}>
-                  {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-                {genre === "Custom" && (
-                  <input value={genreCustom} maxLength={40} placeholder="Custom genre…" onChange={(e) => { const v = e.target.value; setGenreCustom(v); maybeDefaultKidsPacing(genre, v); }} style={{ marginTop: 6 }} />
-                )}
-              </div>
-              <div>
-                <label htmlFor="dir-style">Visual style</label>
+              <div style={{ flex: "1.5 1 130px" }}>
+                <label htmlFor="dir-style" title="Changing the style updates the Visual Style Lock in the Master Prompt">Visual style</label>
                 <select id="dir-style" value={visualStyle} onChange={(e) => setVisualStyle(e.target.value)}>
                   {STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -2001,9 +2115,118 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   <input value={styleCustom} maxLength={120} placeholder="Describe the custom style…" onChange={(e) => setStyleCustom(e.target.value)} style={{ marginTop: 6 }} />
                 )}
               </div>
+              <div style={{ flex: "1.2 1 110px" }}>
+                <label htmlFor="dir-target">Target duration</label>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  {targetOpt === -1 ? (
+                    <input type="number" min={15} max={3600} value={targetCustom} onChange={(e) => setTargetCustom(e.target.value)} style={{ flex: "1 1 60px", minWidth: 60, width: "100%" }} disabled={busy != null} />
+                  ) : (
+                    <select
+                      id="dir-target"
+                      value={targetOpt}
+                      onChange={(e) => { setTargetOpt(Number(e.target.value)); }}
+                      disabled={busy != null}
+                      style={{ flex: "1 1 70px", minWidth: 70, width: "100%" }}
+                    >
+                      {TARGETS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+              <div style={{ flex: "1 1 95px" }}>
+                <label htmlFor="dir-scene" title="Typical scene length (pacing hint only) — the AI decides each scene's own duration, shot count and shot timings from the story, line by line">Scene duration</label>
+                <select id="dir-scene" value={sceneOpt} onChange={(e) => setSceneOpt(Number(e.target.value))}>
+                  {SCENE_DURS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
+                </select>
+                {sceneOpt === -1 && (
+                  <input type="number" min={1} max={30} value={sceneCustom} onChange={(e) => setSceneCustom(e.target.value)} style={{ marginTop: 6 }} />
+                )}
+              </div>
+              <label
+                style={{ display: "flex", gap: 4, alignItems: "center", fontWeight: 400, paddingBottom: 6, flexShrink: 0, cursor: "pointer", opacity: includeDialogue ? 1 : 0.45 }}
+                title="When ON, scenes carry spoken lines (voice + lip-sync). Turn OFF for a silent film — clips stay at their planned length."
+                aria-label="Dialogues"
+              >
+                <input
+                  type="checkbox"
+                  checked={includeDialogue}
+                  onChange={(e) => setIncludeDialogue(e.target.checked)}
+                  disabled={busy != null}
+                />
+                <span aria-hidden="true" style={{ fontSize: 16 }}>🎙</span>
+              </label>
+              <label
+                style={{ display: "flex", gap: 4, alignItems: "center", fontWeight: 400, paddingBottom: 6, flexShrink: 0, cursor: "pointer", opacity: chainContinuity ? 1 : 0.45 }}
+                title="When ON, every scene continues the previous shot's end state (same look/framing) via prompt continuity — so the movie plays as one connected story. When OFF, every scene plans and generates as an independent fresh shot. Pixels always stay per-scene (each clip animates its own scene image)."
+                aria-label="Connected scenes"
+              >
+                <input
+                  type="checkbox"
+                  checked={chainContinuity}
+                  onChange={(e) => setChainContinuity(e.target.checked)}
+                  disabled={busy != null}
+                />
+                <span aria-hidden="true" style={{ fontSize: 16 }}>🔗</span>
+              </label>
             </div>
-            <div className="grid grid-3" style={{ marginTop: 8 }}>
-              <div>
+            <div style={{ marginTop: 8 }}>
+              <label htmlFor="dir-master" title="Shows the selected Analyzer's task and instructions. The Visual style preset is appended at the end — edit freely. This text is sent as THE style lock appended to every image prompt, so scenes cannot drift off-style.">
+                Master Prompt <span className="hint" style={{ fontWeight: 400 }}>(Analyzer task + instructions + Visual style preset — editable)</span>
+              </label>
+              <textarea
+                id="dir-master"
+                rows={10}
+                value={masterPrompt}
+                maxLength={4000}
+                placeholder="Select an Analyzer to see its task and instructions…"
+                onChange={(e) => setMasterPrompt(e.target.value)}
+                style={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "pre-wrap" }}
+              />
+              <p className="hint" style={{ margin: "4px 0 0" }}>
+                The Analyzer's task and instructions are shown above. The Visual style preset is appended at the end. Your edits are kept and used verbatim.
+              </p>
+            </div>
+              <label htmlFor="dir-story" style={{ marginTop: 8 }}>
+                Story
+              </label>
+              <textarea
+              id="dir-story"
+              rows={8}
+              style={{ height: "20vh" }}
+              value={story}
+              maxLength={10000}
+              placeholder="Once upon a time… (paste the full story)"
+              onChange={(e) => setStory(e.target.value)}
+            />
+            <div className="row" style={{ marginTop: 8, gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 0", minWidth: 110 }}>
+                <label htmlFor="dir-lang">Language</label>
+                <select id="dir-lang" value={language} onChange={(e) => setLanguage(e.target.value)}>
+                  {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 0", minWidth: 110 }}>
+                <label htmlFor="dir-sem-lang" title="The language of the story text for the meaning analysis (the spoken language above is separate)">Source language</label>
+                <select id="dir-sem-lang" value={semanticsLanguage} onChange={(e) => setSemanticsLanguage(e.target.value)}>
+                  <option value="auto">Auto detect</option>
+                  <option value="hi">Hindi</option>
+                  <option value="en">English</option>
+                  <option value="hinglish">Hinglish (mixed)</option>
+                </select>
+                <p className="hint" style={{ margin: "4px 0 0" }}>
+                  Every line is read for its meaning before a scene is planned.
+                </p>
+              </div>
+              <div style={{ flex: "1 1 0", minWidth: 110 }}>
+                <label htmlFor="dir-genre">Genre</label>
+                <select id="dir-genre" value={genre} onChange={(e) => setGenre(e.target.value)}>
+                  {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+                {genre === "Custom" && (
+                  <input value={genreCustom} maxLength={40} placeholder="Custom genre…" onChange={(e) => setGenreCustom(e.target.value)} style={{ marginTop: 6 }} />
+                )}
+              </div>
+              <div style={{ flex: "1 1 0", minWidth: 110 }}>
                 <label htmlFor="dir-aspect">Aspect ratio</label>
                 <select id="dir-aspect" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
                   {ASPECTS.map((a) => <option key={a} value={a}>{a}</option>)}
@@ -2016,116 +2239,13 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                       : "Standard landscape cut."}
                 </p>
               </div>
-              <div>
-                <label htmlFor="dir-target">Target duration{mode === "story" && autoTarget ? ` · ~${autoTargetSeconds}s auto` : ""}</label>
-                {mode === "song" ? (
-                  <p className="hint" style={{ margin: "6px 0 0" }}>
-                    {song ? <>🔒 ~{song.durationSeconds}s (song length)</> : "Upload the song — the timeline locks to its length."}
-                  </p>
-                ) : autoTarget ? (
-                  <>
-                    <p className="hint" style={{ margin: "6px 0 0" }}>
-                      ✨ ~{autoTargetSeconds}s — AI follows your story. Uncheck Auto to pick manually.
-                    </p>
-                    <button
-                      type="button"
-                      className="ghost shotlist-btn"
-                      onClick={() => void handleAiTarget()}
-                      disabled={busy != null || estimatingTarget || story.trim().length < 20}
-                      title="Ask the local LLM to read the story and set the exact target duration"
-                      style={{ marginTop: 4 }}
-                    >
-                      {estimatingTarget ? "Analyzing…" : "✨ AI length"}
-                    </button>
-                    {targetNote && <p className="muted" style={{ margin: "4px 0 0" }}>{targetNote}</p>}
-                  </>
-                ) : (
-                  <>
-                    <select
-                      id="dir-target"
-                      value={targetOpt}
-                      onChange={(e) => { setTargetOpt(Number(e.target.value)); }}
-                      disabled={busy != null}
-                    >
-                      {TARGETS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
-                    </select>
-                    {targetOpt === -1 && (
-                      <input type="number" min={15} max={3600} value={targetCustom} onChange={(e) => setTargetCustom(e.target.value)} style={{ marginTop: 6 }} disabled={busy != null} />
-                    )}
-                    <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, fontWeight: 400 }}>
-                      <input
-                        type="checkbox"
-                        checked={autoTarget}
-                        onChange={(e) => {
-                          setAutoTarget(e.target.checked);
-                          if (e.target.checked && story.trim().length >= 20) {
-                            setAutoTargetSeconds(estimateStoryDurationLocal(story));
-                          }
-                        }}
-                        disabled={busy != null}
-                      />
-                      Auto length
-                    </label>
-                  </>
-                )}
-                {mode === "story" && autoTarget && (
-                  <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, fontWeight: 400 }}>
-                    <input
-                      type="checkbox"
-                      checked={autoTarget}
-                      onChange={(e) => {
-                        setAutoTarget(e.target.checked);
-                        if (e.target.checked && story.trim().length >= 20) {
-                          setAutoTargetSeconds(estimateStoryDurationLocal(story));
-                        }
-                      }}
-                      disabled={busy != null}
-                    />
-                    Auto length
-                  </label>
-                )}
-              </div>
-              <div>
-                <label htmlFor="dir-scene" title="Typical scene length (pacing hint only) — the AI decides each scene's own duration, shot count and shot timings from the story, line by line">Scene duration · AI-paced</label>
-                <select id="dir-scene" value={sceneOpt} onChange={(e) => { sceneTouched.current = true; setSceneOpt(Number(e.target.value)); }}>
-                  {SCENE_DURS.map((t) => <option key={t.seconds} value={t.seconds}>{t.label}</option>)}
-                </select>
-                {sceneOpt === -1 && (
-                  <input type="number" min={1} max={30} value={sceneCustom} onChange={(e) => { sceneTouched.current = true; setSceneCustom(e.target.value); }} style={{ marginTop: 6 }} />
-                )}
-              </div>
-            </div>
-            <p className="hint">AI analyzes the story line by line and plans up to {plannedScenes} scenes toward ~{targetSeconds}s — deciding each scene's duration, shot count and shot timings itself (typical scene ~{sceneSeconds}s). Multi-shot scenes raise the shot total above the scene count — shots generate as scenes (one clip per shot).</p>
-            <div className="row" style={{ marginTop: 8, gap: 16 }}>
-              <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }} title="When ON, scenes carry spoken lines (voice + lip-sync). Turn OFF for a silent film — clips stay at their planned length.">
-                <input
-                  type="checkbox"
-                  checked={includeDialogue}
-                  onChange={(e) => setIncludeDialogue(e.target.checked)}
-                  disabled={busy != null}
-                />
-                🎙 Dialogues {includeDialogue ? "on" : "off"}
-              </label>
-              <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }} title="When ON, every scene continues the previous shot's end state (same look/framing) via prompt continuity — so the movie plays as one connected story. When OFF, every scene plans and generates as an independent fresh shot. Pixels always stay per-scene (each clip animates its own scene image).">
-                <input
-                  type="checkbox"
-                  checked={chainContinuity}
-                  onChange={(e) => setChainContinuity(e.target.checked)}
-                  disabled={busy != null}
-                />
-                🔗 Connected scenes {chainContinuity ? "on" : "off"}
-              </label>
             </div>
             {!includeDialogue && (
               <p className="hint" style={{ margin: "4px 0 0" }}>
                 Silent film: scenes plan with empty dialogue — approve generates visuals only (no TTS, no lip-sync).
               </p>
             )}
-            {chainContinuity ? (
-              <p className="hint" style={{ margin: "4px 0 0" }}>
-                Connected: scenes continue the previous shot's end state in their prompts (each clip still animates its own scene image).
-              </p>
-            ) : (
+            {!chainContinuity && (
               <p className="hint" style={{ margin: "4px 0 0" }}>
                 Independent: every scene plans and generates as a fresh shot — no continuation of the previous scene.
               </p>
@@ -2146,17 +2266,132 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
             <textarea
               id="dir-instructions"
               rows={3}
+              style={{ height: "20vh" }}
               value={instructions}
               placeholder="Keep Minku's appearance exactly the same… avoid scary scenes…"
               onChange={(e) => setInstructions(e.target.value)}
             />
             {instructionsNote && <p className="muted" style={{ margin: "4px 0 0" }}>{instructionsNote}</p>}
+            {busy != null && (
+              <div style={{ marginTop: 8 }}>
+                <label htmlFor="dir-live" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span className="pill running" aria-hidden="true">🔴 LIVE</span>
+                  <span style={{ color: "var(--accent)" }}>Backend response — streaming live from the AI Director</span>
+                </label>
+                <textarea
+                  id="dir-live"
+                  ref={formLiveRef}
+                  readOnly
+                  value={formLiveText}
+                  rows={6}
+                  placeholder="Waiting for the first tokens from the model…"
+                  spellCheck={false}
+                  style={{ height: "16vh", fontFamily: "monospace", fontSize: 12, resize: "vertical", whiteSpace: "pre-wrap", color: "#22c55e" }}
+                />
+              </div>
+            )}
             <div className="row" style={{ marginTop: 12 }}>
-              <button className="primary" onClick={() => void doAnalyze()} disabled={busy != null || songUploading || !title.trim() || (mode === "song" ? !song : story.trim().length < 20)} title={mode === "song" ? "Read the song into characters, locations, beats (no images/videos yet)" : "Analyze the story into characters, locations, beats (no images/videos yet)"}>
+              <button
+                className="ghost shotlist-btn"
+                onClick={() => void openBiblePrompt()}
+                disabled={busy != null || biblePromptLoading || !title.trim() || story.trim().length < 20}
+                title="Preview the exact prompt the AI Director will receive — edit it before sending"
+              >
+                {biblePromptLoading ? <Spinner size={13} /> : "👁"}
+                {biblePromptLoading ? "Loading…" : "Show Prompt"}
+              </button>
+              <button className="primary" onClick={() => void doAnalyze()} disabled={busy != null || !title.trim() || story.trim().length < 20} title="Analyze the story into characters, locations, beats (no images/videos yet)">
                 {busy ? <Spinner size={13} /> : <IconSparkles size={13} />}
-                {busy ? "Directing…" : mode === "song" ? "Generate Song Storyboard" : "Generate Storyboard"}
+                {busy ? "Directing…" : "Generate Storyboard"}
               </button>
             </div>
+            {biblePromptOpen && (
+              <div className="dlg-overlay" role="dialog" aria-modal="true" aria-label="Edit the directing prompt" onClick={() => setBiblePromptOpen(false)}>
+                <div className="dlg-box" style={{ width: "min(1104px, 94vw)" }} onClick={(e) => e.stopPropagation()}>
+                  <div className="row shot-popup-head" style={{ alignItems: "center", marginBottom: 8 }}>
+                    <h3 className="dlg-title" style={{ margin: 0, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+                      🧠 Prompt sent to the AI Director{biblePromptEdited ? " — edited" : ""}
+                    </h3>
+                    <button className="icon-btn" onClick={() => setBiblePromptOpen(false)} title="Close popup" aria-label="Close popup">✕</button>
+                  </div>
+                  <p className="hint" style={{ margin: "0 0 8px" }}>
+                    Edit freely — this text is sent to the model verbatim in place of the default prompt
+                    (the system rules and every downstream stage stay the same). Reset restores the generated prompt.
+                  </p>
+                  <details open style={{ marginBottom: 8 }}>
+                    <summary><b>MASTER PROMPT</b> — the style lock (from Analyzer + Visual Style + Additional Instructions) that will be appended to every image prompt</summary>
+                    <textarea
+                      value={masterPrompt}
+                      onChange={(e) => setMasterPrompt(e.target.value)}
+                      style={{ width: "100%", height: "10vh", fontFamily: "monospace", fontSize: 12, resize: "vertical", whiteSpace: "pre-wrap", marginTop: 8, background: "rgba(0,0,0,0.15)", border: "1px solid var(--line, #e5e7eb)", borderRadius: 8, padding: 10 }}
+                      spellCheck={false}
+                    />
+                  </details>
+                  <details open style={{ marginBottom: 8 }}>
+                    <summary><b>USER PROMPT</b> — the story/lyrics + settings sent to the model</summary>
+                    <textarea
+                      value={biblePromptDraft}
+                      onChange={(e) => { setBiblePromptDraft(e.target.value); setBiblePromptEdited(true); }}
+                      style={{ width: "100%", height: "45vh", fontFamily: "monospace", fontSize: 12, resize: "vertical", whiteSpace: "pre-wrap" }}
+                      spellCheck={false}
+                    />
+                  </details>
+                  {biblePromptOptimizing && (
+                    <p className="hint" style={{ margin: "8px 0 0" }}>
+                      <Spinner size={12} /> Optimizing the prompt with the LLM — keeping every constraint…
+                    </p>
+                  )}
+                  {biblePromptOptimizeError && <p className="hint err-text" style={{ margin: "8px 0 0" }}>{biblePromptOptimizeError}</p>}
+                  {biblePromptOptimized !== null && !biblePromptOptimizing && (
+                    <div style={{ marginTop: 10, border: "1px solid var(--line, #e5e7eb)", borderRadius: 8, padding: 10 }}>
+                      <div className="row" style={{ alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <strong style={{ flex: 1, minWidth: 0 }}>
+                          ✨ Optimized prompt
+                          {biblePromptTokens ? ` — ≈${biblePromptTokens.optimized} tokens (was ≈${biblePromptTokens.original})` : ""}
+                        </strong>
+                        <button className="ghost" onClick={() => { setBiblePromptOptimized(null); setBiblePromptTokens(null); }} title="Hide the optimized comparison">
+                          Dismiss
+                        </button>
+                        <button className="primary" onClick={useOptimizedBiblePrompt} title="Replace the editable prompt above with the optimized text">
+                          Use optimized
+                        </button>
+                      </div>
+                      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 200, overflowY: "auto", background: "rgba(0,0,0,0.25)", padding: 10, borderRadius: 8, margin: 0 }}>{biblePromptOptimized}</pre>
+                      <div className="shotlist-detail-label" style={{ marginTop: 8 }}>
+                        Main prompt{biblePromptTokens ? ` (≈${biblePromptTokens.original} tokens)` : ""}
+                      </div>
+                      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 160, overflowY: "auto", background: "rgba(0,0,0,0.15)", padding: 10, borderRadius: 8, margin: "4px 0 0" }}>{biblePromptMain}</pre>
+                    </div>
+                  )}
+                  <div className="dlg-actions" style={{ marginTop: 12 }}>
+                    <button className="ghost" onClick={() => void openBiblePrompt()} disabled={biblePromptLoading} title="Restore the auto-generated prompt">
+                      Reset
+                    </button>
+                    <button
+                      className="ghost"
+                      onClick={() => void optimizeBiblePrompt()}
+                      disabled={biblePromptOptimizing || !biblePromptDraft.trim()}
+                      title="Ask the LLM to rewrite this prompt for clarity and impact — every constraint is kept. Compare the optimized text (with token counts) against the main prompt before applying."
+                    >
+                      {biblePromptOptimizing ? <Spinner size={13} /> : "✨"}
+                      {biblePromptOptimizing ? "Optimizing…" : "Optimize Prompt"}
+                    </button>
+                    <span className="spacer" />
+                    <button className="ghost" onClick={() => setBiblePromptOpen(false)} title="Keep the default prompt (nothing is sent)">
+                      Close
+                    </button>
+                    <button
+                      className="primary"
+                      onClick={() => { setBiblePromptOpen(false); void doAnalyze(biblePromptDraft.trim() || undefined); }}
+                      disabled={busy != null || !biblePromptDraft.trim()}
+                      title="Send the text above to the AI Director"
+                    >
+                      {biblePromptEdited ? "Generate with edited prompt" : "Generate Storyboard"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </>
         )}
@@ -2240,6 +2475,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 </p>
               </div>
             ) : null}
+            <BatchSizeSelect value={sceneBatch} onChange={setSceneBatch} disabled={busy != null} />
             <div className="row" style={{ marginBottom: 8 }}>
               {board.scenes.length < board.sceneCount || timelineOpen ? (
                 <button
@@ -2444,6 +2680,80 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* The MEANING layer: what every source line means and what can be
+                SEEN (the scenes are planned from this). The original text is
+                always shown next to its interpretation. */}
+            {board.blueprint && (
+              <div className="beat-meta-box" style={{ marginBottom: 12 }}>
+                <div className="row" style={{ alignItems: "center" }}>
+                  <div className="section-label" style={{ margin: 0 }}>🧠 Meaning</div>
+                  <span className="spacer" />
+                  {semantics && (
+                    <span className="pill" title="The meaning analysis of every source line">
+                      {semantics.lines.length} line(s) · {semantics.language}
+                    </span>
+                  )}
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doLoadSemantics()}
+                    disabled={semBusy != null || busy != null}
+                    title="Read the meaning of every source line (no LLM call, nothing is changed)"
+                  >
+                    {semBusy === "load" ? <Spinner size={11} /> : <span aria-hidden="true">🔎</span>}
+                    {semBusy === "load" ? "Reading…" : "Read the meaning"}
+                  </button>
+                  <button
+                    className="ghost shotlist-btn"
+                    onClick={() => void doAnalyzeSemantics()}
+                    disabled={semBusy != null || busy != null}
+                    title="Ask the local model to read every line in depth (slow on a local model)"
+                  >
+                    {semBusy === "model" ? <Spinner size={11} /> : <span aria-hidden="true">✨</span>}
+                    {semBusy === "model" ? "Reading deeply…" : "Deep meaning analysis"}
+                  </button>
+                </div>
+                {semError && <p className="hint err-text" style={{ margin: "6px 0 0" }}>{semError}</p>}
+                {semantics && semantics.warning && (
+                  <p className="hint warn-text" style={{ margin: "6px 0 0" }}>{semantics.warning}</p>
+                )}
+                {semantics && semantics.issues.length > 0 && (
+                  <p className="hint warn-text" style={{ margin: "6px 0 0" }}>
+                    {semantics.issues.length} scene(s) do not show their line yet — use “Repair flagged shots”.
+                  </p>
+                )}
+                {semantics && semantics.lines.length > 0 && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {semantics.lines.map((l) => (
+                      <details key={l.line_id} className="dir-meaning-line">
+                        <summary style={{ cursor: "pointer", fontSize: 12 }}>
+                          <span className="pill" style={{ marginRight: 6 }}>{l.line_id}</span>
+                          <span className="pill" style={{ marginRight: 6 }}>{l.language}</span>
+                          <b style={{ fontSize: 12 }}>{str(l.source_text).slice(0, 90)}</b>
+                          {l.interpretation ? <span className="muted" style={{ fontSize: 11 }}> → {str(l.interpretation).slice(0, 90)}</span> : null}
+                        </summary>
+                        <div style={{ fontSize: 12, padding: "6px 0 2px" }}>
+                          {l.action_plan.length > 0 && (
+                            <p className="muted" style={{ margin: "0 0 4px" }}>
+                              🎬 {l.action_plan.map((a) => `${a.action}${a.body_part ? ` (${a.body_part})` : ""}`).join(" · ")}
+                            </p>
+                          )}
+                          {l.camera && (
+                            <p className="muted" style={{ margin: "0 0 4px" }}>
+                              📷 {l.camera.shot_type} / {l.camera.angle} / {l.camera.movement}
+                              {l.camera.rationale ? ` — ${l.camera.rationale}` : ""}
+                            </p>
+                          )}
+                          {l.warnings.length > 0 && (
+                            <p className="warn-text" style={{ margin: 0, fontSize: 11 }}>{l.warnings.join(" · ")}</p>
+                          )}
+                        </div>
+                      </details>
+                    ))}
                   </div>
                 )}
               </div>
@@ -3064,6 +3374,24 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                             </button>
                           </span>
                         </div>
+                        {((s as DirectorScene & { source_line?: string; semantic_meaning?: string; action_plan?: { action: string }[]; camera_rationale?: string }).source_line
+                          || (s as DirectorScene & { semantic_meaning?: string }).semantic_meaning) && (
+                          <div className="dir-scene-meaning" style={{ fontSize: 11, margin: "2px 0 4px" }}>
+                            <span title="The original source line this scene shows">
+                              🔤 {str((s as DirectorScene & { source_line?: string }).source_line).slice(0, 120)}
+                            </span>
+                            {(s as DirectorScene & { semantic_meaning?: string }).semantic_meaning && (
+                              <span className="muted" title="What the line means — the scene must SHOW it">
+                                {" → "}{str((s as DirectorScene & { semantic_meaning?: string }).semantic_meaning).slice(0, 140)}
+                              </span>
+                            )}
+                            {((s as DirectorScene & { action_plan?: { action: string }[] }).action_plan || []).length > 0 && (
+                              <span className="muted" title="The visible action the model must render">
+                                {" · 🎬 "}{(s as DirectorScene & { action_plan?: { action: string }[] }).action_plan!.map((a) => str(a.action)).join(" · ").slice(0, 160)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="dir-shot-strip" role="list" aria-label={`Timed shots of Scene ${s.scene_number}`}>
                           {shots.length ? shots.map((sh, k) => {
                             const seg = str(sh.lyric_segment) || str(sh.action) || "—";
@@ -3585,6 +3913,10 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 <summary><b>SYSTEM message</b> — the shared director rules</summary>
                 <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 320, overflowY: "auto", background: "rgba(0,0,0,0.25)", padding: 10, borderRadius: 8 }}>{promptPreview.system || "(empty)"}</pre>
               </details>
+              <details style={{ marginTop: 8 }}>
+                <summary><b>MASTER PROMPT</b> — the style lock (from Analyzer + Visual Style)</summary>
+                <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 200, overflowY: "auto", background: "rgba(0,0,0,0.25)", padding: 10, borderRadius: 8 }}>{masterPrompt || "(empty)"}</pre>
+              </details>
             </>
           )}
           <div className="dlg-actions" style={{ marginTop: 12 }}>
@@ -3633,6 +3965,8 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 <span><span className="shotlist-detail-label">Visual style</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.visualStyle) || "—"}{inputBoard.input.visualStyle === "Custom" && inputBoard.input.styleCustom ? ` (${inputBoard.input.styleCustom})` : ""}</p></span>
                 <span><span className="shotlist-detail-label">Aspect ratio</span><p style={{ margin: "2px 0 0" }}>{str(inputBoard.input.aspectRatio) || "—"}</p></span>
               </div>
+              <div className="shotlist-detail-label" style={{ marginTop: 8 }}>Master prompt</div>
+              <p style={{ whiteSpace: "pre-wrap" }}>{str(inputBoard.input.masterPrompt) || "—"}</p>
               <div className="dir-scene-row-head" style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
                 <span><span className="shotlist-detail-label">Target duration</span><p style={{ margin: "2px 0 0" }}>~{Math.round(Number(inputBoard.input.song?.durationSeconds ?? inputBoard.input.targetSeconds) || 0)}s{inputBoard.input.song?.durationSeconds ? " (🔒 song length)" : ""}</p></span>
                 <span><span className="shotlist-detail-label">Scene duration (AI pace hint)</span><p style={{ margin: "2px 0 0" }}>~{inputBoard.input.sceneSeconds}s</p></span>
@@ -3691,7 +4025,7 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                 </div>
                 <div>
                   <label>Visual style</label>
-                  <select value={inputDraft.visualStyle} onChange={(e) => setInputDraft((d) => ({ ...d, visualStyle: e.target.value }))}>
+                  <select value={inputDraft.visualStyle} onChange={(e) => { const v = e.target.value; setInputDraft((d) => ({ ...d, visualStyle: v, masterPrompt: STYLE_MASTER_PROMPTS[v] ?? d.masterPrompt })) }}>
                     {STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                   {inputDraft.visualStyle === "Custom" && (
@@ -3699,6 +4033,15 @@ export default function DirectorPage({ onOpenProject, onProjectsChanged, onPlann
                   )}
                 </div>
               </div>
+              <label style={{ marginTop: 8 }}>Master prompt (style preset — auto-filled from Visual style)</label>
+              <textarea
+                rows={2}
+                value={inputDraft.masterPrompt}
+                maxLength={2000}
+                placeholder="Style master prompt — sent as THE style lock for every image prompt…"
+                onChange={(e) => setInputDraft((d) => ({ ...d, masterPrompt: e.target.value }))}
+                title="Auto-filled from the Visual style preset; edits are used verbatim as the style lock"
+              />
               <div className="grid grid-3" style={{ marginTop: 8 }}>
                 <div>
                   <label>Target duration (sec){inputBoard.input.song?.durationSeconds ? " 🔒" : ""}</label>

@@ -5,6 +5,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   SCENE_BATCH,
+  SCENE_BATCH_MIN,
+  SCENE_BATCH_MAX,
   MAX_SCENES,
   MIN_SHOT_SECONDS,
   linesForTimeWindow,
@@ -42,7 +44,6 @@ import {
   anatomyLockFor,
   withAnatomyLock,
   validateBibleAnatomy,
-  validateKidsScenePhysics,
 } from "../lib/director.mjs";
 
 describe("sceneCountFor", () => {
@@ -57,6 +58,14 @@ describe("sceneCountFor", () => {
   });
   it("batch size is sane", () => {
     assert.ok(SCENE_BATCH >= 4 && SCENE_BATCH <= 16);
+  });
+  it("user-selectable scene batch range is 1..12 with the default batch", () => {
+    assert.equal(SCENE_BATCH_MIN, 1);
+    assert.equal(SCENE_BATCH_MAX, 12);
+    const options = Array.from({ length: SCENE_BATCH_MAX - SCENE_BATCH_MIN + 1 }, (_, i) => SCENE_BATCH_MIN + i);
+    assert.deepEqual(options, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    assert.equal(SCENE_BATCH, 10);
+    assert.ok(SCENE_BATCH_MAX >= SCENE_BATCH);
   });
 });
 
@@ -969,22 +978,17 @@ describe("kids songs (saanpu-style rhymes)", () => {
     ];
     assert.ok(validateLyricPlan(stall, lyricLines.slice(0, 2), null).some((m) => m.includes("re-covers lines")), "adjacent repeat still flags");
   });
-  it("bible prompt registers every singer for kids genres only", () => {
+  it("bible prompt carries no kids cast rule on any genre", () => {
     const kids = buildBiblePrompt({
       title: "S", story: "lyrics", language: "Hindi", genre: "Kids",
       visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
     });
-    assert.ok(kids.includes("KIDS CAST RULE"), "kids bible asks for the full animal cast");
+    assert.ok(!kids.includes("KIDS CAST RULE"), "no kids cast rule is forced");
     const custom = buildBiblePrompt({
       title: "S", story: "lyrics", language: "Hindi", genre: "Custom", genreCustom: "nursery rhymes",
       visualStyle: "Cartoon", targetSeconds: 60, sceneSeconds: 5,
     });
-    assert.ok(custom.includes("KIDS CAST RULE"), "custom nursery genre counts as kids");
-    const epic = buildBiblePrompt({
-      title: "S", story: "story", language: "Hindi", genre: "Fantasy",
-      visualStyle: "Anime", targetSeconds: 60, sceneSeconds: 5,
-    });
-    assert.ok(!epic.includes("KIDS CAST RULE"), "other genres stay byte-identical in spirit");
+    assert.ok(!custom.includes("KIDS CAST RULE"), "custom nursery genres get the same generic prompt");
     assert.ok(isKidsGenre("Kids") && isKidsGenre("Educational") && isKidsGenre("Custom", "preschool learning"));
     assert.ok(!isKidsGenre("Fantasy") && !isKidsGenre("Horror") && !isKidsGenre(""));
   });
@@ -1103,28 +1107,7 @@ describe("anatomy integrity (snake stays limbless, no extra parts)", () => {
     assert.equal(anatomyLockFor({ name: "Doggy", species: "", visual_identity_prompt: "limbless serpentine body" }), null,
       "missing species must not cement snake anatomy from identity text");
   });
-  it("scene-level kids validator catches impossible actions and coverings", () => {
-    const board = {
-      input: { genre: "Kids" },
-      blueprint: { characters: [
-        { character_id: "dog", name: "Dog", species: "dog" },
-        { character_id: "snake", name: "Snake", species: "snake" },
-        { character_id: "elephant", name: "Elephant", species: "elephant" },
-      ] },
-      scenes: [
-        { scene_number: 1, characters: ["dog"], action: "The dog slithers across the floor", image_prompt: "limbless serpentine dog" },
-        { scene_number: 2, characters: ["snake"], action: "The snake walks on four legs", image_prompt: "furry snake" },
-        { scene_number: 3, characters: ["elephant"], action: "The elephant waves", image_prompt: "elephant covered in fur" },
-      ],
-    };
-    const errors = validateKidsScenePhysics(board);
-    assert.ok(errors.some((x) => x.includes("Dog") && /snake-like/i.test(x)));
-    assert.ok(errors.some((x) => x.includes("Snake") && /limbless/i.test(x)));
-    assert.ok(errors.some((x) => x.includes("Snake") && /scales/i.test(x)));
-    assert.ok(errors.some((x) => x.includes("Elephant") && /bare skin/i.test(x)));
-    assert.deepEqual(validateKidsScenePhysics({ input: { genre: "Adventure" }, scenes: board.scenes }), []);
-  });
-  it("kids scene duration floor is enforced and shot floor remains feasible", () => {
+  it("generic scene duration floors stay feasible via the shared options", () => {
     const short = normalizeScene({ duration_seconds: 1, shots: [{ duration_seconds: 0.2 }, { duration_seconds: 0.8 }] }, 1, 5,
       { minShotSeconds: 1.5, minSceneSeconds: 4 });
     assert.equal(short.duration_seconds, 4);
